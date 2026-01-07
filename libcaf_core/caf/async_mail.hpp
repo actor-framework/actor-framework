@@ -134,7 +134,8 @@ public:
     if (!receiver)
       return;
     auto* ptr = actor_cast<abstract_actor*>(receiver);
-    ptr->enqueue(make_mailbox_element(self_->ctrl(), make_message_id(Priority),
+    ptr->enqueue(make_mailbox_element({self_->ctrl(), add_ref},
+                                      make_message_id(Priority),
                                       std::move(content_)),
                  self_->context());
   }

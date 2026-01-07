@@ -60,9 +60,16 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   has been default-constructed or holds a valid error code.
 - The methods `or_else` and `eval` on `caf::error` are now deprecated since they
   overlap with methods such as `transform` and `and_then` on `caf::expected`.
+- The constructors and assignment operators of `caf::intrusive_ptr` and
+  `caf::weak_intrusive_ptr` that accept a boolean flag to control whether the
+  reference count should be increased or not have been deprecated. Users should
+  use the new `add_ref` and `adopt_ref` tags instead.
 
 ### Added
 
+- CAF's intrusive pointer API now uses explicit `add_ref` and `adopt_ref` tags
+  to control whether the reference count should be increased or not instead of
+  relying on boolean flags.
 - Added `monitor` API to WebSocket and HTTP servers in the `with` DSL (#2026).
 - When starting a server or client using length-prefix framing, users can now
   specify the maximum message size via `max_message_size` and the number of

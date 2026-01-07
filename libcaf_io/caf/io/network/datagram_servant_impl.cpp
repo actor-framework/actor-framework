@@ -38,7 +38,7 @@ bool datagram_servant_impl::new_endpoint(network::receive_buffer& buf) {
   auto& dm = handler_.backend();
   auto hdl = datagram_handle::from_int(dm.next_endpoint_id());
   add_endpoint(handler_.sending_endpoint(), hdl);
-  parent()->add_hdl_for_datagram_servant(this, hdl);
+  parent()->add_hdl_for_datagram_servant({this, add_ref}, hdl);
   return consume(&dm, hdl, buf);
 }
 
@@ -69,7 +69,7 @@ void datagram_servant_impl::graceful_shutdown() {
 
 void datagram_servant_impl::flush() {
   auto lg = log::io::trace("");
-  handler_.flush(this);
+  handler_.flush({this, add_ref});
 }
 
 std::string datagram_servant_impl::addr(datagram_handle hdl) const {
@@ -101,7 +101,7 @@ std::vector<datagram_handle> datagram_servant_impl::hdls() const {
 
 void datagram_servant_impl::add_endpoint(const ip_endpoint& ep,
                                          datagram_handle hdl) {
-  handler_.add_endpoint(hdl, ep, this);
+  handler_.add_endpoint(hdl, ep, {this, add_ref});
 }
 
 void datagram_servant_impl::remove_endpoint(datagram_handle hdl) {

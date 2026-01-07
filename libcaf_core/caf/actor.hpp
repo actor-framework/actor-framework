@@ -7,6 +7,8 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_traits.hpp"
+#include "caf/add_ref.hpp"
+#include "caf/adopt_ref.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/comparable.hpp"
@@ -55,7 +57,7 @@ public:
 
   template <class T>
     requires actor_traits<T>::is_dynamically_typed
-  actor(T* ptr) : ptr_(ptr->ctrl()) {
+  actor(T* ptr) : ptr_(ptr->ctrl(), add_ref) {
     CAF_ASSERT(ptr != nullptr);
   }
 
@@ -123,7 +125,12 @@ public:
 
   intptr_t compare(const strong_actor_ptr&) const noexcept;
 
+  [[deprecated("construct using add_ref or adopt_ref instead")]]
   actor(actor_control_block*, bool);
+
+  actor(actor_control_block*, add_ref_t);
+
+  actor(actor_control_block*, adopt_ref_t);
 
   /// @endcond
 
@@ -155,6 +162,7 @@ private:
     return ptr_.release();
   }
 
+  [[deprecated("construct using add_ref or adopt_ref instead")]]
   actor(actor_control_block*);
 
   strong_actor_ptr ptr_;

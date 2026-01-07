@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/add_ref.hpp"
+#include "caf/adopt_ref.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -45,6 +47,14 @@ public:
 
   explicit disposable(intrusive_ptr<impl> pimpl) noexcept
     : pimpl_(std::move(pimpl)) {
+    // nop
+  }
+
+  disposable(impl* pimpl, adopt_ref_t) noexcept : pimpl_(pimpl, adopt_ref) {
+    // nop
+  }
+
+  disposable(impl* pimpl, add_ref_t) noexcept : pimpl_(pimpl, add_ref) {
     // nop
   }
 

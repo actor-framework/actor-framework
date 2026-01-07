@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/adopt_ref.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/aligned_alloc.hpp"
 #include "caf/detail/assert.hpp"
@@ -68,12 +69,12 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
     lptr->log(log::level::debug, CAF_LOG_FLOW_COMPONENT,
               "SPAWN ; ID = {}; NAME = {}; TYPE = {}; ARGS = {}; NODE = {}",
               aid, obj->name(), detail::pretty_type_name(typeid(T)), args, nid);
-    return {ctrl, false};
+    return {ctrl, adopt_ref};
   }
 #endif
   CAF_PUSH_AID(aid);
   detail::make_actor_util::create_actor<T>(obj_mem, std::forward<Ts>(xs)...);
-  return {ctrl, false};
+  return {ctrl, adopt_ref};
 }
 
 } // namespace caf

@@ -420,12 +420,11 @@ private:
           caf_logger_instance                                                  \
           && caf_logger_instance->accepts(::caf::log::level::debug,            \
                                           CAF_LOG_FLOW_COMPONENT)) {           \
-        caf_logger_instance->log(::caf::log::level::debug,                     \
-                                 CAF_LOG_FLOW_COMPONENT,                       \
-                                 "SEND ; TO = {}; FROM = {}; CONTENT = {}",    \
-                                 ::caf::strong_actor_ptr{this->ctrl()},        \
-                                 ptr->sender,                                  \
-                                 ::caf::deep_to_string(ptr->content()));       \
+        caf_logger_instance->log(                                              \
+          ::caf::log::level::debug, CAF_LOG_FLOW_COMPONENT,                    \
+          "SEND ; TO = {}; FROM = {}; CONTENT = {}",                           \
+          ::caf::strong_actor_ptr{this->ctrl(), ::caf::add_ref}, ptr->sender,  \
+          ::caf::deep_to_string(ptr->content()));                              \
       }                                                                        \
     } while (false)
 

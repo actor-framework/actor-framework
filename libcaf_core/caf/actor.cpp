@@ -26,11 +26,22 @@ actor::actor(const scoped_actor& x) : ptr_(actor_cast<strong_actor_ptr>(x)) {
   // nop
 }
 
-actor::actor(actor_control_block* ptr) : ptr_(ptr) {
+actor::actor(actor_control_block* ptr) : ptr_(ptr, add_ref) {
   // nop
 }
 
-actor::actor(actor_control_block* ptr, bool add_ref) : ptr_(ptr, add_ref) {
+CAF_PUSH_DEPRECATED_WARNING
+actor::actor(actor_control_block* ptr, bool increase_ref_count)
+  : ptr_(ptr, increase_ref_count) {
+  // nop
+}
+CAF_POP_WARNINGS
+
+actor::actor(actor_control_block* ptr, add_ref_t) : ptr_(ptr, add_ref) {
+  // nop
+}
+
+actor::actor(actor_control_block* ptr, adopt_ref_t) : ptr_(ptr, adopt_ref) {
   // nop
 }
 

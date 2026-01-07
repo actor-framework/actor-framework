@@ -68,7 +68,9 @@ public:
       using index_type = decltype(index);
       using value_type = typename std::decay_t<decltype(input)>::value_type;
       using fwd_impl = forwarder<value_type, zip_with_sub, index_type>;
-      auto fwd = parent_->add_child(std::in_place_type<fwd_impl>, this, index);
+      auto fwd = parent_->add_child(std::in_place_type<fwd_impl>,
+                                    intrusive_ptr<zip_with_sub>{this, add_ref},
+                                    index);
       std::get<index_type::value>(srcs).subscribe(fwd->as_observer());
     });
   }

@@ -47,7 +47,7 @@ public:
       return;
     demand_ += new_demand;
     if (demand_ == new_demand && !buffer_.empty()) {
-      parent_->delay_fn([strong_this = intrusive_ptr{this}] { //
+      parent_->delay_fn([strong_this = intrusive_ptr{this, add_ref}] { //
         strong_this->on_request();
       });
     }

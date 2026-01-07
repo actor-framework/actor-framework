@@ -44,7 +44,7 @@ public:
     self_ref_ = owner->as_disposable();
     if (!monitored_actors_.empty()) {
       monitor_callback_ = make_action([this] { owner_->shutdown(); });
-      auto ctx = async::execution_context_ptr{owner_->mpx_ptr()};
+      auto ctx = async::execution_context_ptr{owner_->mpx_ptr(), add_ref};
       for (auto& hdl : monitored_actors_) {
         CAF_ASSERT(hdl);
         hdl->get()->attach_functor([ctx, cb = monitor_callback_] {

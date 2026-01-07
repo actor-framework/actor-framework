@@ -9,6 +9,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/add_ref.hpp"
 #include "caf/config.hpp"
 #include "caf/default_attachable.hpp"
 #include "caf/detail/assert.hpp"
@@ -133,7 +134,7 @@ actor_control_block* abstract_actor::ctrl() const {
 }
 
 actor_addr abstract_actor::address() const noexcept {
-  return actor_addr{actor_control_block::from(this)};
+  return actor_addr{actor_control_block::from(this), add_ref};
 }
 
 // -- callbacks ----------------------------------------------------------------

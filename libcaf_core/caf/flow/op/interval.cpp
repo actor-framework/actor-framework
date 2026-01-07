@@ -56,7 +56,7 @@ public:
       return;
     }
     pending_ = parent_->delay_until_fn(
-      timeout, [sptr = intrusive_ptr<interval_sub>{this}] { //
+      timeout, [sptr = intrusive_ptr<interval_sub>{this, add_ref}] { //
         sptr->fire();
       });
   }

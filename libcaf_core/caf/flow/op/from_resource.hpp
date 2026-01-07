@@ -35,7 +35,7 @@ public:
 
   from_resource_sub(coordinator* parent, buffer_ptr buf,
                     observer<value_type> out)
-    : parent_(parent), buf_(buf), out_(std::move(out)) {
+    : parent_(parent, add_ref), buf_(buf), out_(std::move(out)) {
     parent_->ref_execution_context();
   }
 
@@ -189,7 +189,7 @@ private:
   }
 
   intrusive_ptr<from_resource_sub> strong_this() {
-    return {this};
+    return {this, add_ref};
   }
 
   /// Stores the @ref coordinator that runs this flow. Unlike other observables,

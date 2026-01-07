@@ -102,7 +102,7 @@ public:
   class CAF_CORE_EXPORT fwd_impl final : public impl_base {
   public:
     fwd_impl(coordinator* parent, listener* src, coordinated* snk)
-      : parent_(parent), src_(src), snk_(snk) {
+      : parent_(parent), src_(src, add_ref), snk_(snk, add_ref) {
       // nop
     }
 
@@ -135,7 +135,7 @@ public:
     static subscription make_unsafe(coordinator* parent, listener* src,
                                     coordinated* snk) {
       intrusive_ptr<subscription::impl> ptr{new fwd_impl(parent, src, snk),
-                                            false};
+                                            adopt_ref};
       return subscription{std::move(ptr)};
     }
 
@@ -201,7 +201,7 @@ public:
     if (pimpl_) {
       // Defend against impl::cancel() indirectly calling member functions on
       // this object again.
-      auto ptr = intrusive_ptr<impl>{pimpl_.release(), false};
+      auto ptr = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
       auto* parent = ptr->parent();
       ptr->cancel();
       parent->release_later(ptr);

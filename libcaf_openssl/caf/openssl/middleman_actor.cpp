@@ -152,7 +152,7 @@ public:
 
   void flush() override {
     auto lg = log::openssl::trace("");
-    stream_.flush(this);
+    stream_.flush({this, add_ref});
   }
 
   std::string addr() const override {
@@ -177,7 +177,7 @@ public:
     // This schedules the scribe in case SSL still needs to call SSL_connect
     // or SSL_accept. Otherwise, the backend simply removes the socket for
     // write operations after the first "nop write".
-    stream_.force_empty_write(this);
+    stream_.force_empty_write({this, add_ref});
   }
 
   void add_to_loop() override {

@@ -226,7 +226,7 @@ public:
 
   void on_disposed(state_type* ptr, bool from_external) final {
     super::parent_->delay_fn(
-      [mc = strong_this(), sptr = state_ptr_type{ptr}, from_external] {
+      [mc = strong_this(), sptr = state_ptr_type{ptr, add_ref}, from_external] {
         if (auto i = std::ranges::find(mc->states_, sptr);
             i != mc->states_.end()) {
           // We don't care about preserving the order of elements in the vector.
@@ -247,7 +247,7 @@ protected:
 
 private:
   intrusive_ptr<mcast> strong_this() {
-    return {this};
+    return {this, add_ref};
   }
 
   /// Called whenever a state is disposed.

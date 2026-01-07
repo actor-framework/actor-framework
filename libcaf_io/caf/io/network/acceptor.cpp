@@ -22,7 +22,7 @@ void acceptor::start(acceptor_manager* mgr) {
 
 void acceptor::activate(acceptor_manager* mgr) {
   if (!mgr_) {
-    mgr_.reset(mgr);
+    mgr_.reset(mgr, add_ref);
     event_handler::activate();
   }
 }

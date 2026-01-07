@@ -4,7 +4,7 @@
 
 #include "caf/disposable.hpp"
 
-#include "caf/make_counted.hpp"
+#include "caf/ref_counted.hpp"
 
 #include <algorithm>
 
@@ -17,7 +17,7 @@ disposable::impl::~impl() {
 }
 
 disposable disposable::impl::as_disposable() noexcept {
-  return disposable{intrusive_ptr<impl>{this}};
+  return disposable{intrusive_ptr<impl>{this, add_ref}};
 }
 
 // -- factories ----------------------------------------------------------------
@@ -50,14 +50,6 @@ public:
     deref();
   }
 
-  friend void intrusive_ptr_add_ref(const composite_impl* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const composite_impl* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
   std::vector<disposable> entries_;
 };
@@ -67,8 +59,7 @@ private:
 disposable disposable::make_composite(std::vector<disposable> entries) {
   if (entries.empty())
     return {};
-  else
-    return disposable{make_counted<composite_impl>(std::move(entries))};
+  return {new composite_impl(std::move(entries)), adopt_ref};
 }
 
 namespace {
@@ -95,14 +86,6 @@ public:
     deref();
   }
 
-  friend void intrusive_ptr_add_ref(const flag_impl* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const flag_impl* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
   std::atomic<bool> flag_;
 };
@@ -110,7 +93,7 @@ private:
 } // namespace
 
 disposable disposable::make_flag() {
-  return disposable{make_counted<flag_impl>()};
+  return {new flag_impl, adopt_ref};
 }
 
 // -- utility ------------------------------------------------------------------

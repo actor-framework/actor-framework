@@ -51,7 +51,7 @@ void pipe_reader::handle_event(operation op) {
   if (op == operation::read) {
     auto ptr = try_read_next();
     if (ptr != nullptr)
-      backend().resume({ptr, false});
+      backend().resume({ptr, adopt_ref});
   }
   // else: ignore errors
 }

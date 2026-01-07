@@ -57,8 +57,9 @@ public:
     auto* parent = decorated.parent();
     auto flag = disposable::make_flag();
     parent->watch(flag);
-    auto pimpl = make_counted<default_impl>(parent, std::move(decorated),
-                                            std::move(flag));
+    auto pimpl
+      = make_counted<default_impl>(execution_context_ptr{parent, add_ref},
+                                   std::move(decorated), std::move(flag));
     return publisher{std::move(pimpl)};
   }
 

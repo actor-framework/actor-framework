@@ -107,12 +107,13 @@ public:
 
   chunk() noexcept = default;
 
-  explicit chunk(const_byte_span buffer) : data_(data::make(buffer), false) {
+  explicit chunk(const_byte_span buffer)
+    : data_(data::make(buffer), adopt_ref) {
     // nop
   }
 
   explicit chunk(std::span<const const_byte_span> buffers)
-    : data_(data::make(buffers), false) {
+    : data_(data::make(buffers), adopt_ref) {
     // nop
   }
 

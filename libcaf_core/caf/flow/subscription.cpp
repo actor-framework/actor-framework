@@ -30,7 +30,7 @@ void subscription::impl_base::deref_coordinated() const noexcept {
 
 void subscription::impl_base::dispose() {
   if (!disposed()) {
-    parent()->delay_fn([sptr = intrusive_ptr<impl_base>{this}] { //
+    parent()->delay_fn([sptr = intrusive_ptr<impl_base>{this, add_ref}] { //
       sptr->do_dispose(true);
     });
   }

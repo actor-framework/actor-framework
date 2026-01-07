@@ -697,11 +697,17 @@ logger* logger::current_logger() {
 }
 
 void logger::current_logger(actor_system* sys) {
-  current_logger_ptr.reset(sys != nullptr ? &sys->logger() : nullptr);
+  if (sys != nullptr)
+    current_logger_ptr.reset(&sys->logger(), add_ref);
+  else
+    current_logger_ptr.reset();
 }
 
 void logger::current_logger(logger* ptr) {
-  current_logger_ptr.reset(ptr);
+  if (ptr != nullptr)
+    current_logger_ptr.reset(ptr, add_ref);
+  else
+    current_logger_ptr.reset();
 }
 
 void logger::current_logger(std::nullptr_t) {

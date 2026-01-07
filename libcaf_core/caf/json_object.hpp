@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/add_ref.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/json.hpp"
 #include "caf/fwd.hpp"
@@ -51,7 +52,7 @@ public:
     }
 
     json_value value() const noexcept {
-      return json_value{iter_->val, storage_};
+      return json_value{iter_->val, {storage_, add_ref}};
     }
 
     value_type operator*() const noexcept {

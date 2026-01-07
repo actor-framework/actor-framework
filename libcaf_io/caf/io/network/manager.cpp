@@ -19,7 +19,10 @@ manager::~manager() {
 }
 
 void manager::set_parent(abstract_broker* ptr) {
-  parent_ = ptr != nullptr ? ptr->ctrl() : nullptr;
+  if (ptr != nullptr)
+    parent_.reset(ptr->ctrl(), add_ref);
+  else
+    parent_.reset();
 }
 
 abstract_broker* manager::parent() {

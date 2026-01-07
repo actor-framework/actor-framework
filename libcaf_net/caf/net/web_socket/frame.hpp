@@ -33,22 +33,22 @@ public:
   }
 
   explicit frame(const_byte_span buffer)
-    : data_(chunk::data::make(buffer), false) {
+    : data_(chunk::data::make(buffer), adopt_ref) {
     // nop
   }
 
   explicit frame(std::span<const const_byte_span> buffers)
-    : data_(chunk::data::make(buffers), false) {
+    : data_(chunk::data::make(buffers), adopt_ref) {
     // nop
   }
 
   explicit frame(std::string_view text)
-    : data_(chunk::data::make(text), false) {
+    : data_(chunk::data::make(text), adopt_ref) {
     // nop
   }
 
   explicit frame(std::span<const std::string_view> texts)
-    : data_(chunk::data::make(texts), false) {
+    : data_(chunk::data::make(texts), adopt_ref) {
     // nop
   }
 

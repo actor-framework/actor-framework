@@ -4,6 +4,7 @@
 
 #include "caf/detail/behavior_impl.hpp"
 
+#include "caf/add_ref.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/message_handler.hpp"
 
@@ -80,7 +81,7 @@ void behavior_impl::handle_timeout() {
 
 behavior_impl::pointer behavior_impl::or_else(const pointer& other) {
   CAF_ASSERT(other != nullptr);
-  return make_counted<combinator>(this, other);
+  return make_counted<combinator>(pointer{this, add_ref}, other);
 }
 
 } // namespace caf::detail

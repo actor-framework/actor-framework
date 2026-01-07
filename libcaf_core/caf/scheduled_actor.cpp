@@ -378,8 +378,9 @@ void scheduled_actor::set_receive_timeout() {
     case timeout_mode::repeat_weak:
       timeout_state_.id = new_u64_id();
       timeout_state_.pending = clock().schedule_message(
-        nullptr, weak_actor_ptr{ctrl()}, clock().now() + timeout_state_.delay,
-        make_message_id(), make_message(timeout_msg{timeout_state_.id}));
+        nullptr, weak_actor_ptr{ctrl(), add_ref},
+        clock().now() + timeout_state_.delay, make_message_id(),
+        make_message(timeout_msg{timeout_state_.id}));
       break;
     case timeout_mode::legacy:
       if (bhvr_stack_.empty()) {
@@ -391,8 +392,9 @@ void scheduled_actor::set_receive_timeout() {
     case timeout_mode::repeat_strong:
       timeout_state_.id = new_u64_id();
       timeout_state_.pending = clock().schedule_message(
-        nullptr, strong_actor_ptr{ctrl()}, clock().now() + timeout_state_.delay,
-        make_message_id(), make_message(timeout_msg{timeout_state_.id}));
+        nullptr, strong_actor_ptr{ctrl(), add_ref},
+        clock().now() + timeout_state_.delay, make_message_id(),
+        make_message(timeout_msg{timeout_state_.id}));
       break;
   }
 }
@@ -580,7 +582,8 @@ void scheduled_actor::delay(action what) {
 
 disposable scheduled_actor::delay_until(steady_time_point abs_time,
                                         action what) {
-  return clock().schedule(abs_time, std::move(what), strong_actor_ptr{ctrl()});
+  return clock().schedule(abs_time, std::move(what),
+                          strong_actor_ptr{ctrl(), add_ref});
 }
 
 // -- message processing -------------------------------------------------------
@@ -611,7 +614,7 @@ scheduled_actor::categorize(mailbox_element& x) {
     auto& what = content.get_as<std::string>(2);
     if (what == "info") {
       log::core::debug("reply to 'info' message");
-      rp.deliver(ok_atom_v, what, strong_actor_ptr{ctrl()}, name());
+      rp.deliver(ok_atom_v, what, strong_actor_ptr{ctrl(), add_ref}, name());
     } else {
       rp.deliver(make_error(sec::unsupported_sys_key));
     }
@@ -664,14 +667,15 @@ scheduled_actor::categorize(mailbox_element& x) {
           // Inform the sink that the stream is now open.
           stream_subs_.emplace(flow_id, std::move(fwd));
           auto mipb = static_cast<uint32_t>(i->second.max_items_per_batch);
-          unsafe_send_as(this, sink_hdl,
-                         stream_ack_msg{ctrl(), sink_id, flow_id, mipb});
+          unsafe_send_as(
+            this, sink_hdl,
+            stream_ack_msg{{ctrl(), add_ref}, sink_id, flow_id, mipb});
           if (sink_hdl.node() != node()) {
             // Actors cancel any pending streams when they terminate. However,
             // remote actors may terminate without sending us a proper goodbye.
             // Hence, we add a function object to remote actors to make sure we
             // get a cancel in all cases.
-            auto weak_self = weak_actor_ptr{ctrl()};
+            auto weak_self = weak_actor_ptr{ctrl(), add_ref};
             sink_hdl->attach_functor([weak_self, flow_id] {
               if (auto sptr = weak_self.lock())
                 caf::anon_mail(stream_cancel_msg{flow_id})
@@ -1030,7 +1034,8 @@ disposable scheduled_actor::run_scheduled(actor_clock::time_point when,
   CAF_ASSERT(what.ptr() != nullptr);
   auto lg = log::core::trace("when = {}",
                              const_cast<const actor_clock::time_point*>(&when));
-  return clock().schedule(when, std::move(what), strong_actor_ptr{ctrl()});
+  return clock().schedule(when, std::move(what),
+                          strong_actor_ptr{ctrl(), add_ref});
 }
 
 disposable scheduled_actor::run_scheduled_weak(timestamp when, action what) {
@@ -1045,7 +1050,8 @@ disposable scheduled_actor::run_scheduled_weak(actor_clock::time_point when,
   CAF_ASSERT(what.ptr() != nullptr);
   auto lg = log::core::trace("when = {}",
                              const_cast<const actor_clock::time_point*>(&when));
-  return clock().schedule(when, std::move(what), weak_actor_ptr{ctrl()});
+  return clock().schedule(when, std::move(what),
+                          weak_actor_ptr{ctrl(), add_ref});
 }
 
 disposable scheduled_actor::run_delayed(timespan delay, action what) {
@@ -1072,7 +1078,7 @@ stream scheduled_actor::to_stream_impl(cow_string name, batch_op_ptr batch_op,
   auto local_id = new_u64_id();
   stream_sources_.emplace(local_id, stream_source_state{std::move(batch_op),
                                                         max_items_per_batch});
-  return {ctrl(), item_type, std::move(name), local_id};
+  return {{ctrl(), add_ref}, item_type, std::move(name), local_id};
 }
 
 flow::observable<async::batch>

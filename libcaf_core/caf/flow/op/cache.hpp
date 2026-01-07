@@ -41,7 +41,7 @@ public:
       return;
     }
     demand_ = n;
-    auto self = intrusive_ptr<cache_sub>{this};
+    auto self = intrusive_ptr<cache_sub>{this, add_ref};
     parent_->delay_fn([self] { self->update(); });
   }
 

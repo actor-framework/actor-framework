@@ -11,7 +11,7 @@ namespace caf::flow {
 // -- factories ----------------------------------------------------------------
 
 intrusive_ptr<scoped_coordinator> scoped_coordinator::make() {
-  return {new scoped_coordinator, false};
+  return {new scoped_coordinator, adopt_ref};
 }
 
 // -- execution ----------------------------------------------------------------

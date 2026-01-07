@@ -480,7 +480,7 @@ config_value::parse_msg_impl(std::string_view str,
       CAF_ASSERT(unused == ls_size);
       intrusive_ptr<detail::message_data> ptr;
       if (auto vptr = malloc(sizeof(detail::message_data) + ls.data_size()))
-        ptr.reset(new (vptr) detail::message_data(ls), false);
+        ptr.reset(new (vptr) detail::message_data(ls), adopt_ref);
       else
         return false;
       auto pos = ptr->storage();
@@ -492,7 +492,7 @@ config_value::parse_msg_impl(std::string_view str,
           return false;
         pos += meta.padded_size;
       }
-      result.reset(ptr.release(), false);
+      result.reset(ptr.release(), adopt_ref);
       return reader.end_sequence();
     };
     if (std::ranges::any_of(allowed_types, converts))

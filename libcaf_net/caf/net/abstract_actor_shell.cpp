@@ -21,7 +21,7 @@ namespace caf::net {
 
 abstract_actor_shell::abstract_actor_shell(actor_config& cfg,
                                            socket_manager* owner)
-  : super(cfg), manager_(owner) {
+  : super(cfg), manager_(owner, add_ref) {
   mailbox_.try_block();
   resume_ = make_action([this] {
     for (;;) {

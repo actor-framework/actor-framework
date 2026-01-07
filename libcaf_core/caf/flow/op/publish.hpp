@@ -81,7 +81,7 @@ public:
     }
     if (!conn_ || conn_->disposed()) {
       in_.cancel(); // Make sure stale state is cleaned up.
-      auto sub = source_->subscribe(observer<T>{this});
+      auto sub = source_->subscribe(observer<T>{this, add_ref});
       conn_ = make_counted<detail::counted_disposable>(std::move(sub));
     }
     return conn_->acquire();

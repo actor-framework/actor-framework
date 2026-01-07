@@ -78,7 +78,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
       // We don't need to worry about exceptions here: the message_data
       // constructor as well as `move_to_list` are `noexcept`.
-      ptr.reset(new (vptr) detail::message_data(ids.move_to_list()), false);
+      ptr.reset(new (vptr) detail::message_data(ids.move_to_list()), adopt_ref);
     } else {
       STOP(sec::runtime_error, "unable to allocate memory");
     }
@@ -95,7 +95,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
         return false;
       pos += meta.padded_size;
     }
-    data.reset(ptr.release(), false);
+    data.reset(ptr.release(), adopt_ref);
     return source.end_tuple() && source.end_field() && source.end_object();
   }
   // For human-readable data formats, we serialize messages as a single list of
@@ -174,7 +174,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
       // We don't need to worry about exceptions here: the message_data
       // constructor as well as `move_to_list` are `noexcept`.
-      ptr.reset(new (vptr) detail::message_data(ids.move_to_list()), false);
+      ptr.reset(new (vptr) detail::message_data(ids.move_to_list()), adopt_ref);
     } else {
       STOP(sec::runtime_error, "unable to allocate memory");
     }
@@ -185,7 +185,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
       ptr->inc_constructed_elements();
       pos += x.meta->padded_size;
     }
-    data.reset(ptr.release(), false);
+    data.reset(ptr.release(), adopt_ref);
     return true;
   } else {
     data.reset();

@@ -35,8 +35,23 @@ public:
     // nop
   }
 
-  weak_intrusive_ptr(pointer raw_ptr, bool add_ref = true) noexcept {
-    set_ptr(raw_ptr, add_ref);
+  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  weak_intrusive_ptr(pointer raw_ptr, bool increase_ref_count = true) noexcept {
+    set_ptr(raw_ptr, increase_ref_count);
+  }
+
+  weak_intrusive_ptr(pointer raw_ptr, add_ref_t) noexcept {
+    if (raw_ptr) {
+      ptr_ = raw_ptr;
+      intrusive_ptr_add_weak_ref(ptr_);
+    } else {
+      ptr_ = nullptr;
+    }
+  }
+
+  constexpr weak_intrusive_ptr(pointer raw_ptr, adopt_ref_t) noexcept
+    : ptr_(raw_ptr) {
+    // nop
   }
 
   weak_intrusive_ptr(weak_intrusive_ptr&& other) noexcept
@@ -78,15 +93,44 @@ public:
     return detach();
   }
 
-  void reset(pointer new_value = nullptr, bool add_ref = true) {
+  void reset() noexcept {
+    if (ptr_) {
+      // Must set ptr_ to nullptr BEFORE calling release, because release may
+      // trigger destruction of an object that owns this weak_intrusive_ptr. If
+      // ptr_ is still set when the owner's destructor runs, it would try to
+      // release again, causing a double-free.
+      auto tmp = ptr_;
+      ptr_ = nullptr;
+      intrusive_ptr_release_weak(tmp);
+    }
+  }
+
+  [[deprecated("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")]]
+  void reset(pointer new_value, bool increase_ref_count = true) {
     auto old = ptr_;
-    set_ptr(new_value, add_ref);
+    set_ptr(new_value, increase_ref_count);
     if (old)
       intrusive_ptr_release_weak(old);
   }
 
+  void reset(pointer new_value, add_ref_t) noexcept {
+    weak_intrusive_ptr tmp{new_value, add_ref};
+    swap(tmp);
+  }
+
+  void reset(pointer new_value, adopt_ref_t) noexcept {
+    weak_intrusive_ptr tmp{new_value, adopt_ref};
+    swap(tmp);
+  }
+
+  weak_intrusive_ptr& operator=(std::nullptr_t) noexcept {
+    reset();
+    return *this;
+  }
+
+  [[deprecated("use reset instead")]]
   weak_intrusive_ptr& operator=(pointer ptr) noexcept {
-    reset(ptr);
+    reset(ptr, add_ref);
     return *this;
   }
 
@@ -96,7 +140,7 @@ public:
   }
 
   weak_intrusive_ptr& operator=(const weak_intrusive_ptr& other) noexcept {
-    reset(other.ptr_);
+    reset(other.ptr_, add_ref);
     return *this;
   }
 
@@ -137,7 +181,7 @@ public:
     if (!ptr_ || !intrusive_ptr_upgrade_weak(ptr_))
       return nullptr;
     // reference count already increased by intrusive_ptr_upgrade_weak
-    return {ptr_, false};
+    return {ptr_, adopt_ref};
   }
 
   /// Tries to upgrade this weak reference to a strong reference.
@@ -150,9 +194,9 @@ public:
   }
 
 private:
-  void set_ptr(pointer raw_ptr, bool add_ref) noexcept {
+  void set_ptr(pointer raw_ptr, bool increase_ref_count) noexcept {
     ptr_ = raw_ptr;
-    if (raw_ptr && add_ref)
+    if (raw_ptr && increase_ref_count)
       intrusive_ptr_add_weak_ref(raw_ptr);
   }
 

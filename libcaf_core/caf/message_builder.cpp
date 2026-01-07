@@ -31,7 +31,7 @@ message to_message_impl(size_t storage_size, TypeListBuilder& types,
     raw_ptr = new (vptr) message_data(types.move_to_list());
   else
     raw_ptr = new (vptr) message_data(types.copy_to_list());
-  intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
+  intrusive_cow_ptr<message_data> ptr{raw_ptr, adopt_ref};
   auto storage = raw_ptr->storage();
   for (auto& element : elements) {
     if constexpr (Policy == move_msg) {

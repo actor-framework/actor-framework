@@ -306,7 +306,7 @@ struct inspector_access<uri> : inspector_access_base<uri> {
     } else {
       if constexpr (Inspector::is_loading)
         if (!x.impl_->unique())
-          x.impl_.reset(new uri::impl_type, false);
+          x.impl_.reset(new uri::impl_type, adopt_ref);
       return inspect(f, *x.impl_);
     }
   }

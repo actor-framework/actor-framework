@@ -6,6 +6,7 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/add_ref.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message_id.hpp"
@@ -23,7 +24,7 @@ template <message_priority Priority = message_priority::normal, class Source,
 void unsafe_send_as(Source* src, const Dest& receiver, T&& arg, Ts&&... args) {
   if (receiver)
     receiver->enqueue(
-      make_mailbox_element(src->ctrl(), make_message_id(Priority),
+      make_mailbox_element({src->ctrl(), add_ref}, make_message_id(Priority),
                            std::forward<T>(arg), std::forward<Ts>(args)...),
       nullptr);
 }

@@ -32,7 +32,7 @@ public:
         ctx_(std::move(ctx)),
         do_resume_(std::move(do_resume)),
         do_cancel_(std::move(do_cancel)) {
-      buf_->set_producer(this);
+      buf_->set_producer({this, add_ref});
     }
 
     size_t push(std::span<const T> items) {

@@ -47,7 +47,7 @@ void datagram_handler::start(datagram_manager* mgr) {
 
 void datagram_handler::activate(datagram_manager* mgr) {
   if (!reader_) {
-    reader_.reset(mgr);
+    reader_.reset(mgr, add_ref);
     event_handler::activate();
     prepare_next_read();
   }
