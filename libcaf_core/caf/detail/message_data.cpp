@@ -23,19 +23,16 @@ message_data::message_data(type_id_list types) noexcept
 }
 
 message_data::~message_data() noexcept {
-  // Note: no need to perform bound checks or nullptr checks here, because
-  //       we verify the type IDs while constructing the message.
-  auto gmos = global_meta_objects();
   auto ptr = storage();
   if (constructed_elements_ == types_.size()) {
     for (auto id : types_) {
-      auto& meta = gmos[id];
+      auto& meta = global_meta_object(id);
       meta.destroy(ptr);
       ptr += meta.padded_size;
     }
   } else {
     for (size_t index = 0; index < constructed_elements_; ++index) {
-      auto& meta = gmos[types_[index]];
+      auto& meta = global_meta_object(types_[index]);
       meta.destroy(ptr);
       ptr += meta.padded_size;
     }
