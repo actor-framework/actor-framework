@@ -100,7 +100,7 @@ auto do_render(const Args&... args) {
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(stringification_test, first_custom_type_id + 140)
+CAF_BEGIN_TYPE_ID_BLOCK(stringification_test, first_custom_type_id + 160)
 
   CAF_ADD_TYPE_ID(stringification_test, (point2d))
   CAF_ADD_TYPE_ID(stringification_test, (rectangle))
