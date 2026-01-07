@@ -100,18 +100,18 @@ auto do_render(const Args&... args) {
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(stringifcation_test, first_custom_type_id + 140)
+CAF_BEGIN_TYPE_ID_BLOCK(stringification_test, first_custom_type_id + 140)
 
-  CAF_ADD_TYPE_ID(stringifcation_test, (point2d))
-  CAF_ADD_TYPE_ID(stringifcation_test, (rectangle))
-  CAF_ADD_TYPE_ID(stringifcation_test, (mixed_bag))
-  CAF_ADD_TYPE_ID(stringifcation_test, (colored_point))
-  CAF_ADD_TYPE_ID(stringifcation_test, (dummy_user))
+  CAF_ADD_TYPE_ID(stringification_test, (point2d))
+  CAF_ADD_TYPE_ID(stringification_test, (rectangle))
+  CAF_ADD_TYPE_ID(stringification_test, (mixed_bag))
+  CAF_ADD_TYPE_ID(stringification_test, (colored_point))
+  CAF_ADD_TYPE_ID(stringification_test, (dummy_user))
 
-CAF_END_TYPE_ID_BLOCK(stringifcation_test)
+CAF_END_TYPE_ID_BLOCK(stringification_test)
 
 TEST_INIT() {
-  caf::init_global_meta_objects<caf::id_block::stringifcation_test>();
+  caf::init_global_meta_objects<caf::id_block::stringification_test>();
 }
 
 TEST("stringification of numbers") {
