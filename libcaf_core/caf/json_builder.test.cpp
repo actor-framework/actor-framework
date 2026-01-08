@@ -20,14 +20,16 @@ using namespace std::literals;
 
 namespace {
 
+struct circle;
 struct my_request;
 struct rectangle;
 struct point;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(json_builder_test, caf::first_custom_type_id + 85)
+CAF_BEGIN_TYPE_ID_BLOCK(json_builder_test, caf::first_custom_type_id + 30, 10)
 
+  CAF_ADD_TYPE_ID(json_builder_test, (circle))
   CAF_ADD_TYPE_ID(json_builder_test, (my_request))
   CAF_ADD_TYPE_ID(json_builder_test, (rectangle))
   CAF_ADD_TYPE_ID(json_builder_test, (point))
@@ -58,6 +60,17 @@ struct point {
 template <class Inspector>
 bool inspect(Inspector& f, point& x) {
   return f.object(x).fields(f.field("x", x.x), f.field("y", x.y));
+}
+
+struct circle {
+  point center;
+  int32_t radius;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, circle& x) {
+  return f.object(x).fields(f.field("center", x.center),
+                            f.field("radius", x.radius));
 }
 
 struct rectangle {
@@ -288,7 +301,7 @@ TEST("begin field") {
   check(builder.begin_object(1, "circle"));
   SECTION("is present") {
     SECTION("missing index") {
-      auto circle_type = std::vector<uint16_t>{295};
+      auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
       check(!builder.begin_field("foo", true, std::span{circle_type}, 1));
     }
     SECTION("missing query type") {
@@ -296,7 +309,7 @@ TEST("begin field") {
       check(!builder.begin_field("foo", true, std::span{circle_type}, 0));
     }
     SECTION("present query type") {
-      auto circle_type = std::vector<uint16_t>{295};
+      auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
       check(builder.begin_field("foo", true, std::span{circle_type}, 0));
       check(builder.value(42));
       check(builder.end_field());
@@ -307,7 +320,7 @@ TEST("begin field") {
     }
   }
   SECTION("is not present") {
-    auto circle_type = std::vector<uint16_t>{295};
+    auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
     SECTION("don't skip empty fields") {
       builder.skip_empty_fields(false);
       check(builder.begin_field("foo", false, std::span{circle_type}, 0));
@@ -332,7 +345,7 @@ TEST("begin field") {
 
 TEST("begin associative array") {
   SECTION("valid associative array") {
-    auto circle_type = std::vector<uint16_t>{295};
+    auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
     check(builder.begin_tuple(1));
     check(builder.begin_associative_array(1));
     builder.skip_empty_fields(false);
@@ -351,7 +364,7 @@ TEST("begin associative array") {
 TEST("begin sequence") {
   SECTION("valid array") {
     builder.skip_empty_fields(false);
-    auto circle_type = std::vector<uint16_t>{295};
+    auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
     check(builder.begin_sequence(1));
     check(builder.begin_sequence(1));
     check(!builder.begin_field("foo", false, std::span{circle_type}, 0));
@@ -369,7 +382,7 @@ TEST("begin sequence") {
 }
 
 TEST("unexpected object") {
-  auto circle_type = std::vector<uint16_t>{295};
+  auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
   check(!builder.begin_field("foo", false, std::span{circle_type}, 0));
 }
 

@@ -35,7 +35,7 @@ using float_actor = caf::typed_actor<caf::result<void>(float)>;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(typed_spawn_test, caf::first_custom_type_id + 120)
+CAF_BEGIN_TYPE_ID_BLOCK(typed_spawn_test, caf::first_custom_type_id + 150, 10)
 
   CAF_ADD_TYPE_ID(typed_spawn_test, (my_request))
   CAF_ADD_TYPE_ID(typed_spawn_test, (int_actor))

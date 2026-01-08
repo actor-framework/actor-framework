@@ -18,8 +18,11 @@
 #include <mutex>
 
 // Some offset to avoid collisions with other type IDs.
-CAF_BEGIN_TYPE_ID_BLOCK(producer_adapter_test, caf::first_custom_type_id + 10)
+CAF_BEGIN_TYPE_ID_BLOCK(producer_adapter_test, caf::first_custom_type_id + 180,
+                        10)
+
   CAF_ADD_TYPE_ID(producer_adapter_test, (caf::cow_vector<int>) )
+
 CAF_END_TYPE_ID_BLOCK(producer_adapter_test)
 
 using namespace caf;

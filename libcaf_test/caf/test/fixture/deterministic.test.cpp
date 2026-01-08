@@ -42,7 +42,8 @@ bool operator==(my_int lhs, int rhs) noexcept {
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(deterministic_fixture_test, caf::first_custom_type_id)
+CAF_BEGIN_TYPE_ID_BLOCK(deterministic_fixture_test,
+                        caf::first_custom_type_id + 230, 10)
 
   CAF_ADD_TYPE_ID(deterministic_fixture_test, (my_int))
 

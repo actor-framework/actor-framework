@@ -15,7 +15,7 @@
 using namespace caf;
 using namespace std::literals;
 
-CAF_BEGIN_TYPE_ID_BLOCK(typed_stream_test, caf::first_custom_type_id + 115)
+CAF_BEGIN_TYPE_ID_BLOCK(typed_stream_test, caf::first_custom_type_id + 160, 10)
 
   CAF_ADD_TYPE_ID(typed_stream_test, (caf::typed_stream<int32_t>) )
 

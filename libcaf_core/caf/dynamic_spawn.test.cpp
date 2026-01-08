@@ -20,7 +20,7 @@
 #include <iostream>
 #include <stack>
 
-CAF_BEGIN_TYPE_ID_BLOCK(dynamic_spawn_test, caf::first_custom_type_id + 105)
+CAF_BEGIN_TYPE_ID_BLOCK(dynamic_spawn_test, caf::first_custom_type_id + 20, 10)
 
   CAF_ADD_ATOM(dynamic_spawn_test, abc_atom)
   CAF_ADD_ATOM(dynamic_spawn_test, name_atom)

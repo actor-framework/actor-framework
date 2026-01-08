@@ -17,7 +17,8 @@
 #include <thread>
 
 // Some offset to avoid collisions with other type IDs.
-CAF_BEGIN_TYPE_ID_BLOCK(blocking_producer_test, caf::first_custom_type_id + 15)
+CAF_BEGIN_TYPE_ID_BLOCK(blocking_producer_test, caf::first_custom_type_id + 170,
+                        10)
   CAF_ADD_TYPE_ID(blocking_producer_test, (caf::cow_vector<int>) )
 CAF_END_TYPE_ID_BLOCK(blocking_producer_test)
 

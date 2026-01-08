@@ -27,7 +27,7 @@ struct widget;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(json_write_test, caf::first_custom_type_id + 60)
+CAF_BEGIN_TYPE_ID_BLOCK(json_write_test, caf::first_custom_type_id + 50, 10)
 
   CAF_ADD_TYPE_ID(json_write_test, (circle))
   CAF_ADD_TYPE_ID(json_write_test, (dummy_struct))

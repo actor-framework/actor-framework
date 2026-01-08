@@ -12,7 +12,7 @@
 
 using namespace caf;
 
-CAF_BEGIN_TYPE_ID_BLOCK(serial_reply_test, caf::first_custom_type_id + 30)
+CAF_BEGIN_TYPE_ID_BLOCK(serial_reply_test, caf::first_custom_type_id + 90, 10)
 
   CAF_ADD_ATOM(serial_reply_test, sub0_atom)
   CAF_ADD_ATOM(serial_reply_test, sub1_atom)

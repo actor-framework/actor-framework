@@ -229,7 +229,7 @@ using a1970 = typed_actor<t1970>;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(typed_actor_test, caf::first_custom_type_id + 130)
+CAF_BEGIN_TYPE_ID_BLOCK(typed_actor_test, caf::first_custom_type_id + 130, 20)
 
   CAF_ADD_TYPE_ID(typed_actor_test, (s01))
   CAF_ADD_TYPE_ID(typed_actor_test, (s02))
