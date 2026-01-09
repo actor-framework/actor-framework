@@ -63,6 +63,18 @@ add_robot_test(
   merge
   --variable BINARY_PATH:$<TARGET_FILE:caf-robot-flow-merge-driver>)
 
+caf_add_test_executable(
+  caf-robot-type-id-driver
+  SOURCES
+    type-id/driver.cpp
+  DEPENDENCIES
+    CAF::core)
+
+add_robot_test(
+  type-id
+  missing-type-id
+  --variable BINARY_PATH:$<TARGET_FILE:caf-robot-type-id-driver>)
+
 # The logging test requires that the trace logging is enabled.
 if (CAF_ENABLE_TRACE_LOGGING)
   caf_add_test_executable(
