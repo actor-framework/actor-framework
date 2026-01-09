@@ -101,4 +101,20 @@ ptrdiff_t router::consume(const request_header& hdr, const_byte_span payload) {
   return static_cast<ptrdiff_t>(payload.size());
 }
 
+error router::begin_chunked_message(const net::http::request_header& hdr) {
+  hdr_ = hdr;
+  return error{};
+}
+
+ptrdiff_t router::consume_chunk(const_byte_span body) {
+  CAF_ASSERT(hdr_.valid());
+  body_.insert(body_.end(), body.begin(), body.end());
+  return body.size();
+}
+
+error router::end_chunked_message() {
+  consume(hdr_, body_);
+  return error{};
+}
+
 } // namespace caf::net::http

@@ -36,13 +36,19 @@ public:
   virtual ptrdiff_t consume(const request_header& hdr, const_byte_span payload)
     = 0;
 
-  // ... before the first chunk ...
+  /// Begins a chunked message.
+  /// @param hdr The header fields for the incoming message.
+  /// @returns An error if the message cannot be started.
   virtual error begin_chunked_message(const request_header& hdr) = 0;
 
-  // ... when receiving data ...
+  /// Consumes a chunk of the message.
+  /// @param payload The payload of the received chunk.
+  /// @returns The number of consumed bytes or a negative value to signal an
+  ///          error.
   virtual ptrdiff_t consume_chunk(const_byte_span payload) = 0;
 
-  // ... after the last chunk
+  /// Ends a chunked message.
+  /// @returns An error if the message cannot be ended.
   virtual error end_chunked_message() = 0;
 
   /// Initializes the upper layer.

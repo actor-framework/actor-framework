@@ -78,9 +78,10 @@ public:
     return error{};
   }
 
-  ptrdiff_t consume_chunk(const_byte_span body) override {
-    current_response.chunked_payload.emplace_back(body.begin(), body.end());
-    return body.size();
+  ptrdiff_t consume_chunk(const_byte_span payload) override {
+    current_response.chunked_payload.emplace_back(payload.begin(),
+                                                  payload.end());
+    return payload.size();
   }
 
   error end_chunked_message() override {
