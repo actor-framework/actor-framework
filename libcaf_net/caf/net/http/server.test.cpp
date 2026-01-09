@@ -41,6 +41,12 @@ struct response_t {
     else
       return {};
   }
+
+  void clear() {
+    hdr = net::http::request_header{};
+    payload.clear();
+    chunked_payload.clear();
+  }
 };
 
 class app_t : public net::http::upper_layer::server {
@@ -88,6 +94,7 @@ public:
     if (response)
       response.set_value(current_response);
     cb(down, current_response);
+    current_response.clear();
     return error{};
   }
 
@@ -112,6 +119,7 @@ public:
     if (response)
       response.set_value(current_response);
     cb(down, current_response);
+    current_response.clear();
     return static_cast<ptrdiff_t>(body.size());
   }
 };
@@ -355,7 +363,7 @@ SCENARIO("the server handles edge cases for chunked HTTP requests") {
         require(maybe_res.has_value());
         auto& res = *maybe_res;
         check_eq(res.hdr.method(), net::http::method::post);
-        check_eq(res.payload_as_str(), "");
+        check(res.chunked_payload.empty());
       }
     }
   }
@@ -454,7 +462,6 @@ SCENARIO("the server handles edge cases for chunked HTTP requests") {
       }
     }
   }
-
   GIVEN("a chunked request without the final zero chunk") {
     auto req_headers = "POST /upload HTTP/1.1\r\n"
                        "Host: localhost:8000\r\n"

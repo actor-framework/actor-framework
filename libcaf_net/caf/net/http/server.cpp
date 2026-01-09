@@ -274,10 +274,15 @@ public:
               abort(err);
               return -1;
             }
+            received_chunks_size_ = 0;
             mode_ = mode::read_header;
             return consumed;
           }
-          up_->consume_chunk(remainder.subspan(0, chunk_size));
+          if (up_->consume_chunk(remainder.subspan(0, chunk_size)) < 0) {
+            // TODO write response
+            abort(sec::runtime_error, "error while consuming HTTP chunk");
+            return -1;
+          }
           received_chunks_size_ += chunk_size;
           input = remainder.subspan(chunk_size + 2);
           break;

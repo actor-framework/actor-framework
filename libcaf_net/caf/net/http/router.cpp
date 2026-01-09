@@ -113,7 +113,12 @@ ptrdiff_t router::consume_chunk(const_byte_span body) {
 }
 
 error router::end_chunked_message() {
-  consume(hdr_, body_);
+  auto ret = consume(hdr_, body_);
+  body_.clear();
+  hdr_ = request_header{};
+  if (ret < 0)
+    return error{sec::protocol_error,
+                 "Failed to process the end of the chunked request."};
   return error{};
 }
 
