@@ -59,18 +59,18 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto src = ptr->sender;
-  auto collects_metrics = getf(abstract_actor::collects_metrics_flag);
-  if (collects_metrics) {
+  if (auto* mailbox_size = metrics_.mailbox_size) {
     ptr->set_enqueue_time();
-    metrics_.mailbox_size->inc();
+    mailbox_size->inc();
   }
   // returns false if mailbox has been closed
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
-      home_system().base_metrics().rejected_messages->inc();
-      if (collects_metrics)
-        metrics_.mailbox_size->dec();
+      home_system().message_rejected(this);
+      if (auto* mailbox_size = metrics_.mailbox_size) {
+        mailbox_size->dec();
+      }
       if (mid.is_request()) {
         detail::sync_request_bouncer srb;
         srb(src, mid);

@@ -207,6 +207,7 @@ caf_add_component(
     caf/detail/private_thread.cpp
     caf/detail/private_thread_pool.cpp
     caf/detail/private_thread_pool.test.cpp
+    caf/detail/response_promise_state.cpp
     caf/detail/rfc3629.cpp
     caf/detail/rfc3629.test.cpp
     caf/detail/ring_buffer.test.cpp

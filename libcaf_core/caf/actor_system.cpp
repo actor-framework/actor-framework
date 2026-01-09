@@ -13,6 +13,7 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/daemons.hpp"
+#include "caf/detail/glob_match.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread_pool.hpp"
 #include "caf/event_based_actor.hpp"
@@ -25,6 +26,7 @@
 #include "caf/telemetry/metric_registry.hpp"
 #include "caf/thread_owner.hpp"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdio>
@@ -54,19 +56,33 @@ namespace {
 // process. Batch messages and ACKs are treated equally. Open, close, and error
 // messages are evaluated to add and remove state as needed.
 
-auto make_base_metrics(telemetry::metric_registry& reg) {
-  return actor_system::base_metrics_t{
-    // Initialize the base metrics.
-    reg.counter_singleton("caf.system", "rejected-messages",
-                          "Number of rejected messages.", "1", true),
-    reg.counter_family("caf.system", "processed-messages", {"name"},
-                       "Number of processed messages.", "1", true),
-    reg.gauge_singleton("caf.system", "queued-messages",
-                        "Number of messages in all mailboxes.", "1", true),
-  };
-}
+/// Metrics that the actor system collects.
+struct base_metrics_t {
+  /// Counts the number of messages that were rejected because the target
+  /// mailbox was closed or did not exist.
+  telemetry::int_counter* rejected_messages = nullptr;
 
-auto make_actor_metric_families(telemetry::metric_registry& reg) {
+  /// Counts the total number of messages that wait in a mailbox.
+  telemetry::int_gauge* queued_messages = nullptr;
+
+  /// Counts the number of actors that are currently running.
+  telemetry::int_gauge_family* running_count = nullptr;
+
+  /// Counts the total number of processed messages by actor type.
+  telemetry::int_counter_family* processed_messages = nullptr;
+
+  /// Samples how long the actor needs to process messages by actor type.
+  telemetry::dbl_histogram_family* processing_time = nullptr;
+
+  /// Samples how long a message waits in the mailbox before the actor
+  /// processes it.
+  telemetry::dbl_histogram_family* mailbox_time = nullptr;
+
+  /// Counts how many messages are currently waiting in the mailbox.
+  telemetry::int_gauge_family* mailbox_size = nullptr;
+};
+
+auto make_base_metrics(telemetry::metric_registry& reg) {
   // Handling a single message generally should take microseconds. Going up to
   // several milliseconds usually indicates a problem (or blocking operations)
   // but may still be expected for very compute-intense tasks. Single messages
@@ -83,31 +99,24 @@ auto make_actor_metric_families(telemetry::metric_registry& reg) {
     1.,     // 1s
     5.,     // 5s
   }};
-  return actor_system::actor_metric_families_t{
-    reg.histogram_family<double>("caf.actor", "processing-time", {"name"},
-                                 default_buckets,
-                                 "Time an actor needs to process messages.",
-                                 "seconds"),
-    reg.histogram_family<double>(
+  return base_metrics_t{
+    .rejected_messages = reg.counter_singleton(
+      "caf.system", "rejected-messages", "Number of rejected messages."),
+    .queued_messages = reg.gauge_singleton(
+      "caf.system", "queued-messages", "Number of messages in all mailboxes."),
+    .running_count = reg.gauge_family("caf.system", "running-actors", {"name"},
+                                      "Number of currently running actors."),
+    .processed_messages = reg.counter_family("caf.actor", "processed-messages",
+                                             {"name"},
+                                             "Number of processed messages."),
+    .processing_time = reg.histogram_family<double>(
+      "caf.actor", "processing-time", {"name"}, default_buckets,
+      "Time an actor needs to process messages.", "seconds"),
+    .mailbox_time = reg.histogram_family<double>(
       "caf.actor", "mailbox-time", {"name"}, default_buckets,
       "Time a message waits in the mailbox before processing.", "seconds"),
-    reg.gauge_family("caf.actor", "mailbox-size", {"name"},
-                     "Number of messages in the mailbox."),
-    {
-      reg.counter_family("caf.actor.stream", "processed-elements",
-                         {"name", "type"},
-                         "Number of processed stream elements from upstream."),
-      reg.gauge_family("caf.actor.stream", "input-buffer-size",
-                       {"name", "type"},
-                       "Number of buffered stream elements from upstream."),
-      reg.counter_family(
-        "caf.actor.stream", "pushed-elements", {"name", "type"},
-        "Number of elements that have been pushed downstream."),
-      reg.gauge_family("caf.actor.stream", "output-buffer-size",
-                       {"name", "type"},
-                       "Number of buffered output stream elements."),
-    },
-  };
+    .mailbox_size = reg.gauge_family("caf.actor", "mailbox-size", {"name"},
+                                     "Number of messages in the mailbox.")};
 }
 
 class print_state_impl {
@@ -440,9 +449,6 @@ public:
       cfg(&cfg),
       private_threads(parent) {
     memset(&flags, 0xFF, sizeof(flags)); // All flags are ON by default.
-    running_actors_metric_family
-      = metrics.gauge_family("caf.system", "running-actors", {"name"},
-                             "Number of currently running actors.");
     print_state = std::make_unique<print_state_impl>(cfg);
     meta_objects_guard = detail::global_meta_objects_guard();
     if (!meta_objects_guard)
@@ -461,9 +467,6 @@ public:
     if (auto lst = get_as<string_list>(cfg,
                                        "caf.metrics.filters.actors.excludes")) {
       metrics_actors_excludes = std::move(*lst);
-    }
-    if (!metrics_actors_includes.empty()) {
-      actor_metric_families = make_actor_metric_families(metrics);
     }
     // Spin up modules.
     for (auto fn : cfg.module_factories()) {
@@ -560,6 +563,32 @@ public:
     logger = nullptr;
   }
 
+  telemetry::actor_metrics make_actor_metrics(std::string_view name) {
+    telemetry::actor_metrics result;
+    if (flags.collect_running_actors_metrics) {
+      result.running_count
+        = base_metrics.running_count->get_or_add({{"name", name}});
+    }
+    auto matches = [name](const std::string& glob) {
+      // Note: name.data() is guaranteed to be null-terminated in this case.
+      return detail::glob_match(name.data(), glob.c_str());
+    };
+    auto enable_optional_metrics
+      = std::ranges::any_of(metrics_actors_includes, matches)
+        && std::ranges::none_of(metrics_actors_excludes, matches);
+    if (enable_optional_metrics) {
+      result.processed_messages
+        = base_metrics.processed_messages->get_or_add({{"name", name}});
+      result.processing_time
+        = base_metrics.processing_time->get_or_add({{"name", name}});
+      result.mailbox_time
+        = base_metrics.mailbox_time->get_or_add({{"name", name}});
+      result.mailbox_size
+        = base_metrics.mailbox_size->get_or_add({{"name", name}});
+    }
+    return result;
+  }
+
   /// Used to generate ascending actor IDs.
   std::atomic<size_t> ids;
 
@@ -612,12 +641,6 @@ public:
   /// for faster lookups at runtime.
   std::vector<std::string> metrics_actors_excludes;
 
-  /// Caches families for optional actor metrics.
-  actor_metric_families_t actor_metric_families;
-
-  /// Caches the metric family for the `caf.running-actors` metric.
-  telemetry::int_gauge_family* running_actors_metric_family;
-
   /// Manages threads for detached actors.
   detail::private_thread_pool private_threads;
 
@@ -659,42 +682,14 @@ actor_system::~actor_system() {
 
 // -- properties ---------------------------------------------------------------
 
-actor_system::base_metrics_t& actor_system::base_metrics() noexcept {
-  return impl_->base_metrics;
-}
-
-const actor_system::base_metrics_t&
-actor_system::base_metrics() const noexcept {
-  return impl_->base_metrics;
-}
-
-const actor_system::actor_metric_families_t&
-actor_system::actor_metric_families() const noexcept {
-  return impl_->actor_metric_families;
-}
-
 detail::global_meta_objects_guard_type
 actor_system::meta_objects_guard() const noexcept {
   return impl_->meta_objects_guard;
 }
 
-std::span<const std::string>
-actor_system::metrics_actors_includes() const noexcept {
-  return impl_->metrics_actors_includes;
-}
-
-std::span<const std::string>
-actor_system::metrics_actors_excludes() const noexcept {
-  return impl_->metrics_actors_excludes;
-}
-
-bool actor_system::collect_running_actors_metrics() const noexcept {
-  return impl_->flags.collect_running_actors_metrics;
-}
-
-telemetry::int_gauge_family*
-actor_system::running_actors_metric_family() const noexcept {
-  return impl_->running_actors_metric_family;
+telemetry::actor_metrics
+actor_system::make_actor_metrics(std::string_view name) {
+  return impl_->make_actor_metrics(name);
 }
 
 const actor_system_config& actor_system::config() const {
@@ -897,6 +892,10 @@ void actor_system::set_scheduler(std::unique_ptr<caf::scheduler> ptr) {
 
 void actor_system::set_node(node_id id) {
   impl_->node = id;
+}
+
+void actor_system::message_rejected(abstract_actor*) {
+  impl_->base_metrics.rejected_messages->inc();
 }
 
 } // namespace caf

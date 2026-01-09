@@ -29,35 +29,6 @@
 
 namespace caf {
 
-namespace {
-
-local_actor::metrics_t make_instance_metrics(actor_system& sys,
-                                             local_actor* self,
-                                             std::string_view name) {
-  const auto& includes = sys.metrics_actors_includes();
-  const auto& excludes = sys.metrics_actors_excludes();
-  auto matches = [name](const std::string& glob) {
-    // Note: name.data() is guaranteed to be null-terminated in this case.
-    return detail::glob_match(name.data(), glob.c_str());
-  };
-  if (includes.empty() || std::ranges::none_of(includes, matches)
-      || std::ranges::any_of(excludes, matches))
-    return {
-      nullptr,
-      nullptr,
-      nullptr,
-    };
-  self->setf(abstract_actor::collects_metrics_flag);
-  const auto& families = sys.actor_metric_families();
-  return {
-    families.processing_time->get_or_add({{"name", name}}),
-    families.mailbox_time->get_or_add({{"name", name}}),
-    families.mailbox_size->get_or_add({{"name", name}}),
-  };
-}
-
-} // namespace
-
 local_actor::local_actor(actor_config& cfg)
   : abstract_actor(cfg),
     context_(cfg.sched),
@@ -71,14 +42,10 @@ local_actor::~local_actor() {
 }
 
 void local_actor::setup_metrics() {
-  auto& sys = home_system();
-  auto nstr = std::string_view{name()};
-  if (sys.collect_running_actors_metrics()) {
-    running_count_
-      = sys.running_actors_metric_family()->get_or_add({{"name", nstr}});
-    running_count_->inc();
+  metrics_ = system().make_actor_metrics(name());
+  if (auto* running_count = metrics_.running_count) {
+    running_count->inc();
   }
-  metrics_ = make_instance_metrics(sys, this, nstr);
 }
 
 auto local_actor::now() const noexcept -> clock_type::time_point {
@@ -167,8 +134,8 @@ void local_actor::initialize() {
 
 void local_actor::on_cleanup([[maybe_unused]] const error& reason) {
   auto lg = log::core::trace("reason = {}", reason);
-  if (running_count_) {
-    running_count_->dec();
+  if (auto* running_count = metrics_.running_count) {
+    running_count->dec();
   }
   on_exit();
   CAF_LOG_TERMINATE_EVENT(this, reason);
@@ -184,7 +151,7 @@ void local_actor::do_anon_send(abstract_actor* receiver,
                       context());
     return;
   }
-  system().base_metrics().rejected_messages->inc();
+  system().message_rejected(nullptr);
 }
 
 disposable local_actor::do_scheduled_anon_send(strong_actor_ptr receiver,
@@ -196,7 +163,7 @@ disposable local_actor::do_scheduled_anon_send(strong_actor_ptr receiver,
       timeout, receiver,
       make_mailbox_element(nullptr, make_message_id(priority), std::move(msg)));
   }
-  system().base_metrics().rejected_messages->inc();
+  system().message_rejected(nullptr);
   return {};
 }
 

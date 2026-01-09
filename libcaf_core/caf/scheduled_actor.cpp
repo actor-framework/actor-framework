@@ -176,10 +176,9 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  auto collects_metrics = getf(abstract_actor::collects_metrics_flag);
-  if (collects_metrics) {
+  if (auto* mailbox_size = metrics_.mailbox_size) {
     ptr->set_enqueue_time();
-    metrics_.mailbox_size->inc();
+    mailbox_size->inc();
   }
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::unblocked_reader: {
@@ -200,9 +199,10 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
       return true;
     default: { // intrusive::inbox_result::queue_closed
       CAF_LOG_REJECT_EVENT();
-      home_system().base_metrics().rejected_messages->inc();
-      if (collects_metrics)
-        metrics_.mailbox_size->dec();
+      home_system().message_rejected(this);
+      if (auto* mailbox_size = metrics_.mailbox_size) {
+        mailbox_size->dec();
+      }
       if (mid.is_request()) {
         detail::sync_request_bouncer f;
         f(sender, mid);
@@ -239,9 +239,6 @@ void scheduled_actor::launch(scheduler* sched, bool lazy, bool hide) {
     intrusive_ptr_add_ref(ctrl());
     sched->delay(this, resumable::initialization_event_id);
   }
-  processed_messages_
-    = home_system().base_metrics().processed_messages->get_or_add(
-      {{"name", name()}});
 }
 
 void scheduled_actor::on_cleanup(const error& reason) {
@@ -282,8 +279,8 @@ void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
   auto guard = detail::scope_guard{[this, &consumed]() noexcept {
     if (consumed > 0) {
       auto val = static_cast<int64_t>(consumed);
-      if (processed_messages_)
-        processed_messages_->inc(val);
+      if (metrics_.processed_messages)
+        metrics_.processed_messages->inc(val);
     }
   }};
   auto reset_timeouts_if_needed = [&] {
