@@ -43,8 +43,8 @@ public:
 
   /// Consumes a chunk of the message.
   /// @param payload The payload of the received chunk.
-  /// @returns The number of consumed bytes or a negative value to signal an
-  ///          error.
+  /// @returns An error if the chunk cannot be consumed, or an empty error on
+  ///          success.
   virtual error consume_chunk(const_byte_span payload) = 0;
 
   /// Ends a chunked message.

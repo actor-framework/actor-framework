@@ -371,7 +371,7 @@ SCENARIO("the server receives the largest accepted chunked HTTP request") {
       THEN("the HTTP layer parses the chunked request and calls the "
            "application layer") {
         auto maybe_res = res_promise.get_future().get(1s);
-        log::test::error("THIS IS Error: {}", maybe_res);
+
         require(maybe_res.has_value());
         check_eq(maybe_res->hdr.method(), net::http::method::post);
         check_eq(maybe_res->hdr.version(), "HTTP/1.1");
