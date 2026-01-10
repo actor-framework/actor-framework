@@ -45,7 +45,7 @@ public:
   /// @param payload The payload of the received chunk.
   /// @returns The number of consumed bytes or a negative value to signal an
   ///          error.
-  virtual ptrdiff_t consume_chunk(const_byte_span payload) = 0;
+  virtual error consume_chunk(const_byte_span payload) = 0;
 
   /// Ends a chunked message.
   /// @returns An error if the message cannot be ended.

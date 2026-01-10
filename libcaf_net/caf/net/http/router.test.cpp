@@ -78,8 +78,8 @@ public:
     return error{};
   }
 
-  ptrdiff_t consume_chunk(const_byte_span) override {
-    return 0;
+  error consume_chunk(const_byte_span) override {
+    return error{};
   }
 
   error end_chunked_message() override {

@@ -73,7 +73,7 @@ public:
 
   error begin_chunked_message(const net::http::request_header&) override;
 
-  ptrdiff_t consume_chunk(const_byte_span) override;
+  error consume_chunk(const_byte_span) override;
 
   error end_chunked_message() override;
 

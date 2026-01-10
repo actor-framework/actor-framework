@@ -187,7 +187,7 @@ public:
               mode_ = mode::read_chunks;
               if (auto err = up_->begin_chunked_message(hdr_); err.valid()) {
                 write_response(status::internal_server_error,
-                               "Failed to initiate chunked message.");
+                               "Failed to initiate chunked transfer.");
                 abort(err);
                 return -1;
               }
@@ -246,8 +246,11 @@ public:
           if (remainder.size() < chunk_size + 2) {
             // Configure the policy for the next call to consume.
             // Await at least chunk line length + chunk_size bytes + crlf.
-            const auto least = input.size() - remainder.size() + chunk_size + 2;
-            const auto most = max_request_size_ - received_chunks_size_;
+            const auto chunk_line_length = input.size() - remainder.size();
+            const auto max_chunk_size = max_request_size_
+                                        - received_chunks_size_;
+            const auto least = chunk_line_length + chunk_size + 2;
+            const auto most = chunk_line_length + max_chunk_size + 2;
             down_->configure_read(receive_policy::between(least, most));
             return consumed;
           }
@@ -278,9 +281,11 @@ public:
             mode_ = mode::read_header;
             return consumed;
           }
-          if (up_->consume_chunk(remainder.subspan(0, chunk_size)) < 0) {
-            // TODO write response
-            abort(sec::runtime_error, "error while consuming HTTP chunk");
+          if (auto err = up_->consume_chunk(remainder.subspan(0, chunk_size));
+              err.valid()) {
+            write_response(status::internal_server_error,
+                           "Failed to process chunk during transfer.");
+            abort(err);
             return -1;
           }
           received_chunks_size_ += chunk_size;

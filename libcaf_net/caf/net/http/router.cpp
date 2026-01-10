@@ -106,10 +106,10 @@ error router::begin_chunked_message(const net::http::request_header& hdr) {
   return error{};
 }
 
-ptrdiff_t router::consume_chunk(const_byte_span body) {
+error router::consume_chunk(const_byte_span body) {
   CAF_ASSERT(hdr_.valid());
   body_.insert(body_.end(), body.begin(), body.end());
-  return body.size();
+  return error{};
 }
 
 error router::end_chunked_message() {
