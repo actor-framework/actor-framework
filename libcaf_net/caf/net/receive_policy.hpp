@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/detail/assert.hpp"
+
 #include <cstdint>
 
 namespace caf::net {
@@ -22,6 +24,7 @@ struct receive_policy {
   /// @pre `min_size > 0`
   /// @pre `min_size <= max_size`
   static constexpr receive_policy between(size_t min_size, size_t max_size) {
+    CAF_ASSERT(min_size <= max_size);
     return {min_size, max_size};
   }
 
