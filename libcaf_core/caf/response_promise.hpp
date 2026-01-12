@@ -8,13 +8,12 @@
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/response_promise_state.hpp"
 #include "caf/detail/send_type_check.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/response_type.hpp"
-
-#include <vector>
 
 namespace caf {
 
@@ -162,41 +161,9 @@ private:
   static void respond_to(local_actor* self, mailbox_element* request,
                          error& response);
 
-  // -- nested types -----------------------------------------------------------
-
-  // Note: response promises must remain local to their owner. Hence, we don't
-  //       need a thread-safe reference count for the state.
-  class CAF_CORE_EXPORT state {
-  public:
-    state() = default;
-    state(const state&) = delete;
-    state& operator=(const state&) = delete;
-    ~state();
-
-    void cancel();
-
-    void deliver_impl(message msg);
-
-    void delegate_impl(abstract_actor* receiver, message msg);
-
-    mutable size_t ref_count = 1;
-    strong_actor_ptr self;
-    strong_actor_ptr source;
-    message_id id;
-
-    friend void intrusive_ptr_add_ref(const state* ptr) {
-      ++ptr->ref_count;
-    }
-
-    friend void intrusive_ptr_release(const state* ptr) {
-      if (--ptr->ref_count == 0)
-        delete ptr;
-    }
-  };
-
   // -- member variables -------------------------------------------------------
 
-  intrusive_ptr<state> state_;
+  intrusive_ptr<detail::response_promise_state> state_;
 };
 
 } // namespace caf

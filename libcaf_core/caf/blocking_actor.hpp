@@ -27,6 +27,7 @@
 #include "caf/mixin/requester.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
+#include "caf/telemetry/actor_metrics.hpp"
 #include "caf/typed_actor.hpp"
 
 #include <chrono>
