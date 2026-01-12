@@ -100,9 +100,8 @@ namespace {
 // intrusive_ptr_release_impl exactly once after running this function object.
 class blocking_actor_runner : public resumable {
 public:
-  explicit blocking_actor_runner(blocking_actor* self,
-                                 detail::private_thread* thread, bool hidden)
-    : self_(self), thread_(thread), hidden_(hidden) {
+  explicit blocking_actor_runner(blocking_actor* self, detail::private_thread* thread)
+    : self_(self), thread_(thread) {
     intrusive_ptr_add_ref(self->ctrl());
   }
 
@@ -127,15 +126,10 @@ public:
     self_->act();
     rsn = self_->fail_state();
 #endif
-    self_->cleanup(std::move(rsn), ctx);
-    [[maybe_unused]] auto id = self_->id();
     auto& sys = self_->system();
-    intrusive_ptr_release(self_->ctrl());
     sys.release_private_thread(thread_);
-    if (!hidden_) {
-      [[maybe_unused]] auto count = sys.registry().dec_running();
-      log::system::debug("actor {} decreased running count to {}", id, count);
-    }
+    self_->cleanup(std::move(rsn), ctx);
+    intrusive_ptr_release(self_->ctrl());
   }
 
   void ref_resumable() const noexcept final {
@@ -149,26 +143,19 @@ public:
 private:
   blocking_actor* self_;
   detail::private_thread* thread_;
-  bool hidden_;
 };
 
 } // namespace
 
-void blocking_actor::launch(scheduler*, bool, bool hide) {
+void blocking_actor::launch(scheduler*, bool) {
   CAF_PUSH_AID_FROM_PTR(this);
-  auto lg = log::core::trace("hide = {}", hide);
+  auto lg = log::core::trace("");
   CAF_ASSERT(getf(is_blocking_flag));
   // Try to acquire a thread before incrementing the running count, since this
   // may throw.
   auto& sys = home_system();
   auto thread = sys.acquire_private_thread();
-  // Note: must *not* call register_at_system() to stop actor cleanup from
-  // decrementing the count before releasing the thread.
-  if (!hide) {
-    [[maybe_unused]] auto count = sys.registry().inc_running();
-    log::system::debug("actor {} increased running count to {}", id(), count);
-  }
-  thread->resume(new blocking_actor_runner(this, thread, hide));
+  thread->resume(new blocking_actor_runner(this, thread));
 }
 
 blocking_actor::receive_while_helper

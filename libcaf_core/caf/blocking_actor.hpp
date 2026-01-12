@@ -168,7 +168,7 @@ public:
 
   const char* name() const override;
 
-  void launch(scheduler* sched, bool lazy, bool hide) override;
+  void launch(scheduler* sched, bool lazy) override;
 
   // -- virtual modifiers ------------------------------------------------------
 

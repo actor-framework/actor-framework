@@ -28,12 +28,10 @@ public:
     return "scoped_actor";
   }
 
-  void launch(scheduler*, bool, bool hide) override {
+  void launch(scheduler*, bool) override {
     CAF_PUSH_AID_FROM_PTR(this);
-    std::ignore = log::system::trace("hide = {}", hide);
+    auto lg = log::system::trace("");
     CAF_ASSERT(getf(is_blocking_flag));
-    if (!hide)
-      register_at_system();
     initialize();
   }
 };

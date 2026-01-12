@@ -96,6 +96,7 @@ namespace caf {
 class CAF_CORE_EXPORT actor_system {
 public:
   friend class abstract_actor;
+  friend class actor_launcher;
   friend class blocking_actor;
   friend class detail::actor_system_access;
   friend class detail::response_promise_state;
@@ -467,8 +468,7 @@ public:
     CAF_SET_LOGGER_SYS(this);
     auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
                              std::forward<Ts>(xs)...);
-    auto ptr = actor_cast<C*>(res);
-    ptr->launch(cfg.sched, has_lazy_init_flag(Os), has_hide_flag(Os));
+    do_launch(actor_cast<C*>(res), cfg.sched, Os);
     return res;
   }
 
@@ -525,6 +525,8 @@ private:
   detail::mailbox_factory* mailbox_factory();
 
   void do_print(term color, const char* buf, size_t num_bytes);
+
+  void do_launch(local_actor* ptr, caf::scheduler* ctx, spawn_options options);
 
   // -- callbacks for actor_system_access --------------------------------------
 

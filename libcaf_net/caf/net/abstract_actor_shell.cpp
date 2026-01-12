@@ -167,12 +167,8 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
 
 // -- overridden functions of local_actor --------------------------------------
 
-void abstract_actor_shell::launch(scheduler*, bool, bool hide) {
-  CAF_PUSH_AID_FROM_PTR(this);
-  auto lg = log::net::trace("hide = {}", hide);
+void abstract_actor_shell::launch(scheduler*, bool) {
   CAF_ASSERT(!getf(is_blocking_flag));
-  if (!hide)
-    register_at_system();
 }
 
 void abstract_actor_shell::on_cleanup(const error& reason) {

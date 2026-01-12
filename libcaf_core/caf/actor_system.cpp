@@ -18,6 +18,7 @@
 #include "caf/detail/private_thread_pool.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/log/core.hpp"
+#include "caf/log/system.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/scheduler.hpp"
 #include "caf/spawn_options.hpp"
@@ -872,6 +873,18 @@ void actor_system::redirect_text_output(void* out,
 
 void actor_system::do_print(term color, const char* buf, size_t num_bytes) {
   impl_->print_state->print(color, buf, num_bytes);
+}
+
+void actor_system::do_launch(local_actor* ptr, caf::scheduler* ctx,
+                             spawn_options options) {
+  if (!has_hide_flag(options)) {
+    ptr->setf(abstract_actor::is_registered_flag);
+    auto count = registry().inc_running();
+    log::system::debug("actor {} increased running count to {}", ptr->id(),
+                       count);
+    // Note: decrementing the count happens in abstract_actor::cleanup().
+  }
+  ptr->launch(ctx, has_lazy_init_flag(options));
 }
 
 // -- callbacks for actor_system_access ----------------------------------------
