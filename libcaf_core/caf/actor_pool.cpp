@@ -4,12 +4,10 @@
 
 #include "caf/actor_pool.hpp"
 
-#include "caf/actor_registry.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/default_attachable.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
 
 #include <atomic>
@@ -87,9 +85,7 @@ actor actor_pool::make(actor_system& sys, policy pol) {
                                            &sys, cfg);
   auto ptr = actor_cast<actor_pool*>(res);
   ptr->setf(abstract_actor::is_registered_flag);
-  auto count = sys.registry().inc_running();
-  log::system::debug("actor {} increased running count to {}", ptr->id(),
-                     count);
+  sys.inc_running_actors_count(ptr->id());
   ptr->policy_ = std::move(pol);
   return res;
 }

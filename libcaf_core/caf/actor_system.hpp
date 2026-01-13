@@ -97,6 +97,7 @@ class CAF_CORE_EXPORT actor_system {
 public:
   friend class abstract_actor;
   friend class actor_launcher;
+  friend class actor_pool;
   friend class blocking_actor;
   friend class detail::actor_system_access;
   friend class detail::response_promise_state;
@@ -294,6 +295,9 @@ public:
 
   /// Blocks this caller until all actors are done.
   void await_all_actors_done() const;
+
+  /// Returns the number of currently running actors.
+  size_t running_actors_count() const;
 
   /// Send a `node_down_msg` to `observer` if this system loses connection to
   /// `node`.
@@ -515,6 +519,21 @@ private:
                   "This actor type cannot be spawned through an actor system. "
                   "Probably you have tried to spawn a broker.");
   }
+
+  /// Increases running-actors-count by one.
+  /// @param who The ID of the actor that is being registered.
+  /// @returns the increased count.
+  size_t inc_running_actors_count(actor_id who);
+
+  /// Decreases running-actors-count by one.
+  /// @param who The ID of the actor that is being unregistered.
+  /// @returns the decreased count.
+  size_t dec_running_actors_count(actor_id who);
+
+  /// Blocks the caller until running-actors-count becomes `expected`
+  /// (must be either 0 or 1) or timeout is reached.
+  void await_running_actors_count_equal(size_t expected,
+                                        timespan timeout = infinite) const;
 
   expected<strong_actor_ptr>
   dyn_spawn_impl(const std::string& name, message& args, caf::scheduler* ctx,

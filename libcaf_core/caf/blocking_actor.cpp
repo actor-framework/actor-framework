@@ -4,7 +4,6 @@
 
 #include "caf/blocking_actor.hpp"
 
-#include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/detail/assert.hpp"
@@ -100,7 +99,8 @@ namespace {
 // intrusive_ptr_release_impl exactly once after running this function object.
 class blocking_actor_runner : public resumable {
 public:
-  explicit blocking_actor_runner(blocking_actor* self, detail::private_thread* thread)
+  explicit blocking_actor_runner(blocking_actor* self,
+                                 detail::private_thread* thread)
     : self_(self), thread_(thread) {
     intrusive_ptr_add_ref(self->ctrl());
   }
@@ -169,8 +169,7 @@ blocking_actor::receive_while(const bool& ref) {
 }
 
 void blocking_actor::await_all_other_actors_done() {
-  system().registry().await_running_count_equal(getf(is_registered_flag) ? 1
-                                                                         : 0);
+  system().await_running_actors_count_equal(getf(is_registered_flag) ? 1 : 0);
 }
 
 void blocking_actor::act() {

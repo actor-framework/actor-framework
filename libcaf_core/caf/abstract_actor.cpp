@@ -14,7 +14,6 @@
 #include "caf/default_attachable.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/log/core.hpp"
-#include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
 
@@ -171,8 +170,7 @@ bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(fail_state_, sched);
   if (getf(is_registered_flag)) {
-    auto count = home_system().registry().dec_running();
-    log::system::debug("actor {} decreased running count to {}", id(), count);
+    home_system().dec_running_actors_count(id());
   }
   on_cleanup(fail_state_);
   return true;

@@ -291,13 +291,13 @@ struct fixture : test::fixture::deterministic {
     log::test::debug("the server returns true for equal numbers");
     inject().with(my_request{42, 42}).from(self).to(ts);
     check_received(self, true);
-    this_test.check_eq(sys.registry().running(), 2u);
+    this_test.check_eq(sys.running_actors_count(), 2u);
     auto c1 = self->spawn(client, self, ts);
     dispatch_messages();
     auto received_msg = std::make_shared<bool>(false);
     self->receive([&received_msg](ok_atom) { *received_msg = true; });
     this_test.check(*received_msg);
-    this_test.check_eq(sys.registry().running(), 2u);
+    this_test.check_eq(sys.running_actors_count(), 2u);
   }
 };
 

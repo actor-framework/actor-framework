@@ -215,41 +215,6 @@ public:
     }
   }
 
-  size_t inc_running() override {
-    return ++running_;
-  }
-
-  size_t dec_running() override {
-    auto new_val = --running_;
-    if (new_val <= 1) {
-      std::unique_lock guard{running_mtx_};
-      running_cv_.notify_all();
-    }
-    return new_val;
-  }
-
-  /// Returns the number of currently running actors.
-  size_t running() const override {
-    return running_.load();
-  }
-
-  /// Blocks the caller until running-actors-count becomes `expected`
-  /// (must be either 0 or 1) or timeout is reached.
-  void await_running_count_equal(size_t expected,
-                                 timespan timeout = infinite) const override {
-    CAF_ASSERT(expected == 0 || expected == 1);
-    auto lg = log::core::trace("expected = {}", expected);
-    std::unique_lock guard{running_mtx_};
-    auto pred = [this, &expected] {
-      log::core::debug("running = {}", running());
-      return running() == expected;
-    };
-    if (timeout == infinite)
-      running_cv_.wait(guard, pred);
-    else
-      running_cv_.wait_for(guard, timeout, pred);
-  }
-
   /// Removes a name mapping.
   void erase(const std::string& key) override {
     // Stores a reference to the actor we're going to remove for the same
@@ -333,10 +298,6 @@ private:
   }
 
   using entries = std::unordered_map<actor_id, strong_actor_ptr>;
-
-  std::atomic<size_t> running_ = 0;
-  mutable std::mutex running_mtx_;
-  mutable std::condition_variable running_cv_;
 
   mutable std::shared_mutex instances_mtx_;
   entries entries_;
@@ -542,7 +503,7 @@ public:
       auto lg = log::core::trace("");
       log::core::debug("shutdown actor system");
       if (flags.await_actors_before_shutdown) {
-        registry.await_running_count_equal(0);
+        await_running_actors_count_equal(0);
       }
       // stop modules in reverse order
       for (auto i = modules.rbegin(); i != modules.rend(); ++i) {
@@ -590,6 +551,38 @@ public:
     return result;
   }
 
+  size_t inc_running_actors_count(actor_id who) {
+    auto count = ++running_actors_count;
+    log::system::debug("actor {} increased running count to {}", who, count);
+    return count;
+  }
+
+  size_t dec_running_actors_count(actor_id who) {
+    auto count = --running_actors_count;
+    log::system::debug("actor {} decreased running count to {}", who, count);
+    if (count <= 1) {
+      std::unique_lock guard{running_actors_mtx};
+      running_actors_cv.notify_all();
+    }
+    return count;
+  }
+
+  void await_running_actors_count_equal(size_t expected,
+                                        timespan timeout = infinite) {
+    CAF_ASSERT(expected == 0 || expected == 1);
+    auto lg = log::core::trace("expected = {}", expected);
+    std::unique_lock guard{running_actors_mtx};
+    auto pred = [this, &expected] {
+      auto running = running_actors_count.load();
+      log::core::debug("running = {}, expected = {}", running, expected);
+      return running == expected;
+    };
+    if (timeout == infinite)
+      running_actors_cv.wait(guard, pred);
+    else
+      running_actors_cv.wait_for(guard, timeout, pred);
+  }
+
   /// Used to generate ascending actor IDs.
   std::atomic<size_t> ids;
 
@@ -604,6 +597,15 @@ public:
 
   /// Maps well-known actor names to actor handles.
   actor_registry_impl registry;
+
+  /// The number of currently running actors.
+  std::atomic<size_t> running_actors_count = 0;
+
+  /// Mutex for the running actors count condition variable.
+  mutable std::mutex running_actors_mtx;
+
+  /// Condition variable for waiting on the running actors count.
+  mutable std::condition_variable running_actors_cv;
 
   /// Manages log output.
   intrusive_ptr<caf::logger> logger;
@@ -776,7 +778,24 @@ actor_id actor_system::latest_actor_id() const {
 }
 
 void actor_system::await_all_actors_done() const {
-  impl_->registry.await_running_count_equal(0);
+  await_running_actors_count_equal(0);
+}
+
+size_t actor_system::inc_running_actors_count(actor_id who) {
+  return impl_->inc_running_actors_count(who);
+}
+
+size_t actor_system::dec_running_actors_count(actor_id who) {
+  return impl_->dec_running_actors_count(who);
+}
+
+size_t actor_system::running_actors_count() const {
+  return impl_->running_actors_count.load();
+}
+
+void actor_system::await_running_actors_count_equal(size_t expected,
+                                                    timespan timeout) const {
+  impl_->await_running_actors_count_equal(expected, timeout);
 }
 
 void actor_system::monitor(const node_id& node, const actor_addr& observer) {
@@ -879,9 +898,7 @@ void actor_system::do_launch(local_actor* ptr, caf::scheduler* ctx,
                              spawn_options options) {
   if (!has_hide_flag(options)) {
     ptr->setf(abstract_actor::is_registered_flag);
-    auto count = registry().inc_running();
-    log::system::debug("actor {} increased running count to {}", ptr->id(),
-                       count);
+    inc_running_actors_count(ptr->id());
     // Note: decrementing the count happens in abstract_actor::cleanup().
   }
   ptr->launch(ctx, has_lazy_init_flag(options));
