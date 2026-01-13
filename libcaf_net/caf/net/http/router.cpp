@@ -101,4 +101,25 @@ ptrdiff_t router::consume(const request_header& hdr, const_byte_span payload) {
   return static_cast<ptrdiff_t>(payload.size());
 }
 
+error router::begin_chunked_message(const net::http::request_header& hdr) {
+  hdr_ = hdr;
+  return error{};
+}
+
+error router::consume_chunk(const_byte_span body) {
+  CAF_ASSERT(hdr_.valid());
+  body_.insert(body_.end(), body.begin(), body.end());
+  return error{};
+}
+
+error router::end_chunked_message() {
+  auto ret = consume(hdr_, body_);
+  body_.clear();
+  hdr_ = request_header{};
+  if (ret < 0)
+    return error{sec::protocol_error,
+                 "Failed to process the end of the chunked request."};
+  return error{};
+}
+
 } // namespace caf::net::http

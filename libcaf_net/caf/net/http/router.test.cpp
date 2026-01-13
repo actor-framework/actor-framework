@@ -74,6 +74,18 @@ public:
     }
   }
 
+  error begin_chunked_message(const net::http::request_header&) override {
+    return error{};
+  }
+
+  error consume_chunk(const_byte_span) override {
+    return error{};
+  }
+
+  error end_chunked_message() override {
+    return error{};
+  }
+
   void prepare_send() override {
     // nop
   }
@@ -470,6 +482,71 @@ SCENARIO("router converts responders to asynchronous request objects") {
         buf.resize(10);
         auto n = net::read(fd1, buf);
         check_eq(n, 0);
+      }
+    }
+  }
+}
+
+SCENARIO("router handles chunked HTTP requests") {
+  GIVEN("an HTTP router with a POST route") {
+    auto http_route
+      = make_route("/upload", http::method::post, [](responder& rp) {
+          auto body = rp.payload();
+          auto body_str = std::string_view{
+            reinterpret_cast<const char*>(body.data()), body.size()};
+          rp.respond(http::status::ok, "text/plain", body_str);
+        });
+    auto default_router
+      = router::make(std::vector<http::route_ptr>{http_route.value()});
+    auto server = net::http::server::make(std::move(default_router));
+    auto transport = net::octet_stream::transport::make(fd2, std::move(server));
+    auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+    if (!mpx->start(mgr)) {
+      CAF_RAISE_ERROR(std::logic_error, "failed to start socket manager");
+    }
+    fd2.id = net::invalid_socket_id;
+    WHEN("receiving a chunked POST request") {
+      auto req_headers = "POST /upload HTTP/1.1\r\n"
+                         "Host: localhost:8090\r\n"
+                         "Transfer-Encoding: chunked\r\n"
+                         "\r\n"sv;
+      auto req_body = "D\r\n"
+                      "Hello, world!\r\n"
+                      "11\r\n"
+                      "Developer Network\r\n"
+                      "0\r\n\r\n"sv;
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the router aggregates chunks and routes the complete body") {
+        // Expected response body is the concatenated chunks
+        std::string_view expected_response = "HTTP/1.1 200 OK\r\n"
+                                             "Content-Type: text/plain\r\n"
+                                             "Content-Length: 30\r\n\r\n"
+                                             "Hello, world!Developer Network";
+        byte_buffer buf;
+        buf.resize(expected_response.size());
+        auto n = net::read(fd1, buf);
+        check_eq(n, static_cast<ptrdiff_t>(expected_response.size()));
+        check_eq(to_str(buf), expected_response);
+      }
+    }
+    WHEN("receiving an empty chunked POST request") {
+      auto req_headers = "POST /upload HTTP/1.1\r\n"
+                         "Host: localhost:8090\r\n"
+                         "Transfer-Encoding: chunked\r\n"
+                         "\r\n"sv;
+      auto req_body = "0\r\n\r\n"sv;
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the router handles empty chunked body correctly") {
+        std::string_view expected_response = "HTTP/1.1 200 OK\r\n"
+                                             "Content-Type: text/plain\r\n"
+                                             "Content-Length: 0\r\n\r\n";
+        byte_buffer buf;
+        buf.resize(expected_response.size());
+        auto n = net::read(fd1, buf);
+        check_eq(n, static_cast<ptrdiff_t>(expected_response.size()));
+        check_eq(to_str(buf), expected_response);
       }
     }
   }

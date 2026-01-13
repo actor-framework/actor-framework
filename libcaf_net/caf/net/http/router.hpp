@@ -71,6 +71,12 @@ public:
   ptrdiff_t consume(const request_header& hdr,
                     const_byte_span payload) override;
 
+  error begin_chunked_message(const net::http::request_header&) override;
+
+  error consume_chunk(const_byte_span) override;
+
+  error end_chunked_message() override;
+
   void prepare_send() override;
 
   bool done_sending() override;
@@ -89,6 +95,12 @@ private:
 
   /// Keeps track of pending HTTP requests when lifting @ref responder objects.
   std::unordered_map<size_t, disposable> pending_;
+
+  /// Keeps the request header for incoming chunked request.
+  request_header hdr_;
+
+  /// Aggregates chunks to request body for incoming chunked request.
+  byte_buffer body_;
 
   /// Lazily initialized for allowing a @ref route to interact with actors.
   actor_shell_ptr shell_;

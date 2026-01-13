@@ -88,6 +88,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `actor_system_config` by calling `exception_handler(my_handler)`. This handler
   then gets passed down to all scheduled actors as the default exception handler
   but can still be overridden by actors.
+- The HTTP server implementation now accepts chunked transfer encoding for
+  incoming requests (#2205).
 
 ### Fixed
 
