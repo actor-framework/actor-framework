@@ -54,6 +54,7 @@ public:
       close(fd_);
       fd_ = invalid_socket;
     }
+    disposed_ = true;
     for (auto& f : cleanup_listeners_) {
       mpx_->schedule(std::move(f));
     }
@@ -316,6 +317,7 @@ private:
       close(fd_);
       fd_ = invalid_socket;
     }
+    disposed_ = true;
     if (!cleanup_listeners_.empty()) {
       for (auto& f : cleanup_listeners_)
         mpx_->schedule(std::move(f));

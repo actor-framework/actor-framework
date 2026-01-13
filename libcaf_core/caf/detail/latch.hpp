@@ -6,13 +6,14 @@
 
 #include "caf/detail/core_export.hpp"
 
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
 
 namespace caf::detail {
 
-// Drop-in replacement for C++20's std::latch.
+// Like std::latch, but allows waiting with a timeout.
 class CAF_CORE_EXPORT latch {
 public:
   explicit latch(ptrdiff_t value) : count_(value) {
@@ -30,6 +31,35 @@ public:
   void count_down();
 
   bool is_ready() const noexcept;
+
+  template <class Rep, class Period>
+  bool wait_for(const std::chrono::duration<Rep, Period>& rel_timeout) {
+    return wait_until(std::chrono::steady_clock::now() + rel_timeout);
+  }
+
+  template <class Clock, class Duration>
+  bool wait_until(const std::chrono::time_point<Clock, Duration>& abs_timeout) {
+    std::unique_lock guard{mtx_};
+    return cv_.wait_until(guard, abs_timeout, [&] { return count_ == 0; });
+  }
+
+  template <class Rep, class Period>
+  bool count_down_and_wait_for(
+    const std::chrono::duration<Rep, Period>& rel_timeout) {
+    return count_down_and_wait_until(std::chrono::steady_clock::now()
+                                     + rel_timeout);
+  }
+
+  template <class Clock, class Duration>
+  bool count_down_and_wait_until(
+    const std::chrono::time_point<Clock, Duration>& abs_timeout) {
+    std::unique_lock guard{mtx_};
+    if (--count_ == 0) {
+      cv_.notify_all();
+      return true;
+    }
+    return cv_.wait_until(guard, abs_timeout, [&] { return count_ == 0; });
+  }
 
 private:
   mutable std::mutex mtx_;
