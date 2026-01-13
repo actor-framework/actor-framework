@@ -6,7 +6,6 @@
 
 #include "caf/test/test.hpp"
 
-#include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
@@ -22,32 +21,28 @@ TEST("spawn_inactive creates an actor without launching it") {
   put(cfg.content, "caf.scheduler.max-threads", 1);
   actor_system sys{cfg};
   SECTION("users may launch the actor manually") {
-    auto baseline = sys.registry().running();
     auto [self, launch] = sys.spawn_inactive();
     auto strong_self = actor{self};
     self->become([](int) {});
-    check_eq(sys.registry().running(), baseline);
     launch();
-    check_eq(sys.registry().running(), baseline + 1);
+    check_eq(sys.running_actors_count(), 1u);
     SECTION("calling launch() twice is a no-op") {
       launch();
-      check_eq(sys.registry().running(), baseline + 1);
+      check_eq(sys.running_actors_count(), 1u);
     }
   }
   SECTION("the actor launches automatically at scope exit") {
-    auto baseline = sys.registry().running();
     auto strong_self = actor{};
     {
       auto [self, launch] = sys.spawn_inactive();
-      check_eq(sys.registry().running(), baseline);
       self->become([](int) {});
       check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
       strong_self = actor{self};
     }
-    check_eq(sys.registry().running(), baseline + 1);
+    check_eq(sys.running_actors_count(), 1u);
     strong_self = nullptr;
     sys.await_all_actors_done();
-    check_eq(sys.registry().running(), baseline);
+    check_eq(sys.running_actors_count(), 0u);
   }
   // Note: checking the ref count at the end to verify that `launch` has dropped
   //       its reference to the actor is unreliable, because the scheduler holds

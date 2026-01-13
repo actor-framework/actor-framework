@@ -135,13 +135,13 @@ TEST("round_robin_actor_pool") {
 
 TEST("broadcast_actor_pool") {
   scoped_actor self{sys};
+  check_eq(sys.running_actors_count(), 1u);
   auto spawn5 = [&] {
     return actor_pool::make(sys, 5, fixture::spawn_worker,
                             actor_pool::broadcast());
   };
-  check_eq(sys.registry().running(), 1u);
   auto pool = actor_pool::make(sys, 5, spawn5, actor_pool::broadcast());
-  check_eq(sys.registry().running(), 32u);
+  check_eq(sys.running_actors_count(), 32u);
   self->mail(1, 2).send(pool);
   std::vector<int> results;
   int i = 0;

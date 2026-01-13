@@ -199,12 +199,6 @@ public:
     return (flags() & flag) != 0;
   }
 
-  /// Sets `is_registered_flag` and calls `system().registry().inc_running()`.
-  void register_at_system();
-
-  /// Unsets `is_registered_flag` and calls `system().registry().dec_running()`.
-  void unregister_from_system();
-
   /// Calls `fun` with exclusive access to an actor's state.
   template <class F>
   auto exclusive_critical_section(F fun) -> decltype(fun()) {

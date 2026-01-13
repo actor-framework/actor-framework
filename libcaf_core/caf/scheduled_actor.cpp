@@ -218,16 +218,14 @@ const char* scheduled_actor::name() const {
   return "user.scheduled-actor";
 }
 
-void scheduled_actor::launch(scheduler* sched, bool lazy, bool hide) {
+void scheduled_actor::launch(scheduler* sched, bool lazy) {
   CAF_PUSH_AID_FROM_PTR(this);
-  auto lg = log::core::trace("lazy = {}, hide = {}", lazy, hide);
+  auto lg = log::core::trace("lazy = {}", lazy);
   if (auto* pinned = pinned_scheduler(); pinned != nullptr) {
     sched = pinned;
   }
   CAF_ASSERT(sched != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
-  if (!hide)
-    register_at_system();
   auto delay_first_scheduling = lazy && mailbox().try_block();
   if (getf(is_detached_flag)) {
     private_thread_ = system().acquire_private_thread();

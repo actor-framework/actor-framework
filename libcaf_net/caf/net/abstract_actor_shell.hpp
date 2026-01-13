@@ -99,7 +99,7 @@ public:
 
   // -- overridden functions of local_actor ------------------------------------
 
-  void launch(scheduler* eu, bool lazy, bool hide) override;
+  void launch(scheduler* sched, bool lazy) override;
 
   void on_cleanup(const error& reason) override;
 

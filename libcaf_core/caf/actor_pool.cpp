@@ -84,6 +84,8 @@ actor actor_pool::make(actor_system& sys, policy pol) {
   auto res = make_actor<actor_pool, actor>(sys.next_actor_id(), sys.node(),
                                            &sys, cfg);
   auto ptr = actor_cast<actor_pool*>(res);
+  ptr->setf(abstract_actor::is_registered_flag);
+  sys.inc_running_actors_count(ptr->id());
   ptr->policy_ = std::move(pol);
   return res;
 }
@@ -112,7 +114,7 @@ bool actor_pool::enqueue(mailbox_element_ptr what, scheduler* sched) {
 
 actor_pool::actor_pool(actor_config& cfg)
   : abstract_actor(cfg), planned_reason_(exit_reason::normal) {
-  register_at_system();
+  // nop
 }
 
 const char* actor_pool::name() const {
@@ -138,7 +140,6 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
       guard.unlock();
       for (auto& w : workers)
         anon_mail(content).send(w);
-      unregister_from_system();
     }
     return true;
   }
@@ -212,8 +213,7 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
 void actor_pool::quit(scheduler* sched) {
   // we can safely run our cleanup code here without holding
   // workers_mtx_ because abstract_actor has its own lock
-  if (cleanup(planned_reason_, sched))
-    unregister_from_system();
+  cleanup(planned_reason_, sched);
 }
 
 void actor_pool::force_close_mailbox() {

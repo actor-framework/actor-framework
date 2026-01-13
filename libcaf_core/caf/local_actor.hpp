@@ -65,7 +65,7 @@ public:
 
   // -- pure virtual modifiers -------------------------------------------------
 
-  virtual void launch(scheduler* sched, bool lazy, bool hide) = 0;
+  virtual void launch(scheduler* sched, bool lazy) = 0;
 
   // -- time -------------------------------------------------------------------
 

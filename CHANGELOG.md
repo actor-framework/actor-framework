@@ -40,6 +40,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `is_sum` parameter for counters now defaults to `true` instead of `false`.
   In the Prometheus output, this means that name for the counter will be
   suffixed with `_total`, which is the standard suffix for counters.
+- The method `caf::actor_registry::running` moved to
+  `caf::actor_system::running_actors_count`. Other methods for manipulating the
+  count have been removed and replaced by private methods on the `actor_system`
+  since they are meant for internal use only.
 
 ### Deprecated
 

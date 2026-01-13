@@ -14,7 +14,6 @@
 #include "caf/default_attachable.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/log/core.hpp"
-#include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
 
@@ -166,30 +165,15 @@ bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
   });
   if (!do_cleanup)
     return false;
-  log::core::debug("cleanup: id = {}, node = {}, fail-state = {}", id(), node(),
-                   fail_state_);
+  log::core::debug("actor {} cleans up with reason {}", id(), fail_state_);
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(fail_state_, sched);
-  unregister_from_system();
+  if (getf(is_registered_flag)) {
+    home_system().dec_running_actors_count(id());
+  }
   on_cleanup(fail_state_);
   return true;
-}
-
-void abstract_actor::register_at_system() {
-  if (getf(is_registered_flag))
-    return;
-  setf(is_registered_flag);
-  [[maybe_unused]] auto count = home_system().registry().inc_running();
-  log::system::debug("actor {} increased running count to {}", id(), count);
-}
-
-void abstract_actor::unregister_from_system() {
-  if (!getf(is_registered_flag))
-    return;
-  unsetf(is_registered_flag);
-  [[maybe_unused]] auto count = home_system().registry().dec_running();
-  log::system::debug("actor {} decreased running count to {}", id(), count);
 }
 
 void abstract_actor::add_link(abstract_actor* x) {

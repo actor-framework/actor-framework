@@ -32,9 +32,8 @@ bool actor_companion::enqueue(mailbox_element_ptr ptr, scheduler*) {
   }
 }
 
-void actor_companion::launch(scheduler*, bool, bool hide) {
-  if (!hide)
-    register_at_system();
+void actor_companion::launch(scheduler*, bool) {
+  // nop
 }
 
 void actor_companion::on_exit() {

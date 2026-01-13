@@ -48,8 +48,7 @@ void actor_launcher::operator()() {
   }
   if (auto* ptr = actor_cast<local_actor*>(state_.self)) {
     ptr->unsetf(abstract_actor::is_inactive_flag);
-    ptr->launch(state_.context, has_lazy_init_flag(state_.options),
-                has_hide_flag(state_.options));
+    ptr->home_system().do_launch(ptr, state_.context, state_.options);
   }
   reset();
 }

@@ -96,6 +96,8 @@ namespace caf {
 class CAF_CORE_EXPORT actor_system {
 public:
   friend class abstract_actor;
+  friend class actor_launcher;
+  friend class actor_pool;
   friend class blocking_actor;
   friend class detail::actor_system_access;
   friend class detail::response_promise_state;
@@ -294,6 +296,9 @@ public:
   /// Blocks this caller until all actors are done.
   void await_all_actors_done() const;
 
+  /// Returns the number of currently running actors.
+  size_t running_actors_count() const;
+
   /// Send a `node_down_msg` to `observer` if this system loses connection to
   /// `node`.
   /// @note Calling this function *n* times causes the system to send
@@ -467,8 +472,7 @@ public:
     CAF_SET_LOGGER_SYS(this);
     auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
                              std::forward<Ts>(xs)...);
-    auto ptr = actor_cast<C*>(res);
-    ptr->launch(cfg.sched, has_lazy_init_flag(Os), has_hide_flag(Os));
+    do_launch(actor_cast<C*>(res), cfg.sched, Os);
     return res;
   }
 
@@ -516,6 +520,21 @@ private:
                   "Probably you have tried to spawn a broker.");
   }
 
+  /// Increases running-actors-count by one.
+  /// @param who The ID of the actor that is being registered.
+  /// @returns the increased count.
+  size_t inc_running_actors_count(actor_id who);
+
+  /// Decreases running-actors-count by one.
+  /// @param who The ID of the actor that is being unregistered.
+  /// @returns the decreased count.
+  size_t dec_running_actors_count(actor_id who);
+
+  /// Blocks the caller until running-actors-count becomes `expected`
+  /// (must be either 0 or 1) or timeout is reached.
+  void await_running_actors_count_equal(size_t expected,
+                                        timespan timeout = infinite) const;
+
   expected<strong_actor_ptr>
   dyn_spawn_impl(const std::string& name, message& args, caf::scheduler* ctx,
                  bool check_interface, const mpi* expected_ifs);
@@ -525,6 +544,8 @@ private:
   detail::mailbox_factory* mailbox_factory();
 
   void do_print(term color, const char* buf, size_t num_bytes);
+
+  void do_launch(local_actor* ptr, caf::scheduler* ctx, spawn_options options);
 
   // -- callbacks for actor_system_access --------------------------------------
 

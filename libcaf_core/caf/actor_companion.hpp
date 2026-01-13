@@ -51,7 +51,7 @@ public:
 
   bool enqueue(mailbox_element_ptr ptr, scheduler* sched) override;
 
-  void launch(scheduler* sched, bool lazy, bool hide) override;
+  void launch(scheduler* sched, bool lazy) override;
 
   void on_exit() override;
 

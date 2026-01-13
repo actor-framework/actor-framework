@@ -18,14 +18,12 @@
 
 namespace caf::io {
 
-void abstract_broker::launch(scheduler* sched, bool lazy, bool hide) {
+void abstract_broker::launch(scheduler* sched, bool lazy) {
   CAF_PUSH_AID_FROM_PTR(this);
   CAF_ASSERT(sched != nullptr);
   CAF_ASSERT(dynamic_cast<network::multiplexer*>(sched) != nullptr);
   backend_ = static_cast<network::multiplexer*>(sched);
-  auto lg = log::io::trace("lazy = {}, hide = {}", lazy, hide);
-  if (!hide)
-    register_at_system();
+  auto lg = log::io::trace("lazy = {}", lazy);
   if (lazy && mailbox().try_block())
     return;
   intrusive_ptr_add_ref(ctrl());

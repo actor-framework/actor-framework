@@ -231,23 +231,20 @@ TEST("spawning a typed actor and sending messages") {
     inject().with(my_request{42, 42}).from(self).to(ts);
     expect<bool>().with(true).from(ts).to(self);
     log::test::debug("client and server communicate using request/then");
-    check_eq(sys.registry().running(), 2u);
+    check_eq(sys.running_actors_count(), 2u);
     auto c1 = sys.spawn(client, self, ts);
     dispatch_message();
     dispatch_message();
     dispatch_message();
     dispatch_message();
     expect<ok_atom>().with(ok_atom_v).from(c1).to(self);
-    check_eq(sys.registry().running(), 2u);
+    check_eq(sys.running_actors_count(), 2u);
   };
   SECTION("run test series with typed_server1") {
     test_typed_spawn(sys.spawn(typed_server1));
-    sys.registry().await_running_count_equal(1);
   }
   SECTION("run test series with typed_server2") {
     test_typed_spawn(sys.spawn(typed_server2));
-    sys.registry().await_running_count_equal(1, 1s);
-    require_ne(sys.registry().running(), 0u);
   }
   SECTION("run test series with typed_server3") {
     auto serv3 = sys.spawn(typed_server3, "hi there", self);
