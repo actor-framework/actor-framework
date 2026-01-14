@@ -72,6 +72,7 @@ caf_add_component(
     caf/net/http/status.cpp
     caf/net/http/upper_layer.cpp
     caf/net/http/v1.cpp
+    caf/net/http/with.test.cpp
     caf/net/ip.cpp
     caf/net/ip.test.cpp
     caf/net/lp/client_factory.cpp
