@@ -545,8 +545,8 @@ public:
     return update_for(mgr.get());
   }
 
-  /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
-  /// later via the pollset updater.
+  /// Writes `opcode` and `ptr` to the pipe for handling an event later via the
+  /// pollset updater.
   /// @warning assumes ownership of @p ptr.
   template <class T>
   bool write_to_pipe(uint8_t opcode, T* ptr) {

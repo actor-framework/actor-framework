@@ -62,7 +62,7 @@ expected<std::string> CAF_NET_EXPORT remote_addr(network_socket x);
 /// of this socket reports the family `AF_INET`.
 bool CAF_NET_EXPORT is_ipv4(network_socket x);
 
-///  Checks whether the socket is bound to an IPv4 address, i.e., the `sockaddr`
+///  Checks whether the socket is bound to an IPv6 address, i.e., the `sockaddr`
 ///  of this socket reports the family `AF_INET6`.
 bool CAF_NET_EXPORT is_ipv6(network_socket x);
 
