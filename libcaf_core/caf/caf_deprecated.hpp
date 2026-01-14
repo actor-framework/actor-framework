@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "caf/caf_deprecated.hpp"
-#include "caf/chunk.hpp"
+#ifdef CAF_SUPPRESS_DEPRECATION_WARNINGS
 
-namespace caf::net::lp {
+#  define CAF_DEPRECATED(msg)
 
-/// An implicitly shared type for binary data frames.
-using frame CAF_DEPRECATED("use caf::chunk instead") = caf::chunk;
+#else
 
-} // namespace caf::net::lp
+#  define CAF_DEPRECATED(msg) [[deprecated(msg)]]
+
+#endif

@@ -9,6 +9,7 @@
 #include "caf/actor_traits.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/comparable.hpp"
@@ -125,7 +126,7 @@ public:
 
   intptr_t compare(const strong_actor_ptr&) const noexcept;
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   actor(actor_control_block*, bool);
 
   actor(actor_control_block*, add_ref_t);
@@ -162,7 +163,7 @@ private:
     return ptr_.release();
   }
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   actor(actor_control_block*);
 
   strong_actor_ptr ptr_;

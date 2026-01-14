@@ -8,6 +8,7 @@
 #include "caf/abstract_scheduled_actor.hpp"
 #include "caf/action.hpp"
 #include "caf/async/fwd.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/cow_string.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/behavior_stack.hpp"
@@ -254,7 +255,7 @@ public:
   // -- event handlers ---------------------------------------------------------
 
   /// Sets a custom handler for unexpected messages.
-  [[deprecated("use a handler for 'message' instead")]]
+  CAF_DEPRECATED("use a handler for 'message' instead")
   void set_default_handler(default_handler fun) {
     if (fun)
       default_handler_ = std::move(fun);
@@ -265,7 +266,7 @@ public:
   /// Sets a custom handler for unexpected messages.
   template <std::invocable<message&> F>
     requires std::same_as<std::invoke_result_t<F, message&>, skippable_result>
-  [[deprecated("use a handler for 'message' instead")]]
+  CAF_DEPRECATED("use a handler for 'message' instead")
   void set_default_handler(F fun) {
     default_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                             message& xs) mutable {
@@ -274,7 +275,7 @@ public:
   }
 
   /// Sets a custom handler for error messages.
-  [[deprecated("use a handler for 'error' instead")]]
+  CAF_DEPRECATED("use a handler for 'error' instead")
   void set_error_handler(error_handler fun) {
     if (fun)
       error_handler_ = std::move(fun);
@@ -284,7 +285,7 @@ public:
 
   /// Sets a custom handler for error messages.
   template <std::invocable<error&> F>
-  [[deprecated("use a handler for 'error' instead")]]
+  CAF_DEPRECATED("use a handler for 'error' instead")
   void set_error_handler(F fun) {
     error_handler_ = [fn{std::move(fun)}](scheduled_actor*, error& x) mutable {
       fn(x);
@@ -292,7 +293,7 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  [[deprecated("use monitor with callback instead")]]
+  CAF_DEPRECATED("use monitor with callback instead")
   void set_down_handler(down_handler fun) {
     if (fun)
       down_handler_ = std::move(fun);
@@ -302,14 +303,14 @@ public:
 
   /// Sets a custom handler for down messages.
   template <std::invocable<down_msg&> F>
-  [[deprecated("use monitor with callback instead")]]
+  CAF_DEPRECATED("use monitor with callback instead")
   void set_down_handler(F fun) {
     down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                          down_msg& x) mutable { fn(x); };
   }
 
   /// Sets a custom handler for node down messages.
-  [[deprecated("use a handler for 'node_down_msg' instead")]]
+  CAF_DEPRECATED("use a handler for 'node_down_msg' instead")
   void set_node_down_handler(node_down_handler fun) {
     if (fun)
       node_down_handler_ = std::move(fun);
@@ -319,7 +320,7 @@ public:
 
   /// Sets a custom handler for down messages.
   template <std::invocable<node_down_msg&> F>
-  [[deprecated("use a handler for 'node_down_msg' instead")]]
+  CAF_DEPRECATED("use a handler for 'node_down_msg' instead")
   void set_node_down_handler(F fun) {
     node_down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                               node_down_msg& x) mutable {
@@ -328,7 +329,7 @@ public:
   }
 
   /// Sets a custom handler for error messages.
-  [[deprecated("use a handler for 'exit_msg' instead")]]
+  CAF_DEPRECATED("use a handler for 'exit_msg' instead")
   void set_exit_handler(exit_handler fun) {
     if (fun)
       exit_handler_ = std::move(fun);
@@ -338,7 +339,7 @@ public:
 
   /// Sets a custom handler for exit messages.
   template <std::invocable<exit_msg&> F>
-  [[deprecated("use a handler for 'exit_msg' instead")]]
+  CAF_DEPRECATED("use a handler for 'exit_msg' instead")
   void set_exit_handler(F fun) {
     exit_handler_ = [fn{std::move(fun)}](scheduled_actor*,
                                          exit_msg& x) mutable { fn(x); };
@@ -625,13 +626,13 @@ public:
   using super::demonitor;
 
   template <message_priority P = message_priority::normal, class Handle>
-  [[deprecated("use the monitor() overload with a callback instead")]]
+  CAF_DEPRECATED("use the monitor() overload with a callback instead")
   void monitor(const Handle& whom) {
     do_monitor(actor_cast<abstract_actor*>(whom), P);
   }
 
   template <class Handle>
-  [[deprecated("use the monitor() overload with a callback instead")]]
+  CAF_DEPRECATED("use the monitor() overload with a callback instead")
   void demonitor(const Handle& whom) {
     do_demonitor(actor_cast<strong_actor_ptr>(whom));
   }

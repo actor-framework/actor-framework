@@ -11,6 +11,7 @@
 #include "caf/net/http/route.hpp"
 #include "caf/net/http/upper_layer.hpp"
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/expected.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -59,7 +60,7 @@ public:
   /// processing of the HTTP request.
   request lift(responder&& res);
 
-  [[deprecated("use abort_and_shutdown instead")]]
+  CAF_DEPRECATED("use abort_and_shutdown instead")
   void shutdown(const error& err);
 
   void abort_and_shutdown(const error& err);

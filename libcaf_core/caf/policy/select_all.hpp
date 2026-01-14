@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/behavior.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/config.hpp"
 #include "caf/cow_tuple.hpp"
 #include "caf/detail/assert.hpp"
@@ -166,7 +167,7 @@ using select_all_helper_t = typename select_select_all_helper<F>::type;
 
 namespace caf::policy {
 
-class [[deprecated("obsolete, use the mail API instead")]] select_all {
+class CAF_DEPRECATED("obsolete, use the mail API instead") select_all {
 public:
   static constexpr bool is_trivial = false;
 

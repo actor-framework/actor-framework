@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
@@ -202,13 +203,13 @@ public:
   // -- legacy API (for the logging macros) ------------------------------------
 
   /// @private
-  [[deprecated("use the new logging functions instead")]]
+  CAF_DEPRECATED("use the new logging functions instead")
   void
   legacy_api_log(unsigned level, std::string_view component, std::string msg,
                  std::source_location loc = std::source_location::current());
 
   /// @private
-  [[deprecated("use the new logging functions instead")]]
+  CAF_DEPRECATED("use the new logging functions instead")
   trace_exit_guard legacy_api_log_trace(std::string_view component,
                                         std::string msg,
                                         std::source_location loc

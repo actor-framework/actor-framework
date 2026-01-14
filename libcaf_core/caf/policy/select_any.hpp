@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/behavior.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/concepts.hpp"
@@ -48,7 +49,7 @@ namespace caf::policy {
 /// all other results.
 /// @relates response_handle
 template <class ResponseType>
-class [[deprecated("obsolete, use the mail API instead")]] select_any {
+class CAF_DEPRECATED("obsolete, use the mail API instead") select_any {
 public:
   static constexpr bool is_trivial = false;
 
