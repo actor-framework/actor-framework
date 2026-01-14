@@ -139,11 +139,6 @@ class default_multiplexer : public detail::atomic_ref_counted,
 public:
   // -- member types -----------------------------------------------------------
 
-  struct poll_update {
-    short events = 0;
-    socket_manager_ptr mgr;
-  };
-
   using poll_update_map = unordered_flat_map<socket_manager_ptr, short>;
 
   using pollfd_list = std::vector<pollfd>;
