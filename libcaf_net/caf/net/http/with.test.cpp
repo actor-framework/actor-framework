@@ -48,8 +48,8 @@ using error_log_ptr = std::shared_ptr<error_log>;
 
 using latch_ptr = std::shared_ptr<detail::latch>;
 
-void test_client(uint16_t port, bool wait_before_connect, latch_ptr lptr,
-                 error_log_ptr elog_ptr) {
+void test_client(const char* host, uint16_t port, bool wait_before_connect,
+                 latch_ptr lptr, error_log_ptr elog_ptr) {
   auto do_wait = [=] {
     if (!lptr->count_down_and_wait_for(1s)) {
       elog_ptr->append(sec::request_timeout,
@@ -62,7 +62,7 @@ void test_client(uint16_t port, bool wait_before_connect, latch_ptr lptr,
   if (wait_before_connect) {
     do_wait();
   }
-  auto maybe_fd = net::make_connected_tcp_stream_socket("localhost", port, 1s);
+  auto maybe_fd = net::make_connected_tcp_stream_socket(host, port, 1s);
   if (!maybe_fd) {
     elog_ptr->append(maybe_fd.error());
     return;
@@ -112,6 +112,7 @@ TEST("GH-2226 regression") {
   // Create an accept socket with the port chosen by the OS.
   auto acceptor = unbox(net::make_tcp_accept_socket(0));
   auto port = unbox(net::local_port(acceptor));
+  auto host = net::is_ipv4(acceptor) ? "127.0.0.1" : "::1";
   // Launch our server.
   auto hdl = net::http::with(sys)
                .accept(acceptor)
@@ -128,10 +129,10 @@ TEST("GH-2226 regression") {
   std::thread clients[4];
   // Two clients connect right away, the other two wait on the latch until the
   // first two connections have been established.
-  clients[0] = std::thread(test_client, port, true, latch, elog);
-  clients[1] = std::thread(test_client, port, true, latch, elog);
-  clients[2] = std::thread(test_client, port, false, latch, elog);
-  clients[3] = std::thread(test_client, port, false, latch, elog);
+  clients[0] = std::thread(test_client, host, port, true, latch, elog);
+  clients[1] = std::thread(test_client, host, port, true, latch, elog);
+  clients[2] = std::thread(test_client, host, port, false, latch, elog);
+  clients[3] = std::thread(test_client, host, port, false, latch, elog);
   // Wait for all clients. At most they will run for about 1 second due to the
   // timeouts in the client code.
   for (auto& client : clients) {

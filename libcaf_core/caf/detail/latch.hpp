@@ -40,7 +40,7 @@ public:
   template <class Clock, class Duration>
   bool wait_until(const std::chrono::time_point<Clock, Duration>& abs_timeout) {
     std::unique_lock guard{mtx_};
-    return cv_.wait_until(guard, abs_timeout, [&] { return count_ == 0; });
+    return cv_.wait_until(guard, abs_timeout, [this] { return count_ == 0; });
   }
 
   template <class Rep, class Period>
@@ -58,7 +58,7 @@ public:
       cv_.notify_all();
       return true;
     }
-    return cv_.wait_until(guard, abs_timeout, [&] { return count_ == 0; });
+    return cv_.wait_until(guard, abs_timeout, [this] { return count_ == 0; });
   }
 
 private:
