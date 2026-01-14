@@ -161,25 +161,4 @@ expected<tcp_stream_socket> accept(tcp_accept_socket x) {
   return tcp_stream_socket{sock};
 }
 
-namespace {
-
-int get_family(network_socket fd) {
-  sockaddr_storage addr;
-  socklen_t len = sizeof(addr);
-  if (getsockname(fd.id, reinterpret_cast<sockaddr*>(&addr), &len) == -1) {
-    return -1;
-  }
-  return addr.ss_family;
-}
-
-} // namespace
-
-bool is_ipv4(network_socket x) {
-  return get_family(x) == AF_INET;
-}
-
-bool is_ipv6(network_socket x) {
-  return get_family(x) == AF_INET6;
-}
-
 } // namespace caf::net
