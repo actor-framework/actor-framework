@@ -162,6 +162,20 @@ public:
 
   /// Checks whether `what` holds a value.
   template <class T>
+  bool check_has_value(const std::optional<T>& what,
+                       const std::source_location& location
+                       = std::source_location::current()) {
+    if (what.has_value()) {
+      reporter::instance().pass(location);
+      return true;
+    }
+    auto msg = detail::format("std::optional<T> is empty");
+    reporter::instance().fail(msg, location);
+    return false;
+  }
+
+  /// Checks whether `what` holds a value.
+  template <class T>
   bool
   check_has_value(const expected<T>& what, const std::source_location& location
                                            = std::source_location::current()) {
@@ -233,6 +247,40 @@ public:
   /// Evaluates whether `value` is `true` and fails otherwise.
   void require(bool value, const std::source_location& location
                            = std::source_location::current());
+
+  /// Checks whether `what` holds a value.
+  template <class T>
+  void require_has_value(const std::optional<T>& what,
+                         const std::source_location& location
+                         = std::source_location::current()) {
+    if (!check_has_value(what, location)) {
+      requirement_failed::raise(location);
+    }
+  }
+
+  /// Checks whether `what` holds a value.
+  template <class T>
+  void require_has_value(const expected<T>& what,
+                         const std::source_location& location
+                         = std::source_location::current()) {
+    if (!check_has_value(what, location)) {
+      requirement_failed::raise(location);
+    }
+  }
+
+  template <class T>
+  T unbox(const expected<T>& what, const std::source_location& location
+                                   = std::source_location::current()) {
+    require_has_value(what, location);
+    return *what;
+  }
+
+  template <class T>
+  T unbox(const std::optional<T>& what, const std::source_location& location
+                                        = std::source_location::current()) {
+    require_has_value(what, location);
+    return *what;
+  }
 
   /// Returns the `runnable` instance that is currently running.
   static runnable& current();

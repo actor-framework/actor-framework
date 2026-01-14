@@ -66,14 +66,21 @@ public:
     auto lg = log::net::trace("");
     CAF_ASSERT(owner_ != nullptr);
     if (open_connections_.size() == max_connections_) {
+      log::net::debug("stop accepting new connections on socket {}: "
+                      "reached maximum number of connections",
+                      handle().id);
       owner_->deregister_reading();
       return;
     }
     if (auto conn = acceptor_->try_accept()) {
       auto& child = *conn;
       open_connections_.push_back(child->as_disposable());
-      if (open_connections_.size() == max_connections_)
+      if (open_connections_.size() == max_connections_) {
+        log::net::debug("stop accepting new connections on socket {}: "
+                        "reached maximum number of connections",
+                        handle().id);
         owner_->deregister_reading();
+      }
       child->add_cleanup_listener(on_conn_close_);
       if (auto err = child->start(); err.valid()) {
         on_error(err);
@@ -120,10 +127,14 @@ private:
     auto& conns = open_connections_;
     auto new_end = std::remove_if(conns.begin(), conns.end(),
                                   [](auto& ptr) { return ptr.disposed(); });
-    if (new_end == conns.end())
+    if (new_end == conns.end()) {
       return;
-    if (open_connections_.size() == max_connections_)
+    }
+    if (open_connections_.size() == max_connections_) {
+      log::net::debug("resume accepting new connections on socket {}",
+                      handle().id);
       owner_->register_reading();
+    }
     conns.erase(new_end, conns.end());
   }
 

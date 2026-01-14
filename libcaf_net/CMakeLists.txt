@@ -75,6 +75,7 @@ caf_add_component(
     caf/net/http/upper_layer.cpp
     caf/net/http/v1.cpp
     caf/net/http/with.cpp
+    caf/net/http/with.test.cpp
     caf/net/ip.cpp
     caf/net/ip.test.cpp
     caf/net/lp/framing.cpp

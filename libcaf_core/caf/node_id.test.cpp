@@ -45,20 +45,6 @@ node_id roundtrip(node_id nid) {
   return result;
 }
 
-template <class T>
-T unbox(caf::expected<T> x) {
-  if (!x)
-    test::runnable::current().fail("{}", to_string(x.error()));
-  return std::move(*x);
-}
-
-template <class T>
-T unbox(std::optional<T> x) {
-  if (!x)
-    test::runnable::current().fail("x == std::nullopt");
-  return std::move(*x);
-}
-
 } // namespace
 
 TEST("node IDs are convertible from string") {
