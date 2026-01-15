@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
@@ -184,7 +185,7 @@ public:
     data_.reset();
   }
 
-  [[deprecated("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")]]
+  CAF_DEPRECATED("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")
   void reset(detail::message_data* new_ptr,
              bool increase_ref_count = true) noexcept {
     if (increase_ref_count) {

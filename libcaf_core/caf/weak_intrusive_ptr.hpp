@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/intrusive_ptr.hpp"
 
@@ -35,7 +36,7 @@ public:
     // nop
   }
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   weak_intrusive_ptr(pointer raw_ptr, bool increase_ref_count = true) noexcept {
     set_ptr(raw_ptr, increase_ref_count);
   }
@@ -105,7 +106,7 @@ public:
     }
   }
 
-  [[deprecated("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")]]
+  CAF_DEPRECATED("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")
   void reset(pointer new_value, bool increase_ref_count = true) {
     auto old = ptr_;
     set_ptr(new_value, increase_ref_count);
@@ -128,7 +129,7 @@ public:
     return *this;
   }
 
-  [[deprecated("use reset instead")]]
+  CAF_DEPRECATED("use reset instead")
   weak_intrusive_ptr& operator=(pointer ptr) noexcept {
     reset(ptr, add_ref);
     return *this;

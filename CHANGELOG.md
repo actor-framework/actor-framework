@@ -90,6 +90,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   but can still be overridden by actors.
 - The HTTP server implementation now accepts chunked transfer encoding for
   incoming requests (#2205).
+- Users can now define `CAF_SUPPRESS_DEPRECATION_WARNINGS` to silence all
+  deprecation warnings emitted by CAF headers. By turning deprecation warnings
+  off, users can migrate their code base in multiple steps without getting less
+  urgent warnings. Of course, we recommend using this macro only for a short
+  transition period since deprecated APIs will usually be removed in the next
+  major release.
 
 ### Fixed
 

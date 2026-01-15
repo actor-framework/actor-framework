@@ -11,6 +11,7 @@
 #include "caf/actor_config.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/behavior.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/monitor_action.hpp"
@@ -146,7 +147,7 @@ public:
 
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
-  [[deprecated("use anon_mail instead")]]
+  CAF_DEPRECATED("use anon_mail instead")
   void anon_send(const Handle& receiver, T&& arg, Ts&&... args) {
     detail::send_type_check<none_t, Handle, T, Ts...>();
     do_anon_send(actor_cast<abstract_actor*>(receiver), Priority,
@@ -155,10 +156,10 @@ public:
 
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
-  [[deprecated("use anon_mail instead")]]
-  disposable scheduled_anon_send(const Handle& receiver,
-                                 actor_clock::time_point timeout, T&& arg,
-                                 Ts&&... args) {
+  CAF_DEPRECATED("use anon_mail instead")
+  disposable
+    scheduled_anon_send(const Handle& receiver, actor_clock::time_point timeout,
+                        T&& arg, Ts&&... args) {
     detail::send_type_check<none_t, Handle, T, Ts...>();
     return do_scheduled_anon_send(
       actor_cast<strong_actor_ptr>(receiver), Priority, timeout,
@@ -167,7 +168,7 @@ public:
 
   template <message_priority Priority = message_priority::normal, class Handle,
             class T, class... Ts>
-  [[deprecated("use anon_mail instead")]]
+  CAF_DEPRECATED("use anon_mail instead")
   disposable delayed_anon_send(const Handle& receiver,
                                actor_clock::duration_type timeout, T&& arg,
                                Ts&&... args) {

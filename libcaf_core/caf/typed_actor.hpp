@@ -8,6 +8,7 @@
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/to_statically_typed_trait.hpp"
 #include "caf/detail/type_list.hpp"
@@ -215,7 +216,7 @@ public:
     return actor_addr::compare(get(), actor_cast<actor_control_block*>(x));
   }
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   typed_actor(actor_control_block* ptr, bool increase_ref_count) {
     if (increase_ref_count) {
       ptr_.reset(ptr, add_ref);
@@ -266,9 +267,8 @@ private:
     return ptr_.release();
   }
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
-  explicit typed_actor(actor_control_block* ptr)
-    : ptr_(ptr, add_ref) {
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
+  explicit typed_actor(actor_control_block* ptr) : ptr_(ptr, add_ref) {
     // nop
   }
 

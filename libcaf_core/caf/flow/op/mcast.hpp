@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/empty.hpp"
@@ -112,7 +113,7 @@ public:
                            });
   }
 
-  [[deprecated("use push instead")]]
+  CAF_DEPRECATED("use push instead")
   bool push_all(const T& item) {
     return push(item);
   }

@@ -6,6 +6,7 @@
 
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
@@ -74,7 +75,7 @@ public:
     // nop
   }
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   intrusive_ptr(pointer raw_ptr, bool increase_ref_count = true) noexcept {
     set_ptr(raw_ptr, increase_ref_count);
   }
@@ -140,7 +141,7 @@ public:
     }
   }
 
-  [[deprecated("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")]]
+  CAF_DEPRECATED("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")
   void reset(pointer new_value, bool increase_ref_count = true) noexcept {
     intrusive_ptr tmp{new_value, increase_ref_count};
     swap(tmp);
@@ -166,7 +167,7 @@ public:
     return *this;
   }
 
-  [[deprecated("use reset instead")]]
+  CAF_DEPRECATED("use reset instead")
   intrusive_ptr& operator=(pointer ptr) noexcept {
     reset(ptr, add_ref);
     return *this;

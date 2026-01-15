@@ -4,10 +4,12 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
+
 #define CAF_ADD_DEPRECATED_REQUEST_API                                         \
   template <message_priority P = message_priority::normal, class Rep = int,    \
             class Period = std::ratio<1>, class Handle = actor, class... Args> \
-  [[deprecated("use the mail API instead")]]                                   \
+  CAF_DEPRECATED("use the mail API instead")                                   \
   auto request(const Handle& dest, std::chrono::duration<Rep, Period> timeout, \
                Args&&... args) {                                               \
     return this->mail(std::forward<Args>(args)...).request(dest, timeout);     \
@@ -15,7 +17,7 @@
   template <class MergePolicy,                                                 \
             message_priority Prio = message_priority::normal, class Rep = int, \
             class Period = std::ratio<1>, class Container, class... Args>      \
-  [[deprecated("use the mail API instead")]]                                   \
+  CAF_DEPRECATED("use the mail API instead")                                   \
   auto fan_out_request(const Container& destinations,                          \
                        std::chrono::duration<Rep, Period> timeout,             \
                        Args&&... args) {                                       \

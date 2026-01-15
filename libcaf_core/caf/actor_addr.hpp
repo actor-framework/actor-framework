@@ -8,6 +8,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -108,7 +109,7 @@ public:
     x.ptr_.reset();
   }
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   actor_addr(actor_control_block*, bool);
 
   actor_addr(actor_control_block*, add_ref_t);
@@ -130,7 +131,7 @@ private:
     return ptr_.get_locked();
   }
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   actor_addr(actor_control_block*);
 
   weak_actor_ptr ptr_;

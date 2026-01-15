@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/intrusive_ptr.hpp"
 
@@ -77,7 +78,7 @@ public:
     // nop
   }
 
-  [[deprecated("construct using add_ref or adopt_ref instead")]]
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   explicit intrusive_cow_ptr(pointer ptr,
                              bool increase_ref_count = true) noexcept
     : ptr_(ptr, increase_ref_count) {
@@ -136,7 +137,7 @@ public:
   }
 
   /// Replaces the managed object.
-  [[deprecated("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")]]
+  CAF_DEPRECATED("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")
   void reset(pointer ptr, bool inc_ref_count = true) noexcept {
     ptr_.reset(ptr, inc_ref_count);
   }

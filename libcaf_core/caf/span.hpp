@@ -4,33 +4,35 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
+
 #include <span>
 
 namespace caf {
 
 template <class T>
-using span [[deprecated("use std::span instead")]] = std::span<T>;
+using span CAF_DEPRECATED("use std::span instead") = std::span<T>;
 
 template <class T, size_t N>
-[[deprecated("construct std::span directly instead")]]
+CAF_DEPRECATED("construct std::span directly instead")
 auto make_span(T (&data)[N]) {
   return std::span{data, N};
 }
 
 template <class Container>
-[[deprecated("construct std::span directly instead")]]
+CAF_DEPRECATED("construct std::span directly instead")
 auto make_span(Container& container) {
   return std::span{container.data(), container.size()};
 }
 
 template <class T>
-[[deprecated("construct std::span directly instead")]]
+CAF_DEPRECATED("construct std::span directly instead")
 auto make_span(T* data, size_t size) {
   return std::span{data, size};
 }
 
 template <class T>
-[[deprecated("construct std::span directly instead")]]
+CAF_DEPRECATED("construct std::span directly instead")
 auto make_span(T* data, T* end) {
   return std::span{data, static_cast<size_t>(end - data)};
 }

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/behavior_impl.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
@@ -53,15 +54,14 @@ public:
 
   /// Creates a behavior from `tdef` without message handler.
   template <class F>
-  [[deprecated("use idle timeouts instead of 'after >> ...'")]]
-  behavior(timeout_definition<F> tdef)
-    : impl_(detail::make_behavior(tdef)) {
+  CAF_DEPRECATED("use idle timeouts instead of 'after >> ...'")
+  behavior(timeout_definition<F> tdef) : impl_(detail::make_behavior(tdef)) {
     // nop
   }
 
   /// Assigns new handlers.
   template <class... Ts>
-  [[deprecated("use idle timeouts instead of 'after >> ...'")]]
+  CAF_DEPRECATED("use idle timeouts instead of 'after >> ...'")
   void legacy_assign(Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "assign() called without arguments");
     impl_ = detail::make_behavior(std::forward<Ts>(xs)...);
