@@ -156,6 +156,25 @@ public:
   bool check(bool value, const detail::source_location& location
                          = detail::source_location::current());
 
+  /// Checks whether `str` matches the regular expression `rx`.
+  bool check_matches(std::string_view str, std::string_view rx,
+                     const detail::source_location& location
+                     = detail::source_location::current());
+
+  /// Checks whether `what` holds a value.
+  template <class T>
+  bool check_has_value(const std::optional<T>& what,
+                       const detail::source_location& location
+                       = detail::source_location::current()) {
+    if (what.has_value()) {
+      reporter::instance().pass(location);
+      return true;
+    }
+    auto msg = detail::format("std::optional<T> is empty");
+    reporter::instance().fail(msg, location);
+    return false;
+  }
+
   /// Checks whether `what` holds a value.
   template <class T>
   bool check_has_value(const expected<T>& what,
@@ -230,14 +249,48 @@ public:
   void require(bool value, const detail::source_location& location
                            = detail::source_location::current());
 
+  /// Checks whether `what` holds a value.
+  template <class T>
+  void require_has_value(const std::optional<T>& what,
+                         const detail::source_location& location
+                         = detail::source_location::current()) {
+    if (!check_has_value(what, location)) {
+      requirement_failed::raise(location);
+    }
+  }
+
+  /// Checks whether `what` holds a value.
+  template <class T>
+  void require_has_value(const expected<T>& what,
+                         const detail::source_location& location
+                         = detail::source_location::current()) {
+    if (!check_has_value(what, location)) {
+      requirement_failed::raise(location);
+    }
+  }
+
+  template <class T>
+  T unbox(const expected<T>& what, const detail::source_location& location
+                                   = detail::source_location::current()) {
+    require_has_value(what, location);
+    return *what;
+  }
+
+  template <class T>
+  T unbox(const std::optional<T>& what, const detail::source_location& location
+                                        = detail::source_location::current()) {
+    require_has_value(what, location);
+    return *what;
+  }
+
   /// Returns the `runnable` instance that is currently running.
   static runnable& current();
 
   block& current_block();
 
   template <class Expr>
-  void should_fail(Expr&& expr, const caf::detail::source_location& location
-                                = caf::detail::source_location::current()) {
+  void should_fail(Expr&& expr, const detail::source_location& location
+                                = detail::source_location::current()) {
     auto& rep = reporter::instance();
     auto lvl = rep.verbosity(log::level::quiet);
     auto before = rep.test_stats();
@@ -318,8 +371,8 @@ public:
   /// increases the failure count.
   template <class Exception = void, class Expr>
   void should_fail_with_exception(Expr&& expr,
-                                  const caf::detail::source_location& location
-                                  = caf::detail::source_location::current()) {
+                                  const detail::source_location& location
+                                  = detail::source_location::current()) {
     auto& rep = reporter::instance();
     auto before = rep.test_stats();
     auto lvl = rep.verbosity(log::level::quiet);

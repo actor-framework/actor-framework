@@ -11,7 +11,10 @@
 #include "caf/test/scope.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/detail/format.hpp"
 #include "caf/detail/scope_guard.hpp"
+
+#include <regex>
 
 namespace caf::test {
 
@@ -73,6 +76,19 @@ bool runnable::check(bool value, const detail::source_location& location) {
     reporter::instance().fail("should be true", location);
   }
   return value;
+}
+
+bool runnable::check_matches(std::string_view str, std::string_view rx,
+                             const detail::source_location& location) {
+  auto regex = std::regex{rx.begin(), rx.end()};
+  if (std::regex_match(str.begin(), str.end(), regex)) {
+    reporter::instance().pass(location);
+    return true;
+  }
+  auto msg = detail::format("string \"{}\" does not match regex \"{}\"", str,
+                            rx);
+  reporter::instance().fail(msg, location);
+  return false;
 }
 
 void runnable::require(bool value, const detail::source_location& location) {

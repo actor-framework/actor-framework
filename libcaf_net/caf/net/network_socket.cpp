@@ -43,7 +43,8 @@ uint16_t port_of(sockaddr& what) {
 
 namespace caf::net {
 
-#if defined(CAF_MACOS) || defined(CAF_IOS) || defined(CAF_BSD)
+#if defined(CAF_MACOS) || defined(CAF_IOS)                                     \
+  || (defined(CAF_BSD) && defined(SO_NOSIGPIPE))
 #  define CAF_HAS_NOSIGPIPE_SOCKET_FLAG
 #endif
 
@@ -167,6 +168,27 @@ expected<uint16_t> remote_port(network_socket x) {
   CAF_NET_SYSCALL("getpeername", tmp, !=, 0,
                   getpeername(x.id, reinterpret_cast<sockaddr*>(&st), &st_len));
   return ntohs(port_of(reinterpret_cast<sockaddr&>(st)));
+}
+
+namespace {
+
+int get_family(network_socket fd) {
+  sockaddr_storage addr;
+  socklen_t len = sizeof(addr);
+  if (getsockname(fd.id, reinterpret_cast<sockaddr*>(&addr), &len) == -1) {
+    return -1;
+  }
+  return addr.ss_family;
+}
+
+} // namespace
+
+bool is_ipv4(network_socket x) {
+  return get_family(x) == AF_INET;
+}
+
+bool is_ipv6(network_socket x) {
+  return get_family(x) == AF_INET6;
 }
 
 } // namespace caf::net

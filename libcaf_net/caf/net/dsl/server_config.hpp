@@ -79,7 +79,7 @@ public:
     }
   };
 
-  using socket_t = server_config_tag<error>;
+  using socket_t = server_config_tag<socket>;
 
   static constexpr auto socket_v = socket_t{};
 

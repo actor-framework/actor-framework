@@ -43,6 +43,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix a deadlock when disposing an monitor action while it is running (#2169).
 - Fix a resource leak where sockets were not closed on error, e.g., when an HTTP
   server rejects an incoming request at the protocol level (#2212).
+- Fix a build error when passing a TCP accept socket to the high-level DSL for
+  starting an HTTP server.
+- Fix a bug in the HTTP server implementation with the `max-connections` setting
+  that caused CAF to reject all incoming connections after reaching the limit
+  even after some connections had already been closed (#2227).
+- Fix a bug in the network stack of CAF that could lead to inconsistent state if
+  the OS re-uses a socket ID too quickly after closing a socket.
 
 ## [1.1.0] - 2025-07-25
 
