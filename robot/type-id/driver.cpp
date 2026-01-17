@@ -9,6 +9,12 @@
 #include <caf/scoped_actor.hpp>
 #include <caf/type_id.hpp>
 
+#ifdef CAF_WINDOWS
+#  include <windows.h>
+
+#  include <cstdlib>
+#endif
+
 struct my_custom_type {
   int value;
 };
@@ -25,6 +31,11 @@ CAF_BEGIN_TYPE_ID_BLOCK(my_module, caf::first_custom_type_id)
 CAF_END_TYPE_ID_BLOCK(my_module)
 
 int caf_main(caf::actor_system& sys) {
+#ifdef CAF_WINDOWS
+  // Suppress the Windows error dialog box.
+  SetErrorMode(SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS);
+  _set_abort_behavior(0, _WRITE_ABORT_MSG);
+#endif
   caf::scoped_actor self{sys};
   auto receiver = sys.spawn([](caf::event_based_actor* self) {
     return caf::behavior{
