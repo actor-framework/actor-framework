@@ -8,6 +8,8 @@
 #include "caf/config.hpp"
 #include "caf/detail/aligned_alloc.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/current_actor.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/logger.hpp"
@@ -22,6 +24,12 @@ namespace caf::detail {
 struct make_actor_util {
   template <class T, class... Ts>
   static T* create_actor(void* mem, Ts&&... args) {
+    // Note: the constructor of abstract_actor sets the current actor to itself.
+    //       Hence, we store the pointer to the current actor here and restore
+    //       it after creating the new actor at scope exit.
+    detail::scope_guard guard([prev = detail::current_actor()]() noexcept {
+      detail::current_actor(prev);
+    });
     auto* ptr = new (mem) T(std::forward<Ts>(args)...);
     ptr->setup_metrics();
     // Make sure that the pointer to the actor object is correct. Virtual
@@ -60,19 +68,14 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
   if (auto* lptr = logger::current_logger();
       lptr && lptr->accepts(log::level::debug, CAF_LOG_FLOW_COMPONENT)) {
     auto args = deep_to_string(std::forward_as_tuple(xs...));
-    T* obj;
-    {
-      CAF_PUSH_AID(aid);
-      obj = detail::make_actor_util::create_actor<T>(obj_mem,
-                                                     std::forward<Ts>(xs)...);
-    }
+    auto* obj = detail::make_actor_util::create_actor<T>(
+      obj_mem, std::forward<Ts>(xs)...);
     lptr->log(log::level::debug, CAF_LOG_FLOW_COMPONENT,
               "SPAWN ; ID = {}; NAME = {}; TYPE = {}; ARGS = {}; NODE = {}",
               aid, obj->name(), detail::pretty_type_name(typeid(T)), args, nid);
     return {ctrl, adopt_ref};
   }
 #endif
-  CAF_PUSH_AID(aid);
   detail::make_actor_util::create_actor<T>(obj_mem, std::forward<Ts>(xs)...);
   return {ctrl, adopt_ref};
 }

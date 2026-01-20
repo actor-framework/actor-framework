@@ -96,6 +96,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   urgent warnings. Of course, we recommend using this macro only for a short
   transition period since deprecated APIs will usually be removed in the next
   major release.
+- The new static method `caf::abstract_actor::current()` grants users
+  access to the actor currently associated with the calling thread (returns
+  `nullptr` if no actor is associated with the thread).
 
 ### Fixed
 
@@ -116,6 +119,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The getters `spawn_serv` and `config_serv` have been removed from the public
   interface of `actor_system`. These actors are an implementation detail of the
   I/O module and should not be accessed directly by users.
+- The method `logger::thread_local_aid(actor_id)` as well as the macros
+  `CAF_PUSH_AID`, `CAF_PUSH_AID_FROM_PTR` and `CAF_SET_AID` have been removed.
+  They were technically part of the public API but were never intended to be
+  called by users.
 
 ## [1.1.0] - 2025-07-25
 

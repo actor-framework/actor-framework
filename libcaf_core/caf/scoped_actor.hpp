@@ -61,7 +61,7 @@ private:
     return self_.get();
   }
 
-  actor_id prev_; // used for logging/debugging purposes only
+  abstract_actor* prev_; // previous current actor, restored in destructor
   strong_actor_ptr self_;
 };
 

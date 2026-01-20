@@ -9,6 +9,7 @@
 #include "caf/byte_span.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/current_actor.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/event_based_actor.hpp"
@@ -19,7 +20,7 @@
 namespace caf::io {
 
 void abstract_broker::launch(scheduler* sched, bool lazy) {
-  CAF_PUSH_AID_FROM_PTR(this);
+  detail::current_actor_guard ctx_guard{this};
   CAF_ASSERT(sched != nullptr);
   CAF_ASSERT(dynamic_cast<network::multiplexer*>(sched) != nullptr);
   backend_ = static_cast<network::multiplexer*>(sched);

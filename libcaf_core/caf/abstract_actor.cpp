@@ -13,6 +13,7 @@
 #include "caf/config.hpp"
 #include "caf/default_attachable.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/current_actor.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
@@ -25,7 +26,7 @@ namespace caf {
 // -- constructors, destructors, and assignment operators ----------------------
 
 abstract_actor::abstract_actor(actor_config& cfg) : flags_(cfg.flags) {
-  // nop
+  detail::current_actor(this);
 }
 
 abstract_actor::~abstract_actor() {
@@ -136,10 +137,14 @@ actor_addr abstract_actor::address() const noexcept {
   return actor_addr{actor_control_block::from(this), add_ref};
 }
 
+abstract_actor* abstract_actor::current() noexcept {
+  return detail::current_actor();
+}
+
 // -- callbacks ----------------------------------------------------------------
 
 void abstract_actor::on_unreachable() {
-  CAF_PUSH_AID_FROM_PTR(this);
+  detail::current_actor_guard ctx_guard{this};
   cleanup(make_error(exit_reason::unreachable), nullptr);
 }
 

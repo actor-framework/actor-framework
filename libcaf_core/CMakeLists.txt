@@ -69,6 +69,7 @@ caf_add_component(
     ${CAF_CORE_HEADERS}
   SOURCES
     caf/abstract_actor.cpp
+    caf/abstract_actor.test.cpp
     caf/abstract_blocking_actor.cpp
     caf/abstract_mailbox.cpp
     caf/abstract_scheduled_actor.cpp
@@ -168,6 +169,7 @@ caf_add_component(
     caf/detail/counted_disposable.cpp
     caf/detail/counted_disposable.test.cpp
     caf/detail/critical.cpp
+    caf/detail/current_actor.cpp
     caf/detail/daemons.cpp
     caf/detail/default_mailbox.cpp
     caf/detail/default_mailbox.test.cpp

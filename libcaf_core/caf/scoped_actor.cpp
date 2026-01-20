@@ -7,6 +7,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/current_actor.hpp"
 #include "caf/log/system.hpp"
 #include "caf/spawn_options.hpp"
 
@@ -29,7 +30,7 @@ public:
   }
 
   void launch(scheduler*, bool) override {
-    CAF_PUSH_AID_FROM_PTR(this);
+    detail::current_actor_guard ctx_guard{this};
     auto lg = log::system::trace("");
     CAF_ASSERT(getf(is_blocking_flag));
     initialize();
@@ -45,7 +46,8 @@ scoped_actor::scoped_actor(actor_system& sys, bool hide) {
     cfg.flags |= abstract_actor::is_hidden_flag;
   auto hdl = sys.spawn_impl<impl, no_spawn_options>(cfg);
   self_ = actor_cast<strong_actor_ptr>(std::move(hdl));
-  prev_ = CAF_SET_AID(self_->id());
+  prev_ = detail::current_actor();
+  detail::current_actor(self_->get());
 }
 
 scoped_actor::~scoped_actor() {
@@ -54,7 +56,7 @@ scoped_actor::~scoped_actor() {
   auto x = ptr();
   if (!x->getf(abstract_actor::is_terminated_flag))
     x->cleanup(exit_reason::normal, nullptr);
-  CAF_SET_AID(prev_);
+  detail::current_actor(prev_);
 }
 
 blocking_actor* scoped_actor::ptr() const {

@@ -130,6 +130,10 @@ public:
   /// Returns the logical actor address.
   actor_addr address() const noexcept;
 
+  /// Returns the actor currently associated to the calling thread or `nullptr`
+  /// if none is associated.
+  static abstract_actor* current() noexcept;
+
   // -- messaging --------------------------------------------------------------
 
   /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
@@ -270,6 +274,9 @@ protected:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  /// @note calls `detail::current_actor(this)`; re-setting the current actor
+  ///       needs to be done by the outer scope (usually taken care of by
+  ///       `detail::make_actor_util`)
   explicit abstract_actor(actor_config& cfg);
 
   // -- attachables ------------------------------------------------------------
