@@ -226,9 +226,6 @@ public:
   /// Returns the ID of the actor currently associated to the calling thread.
   static actor_id thread_local_aid();
 
-  /// Associates an actor ID to the calling thread and returns the last value.
-  static actor_id thread_local_aid(actor_id aid) noexcept;
-
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
   virtual bool accepts(unsigned level, std::string_view component_name) = 0;
@@ -337,21 +334,6 @@ private:
         loglvl, component, (caf::logger::line_builder{} << message).get());    \
     }                                                                          \
   } while (false)
-
-#define CAF_PUSH_AID(aarg)                                                     \
-  caf::actor_id CAF_PP_UNIFYN(caf_aid_tmp)                                     \
-    = caf::logger::thread_local_aid(aarg);                                     \
-  auto CAF_PP_UNIFYN(caf_aid_tmp_guard)                                        \
-    = caf::detail::scope_guard([=]() noexcept {                                \
-        caf::logger::thread_local_aid(CAF_PP_UNIFYN(caf_aid_tmp));             \
-      })
-
-#define CAF_PUSH_AID_FROM_PTR(some_ptr)                                        \
-  auto CAF_PP_UNIFYN(caf_aid_ptr) = some_ptr;                                  \
-  CAF_PUSH_AID(CAF_PP_UNIFYN(caf_aid_ptr) ? CAF_PP_UNIFYN(caf_aid_ptr)->id()   \
-                                          : 0)
-
-#define CAF_SET_AID(aid_arg) caf::logger::thread_local_aid(aid_arg)
 
 #define CAF_SET_LOGGER_SYS(ptr) caf::logger::current_logger(ptr)
 

@@ -7,6 +7,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/private_thread.hpp"
@@ -106,7 +107,7 @@ public:
   }
 
   void resume(scheduler* ctx, uint64_t event_id) override {
-    CAF_PUSH_AID_FROM_PTR(self_);
+    detail::current_actor_guard ctx_guard{self_};
     if (event_id == resumable::dispose_event_id) {
       self_->cleanup(make_error(exit_reason::user_shutdown), ctx);
       return;
@@ -148,7 +149,7 @@ private:
 } // namespace
 
 void blocking_actor::launch(scheduler*, bool) {
-  CAF_PUSH_AID_FROM_PTR(this);
+  detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("");
   CAF_ASSERT(getf(is_blocking_flag));
   // Try to acquire a thread before incrementing the running count, since this

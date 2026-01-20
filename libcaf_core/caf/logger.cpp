@@ -9,6 +9,7 @@
 #include "caf/chunked_string.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/current_actor.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/log_level_map.hpp"
@@ -125,9 +126,6 @@ void render_fields_formatted(render_buffer& buf,
   buf.append(" ; "); // separates the message from the fields
   render_fields(buf, fields);
 }
-
-// Stores the ID of the currently running actor.
-thread_local actor_id current_actor_id;
 
 // Stores a pointer to the system-wide logger.
 thread_local intrusive_ptr<logger> current_logger_ptr;
@@ -680,12 +678,10 @@ void logger::legacy_api_log(unsigned level, std::string_view component,
 }
 
 actor_id logger::thread_local_aid() {
-  return current_actor_id;
-}
-
-actor_id logger::thread_local_aid(actor_id aid) noexcept {
-  std::swap(current_actor_id, aid);
-  return aid;
+  if (auto* ptr = detail::current_actor()) {
+    return ptr->id();
+  }
+  return 0;
 }
 
 intrusive_ptr<logger> logger::make(actor_system& sys) {

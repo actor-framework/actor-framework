@@ -7,6 +7,7 @@
 #include "caf/add_ref.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/current_actor.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
@@ -45,7 +46,7 @@ bool forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
 }
 
 bool forwarding_actor_proxy::enqueue(mailbox_element_ptr what, scheduler*) {
-  CAF_PUSH_AID(0);
+  detail::current_actor_guard ctx_guard{nullptr};
   CAF_ASSERT(what);
   return forward_msg(std::move(what->sender), what->mid,
                      std::move(what->payload));
