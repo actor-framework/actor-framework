@@ -9,6 +9,7 @@
 #include "caf/json_object.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/parser_state.hpp"
+#include "caf/sec.hpp"
 
 #include <cstdint>
 #include <fstream>
@@ -170,7 +171,7 @@ expected<json_value> json_value::parse(std::string_view str) {
   auto root = detail::json::parse(ps, &storage->buf);
   if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  return {ps.error()};
+  return expected<json_value>{unexpect, ps.error()};
 }
 
 expected<json_value> json_value::parse_shallow(std::string_view str) {
@@ -179,7 +180,7 @@ expected<json_value> json_value::parse_shallow(std::string_view str) {
   auto root = detail::json::parse_shallow(ps, &storage->buf);
   if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  return {ps.error()};
+  return expected<json_value>{unexpect, ps.error()};
 }
 
 expected<json_value> json_value::parse_in_situ(std::string& str) {
@@ -188,21 +189,21 @@ expected<json_value> json_value::parse_in_situ(std::string& str) {
                                                str.data() + str.size()};
   auto root = detail::json::parse_in_situ(ps, &storage->buf);
   if (ps.code == pec::success)
-    return {json_value{root, std::move(storage)}};
-  return {ps.error()};
+    return expected<json_value>{std::in_place, root, std::move(storage)};
+  return expected<json_value>{unexpect, ps.error()};
 }
 
 expected<json_value> json_value::parse_file(const char* path) {
   using iterator_t = std::istreambuf_iterator<char>;
   std::ifstream input{path};
   if (!input.is_open())
-    return make_error(sec::cannot_open_file);
+    return expected<json_value>{unexpect, sec::cannot_open_file};
   auto storage = make_counted<detail::json::storage>();
   detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
   auto root = detail::json::parse(ps, &storage->buf);
   if (ps.code == pec::success)
     return {json_value{root, std::move(storage)}};
-  return {ps.error()};
+  return expected<json_value>{unexpect, ps.error()};
 }
 
 expected<json_value> json_value::parse_file(const std::string& path) {

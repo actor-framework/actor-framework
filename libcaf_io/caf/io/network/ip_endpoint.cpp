@@ -6,6 +6,7 @@
 
 #include "caf/io/network/native_socket.hpp"
 
+#include "caf/error_code.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/log/system.hpp"
 #include "caf/sec.hpp"
@@ -231,10 +232,10 @@ error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
         break;
       }
       default:
-        return sec::invalid_argument;
+        return error_code{sec::invalid_argument};
     }
   }
-  return none;
+  return {};
 }
 
 error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
@@ -250,7 +251,7 @@ error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
     p = 0;
     l = 0;
   }
-  return none;
+  return {};
 }
 
 } // namespace caf::io::network

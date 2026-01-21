@@ -130,10 +130,11 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
 #ifdef SOCK_CLOEXEC
   socktype |= SOCK_CLOEXEC;
 #endif
-  CAF_NET_SYSCALL("socket", fd, ==, -1, ::socket(proto, socktype, 0));
+  CAF_NET_SYSCALL_TO_UNEXPECTED("socket", fd, ==, -1,
+                                ::socket(proto, socktype, 0));
   tcp_stream_socket sock{fd};
   if (auto err = child_process_inherit(sock, false); err.valid())
-    return err;
+    return expected<tcp_stream_socket>{unexpect, std::move(err)};
   auto sguard = make_socket_guard(sock);
   if (proto == AF_INET6) {
     if (ip_connect<AF_INET6>(sock, to_string(node.address()), node.port(),
@@ -149,7 +150,7 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node,
     return sguard.release();
   }
   log::net::info("failed to connect to {}", node);
-  return make_error(sec::cannot_connect_to_node);
+  return expected<tcp_stream_socket>{unexpect, sec::cannot_connect_to_node};
 }
 
 expected<tcp_stream_socket>
@@ -158,20 +159,23 @@ make_connected_tcp_stream_socket(const uri::authority_type& node,
   auto lg = log::net::trace("node = {}, timeout = {}", node, timeout);
   auto port = node.port;
   if (port == 0)
-    return make_error(sec::cannot_connect_to_node, "port is zero");
+    return expected<tcp_stream_socket>{unexpect, sec::cannot_connect_to_node,
+                                       "port is zero"};
   std::vector<ip_address> addrs;
   if (auto str = std::get_if<std::string>(&node.host))
     addrs = ip::resolve(*str);
   else if (auto addr = std::get_if<ip_address>(&node.host))
     addrs.push_back(*addr);
   if (addrs.empty())
-    return make_error(sec::cannot_connect_to_node, "empty authority");
+    return expected<tcp_stream_socket>{unexpect, sec::cannot_connect_to_node,
+                                       "empty authority"};
   for (auto& addr : addrs) {
     auto ep = ip_endpoint{addr, port};
     if (auto sock = make_connected_tcp_stream_socket(ep, timeout))
       return *sock;
   }
-  return make_error(sec::cannot_connect_to_node, to_string(node));
+  return expected<tcp_stream_socket>{unexpect, sec::cannot_connect_to_node,
+                                     to_string(node)};
 }
 
 expected<tcp_stream_socket> make_connected_tcp_stream_socket(std::string host,

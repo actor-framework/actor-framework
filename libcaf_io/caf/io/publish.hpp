@@ -26,7 +26,7 @@ template <class Handle>
 expected<uint16_t> publish(const Handle& whom, uint16_t port,
                            const char* in = nullptr, bool reuse = false) {
   if (!whom)
-    return sec::cannot_publish_invalid_actor;
+    return unexpected<error>{std::in_place, sec::cannot_publish_invalid_actor};
   auto& sys = whom.home_system();
   return sys.middleman().publish(whom, port, in, reuse);
 }

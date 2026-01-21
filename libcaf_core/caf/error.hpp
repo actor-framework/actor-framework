@@ -7,7 +7,6 @@
 #include "caf/caf_deprecated.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/error_code.hpp"
 #include "caf/error_code_enum.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -97,21 +96,11 @@ public:
     // nop
   }
 
-  template <error_code_enum Enum>
-  error(error_code<Enum> code) : error(to_integer(code), type_id_v<Enum>) {
-    // nop
-  }
-
   template <error_code_enum E>
   error& operator=(E error_value) {
     error tmp{error_value};
     std::swap(data_, tmp.data_);
     return *this;
-  }
-
-  template <error_code_enum E>
-  error& operator=(error_code<E> code) {
-    return *this = code.value();
   }
 
   // -- properties -------------------------------------------------------------

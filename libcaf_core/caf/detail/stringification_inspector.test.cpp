@@ -336,14 +336,14 @@ TEST("stringification of expected with value") {
 
 TEST("stringification of expected with error") {
   // expected<int> with error
-  auto err_int = expected<int>{make_error(sec::runtime_error)};
+  auto err_int = expected<int>{unexpect, sec::runtime_error};
   check_eq(do_render(err_int), "!runtime_error"s);
   // expected<string> with error
-  auto err_str = expected<std::string>{make_error(sec::invalid_argument)};
+  auto err_str = expected<std::string>{unexpect, sec::invalid_argument};
   check_eq(do_render(err_str), "!invalid_argument"s);
   // expected with error message
-  auto err_msg
-    = expected<int>{make_error(sec::runtime_error, "something failed")};
+  auto err_msg = expected<int>{unexpect, sec::runtime_error,
+                               "something failed"};
   check_eq(do_render(err_msg), "!runtime_error(\"something failed\")"s);
 }
 
@@ -351,14 +351,14 @@ TEST("stringification of expected<void>") {
   // expected<void> with value (success)
   check_eq(do_render(expected<void>{}), "unit"s);
   // expected<void> with error
-  auto err_void = expected<void>{make_error(sec::runtime_error)};
+  auto err_void = expected<void>{unexpect, sec::runtime_error};
   check_eq(do_render(err_void), "!runtime_error"s);
 }
 
 TEST("stringification of nested expected") {
   // Vector of expected values
   std::vector<expected<int>> vec{expected<int>{1}, expected<int>{2},
-                                 expected<int>{make_error(sec::runtime_error)}};
+                                 expected<int>{unexpect, sec::runtime_error}};
   check_eq(do_render(vec), "[1, 2, !runtime_error]"s);
 }
 
@@ -367,6 +367,6 @@ TEST("stringification of expected with custom type") {
   auto pt = point2d{10, 20};
   check_eq(do_render(expected<point2d>{pt}), "point2d(10, 20)"s);
   // expected<point2d> with error
-  auto err_pt = expected<point2d>{make_error(sec::invalid_argument)};
+  auto err_pt = expected<point2d>{unexpect, sec::invalid_argument};
   check_eq(do_render(err_pt), "!invalid_argument"s);
 }

@@ -5,6 +5,7 @@
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/sec.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <algorithm>
@@ -65,18 +66,22 @@ expected<std::pair<size_t, byte_span>> parse_chunk(byte_span input) {
   if (chunk.size() == input.size()) {
     // Prevents indefinite octet stream as chunk_size.
     if (input.size() >= 10)
-      return make_error(sec::protocol_error, "Chunk size part is too long.");
+      return expected<std::pair<size_t, byte_span>>{
+        unexpect, sec::protocol_error, "Chunk size part is too long."};
     // Didn't receive enough data. Signal to caller by returning empty error.
-    return error{};
+    return expected<std::pair<size_t, byte_span>>{unexpect, error{}};
   }
   // Extensions are not supported. Look for extension separator ;
   if (std::ranges::find(chunk, ';') != chunk.end())
-    return make_error(sec::logic_error, "Chunk extensions not supported.");
+    return expected<std::pair<size_t, byte_span>>{
+      unexpect, sec::logic_error, "Chunk extensions not supported."};
   if (!std::ranges::all_of(chunk, isxdigit))
-    return make_error(sec::protocol_error, "Chunk size decoding error.");
+    return expected<std::pair<size_t, byte_span>>{unexpect, sec::protocol_error,
+                                                  "Chunk size decoding error."};
   if (chunk.size() > sizeof(size_t))
-    return make_error(sec::protocol_error,
-                      "Integer overflow while parsing chunk size.");
+    return expected<std::pair<size_t, byte_span>>{
+      unexpect, sec::protocol_error,
+      "Integer overflow while parsing chunk size."};
   // This parsing method is only safe because of the previous checks.
   detail::parser::ascii_to_int<16, size_t> f;
   size_t chunk_size = 0;

@@ -854,20 +854,21 @@ expected<strong_actor_ptr>
 actor_system::dyn_spawn_impl(const std::string& name, message& args,
                              caf::scheduler* sched, bool check_interface,
                              const mpi* expected_ifs) {
+  using result_type = expected<strong_actor_ptr>;
   auto lg = log::core::trace(
     "name = {}, args = {}, check_interface = {}, expected_ifs = {}", name, args,
     check_interface, expected_ifs);
   if (name.empty())
-    return sec::invalid_argument;
+    return result_type{unexpect, sec::invalid_argument};
   auto* fs = impl_->cfg->get_actor_factory(name);
   if (fs == nullptr)
-    return sec::unknown_type;
+    return result_type{unexpect, sec::unknown_type};
   actor_config cfg{sched != nullptr ? sched : &scheduler()};
   auto res = (*fs)(*this, cfg, args);
   if (!res.first)
-    return sec::cannot_spawn_actor_from_arguments;
+    return result_type{unexpect, sec::cannot_spawn_actor_from_arguments};
   if (check_interface && !assignable(res.second, *expected_ifs))
-    return sec::unexpected_actor_messaging_interface;
+    return result_type{unexpect, sec::unexpected_actor_messaging_interface};
   return std::move(res.first);
 }
 

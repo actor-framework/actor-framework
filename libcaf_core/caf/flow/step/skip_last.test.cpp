@@ -7,6 +7,7 @@
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/error_code.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
@@ -59,11 +60,11 @@ TEST("calling take(3) on skip_last(5) ignores the last two items") {
 TEST("skip_last operator forwards errors") {
   SECTION("blueprint") {
     check_eq(collect(obs_error<int>().skip_last(5)),
-             make_error(sec::runtime_error));
+             error_code{sec::runtime_error});
   }
   SECTION("observable") {
     check_eq(collect(obs_error<int>().as_observable().skip_last(5)),
-             make_error(sec::runtime_error));
+             error_code{sec::runtime_error});
   }
 }
 

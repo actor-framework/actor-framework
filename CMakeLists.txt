@@ -61,6 +61,7 @@ option(CAF_ENABLE_ROBOT_TESTS "Add the Robot tests to CTest " OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
 option(CAF_USE_STD_FORMAT "Enable std::format support" OFF)
 option(CAF_ENABLE_TRACE_LOGGING "Enable additional logging for debugging" OFF)
+option(CAF_USE_STD_EXPECTED "Enable std::expected support" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
 
@@ -70,11 +71,6 @@ option(CAF_ENABLE_IO_MODULE "Build legacy networking I/O module" ON)
 option(CAF_ENABLE_NET_MODULE "Build networking I/O module" ON)
 option(CAF_ENABLE_TESTING "Build unit test suites" ON)
 
-# -- CAF options that depend on others -----------------------------------------
-
-cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
-                       "CAF_ENABLE_IO_MODULE" OFF)
-
 # -- CAF options with non-boolean values ---------------------------------------
 
 set(CAF_CXX_VERSION 20 CACHE STRING "Set the C++ version to use for CAF")
@@ -83,6 +79,11 @@ set(CAF_SANITIZERS "" CACHE STRING
     "Comma separated sanitizers, e.g., 'address,undefined'")
 set(CAF_BUILD_INFO_FILE_PATH "" CACHE FILEPATH
   "Optional path for writing CMake and compiler version information")
+
+# -- CAF options that depend on others -----------------------------------------
+
+cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
+                       "CAF_ENABLE_IO_MODULE" OFF)
 
 # -- macOS-specific options ----------------------------------------------------
 

@@ -71,6 +71,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `caf::weak_intrusive_ptr` that accept a boolean flag to control whether the
   reference count should be increased or not have been deprecated. Users should
   use the new `add_ref` and `adopt_ref` tags instead.
+- Deprecate all member functions in `caf::expected` that are not present in
+  `std::expected`.
 
 ### Added
 
@@ -99,6 +101,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The new static method `caf::abstract_actor::current()` grants users
   access to the actor currently associated with the calling thread (returns
   `nullptr` if no actor is associated with the thread).
+- To make `caf::expected` a drop-in replacement for `std::expected`, we have
+  added missing utility types such as `caf::unexpect` and `caf::unexpected`.
+  Further, users can optionally build CAF with `CAF_USE_STD_EXPECTED` enabled to
+  have CAF use aliases to the standard library types instead of its own
+  implementation (requires C++23).
 
 ### Fixed
 
@@ -123,6 +130,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `CAF_PUSH_AID`, `CAF_PUSH_AID_FROM_PTR` and `CAF_SET_AID` have been removed.
   They were technically part of the public API but were never intended to be
   called by users.
+- Removed the implicit conversions from `caf::error_code` to `caf::error` and
+  from error code enums to `caf::error_code`.
 
 ## [1.1.0] - 2025-07-25
 

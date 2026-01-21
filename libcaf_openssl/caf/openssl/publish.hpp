@@ -35,7 +35,7 @@ template <class Handle>
 expected<uint16_t> publish(const Handle& whom, uint16_t port,
                            const char* in = nullptr, bool reuse = false) {
   if (!whom)
-    return sec::cannot_publish_invalid_actor;
+    return expected<uint16_t>{unexpect, sec::cannot_publish_invalid_actor};
   auto& sys = whom.home_system();
   return publish(sys, actor_cast<strong_actor_ptr>(whom),
                  sys.message_types(whom), port, in, reuse);

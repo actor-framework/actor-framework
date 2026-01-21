@@ -232,7 +232,6 @@ caf_add_component(
     caf/event_based_actor.test.cpp
     caf/event_based_mail.test.cpp
     caf/exit_reason.test.cpp
-    caf/expected.test.cpp
     caf/flow/byte.test.cpp
     caf/flow/combine_latest.test.cpp
     caf/flow/concat_map.test.cpp
@@ -418,6 +417,11 @@ caf_add_log_component(system)
 # further investigation.
 if(NOT MSVC AND CAF_ENABLE_TESTING)
   target_sources(caf-core-test PRIVATE caf/behavior.test.cpp)
+endif()
+
+# Don't test caf::expected if it's an alias for std::expected.
+if(NOT CAF_USE_STD_EXPECTED AND CAF_ENABLE_TESTING)
+  target_sources(caf-core-test PRIVATE caf/expected.test.cpp)
 endif()
 
 if(NOT CAF_USE_STD_FORMAT)

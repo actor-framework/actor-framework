@@ -29,15 +29,17 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
              .request(sys.openssl_manager().actor_handle(), infinite)
              .receive();
   if (!x)
-    return std::move(x.error());
+    return expected<strong_actor_ptr>{unexpect, std::move(x.error())};
   auto& tup = *x;
   auto& ptr = get<1>(tup);
   if (!ptr)
-    return sec::no_actor_published_at_port;
+    return expected<strong_actor_ptr>{unexpect,
+                                      sec::no_actor_published_at_port};
   auto& found_mpi = get<2>(tup);
   if (sys.assignable(found_mpi, mpi))
     return std::move(ptr);
-  return sec::unexpected_actor_messaging_interface;
+  return expected<strong_actor_ptr>{unexpect,
+                                    sec::unexpected_actor_messaging_interface};
 }
 
 } // namespace caf::openssl

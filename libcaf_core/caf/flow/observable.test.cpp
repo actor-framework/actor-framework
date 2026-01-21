@@ -9,6 +9,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/error_code.hpp"
 #include "caf/flow/multicaster.hpp"
 
 using caf::test::nil;
@@ -45,27 +46,29 @@ TEST("do_finally(fn) executes the passed function before exit") {
   }
   SECTION("do_finally(fn) invokes fn on error") {
     SECTION("blueprint") {
-      check_eq(collect(obs_error().do_finally(fn)), sec::runtime_error);
+      check_eq(collect(obs_error().do_finally(fn)),
+               error_code{sec::runtime_error});
       check_eq(*x, 1);
       check_eq(collect(range(1, 3).concat(obs_error()).do_finally(fn)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(*x, 2);
       check_eq(
         collect(
           range(1, 3).concat(obs_error()).concat(range(1, 2)).do_finally(fn)),
-        sec::runtime_error);
+        error_code{sec::runtime_error});
       check_eq(*x, 3);
     }
     SECTION("observable") {
-      check_eq(collect(build(obs_error()).do_finally(fn)), sec::runtime_error);
+      check_eq(collect(build(obs_error()).do_finally(fn)),
+               error_code{sec::runtime_error});
       check_eq(*x, 1);
       check_eq(collect(build(range(1, 3).concat(obs_error())).do_finally(fn)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(*x, 2);
       check_eq(collect(
                  build(range(1, 3).concat(obs_error()).concat(range(1, 2)))
                    .do_finally(fn)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(*x, 3);
     }
   }
@@ -108,10 +111,12 @@ TEST("element_at(n) only takes the element with index n") {
   }
   SECTION("element_at(n) propagates errors") {
     SECTION("blueprint") {
-      check_eq(collect(obs_error().element_at(1)), sec::runtime_error);
+      check_eq(collect(obs_error().element_at(1)),
+               error_code{sec::runtime_error});
     }
     SECTION("observable") {
-      check_eq(collect(build(obs_error()).element_at(1)), sec::runtime_error);
+      check_eq(collect(build(obs_error()).element_at(1)),
+               error_code{sec::runtime_error});
     }
   }
 }
@@ -141,18 +146,19 @@ TEST("reduce(init, fn) combines all items into one final value using fn") {
   SECTION("reduce(init, fn) propagates errors") {
     SECTION("blueprint") {
       check_eq(collect(range(1, 1).concat(obs_error()).reduce(0, adder)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(range(1, 3).concat(obs_error()).reduce(0, adder)),
-               sec::runtime_error);
-      check_eq(collect(obs_error().reduce(0, adder)), sec::runtime_error);
+               error_code{sec::runtime_error});
+      check_eq(collect(obs_error().reduce(0, adder)),
+               error_code{sec::runtime_error});
     }
     SECTION("observable") {
       check_eq(collect(build(range(1, 1).concat(obs_error())).reduce(0, adder)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(build(range(1, 3).concat(obs_error())).reduce(0, adder)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(build(obs_error()).reduce(0, adder)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
     }
   }
 }
@@ -182,17 +188,19 @@ TEST("scan(init, fn) creates successive reduced values using fn") {
   SECTION("scan(init, fn) propagates errors") {
     SECTION("blueprint") {
       check_eq(collect(range(1, 1).concat(obs_error()).scan(0, adder)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(range(1, 3).concat(obs_error()).scan(0, adder)),
-               sec::runtime_error);
-      check_eq(collect(obs_error().scan(0, adder)), sec::runtime_error);
+               error_code{sec::runtime_error});
+      check_eq(collect(obs_error().scan(0, adder)),
+               error_code{sec::runtime_error});
     }
     SECTION("observable") {
       check_eq(collect(build(range(1, 1).concat(obs_error())).scan(0, adder)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(build(range(1, 3).concat(obs_error())).scan(0, adder)),
-               sec::runtime_error);
-      check_eq(collect(build(obs_error()).scan(0, adder)), sec::runtime_error);
+               error_code{sec::runtime_error});
+      check_eq(collect(build(obs_error()).scan(0, adder)),
+               error_code{sec::runtime_error});
     }
   }
 }
@@ -250,12 +258,14 @@ TEST("skip(n) skips the first n elements in a range of size m") {
   }
   SECTION("skip(n) forwards errors") {
     SECTION("blueprint") {
-      check_eq(collect(obs_error().skip(0)), sec::runtime_error);
-      check_eq(collect(obs_error().skip(1)), sec::runtime_error);
+      check_eq(collect(obs_error().skip(0)), error_code{sec::runtime_error});
+      check_eq(collect(obs_error().skip(1)), error_code{sec::runtime_error});
     }
     SECTION("observable") {
-      check_eq(collect(build(obs_error()).skip(0)), sec::runtime_error);
-      check_eq(collect(build(obs_error()).skip(1)), sec::runtime_error);
+      check_eq(collect(build(obs_error()).skip(0)),
+               error_code{sec::runtime_error});
+      check_eq(collect(build(obs_error()).skip(1)),
+               error_code{sec::runtime_error});
     }
   }
 }
@@ -498,48 +508,50 @@ TEST("on_error_return() replaces an error with a value") {
   }
   SECTION("on_error_return() forwards errors from the handler") {
     auto return_unexpected = [](const error&) {
-      return expected<int>{make_error(sec::unexpected_message)};
+      return expected<int>{unexpect, sec::unexpected_message};
     };
-    auto return_err = [](const error& err) { return expected<int>{err}; };
+    auto return_err = [](const error& err) {
+      return expected<int>{unexpect, err};
+    };
     SECTION("blueprint") {
       check_eq(collect(obs_error().on_error_return(return_unexpected)),
-               sec::unexpected_message);
+               error_code{sec::unexpected_message});
       check_eq(collect(range(1, 2)
                          .concat(obs_error())
                          .concat(range(1, 2))
                          .on_error_return(return_unexpected)),
-               sec::unexpected_message);
+               error_code{sec::unexpected_message});
       check_eq(collect(range(1, 3)
                          .concat(obs_error())
                          .concat(range(1, 3))
                          .on_error_return(return_err)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(
                  range(1, 2).concat(obs_error()).on_error_return(return_err)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(
         collect(
           range(1, 3).concat(obs_error()).on_error_return(return_unexpected)),
-        sec::unexpected_message);
+        error_code{sec::unexpected_message});
     }
     SECTION("observable") {
       check_eq(collect(build(obs_error()).on_error_return(return_unexpected)),
-               sec::unexpected_message);
+               error_code{sec::unexpected_message});
       check_eq(collect(
                  build(range(1, 2).concat(obs_error()).concat(range(1, 2)))
                    .on_error_return(return_unexpected)),
-               sec::unexpected_message);
+               error_code{sec::unexpected_message});
       check_eq(collect(
                  build(range(1, 3).concat(obs_error()).concat(range(1, 3)))
                    .on_error_return(return_err)),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(
         collect(
           build(range(1, 2).concat(obs_error())).on_error_return(return_err)),
-        sec::runtime_error);
+        error_code{sec::runtime_error});
       check_eq(collect(build(range(1, 3).concat(obs_error()))
                          .on_error_return(return_unexpected)),
-               sec::unexpected_message);
+               error_code{sec::unexpected_message});
     }
   }
 }
@@ -583,19 +595,20 @@ TEST("start_with(value) builds observable that emits value first") {
   }
   SECTION("start_with(value) forwards error)") {
     SECTION("blueprint") {
-      check_eq(collect(obs_error().start_with(value)), sec::runtime_error);
+      check_eq(collect(obs_error().start_with(value)),
+               error_code{sec::runtime_error});
       check_eq(collect(obs_error().start_with(range(1, 2))),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(range(1, 2).start_with(obs_error())),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
     }
     SECTION("observable") {
       check_eq(collect(build(obs_error().start_with(value))),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(build(obs_error().start_with(range(1, 2)))),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
       check_eq(collect(build(range(1, 2).start_with(obs_error()))),
-               sec::runtime_error);
+               error_code{sec::runtime_error});
     }
   }
 }
@@ -616,7 +629,8 @@ SCENARIO("auto_connect operators stay connected even without subscribers") {
       run_flows();
       snk1->sub.cancel();
       snk2->sub.cancel();
-      THEN("the operator stays connected and new subscribers see new items") {
+      THEN("the operator stays connected and new subscribers see new "
+           "items") {
         check(pub.pimpl()->connected());
         src.push(1); // lost, because no subscribers exist anymore
         auto snk3 = make_auto_observer<int>();
@@ -667,7 +681,8 @@ SCENARIO("a ref_count operator disconnects when no subscribers exist") {
       run_flows();
       snk1->sub.cancel();
       snk2->sub.cancel();
-      THEN("the operator disconnects and re-connects when subscribed again") {
+      THEN("the operator disconnects and re-connects when subscribed "
+           "again") {
         check(!pub.pimpl()->connected());
         src.push(1); // lost, because no subscribers exist anymore
         auto snk3 = make_auto_observer<int>();
@@ -682,7 +697,8 @@ SCENARIO("a ref_count operator disconnects when no subscribers exist") {
         check_eq(snk3->buf, std::vector{2});
       }
     }
-    WHEN("disposing a connection and re-connecting before the on_error event") {
+    WHEN("disposing a connection and re-connecting before the on_error "
+         "event") {
       auto snk1 = make_auto_observer<int>();
       auto snk2 = make_auto_observer<int>();
       uut.subscribe(snk1->as_observer());
@@ -691,7 +707,8 @@ SCENARIO("a ref_count operator disconnects when no subscribers exist") {
       check(pub.pimpl()->connected());
       snk1->sub.cancel();
       snk2->sub.cancel();
-      check_ne(pending_actions(), 0u);  // pending on_error(ec::disposed) event
+      check_ne(pending_actions(),
+               0u);                     // pending on_error(ec::disposed) event
       check(!pub.pimpl()->connected()); // conn_ is already disposed
       auto snk3 = make_auto_observer<int>();
       uut.subscribe(snk3->as_observer());

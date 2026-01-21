@@ -27,6 +27,8 @@
 
 #cmakedefine CAF_USE_STD_FORMAT
 
+#cmakedefine CAF_USE_STD_EXPECTED
+
 // Backwards compatibility macros.
 #define CAF_MAJOR_VERSION @CAF_VERSION_MAJOR@
 #define CAF_MINOR_VERSION @CAF_VERSION_MINOR@

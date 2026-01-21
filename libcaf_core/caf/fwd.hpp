@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include "caf/detail/build_config.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/error_code_enum.hpp"
 #include "caf/typed_actor_pack.hpp"
 
 #include <cstddef>
@@ -14,6 +16,10 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#ifdef CAF_USE_STD_EXPECTED
+#  include <expected>
+#endif
 
 namespace caf {
 
@@ -28,7 +34,6 @@ template <class> class basic_cow_string;
 template <class> class callback;
 template <class> class cow_vector;
 template <class> class dictionary;
-template <class> class expected;
 template <class> class function_view;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
@@ -42,6 +47,11 @@ template <class> struct type_id;
 
 template <uint16_t> struct type_by_id;
 template <uint16_t> struct type_name_by_id;
+
+#ifndef CAF_USE_STD_EXPECTED
+template <class> class unexpected;
+template <class> class expected;
+#endif
 
 // -- 2 param templates --------------------------------------------------------
 
@@ -175,18 +185,6 @@ struct stream_open_msg;
 struct timeout_msg;
 struct unit_t;
 
-// -- free template functions --------------------------------------------------
-
-template <class T>
-config_option make_config_option(std::string_view category,
-                                 std::string_view name,
-                                 std::string_view description);
-
-template <class T>
-config_option make_config_option(T& storage, std::string_view category,
-                                 std::string_view name,
-                                 std::string_view description);
-
 // -- enums --------------------------------------------------------------------
 
 enum class exit_reason : uint8_t;
@@ -211,10 +209,30 @@ using ip_subnet = ipv6_subnet;
 using settings = dictionary<config_value>;
 using type_id_t = uint16_t;
 
+#ifdef CAF_USE_STD_EXPECTED
+template <class E>
+using unexpected = std::unexpected<E>;
+
+template <class T>
+using expected = std::expected<T, error>;
+#endif
+
 // -- functions ----------------------------------------------------------------
 
 /// @relates actor_system_config
 CAF_CORE_EXPORT const settings& content(const actor_system_config&);
+
+// -- free template functions --------------------------------------------------
+
+template <class T>
+config_option make_config_option(std::string_view category,
+                                 std::string_view name,
+                                 std::string_view description);
+
+template <class T>
+config_option make_config_option(T& storage, std::string_view category,
+                                 std::string_view name,
+                                 std::string_view description);
 
 // -- hash inspectors ----------------------------------------------------------
 

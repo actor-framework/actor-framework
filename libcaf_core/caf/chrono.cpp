@@ -305,7 +305,7 @@ time_t datetime::to_time_t() const noexcept {
 expected<datetime> datetime::from_string(std::string_view str) {
   datetime tmp;
   if (auto err = parse(str, tmp); err.valid())
-    return err;
+    return expected<datetime>{unexpect, err};
   return tmp;
 }
 
