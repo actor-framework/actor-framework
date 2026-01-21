@@ -82,6 +82,13 @@ public:
     bool producer_blocked : 1;
   };
 
+  /// @param capacity The maximum number of items the buffer can hold. Treated
+  ///                 as a "soft limit" by `push`, i.e., the buffer may
+  ///                 temporarily hold more items than the capacity unless the
+  ///                 producer only calls `try_push`, which treats the capacity
+  ///                 as a hard limit.
+  /// @param min_pull_size The minimum number of items the consumer must pull
+  ///                      before the producer is signaled to produce more.
   spsc_buffer(size_t capacity, size_t min_pull_size)
     : capacity_(capacity), min_pull_size_(min_pull_size) {
     memset(&flags_, 0, sizeof(flags));
@@ -97,6 +104,9 @@ public:
   /// Appends to the buffer and calls `on_producer_wakeup` on the consumer if
   /// the buffer becomes non-empty.
   /// @returns the remaining capacity after inserting the items.
+  /// @note Items are always copied into the buffer, even after reaching the
+  ///       capacity. This allows the buffer to absorb small bursts of items
+  ///       without forcing external buffering.
   size_t push(std::span<const T> items) {
     lock_type guard{mtx_};
     CAF_ASSERT(producer_ != nullptr);
@@ -113,6 +123,9 @@ public:
   /// Appends to the buffer and calls `on_producer_wakeup` on the consumer if
   /// the buffer becomes non-empty.
   /// @returns the remaining capacity after inserting the items.
+  /// @note Items are always copied into the buffer, even after reaching the
+  ///       capacity. This allows the buffer to absorb small bursts of items
+  ///       without forcing external buffering.
   size_t push(const T& item) {
     return push(std::span{&item, 1});
   }
