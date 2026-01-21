@@ -57,7 +57,7 @@ public:
   }
 
   bool push(const net::http::request& item) override {
-    return buf_->push(item);
+    return buf_->try_push(item);
   }
 
 private:
@@ -173,9 +173,10 @@ public:
       auto producer = make_http_request_producer({mpx, add_ref},
                                                  push.try_open());
       auto new_route = make_route([producer](responder& res) {
-        if (!producer->push(responder{res}.to_request())) {
-          auto err = make_error(sec::runtime_error, "flow disconnected");
-          res.router()->abort_and_shutdown(err);
+        auto req = responder{res}.to_request();
+        if (!producer->push(req)) {
+          req.respond(status::service_unavailable, "text/plain",
+                      "service unavailable: too many pending requests");
         }
       });
       if (!new_route) {
