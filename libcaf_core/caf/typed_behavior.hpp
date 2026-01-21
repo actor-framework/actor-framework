@@ -186,6 +186,10 @@ public:
     // TODO: implement type checking.
   }
 
+  explicit typed_behavior(unsafe_behavior_init_t) {
+    // nop
+  }
+
   typed_behavior(unsafe_behavior_init_t, behavior x) : bhvr_(std::move(x)) {
     // nop
   }

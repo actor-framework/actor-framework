@@ -4,12 +4,16 @@
 
 #pragma once
 
+#include "caf/actor_traits.hpp"
+#include "caf/behavior.hpp"
+#include "caf/callback.hpp"
 #include "caf/detail/concepts.hpp"
+#include "caf/detail/metaprogramming.hpp"
 #include "caf/fwd.hpp"
-#include "caf/sec.hpp"
 #include "caf/unsafe_behavior_init.hpp"
 
 #include <new>
+#include <tuple>
 #include <type_traits>
 
 namespace caf::detail {
@@ -24,12 +28,37 @@ public:
   typename Base::behavior_type make_behavior() override;
 };
 
-/// Evaluates to either `stateful_actor_base<State, Base> `or `Base`, depending
-/// on whether `State::make_behavior()` exists.
+/// Conditional base type for `stateful_actor` that overrides `act` when using a
+/// blocking actor as base.
 template <class State, class Base>
-using stateful_actor_base_t
-  = std::conditional_t<has_make_behavior<State>,
-                       stateful_actor_base<State, Base>, Base>;
+class stateful_blocking_actor_base : public Base {
+public:
+  using Base::Base;
+
+  void act() override;
+};
+
+template <class State, class Base>
+struct stateful_actor_base_oracle {
+  using type = Base;
+};
+
+template <has_make_behavior State, non_blocking_actor_type Base>
+struct stateful_actor_base_oracle<State, Base> {
+  using type = stateful_actor_base<State, Base>;
+};
+
+template <has_make_behavior State, blocking_actor_type Base>
+struct stateful_actor_base_oracle<State, Base> {
+  using type = stateful_blocking_actor_base<State, Base>;
+};
+
+/// Evaluates to either `stateful_actor_base<State, Base>`,
+/// `stateful_blocking_actor_base<State, Base>`, or `Base`, depending on whether
+/// the state has `make_behavior()` and whether the base is a blocking actor.
+template <class State, class Base>
+using stateful_actor_base_t =
+  typename stateful_actor_base_oracle<State, Base>::type;
 
 } // namespace caf::detail
 
@@ -95,15 +124,75 @@ namespace caf::detail {
 
 template <class State, class Base>
 typename Base::behavior_type stateful_actor_base<State, Base>::make_behavior() {
-  // When spawning function-based actors, CAF sets `initial_behavior_fac_` to
-  // wrap the function invocation. This always has the highest priority.
-  if (this->initial_behavior_fac_) {
-    auto res = this->initial_behavior_fac_(this);
-    this->initial_behavior_fac_ = nullptr;
-    return {unsafe_behavior_init, std::move(res)};
-  }
   auto dptr = static_cast<stateful_actor<State, Base>*>(this);
   return dptr->state().make_behavior();
 }
+
+template <class State, class Base>
+void stateful_blocking_actor_base<State, Base>::act() {
+  // We call `make_behavior()` only to invoke the user-defined callback. For
+  // blocking actors, this callback must return `void` and `make_behavior()`
+  // will thus always return a default-constructed (empty) behavior that we can
+  // safely discard.
+  auto dptr = static_cast<stateful_actor<State, Base>*>(this);
+  std::ignore = dptr->state().make_behavior();
+}
+
+template <class Self>
+struct functor_state {
+  using behavior_type = typename Self::behavior_type;
+
+  template <class Fn, class... Args>
+  explicit functor_state(Self* selfptr, Fn&& f, Args&&... args)
+    : self(selfptr) {
+    // Wrap the function invocation into a callback that we can call later in
+    // `make_behavior()` when launching the actor.
+    if constexpr (std::is_invocable_r_v<behavior_type, Fn, Self*, Args...>) {
+      static_assert(!actor_traits<Self>::is_blocking,
+                    "Blocking actors cannot return a behavior");
+      auto g = [f = std::forward<Fn>(f), ... args = std::forward<Args>(args)](
+                 Self* self) mutable -> behavior_type {
+        return f(self, std::move(args)...);
+      };
+      fn = make_type_erased_callback(std::move(g));
+    } else if constexpr (std::is_invocable_r_v<behavior_type, Fn, Args...>) {
+      static_assert(!actor_traits<Self>::is_blocking,
+                    "Blocking actors cannot return a behavior");
+      auto g = [f = std::forward<Fn>(f), ... args = std::forward<Args>(args)](
+                 Self*) mutable -> behavior_type {
+        return f(std::move(args)...);
+      };
+      fn = make_type_erased_callback(std::move(g));
+    } else if constexpr (std::is_invocable_r_v<void, Fn, Self*, Args...>) {
+      auto g = [f = std::forward<Fn>(f), ... args = std::forward<Args>(args)](
+                 Self* self) mutable -> behavior_type {
+        f(self, std::move(args)...);
+        return behavior_type{unsafe_behavior_init};
+      };
+      fn = make_type_erased_callback(std::move(g));
+    } else if constexpr (std::is_invocable_r_v<void, Fn, Args...>) {
+      auto g = [f = std::forward<Fn>(f), ... args = std::forward<Args>(args)](
+                 Self*) mutable -> behavior_type {
+        f(std::move(args)...);
+        return behavior_type{unsafe_behavior_init};
+      };
+      fn = make_type_erased_callback(std::move(g));
+    } else {
+      static_assert(detail::always_false<Fn>, "Invalid callable type");
+    }
+  }
+
+  behavior_type make_behavior() {
+    if (fn) {
+      auto res = (*fn)(self);
+      fn = nullptr;
+      return res;
+    }
+    return behavior_type{unsafe_behavior_init};
+  }
+
+  Self* self;
+  unique_callback_ptr<behavior_type(Self*)> fn;
+};
 
 } // namespace caf::detail
