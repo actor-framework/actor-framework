@@ -21,13 +21,13 @@
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/stack.hpp"
-#include "caf/is_timeout_or_catch_all.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
 #include "caf/telemetry/actor_metrics.hpp"
+#include "caf/timeout_definition.hpp"
 #include "caf/typed_actor.hpp"
 
 #include <chrono>
@@ -326,9 +326,9 @@ public:
     using namespace detail;
     static_assert(sizeof...(Ts), "at least one argument required");
     // extract how many arguments are actually the behavior part,
-    // i.e., neither `after(...) >> ...` nor `others >> ...`.
-    using filtered = tl_filter_not_t<type_list<std::decay_t<Ts>...>,
-                                     is_timeout_or_catch_all>;
+    // i.e., not `after(...) >> ...` (timeout definitions).
+    using filtered
+      = tl_filter_not_t<type_list<std::decay_t<Ts>...>, is_timeout_definition>;
     filtered tk;
     behavior bhvr{apply_moved_args(make_behavior_impl, get_indices(tk), tup)};
     using tail_indices = il_range_t<tl_size_v<filtered>, sizeof...(Ts)>;
