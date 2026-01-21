@@ -26,7 +26,7 @@ struct fixture : test::fixture::deterministic {
 
 WITH_FIXTURE(fixture) {
 
-TEST("catch_all") {
+TEST("message catch-all handler") {
   self->mail(42).send(self);
   self->receive([this](float) { fail("received unexpected float"); },
                 [this](message& msg) {
