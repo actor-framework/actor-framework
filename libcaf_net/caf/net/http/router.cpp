@@ -8,12 +8,51 @@
 #include "caf/async/future.hpp"
 #include "caf/disposable.hpp"
 #include "caf/log/net.hpp"
+#include "caf/make_counted.hpp"
+
+#include <atomic>
 
 namespace caf::net::http {
 
+namespace {
+
+/// Trivial connection guard that only tracks the orphaned flag.
+class trivial_connection_guard : public detail::connection_guard {
+public:
+  bool orphaned() const noexcept override {
+    return orphaned_.load(std::memory_order_acquire);
+  }
+
+  void set_orphaned() noexcept override {
+    orphaned_.store(true, std::memory_order_release);
+  }
+
+private:
+  std::atomic<bool> orphaned_{false};
+};
+
+} // namespace
+
 // -- constructors and destructors ---------------------------------------------
 
+router::router() : guard_(make_counted<trivial_connection_guard>()) {
+  // nop
+}
+
+router::router(std::vector<route_ptr> routes)
+  : routes_(std::move(routes)),
+    guard_(make_counted<trivial_connection_guard>()) {
+  // nop
+}
+
+router::router(std::vector<route_ptr> routes,
+               detail::connection_guard_ptr guard)
+  : routes_(std::move(routes)), guard_(std::move(guard)) {
+  CAF_ASSERT(guard_ != nullptr);
+}
+
 router::~router() {
+  guard_->set_orphaned();
   for (auto& [id, hdl] : pending_)
     hdl.dispose();
 }
@@ -22,6 +61,11 @@ router::~router() {
 
 std::unique_ptr<router> router::make(std::vector<route_ptr> routes) {
   return std::make_unique<router>(std::move(routes));
+}
+
+std::unique_ptr<router> router::make(std::vector<route_ptr> routes,
+                                     detail::connection_guard_ptr guard) {
+  return std::make_unique<router>(std::move(routes), std::move(guard));
 }
 
 // -- properties ---------------------------------------------------------------
@@ -36,10 +80,11 @@ actor_shell* router::self() {
 // -- API for the responders ---------------------------------------------------
 
 request router::lift(responder&& res) {
+  CAF_ASSERT(guard_ != nullptr);
   auto prom = async::promise<response>();
   auto fut = prom.get_future();
   auto buf = std::vector<std::byte>{res.payload().begin(), res.payload().end()};
-  auto lifted = request{res.header(), std::move(buf), std::move(prom)};
+  auto lifted = request{res.header(), std::move(buf), std::move(prom), guard_};
   auto request_id = request_id_++;
   auto hdl = fut.bind_to(down_->mpx())
                .then(

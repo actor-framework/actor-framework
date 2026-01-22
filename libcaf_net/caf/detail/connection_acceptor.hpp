@@ -6,6 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 
+#include "caf/action.hpp"
 #include "caf/fwd.hpp"
 
 #include <memory>
@@ -21,7 +22,10 @@ public:
   virtual ~connection_acceptor();
 
   /// Callback from the socket manager for startup.
-  virtual error start(net::socket_manager*) = 0;
+  /// @param parent The socket manager that owns this acceptor.
+  /// @param on_conn_close Callback to invoke when a connection is fully closed
+  ///        (socket cleaned up AND all outstanding requests destroyed).
+  virtual error start(net::socket_manager* parent, action on_conn_close) = 0;
 
   /// Aborts the acceptor.
   virtual void abort(const error&) = 0;

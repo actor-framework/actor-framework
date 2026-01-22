@@ -30,6 +30,7 @@ caf_add_component(
     ${CAF_NET_HEADERS}
   SOURCES
     caf/detail/connection_acceptor.cpp
+    caf/detail/connection_guard.cpp
     caf/detail/flow_bridge_initializer.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp

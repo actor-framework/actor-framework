@@ -11,6 +11,7 @@
 #include "caf/async/execution_context.hpp"
 #include "caf/async/promise.hpp"
 #include "caf/byte_span.hpp"
+#include "caf/detail/connection_guard.hpp"
 #include "caf/detail/net_export.hpp"
 
 #include <cstdint>
@@ -65,9 +66,14 @@ public:
     return respond(code, content_type, as_bytes(std::span{content}));
   }
 
+  /// Returns `true` if the socket manager that created this request has shut
+  /// down, `false` otherwise.
+  [[nodiscard]] bool orphaned() const noexcept;
+
 private:
   request(request_header hdr, std::vector<std::byte> body,
-          async::promise<response> prom);
+          async::promise<response> prom,
+          detail::connection_guard_ptr conn_guard);
 
   impl* impl_ = nullptr;
 };

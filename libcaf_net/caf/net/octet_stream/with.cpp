@@ -42,8 +42,9 @@ public:
                                     write_buffer_size, std::move(events));
   }
 
-  error start(net::socket_manager* parent) override {
+  error start(net::socket_manager* parent, action on_conn_close) override {
     parent_ = parent;
+    on_conn_close_ = std::move(on_conn_close);
     mcast_ = parent->add_child(std::in_place_type<flow::op::mcast<event_type>>);
     flow::observable<event_type>{mcast_}.subscribe(events_);
     return none;
@@ -83,7 +84,10 @@ public:
     auto transport = internal::make_transport(std::move(*conn),
                                               std::move(bridge));
     transport->active_policy().accept();
-    return net::socket_manager::make(parent_->mpx_ptr(), std::move(transport));
+    auto res = net::socket_manager::make(parent_->mpx_ptr(),
+                                         std::move(transport));
+    res->add_cleanup_listener(on_conn_close_);
+    return res;
   }
 
 private:
@@ -98,6 +102,8 @@ private:
   intrusive_ptr<flow::op::mcast<event_type>> mcast_;
 
   async::producer_resource<event_type> events_;
+
+  action on_conn_close_;
 };
 
 } // namespace

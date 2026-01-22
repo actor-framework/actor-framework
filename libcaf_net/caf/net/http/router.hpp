@@ -12,10 +12,9 @@
 #include "caf/net/http/upper_layer.hpp"
 
 #include "caf/caf_deprecated.hpp"
+#include "caf/detail/connection_guard.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/expected.hpp"
-#include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -31,17 +30,20 @@ class CAF_NET_EXPORT router : public upper_layer::server {
 public:
   // -- constructors and destructors -------------------------------------------
 
-  router() = default;
+  router();
 
-  explicit router(std::vector<route_ptr> routes) : routes_(std::move(routes)) {
-    // nop
-  }
+  explicit router(std::vector<route_ptr> routes);
+
+  router(std::vector<route_ptr> routes, detail::connection_guard_ptr guard);
 
   ~router() override;
 
   // -- factories --------------------------------------------------------------
 
   static std::unique_ptr<router> make(std::vector<route_ptr> routes);
+
+  static std::unique_ptr<router> make(std::vector<route_ptr> routes,
+                                      detail::connection_guard_ptr guard);
 
   // -- properties -------------------------------------------------------------
 
@@ -105,6 +107,9 @@ private:
 
   /// Lazily initialized for allowing a @ref route to interact with actors.
   actor_shell_ptr shell_;
+
+  /// Tracks connection lifetime for outstanding requests.
+  detail::connection_guard_ptr guard_;
 };
 
 } // namespace caf::net::http

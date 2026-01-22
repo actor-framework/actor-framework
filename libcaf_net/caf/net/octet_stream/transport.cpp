@@ -318,7 +318,8 @@ public:
   }
 
   void abort(const error& reason) override {
-    up_->abort(reason);
+    if (up_)
+      up_->abort(reason);
     flags_.shutting_down = true;
   }
 
@@ -403,6 +404,9 @@ protected:
       log::net::debug("transport failed with reason: {}", reason);
       up_->abort(reason);
       up_.reset();
+      // Clear the write buffer since we can't send it anyway - this ensures
+      // finalized() returns true and cleanup() will be called.
+      write_buf_.clear();
       parent_->deregister();
       parent_->shutdown();
     }
