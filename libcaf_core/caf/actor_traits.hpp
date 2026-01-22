@@ -96,4 +96,10 @@ template <class T>
 struct actor_traits
   : default_actor_traits<T, std::is_base_of_v<abstract_actor, T>> {};
 
+template <class T>
+concept blocking_actor_type = actor_traits<T>::is_blocking;
+
+template <class T>
+concept non_blocking_actor_type = actor_traits<T>::is_non_blocking;
+
 } // namespace caf
