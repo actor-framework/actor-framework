@@ -15,7 +15,6 @@
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/mailbox_factory.hpp"
-#include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/op/mcast.hpp"
@@ -131,8 +130,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     error_handler_(default_error_handler),
     down_handler_(default_down_handler),
     node_down_handler_(default_node_down_handler),
-    exit_handler_(default_exit_handler),
-    private_thread_(nullptr)
+    exit_handler_(default_exit_handler)
 #ifdef CAF_ENABLE_EXCEPTIONS
     ,
     exception_handler_(home_system().config().exception_handler())
@@ -185,8 +183,9 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
     case intrusive::inbox_result::unblocked_reader: {
       CAF_LOG_ACCEPT_EVENT(true);
       intrusive_ptr_add_ref(ctrl());
-      if (private_thread_) {
-        private_thread_->resume(this);
+      if (pinned_scheduler_) {
+        // Detached actors must run on their dedicated scheduler.
+        pinned_scheduler_->schedule(this, resumable::default_event_id);
       } else if (use_delay) {
         sched->delay(this, resumable::default_event_id);
       } else {
@@ -222,19 +221,15 @@ const char* scheduled_actor::name() const {
 void scheduled_actor::launch(scheduler* sched, bool lazy) {
   detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("lazy = {}", lazy);
-  if (auto* pinned = pinned_scheduler(); pinned != nullptr) {
-    sched = pinned;
-  }
   CAF_ASSERT(sched != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
-  auto delay_first_scheduling = lazy && mailbox().try_block();
+  // For detached non-blocking actors, acquire a detached scheduler now.
   if (getf(is_detached_flag)) {
-    private_thread_ = system().acquire_private_thread();
-    if (!delay_first_scheduling) {
-      intrusive_ptr_add_ref(ctrl());
-      private_thread_->resume(this);
-    }
-  } else if (!delay_first_scheduling) {
+    pinned_scheduler_ = home_system().acquire_detached_scheduler(id(), this);
+    sched = pinned_scheduler_;
+  }
+  auto delay_first_scheduling = lazy && mailbox().try_block();
+  if (!delay_first_scheduling) {
     intrusive_ptr_add_ref(ctrl());
     sched->delay(this, resumable::initialization_event_id);
   }
@@ -243,9 +238,6 @@ void scheduled_actor::launch(scheduler* sched, bool lazy) {
 void scheduled_actor::on_cleanup(const error& reason) {
   auto lg = log::core::trace("reason = {}", reason);
   timeout_state_.pending.dispose();
-  // Shutdown hosting thread when running detached.
-  if (private_thread_)
-    home_system().release_private_thread(private_thread_);
   // Clear state for open requests, flows and streams.
   awaited_responses_.clear();
   multiplexed_responses_.clear();
@@ -263,6 +255,10 @@ void scheduled_actor::ref_resumable() const noexcept {
 
 void scheduled_actor::deref_resumable() const noexcept {
   intrusive_ptr_release(ctrl());
+}
+
+scheduler* scheduled_actor::pinned_scheduler() const noexcept {
+  return pinned_scheduler_;
 }
 
 void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {

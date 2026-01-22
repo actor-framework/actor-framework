@@ -450,8 +450,10 @@ public:
 
   template <class F>
   std::thread launch_thread(const char* thread_name, thread_owner tag, F fun) {
-    auto body = [this, thread_name, tag, f = std::move(fun)](auto) {
-      CAF_SET_LOGGER_SYS(this);
+    using guard_t = caf::intrusive_ptr<caf::ref_counted>;
+    auto* lptr = &logger();
+    auto body = [this, lptr, thread_name, tag, f = std::move(fun)](guard_t) {
+      logger::current_logger(lptr);
       detail::set_thread_name(thread_name);
       thread_started(tag);
       f();
@@ -467,11 +469,13 @@ public:
       cfg.flags |= abstract_actor::is_detached_flag;
     if constexpr (has_hide_flag(Os))
       cfg.flags |= abstract_actor::is_hidden_flag;
+    auto aid = next_actor_id();
+    // For detached non-blocking actors, the detached scheduler will be acquired
+    // when the actor is launched. Always pass the system scheduler for now.
     if (cfg.sched == nullptr)
       cfg.sched = &scheduler();
     CAF_SET_LOGGER_SYS(this);
-    auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
-                             std::forward<Ts>(xs)...);
+    auto res = make_actor<C>(aid, node(), this, cfg, std::forward<Ts>(xs)...);
     do_launch(actor_cast<C*>(res), cfg.sched, Os);
     return res;
   }
@@ -495,9 +499,12 @@ public:
     return spawn_inactive_impl(Options);
   }
 
-  detail::private_thread* acquire_private_thread();
-
-  void release_private_thread(detail::private_thread*);
+  /// @private
+  /// Acquires a detached scheduler for a scheduled actor running in detached
+  /// mode. The actor system retains ownership of the scheduler.
+  /// @param who The ID of the actor that will use this scheduler.
+  /// @param pinned The resumable that will run on this scheduler.
+  caf::scheduler* acquire_detached_scheduler(actor_id who, resumable* pinned);
 
   using custom_setup_fn = void (*)(actor_system&, actor_system_config&, void*);
 
@@ -529,6 +536,8 @@ private:
   /// @param who The ID of the actor that is being unregistered.
   /// @returns the decreased count.
   size_t dec_running_actors_count(actor_id who);
+
+  void on_actor_cleanup(actor_id who, int flags);
 
   /// Blocks the caller until running-actors-count becomes `expected`
   /// (must be either 0 or 1) or timeout is reached.

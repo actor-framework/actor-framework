@@ -118,7 +118,7 @@ TEST("counting_system_without_actor") {
     assumed_init_calls = 1;
     auto fallback = detail::default_thread_count();
     assumed_thread_count = get_or(cfg, "caf.scheduler.max-threads", fallback)
-                           + 2; // clock and private thread pool
+                           + 1; // clock
   }
 }
 
@@ -127,7 +127,7 @@ TEST("counting_system_with_actor") {
     assumed_init_calls = 1;
     auto fallback = detail::default_thread_count();
     assumed_thread_count = get_or(cfg, "caf.scheduler.max-threads", fallback)
-                           + 3; // clock, private thread pool and detached actor
+                           + 2; // clock and detached actor
     sys.spawn<detached>([] {});
     sys.spawn([] {});
   }

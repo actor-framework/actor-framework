@@ -10,13 +10,14 @@
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
-#include "caf/detail/private_thread.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
+#include "caf/resumable.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/scheduler.hpp"
 #include "caf/telemetry/timer.hpp"
 
 #include <utility>
@@ -95,14 +96,10 @@ const char* blocking_actor::name() const {
 
 namespace {
 
-// Runner for passing a blocking actor to a private_thread. We don't actually
-// need a reference count here, because the private thread calls
-// intrusive_ptr_release_impl exactly once after running this function object.
-class blocking_actor_runner : public resumable {
+// Runner for executing a blocking actor on a detached scheduler.
+class blocking_actor_runner : public ref_counted, public resumable {
 public:
-  explicit blocking_actor_runner(blocking_actor* self,
-                                 detail::private_thread* thread)
-    : self_(self), thread_(thread) {
+  explicit blocking_actor_runner(blocking_actor* self) : self_(self) {
     intrusive_ptr_add_ref(self->ctrl());
   }
 
@@ -127,23 +124,20 @@ public:
     self_->act();
     rsn = self_->fail_state();
 #endif
-    auto& sys = self_->system();
-    sys.release_private_thread(thread_);
     self_->cleanup(std::move(rsn), ctx);
     intrusive_ptr_release(self_->ctrl());
   }
 
   void ref_resumable() const noexcept final {
-    // nop
+    ref();
   }
 
   void deref_resumable() const noexcept final {
-    delete this;
+    deref();
   }
 
 private:
   blocking_actor* self_;
-  detail::private_thread* thread_;
 };
 
 } // namespace
@@ -152,11 +146,10 @@ void blocking_actor::launch(scheduler*, bool) {
   detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("");
   CAF_ASSERT(getf(is_blocking_flag));
-  // Try to acquire a thread before incrementing the running count, since this
-  // may throw.
   auto& sys = home_system();
-  auto thread = sys.acquire_private_thread();
-  thread->resume(new blocking_actor_runner(this, thread));
+  auto* runner = new blocking_actor_runner(this);
+  auto* ds = sys.acquire_detached_scheduler(id(), runner);
+  ds->schedule(runner, resumable::default_event_id);
 }
 
 blocking_actor::receive_while_helper

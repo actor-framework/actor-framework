@@ -4,6 +4,8 @@
 
 #include "caf/actor_system.hpp"
 
+#include "caf/abstract_actor.hpp"
+#include "caf/action.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_companion.hpp"
 #include "caf/actor_registry.hpp"
@@ -15,8 +17,8 @@
 #include "caf/detail/daemons.hpp"
 #include "caf/detail/glob_match.hpp"
 #include "caf/detail/meta_object.hpp"
-#include "caf/detail/private_thread_pool.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/internal/detached_scheduler.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
 #include "caf/raise_error.hpp"
@@ -408,8 +410,7 @@ public:
     : ids(0),
       metrics(cfg),
       base_metrics(make_base_metrics(metrics)),
-      cfg(&cfg),
-      private_threads(parent) {
+      cfg(&cfg) {
     memset(&flags, 0xFF, sizeof(flags)); // All flags are ON by default.
     print_state = std::make_unique<print_state_impl>(cfg);
     meta_objects_guard = detail::global_meta_objects_guard();
@@ -491,7 +492,6 @@ public:
         mod->init(cfg);
     // Start all modules.
     registry.start();
-    private_threads.start();
     for (auto& mod : modules)
       if (mod)
         mod->start();
@@ -515,7 +515,7 @@ public:
       }
       log::core::debug("stop scheduler");
       scheduler->stop();
-      private_threads.stop();
+      stop_all_detached_schedulers();
       registry.stop();
       clock = nullptr;
     }
@@ -565,6 +565,95 @@ public:
       running_actors_cv.notify_all();
     }
     return count;
+  }
+
+  void do_launch(local_actor* ptr, caf::scheduler* ctx, spawn_options options) {
+    if (!has_hide_flag(options)) {
+      ptr->setf(abstract_actor::is_registered_flag);
+      inc_running_actors_count(ptr->id());
+      // Note: decrementing the count happens in abstract_actor::cleanup().
+    }
+    ptr->launch(ctx, has_lazy_init_flag(options));
+  }
+
+  void on_actor_cleanup(actor_id who, int flags) {
+    if (flags & abstract_actor::is_registered_flag) {
+      dec_running_actors_count(who);
+    }
+    if (flags & abstract_actor::is_detached_flag) {
+      // The actor is running on its detached scheduler, so we can't call stop()
+      // (which joins the thread) from the same thread.
+      auto fn = [this, who] {
+        std::unique_ptr<internal::detached_scheduler> sched;
+        {
+          std::lock_guard guard{detached_mtx_};
+          if (auto it = detached_schedulers_.find(who);
+              it != detached_schedulers_.end()) {
+            sched = std::move(it->second);
+            detached_schedulers_.erase(it);
+          }
+        }
+        if (sched) {
+          // Set the shutdown flag, then wait for the thread to complete.
+          sched->stop();
+        }
+      };
+      using impl_t = detail::default_action_impl<decltype(fn), true>;
+      scheduler->schedule(new impl_t(std::move(fn)),
+                          resumable::default_event_id);
+    }
+  }
+
+  void thread_started(thread_owner owner) {
+    for (auto& hook : cfg->thread_hooks())
+      hook->thread_started(owner);
+  }
+
+  void thread_terminates() {
+    for (auto& hook : cfg->thread_hooks())
+      hook->thread_terminates();
+  }
+
+  template <class F>
+  std::thread launch_thread(const char* thread_name, thread_owner tag, F fun) {
+    using guard_t = caf::intrusive_ptr<caf::ref_counted>;
+    auto* lptr = logger.get();
+    auto body = [this, lptr, thread_name, tag, f = std::move(fun)](guard_t) {
+      logger::current_logger(lptr);
+      detail::set_thread_name(thread_name);
+      thread_started(tag);
+      f();
+      thread_terminates();
+    };
+    return std::thread{std::move(body), meta_objects_guard};
+  }
+
+  caf::scheduler* acquire_detached_scheduler(actor_id who, resumable* pinned) {
+    auto ptr = std::make_unique<internal::detached_scheduler>(pinned,
+                                                              scheduler.get());
+    auto result = ptr.get();
+    auto hdl = launch_thread("caf.detached", thread_owner::pool,
+                             [result] { result->run(); });
+    ptr->init(std::move(hdl));
+    ptr->start();
+    std::lock_guard guard{detached_mtx_};
+    detached_schedulers_.emplace(who, std::move(ptr));
+    return result;
+  }
+
+  size_t detached_schedulers_count() const noexcept {
+    std::lock_guard guard{detached_mtx_};
+    return detached_schedulers_.size();
+  }
+
+  void stop_all_detached_schedulers() {
+    detached_schedulers_map tmp;
+    {
+      std::lock_guard guard{detached_mtx_};
+      swap(detached_schedulers_, tmp);
+    }
+    for (auto& [id, ptr] : tmp)
+      ptr->stop();
   }
 
   void await_running_actors_count_equal(size_t expected,
@@ -644,8 +733,16 @@ public:
   /// for faster lookups at runtime.
   std::vector<std::string> metrics_actors_excludes;
 
-  /// Manages threads for detached actors.
-  detail::private_thread_pool private_threads;
+  /// Mutex for accessing the detached schedulers map.
+  mutable std::mutex detached_mtx_;
+
+  using detached_schedulers_map
+    = std::unordered_map<actor_id,
+                         std::unique_ptr<internal::detached_scheduler>>;
+
+  /// Map of detached schedulers for scheduled actors running in detached
+  /// mode, keyed by the actor ID.
+  detached_schedulers_map detached_schedulers_;
 
   /// Ties the lifetime of the meta objects table to the actor system.
   detail::global_meta_objects_guard_type meta_objects_guard;
@@ -704,7 +801,7 @@ actor_clock& actor_system::clock() noexcept {
 }
 
 size_t actor_system::detached_actors() const noexcept {
-  return impl_->private_threads.running();
+  return impl_->detached_schedulers_count();
 }
 
 bool actor_system::await_actors_before_shutdown() const {
@@ -789,6 +886,10 @@ size_t actor_system::dec_running_actors_count(actor_id who) {
   return impl_->dec_running_actors_count(who);
 }
 
+void actor_system::on_actor_cleanup(actor_id who, int flags) {
+  impl_->on_actor_cleanup(who, flags);
+}
+
 size_t actor_system::running_actors_count() const {
   return impl_->running_actors_count.load();
 }
@@ -824,30 +925,31 @@ intrusive_ptr<actor_companion> actor_system::make_companion() {
 }
 
 void actor_system::thread_started(thread_owner owner) {
-  for (auto& hook : impl_->cfg->thread_hooks())
-    hook->thread_started(owner);
+  impl_->thread_started(owner);
 }
 
 void actor_system::thread_terminates() {
-  for (auto& hook : impl_->cfg->thread_hooks())
-    hook->thread_terminates();
+  impl_->thread_terminates();
 }
 
 std::pair<event_based_actor*, actor_launcher>
 actor_system::spawn_inactive_impl(spawn_options options) {
   using actor_type = event_based_actor;
   CAF_SET_LOGGER_SYS(this);
+  auto aid = next_actor_id();
   actor_config cfg{&scheduler(), nullptr};
   cfg.flags = abstract_actor::is_inactive_flag;
+  // For detached actors, set the flag. The detached scheduler will be acquired
+  // when the actor is launched.
   if (has_detach_flag(options))
     cfg.flags |= abstract_actor::is_detached_flag;
   if (has_hide_flag(options))
     cfg.flags |= abstract_actor::is_hidden_flag;
   cfg.mbox_factory = mailbox_factory();
-  auto res = make_actor<actor_type>(next_actor_id(), node(), this, cfg);
+  auto res = make_actor<actor_type>(aid, node(), this, cfg);
   auto* ptr = actor_cast<actor_type*>(res);
   return {ptr, actor_launcher{actor_cast<strong_actor_ptr>(std::move(res)),
-                              &scheduler(), options}};
+                              cfg.sched, options}};
 }
 
 expected<strong_actor_ptr>
@@ -872,12 +974,9 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   return std::move(res.first);
 }
 
-detail::private_thread* actor_system::acquire_private_thread() {
-  return impl_->private_threads.acquire();
-}
-
-void actor_system::release_private_thread(detail::private_thread* ptr) {
-  impl_->private_threads.release(ptr);
+caf::scheduler* actor_system::acquire_detached_scheduler(actor_id who,
+                                                         resumable* pinned) {
+  return impl_->acquire_detached_scheduler(who, pinned);
 }
 
 detail::mailbox_factory* actor_system::mailbox_factory() {
@@ -897,12 +996,7 @@ void actor_system::do_print(term color, const char* buf, size_t num_bytes) {
 
 void actor_system::do_launch(local_actor* ptr, caf::scheduler* ctx,
                              spawn_options options) {
-  if (!has_hide_flag(options)) {
-    ptr->setf(abstract_actor::is_registered_flag);
-    inc_running_actors_count(ptr->id());
-    // Note: decrementing the count happens in abstract_actor::cleanup().
-  }
-  ptr->launch(ctx, has_lazy_init_flag(options));
+  impl_->do_launch(ptr, ctx, options);
 }
 
 // -- callbacks for actor_system_access ----------------------------------------

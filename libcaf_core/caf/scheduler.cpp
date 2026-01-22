@@ -13,6 +13,7 @@
 #include "caf/detail/cleanup_and_release.hpp"
 #include "caf/detail/default_thread_count.hpp"
 #include "caf/detail/double_ended_queue.hpp"
+#include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/scoped_actor.hpp"
@@ -109,6 +110,20 @@ public:
   worker(const worker&) = delete;
 
   worker& operator=(const worker&) = delete;
+
+  ~worker() {
+    // There should be no jobs left in the queue after shutdown. Running them
+    // makes no sense anymore, but at least release the references to avoid
+    // memory leaks.
+    auto next = [this] { return data_.queue.try_take_head(); };
+    if (auto* job = next()) {
+      log::system::warning("worker {} has leftover jobs after shutdown", id_);
+      do {
+        intrusive_ptr_release(job);
+        job = next();
+      } while (job != nullptr);
+    }
+  }
 
   template <class Parent>
   void start(Parent* parent) {
@@ -445,6 +460,17 @@ public:
     auto& cfg = sys.config();
     num_workers_ = get_or(cfg, "caf.scheduler.max-threads",
                           detail::default_thread_count());
+  }
+
+  ~scheduler_impl() {
+    // There should be no jobs left in the queue after shutdown. Running them
+    // makes no sense anymore, but at least release the references to avoid
+    // memory leaks.
+    if (!queue.empty()) {
+      log::system::warning("scheduler has leftover jobs after shutdown");
+      for (auto* job : queue)
+        intrusive_ptr_release(job);
+    }
   }
 
   // -- properties -------------------------------------------------------------

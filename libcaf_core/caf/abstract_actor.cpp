@@ -174,9 +174,7 @@ bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
   // send exit messages
   for (attachable* i = head.get(); i != nullptr; i = i->next.get())
     i->actor_exited(fail_state_, sched);
-  if (getf(is_registered_flag)) {
-    home_system().dec_running_actors_count(id());
-  }
+  home_system().on_actor_cleanup(id(), fs);
   on_cleanup(fail_state_);
   return true;
 }

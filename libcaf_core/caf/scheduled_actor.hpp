@@ -77,6 +77,8 @@ class CAF_CORE_EXPORT scheduled_actor : public abstract_scheduled_actor,
 public:
   // -- friends ----------------------------------------------------------------
 
+  friend class actor_system;
+
   friend class detail::batch_forwarder_impl;
 
   friend class detail::stream_bridge;
@@ -214,6 +216,8 @@ public:
   void deref_resumable() const noexcept final;
 
   void resume(scheduler*, uint64_t) override;
+
+  scheduler* pinned_scheduler() const noexcept override;
 
   // -- scheduler callbacks ----------------------------------------------------
 
@@ -709,8 +713,9 @@ protected:
   /// Customization point for setting a default `exit_msg` callback.
   exit_handler exit_handler_;
 
-  /// Pointer to a private thread object associated with a detached actor.
-  detail::private_thread* private_thread_;
+  /// Stores a pointer to the scheduler this actor is pinned to, or `nullptr` if
+  /// the actor runs on the system scheduler.
+  scheduler* pinned_scheduler_ = nullptr;
 
 #ifdef CAF_ENABLE_EXCEPTIONS
   /// Customization point for setting a default exception callback.

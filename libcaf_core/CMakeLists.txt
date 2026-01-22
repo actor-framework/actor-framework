@@ -206,9 +206,6 @@ caf_add_component(
     caf/detail/plain_ref_counted.cpp
     caf/detail/pretty_type_name.cpp
     caf/detail/print.cpp
-    caf/detail/private_thread.cpp
-    caf/detail/private_thread_pool.cpp
-    caf/detail/private_thread_pool.test.cpp
     caf/detail/response_promise_state.cpp
     caf/detail/rfc3629.cpp
     caf/detail/rfc3629.test.cpp
@@ -284,6 +281,7 @@ caf_add_component(
     caf/hash/sha1.test.cpp
     caf/init_global_meta_objects.cpp
     caf/inspector_access_type.test.cpp
+    caf/internal/detached_scheduler.cpp
     caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
