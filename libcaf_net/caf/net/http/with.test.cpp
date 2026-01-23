@@ -15,7 +15,10 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/latch.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
+
+#include <future>
 
 using namespace caf;
 using namespace std::literals;
@@ -103,6 +106,194 @@ void test_client(const char* host, uint16_t port, bool wait_before_connect,
 }
 
 } // namespace
+
+TEST("connection lifetime tracking with outstanding requests") {
+  // Setup.
+  caf::actor_system_config cfg;
+  cfg.load<caf::net::middleman>();
+  caf::actor_system sys{cfg};
+  // Create an accept socket with the port chosen by the OS.
+  auto acceptor = unbox(net::make_tcp_accept_socket(0));
+  auto port = unbox(net::local_port(acceptor));
+  auto host = net::is_ipv4(acceptor) ? "127.0.0.1" : "::1";
+  // Promise to capture the first request.
+  auto prom = std::make_shared<std::promise<net::http::request>>();
+  auto fut = std::optional{prom->get_future()};
+  // Launch our server with max_connections = 1.
+  auto hdl = net::http::with(sys)
+               .accept(acceptor)
+               .max_connections(1)
+               .route("/test", net::http::method::get,
+                      [prom](net::http::responder& res) mutable {
+                        // Store the first request in the promise and respond
+                        // with 200 OK for subsequent requests.
+                        if (prom) {
+                          prom->set_value(std::move(res).to_request());
+                          prom.reset();
+                          return;
+                        }
+                        res.respond(net::http::status::ok);
+                      })
+               .start();
+  require_has_value(hdl);
+  detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
+  // Helper to send a request and wait for response with timeout.
+  auto send_and_receive = [host, port](auto rel_timeout,
+                                       bool wait_for_response) {
+    auto maybe_fd = net::make_connected_tcp_stream_socket(host, port,
+                                                          rel_timeout);
+    if (!maybe_fd)
+      return false;
+    auto fd = *maybe_fd;
+    net::socket_guard guard{fd};
+    auto request = detail::format("GET /test HTTP/1.1\r\n"
+                                  "Host: localhost:{}\r\n\r\n",
+                                  port);
+    if (net::write(fd, as_bytes(std::span{request}))
+        != static_cast<ptrdiff_t>(request.size()))
+      return false;
+    if (wait_for_response) {
+      if (auto err = net::receive_timeout(fd, rel_timeout); err.valid())
+        return false;
+      byte_buffer buf;
+      buf.resize(100);
+      return net::read(fd, buf) > 0;
+    }
+    return true;
+  };
+  // Connect and send, then close the socket without waiting for a response.
+  check(send_and_receive(200ms, false));
+  require(fut->wait_for(1s) == std::future_status::ready);
+  // Try a second client while the request from the first client is still
+  // around. The TCP connection might succeed (kernel backlog), but the HTTP
+  // request should timeout because max_connections = 1.
+  {
+    auto req = fut->get();
+    fut = std::nullopt;
+    check(!send_and_receive(200ms, true));
+    req.respond(net::http::status::ok, "text/plain", "done");
+  }
+  // No active connection left, so a new connection can be established again.
+  check(send_and_receive(200ms, true));
+}
+
+TEST("requests become orphaned when the connection is closed") {
+  // Setup.
+  caf::actor_system_config cfg;
+  cfg.load<caf::net::middleman>();
+  caf::actor_system sys{cfg};
+  // Create an accept socket with the port chosen by the OS.
+  auto acceptor = unbox(net::make_tcp_accept_socket(0));
+  auto port = unbox(net::local_port(acceptor));
+  auto host = net::is_ipv4(acceptor) ? "127.0.0.1" : "::1";
+  // Promise to capture the first request.
+  auto prom = std::make_shared<std::promise<net::http::request>>();
+  auto fut = std::optional{prom->get_future()};
+  // Launch our server with max_connections = 1.
+  auto hdl = net::http::with(sys)
+               .accept(acceptor)
+               .max_connections(1)
+               .route("/test", net::http::method::get,
+                      [prom](net::http::responder& res) mutable {
+                        // Store the first request in the promise and respond
+                        // with 200 OK for subsequent requests.
+                        if (prom) {
+                          prom->set_value(std::move(res).to_request());
+                          prom.reset();
+                          return;
+                        }
+                        res.respond(net::http::status::ok);
+                      })
+               .start();
+  require_has_value(hdl);
+  detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
+  // Helper to send a request and wait for response with timeout.
+  auto send_and_receive = [host, port](auto rel_timeout,
+                                       bool wait_for_response) {
+    auto maybe_fd = net::make_connected_tcp_stream_socket(host, port,
+                                                          rel_timeout);
+    if (!maybe_fd)
+      return false;
+    auto fd = *maybe_fd;
+    net::socket_guard guard{fd};
+    auto request = detail::format("GET /test HTTP/1.1\r\n"
+                                  "Host: localhost:{}\r\n\r\n",
+                                  port);
+    if (net::write(fd, as_bytes(std::span{request}))
+        != static_cast<ptrdiff_t>(request.size()))
+      return false;
+    if (wait_for_response) {
+      if (auto err = net::receive_timeout(fd, rel_timeout); err.valid())
+        return false;
+      byte_buffer buf;
+      buf.resize(100);
+      return net::read(fd, buf) > 0;
+    }
+    return true;
+  };
+  // Connect and send, then close the socket without waiting for a response.
+  check(send_and_receive(200ms, false));
+  require(fut->wait_for(1s) == std::future_status::ready);
+  // The request should become orphaned since the client closed the socket.
+  auto req = fut->get();
+  auto start = std::chrono::steady_clock::now();
+  while (!req.orphaned() && std::chrono::steady_clock::now() - start < 1s) {
+    std::this_thread::sleep_for(20ms);
+  }
+  check(req.orphaned());
+}
+
+TEST("requests become orphaned when disposing the server") {
+  // Setup.
+  caf::actor_system_config cfg;
+  cfg.load<caf::net::middleman>();
+  caf::actor_system sys{cfg};
+  // Create an accept socket with the port chosen by the OS.
+  auto acceptor = unbox(net::make_tcp_accept_socket(0));
+  auto port = unbox(net::local_port(acceptor));
+  auto host = net::is_ipv4(acceptor) ? "127.0.0.1" : "::1";
+  // Promise to capture the first request.
+  auto prom = std::make_shared<std::promise<net::http::request>>();
+  auto fut = std::optional{prom->get_future()};
+  // Launch our server with max_connections = 1.
+  auto hdl = net::http::with(sys)
+               .accept(acceptor)
+               .max_connections(1)
+               .route("/test", net::http::method::get,
+                      [prom](net::http::responder& res) mutable {
+                        // Store the first request in the promise and respond
+                        // with 200 OK for subsequent requests.
+                        if (prom) {
+                          prom->set_value(std::move(res).to_request());
+                          prom.reset();
+                          return;
+                        }
+                        res.respond(net::http::status::ok);
+                      })
+               .start();
+  require_has_value(hdl);
+  detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
+  // Connect to the server.
+  auto maybe_fd = net::make_connected_tcp_stream_socket(host, port, 200ms);
+  require_has_value(maybe_fd);
+  auto fd = *maybe_fd;
+  net::socket_guard guard{fd};
+  auto request = detail::format("GET /test HTTP/1.1\r\n"
+                                "Host: localhost:{}\r\n\r\n",
+                                port);
+  require_eq(net::write(fd, as_bytes(std::span{request})),
+             static_cast<ptrdiff_t>(request.size()));
+  // The server should emit the request now.
+  require(fut->wait_for(1s) == std::future_status::ready);
+  // Disposing the server should cause the request to become orphaned.
+  auto req = fut->get();
+  hdl->dispose();
+  auto start = std::chrono::steady_clock::now();
+  while (!req.orphaned() && std::chrono::steady_clock::now() - start < 1s) {
+    std::this_thread::sleep_for(20ms);
+  }
+  check(req.orphaned());
+}
 
 TEST("GH-2226 regression") {
   // Setup.

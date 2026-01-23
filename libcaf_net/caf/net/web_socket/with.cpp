@@ -34,8 +34,9 @@ public:
     // nop
   }
 
-  error start(net::socket_manager* parent) override {
+  error start(net::socket_manager* parent, action on_conn_close) override {
     parent_ = parent;
+    on_conn_close_ = std::move(on_conn_close);
     return {};
   }
 
@@ -59,7 +60,10 @@ public:
     auto transport = internal::make_transport(std::move(*conn), std::move(ws));
     transport->max_consecutive_reads(max_consecutive_reads_);
     transport->active_policy().accept();
-    return net::socket_manager::make(parent_->mpx_ptr(), std::move(transport));
+    auto res = net::socket_manager::make(parent_->mpx_ptr(),
+                                         std::move(transport));
+    res->add_cleanup_listener(on_conn_close_);
+    return res;
   }
 
   net::socket handle() const override {
@@ -71,6 +75,7 @@ private:
   net::socket_manager* parent_ = nullptr;
   detail::ws_conn_acceptor_ptr wca_;
   size_t max_consecutive_reads_;
+  action on_conn_close_;
 };
 
 class with_t::config_impl : public internal::net_config {

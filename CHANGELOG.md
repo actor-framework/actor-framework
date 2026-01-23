@@ -44,6 +44,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `caf::actor_system::running_actors_count`. Other methods for manipulating the
   count have been removed and replaced by private methods on the `actor_system`
   since they are meant for internal use only.
+- Outstanding `http::request` objects now keep their connection "alive" for the
+  purpose of `max_connections` tracking. Previously, only open sockets counted
+  against the limit, which could cause the server to accept new connections
+  while there were still pending requests being processed.
 
 ### Deprecated
 
@@ -106,6 +110,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   Further, users can optionally build CAF with `CAF_USE_STD_EXPECTED` enabled to
   have CAF use aliases to the standard library types instead of its own
   implementation (requires C++23).
+- The class `http::request` now has an `orphaned()` method that returns `true`
+  if the underlying connection has been shut down. This allows request handlers
+  to safely discard abandoned requests.
 
 ### Fixed
 

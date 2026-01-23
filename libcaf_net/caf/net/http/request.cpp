@@ -4,6 +4,8 @@
 
 #include "caf/net/http/request.hpp"
 
+#include "caf/detail/connection_guard.hpp"
+
 #include <utility>
 
 using namespace std::literals;
@@ -15,14 +17,22 @@ namespace caf::net::http {
 class request::impl : public ref_counted {
 public:
   impl(request_header hdr, std::vector<std::byte> body,
-       async::promise<response> prom)
-    : hdr(std::move(hdr)), body(std::move(body)), prom(std::move(prom)) {
-    // nop
+       async::promise<response> prom, detail::connection_guard_ptr conn_guard)
+    : hdr(std::move(hdr)),
+      body(std::move(body)),
+      prom(std::move(prom)),
+      conn_guard(std::move(conn_guard)) {
+    CAF_ASSERT(this->conn_guard != nullptr);
+  }
+
+  bool orphaned() const noexcept {
+    return conn_guard->orphaned();
   }
 
   request_header hdr;
   std::vector<std::byte> body;
   async::promise<response> prom;
+  detail::connection_guard_ptr conn_guard;
 };
 
 request::request(request&& other) noexcept : impl_(other.impl_) {
@@ -39,8 +49,10 @@ request::request(const request& other) noexcept {
 }
 
 request::request(request_header hdr, std::vector<std::byte> body,
-                 async::promise<response> prom) {
-  impl_ = new impl(std::move(hdr), std::move(body), std::move(prom));
+                 async::promise<response> prom,
+                 detail::connection_guard_ptr conn_guard) {
+  impl_ = new impl(std::move(hdr), std::move(body), std::move(prom),
+                   std::move(conn_guard));
 }
 
 request& request::operator=(request&& other) noexcept {
@@ -80,6 +92,10 @@ void request::respond(status code, std::string_view content_type,
   fields.emplace("Content-Length"sv, content_size);
   auto body = std::vector<std::byte>{content.begin(), content.end()};
   impl_->prom.set_value(response{code, std::move(fields), std::move(body)});
+}
+
+bool request::orphaned() const noexcept {
+  return impl_->orphaned();
 }
 
 } // namespace caf::net::http
