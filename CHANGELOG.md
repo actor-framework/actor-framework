@@ -50,6 +50,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   even after some connections had already been closed (#2227).
 - Fix a bug in the network stack of CAF that could lead to inconsistent state if
   the OS re-uses a socket ID too quickly after closing a socket.
+- Fix case-sensitive HTTP header field name comparisons in the WebSocket client
+  handshake validation. HTTP header names are case-insensitive according to the
+  standard, so servers responding with lowercase headers like `upgrade` instead
+  of `Upgrade` were incorrectly rejected.
 
 ## [1.1.0] - 2025-07-25
 
