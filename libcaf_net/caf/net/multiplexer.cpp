@@ -19,6 +19,7 @@
 #include "caf/detail/critical.hpp"
 #include "caf/detail/latch.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/detail/panic.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/log/net.hpp"
@@ -355,9 +356,7 @@ public:
           // Must not happen.
           auto int_code = static_cast<int>(code);
           auto msg = std::generic_category().message(int_code);
-          std::string_view prefix = "poll() failed: ";
-          msg.insert(msg.begin(), prefix.begin(), prefix.end());
-          CAF_CRITICAL(msg.c_str());
+          detail::panic("poll() failed: {} (error code: {})", msg, int_code);
         }
       }
     }

@@ -52,7 +52,7 @@ template <class T>
 #  define CAF_RAISE_ERROR_IMPL_1(msg)                                          \
     do {                                                                       \
       ::caf::detail::log_cstring_error(msg);                                   \
-      CAF_CRITICAL(msg);                                                       \
+      ::caf::detail::critical(msg);                                            \
     } while (false)
 
 #  define CAF_RAISE_ERROR_IMPL_2(unused, msg) CAF_RAISE_ERROR_IMPL_1(msg)

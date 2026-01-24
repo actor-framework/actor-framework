@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/critical.hpp"
+#include "caf/detail/panic.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
@@ -37,7 +38,9 @@ uint16_t port_of(sockaddr& what) {
     default:
       break;
   }
-  CAF_CRITICAL("invalid protocol family");
+  caf::detail::panic("invalid protocol family: {} (expected AF_INET ({}) or "
+                     "AF_INET6 ({}))",
+                     what.sa_family, AF_INET, AF_INET6);
 }
 
 } // namespace

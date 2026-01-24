@@ -10,6 +10,7 @@
 #include "caf/config.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/critical.hpp"
+#include "caf/detail/panic.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"
 #include "caf/make_counted.hpp"
@@ -58,7 +59,7 @@ const meta_object& global_meta_object(type_id_t id) {
     if (!meta.type_name.empty())
       return meta;
   }
-  auto msg = detail::format(
+  panic(
     "found no meta object for type ID {}!\n"
     "        This usually means that run-time type initialization is missing.\n"
     "        With CAF_MAIN, make sure to pass all custom type ID blocks.\n"
@@ -67,7 +68,6 @@ const meta_object& global_meta_object(type_id_t id) {
     "        - <module>::init_global_meta_objects() for all loaded modules\n"
     "        - caf::init_global_meta_objects<T>() for all custom ID blocks",
     id);
-  CAF_CRITICAL(msg.c_str());
 }
 
 const meta_object* global_meta_object_or_null(type_id_t id) {
@@ -89,8 +89,9 @@ void clear_global_meta_objects() {
 
 std::span<meta_object> resize_global_meta_objects(size_t size) {
   if (size <= meta_objects_size)
-    CAF_CRITICAL("resize_global_meta_objects called with a new size that does "
-                 "not grow the array");
+    panic("resize_global_meta_objects called with a new size ({}) that does "
+          "not grow the array (current size: {})",
+          size, meta_objects_size);
   auto new_storage = new meta_object[size];
   std::copy(meta_objects, meta_objects + meta_objects_size, new_storage);
   delete[] meta_objects;
@@ -104,9 +105,10 @@ void set_global_meta_objects(type_id_t first_id,
   auto new_size = first_id + xs.size();
   if (first_id < meta_objects_size) {
     if (new_size > meta_objects_size)
-      CAF_CRITICAL("set_global_meta_objects called with "
-                   "'first_id < meta_objects_size' and "
-                   "'new_size > meta_objects_size'");
+      panic("set_global_meta_objects called with "
+            "'first_id ({}) < meta_objects_size ({})' and "
+            "'new_size ({}) > meta_objects_size ({})'",
+            first_id, meta_objects_size, new_size, meta_objects_size);
     auto out = meta_objects + first_id;
     for (const auto& x : xs) {
       if (out->type_name.empty()) {
@@ -119,11 +121,9 @@ void set_global_meta_objects(type_id_t first_id,
         // Get null-terminated strings.
         auto name1 = std::string{out->type_name};
         auto name2 = std::string{x.type_name};
-        auto msg = detail::format("type ID {} already assigned to {} "
-                                  "(tried to override with {})",
-                                  std::distance(meta_objects, out),
-                                  name1.c_str(), name2.c_str());
-        CAF_CRITICAL(msg.c_str());
+        panic("type ID {} already assigned to {} "
+              "(tried to override with {})",
+              std::distance(meta_objects, out), name1, name2);
       }
       ++out;
     }

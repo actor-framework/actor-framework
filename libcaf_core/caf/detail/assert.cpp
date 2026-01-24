@@ -4,38 +4,15 @@
 
 #include "caf/detail/assert.hpp"
 
-#include "caf/config.hpp"
-
-#include <cstdio>
-#include <cstdlib>
-
-#if defined(CAF_WINDOWS) || defined(CAF_BSD) || !__has_include(<execinfo.h>)
+#include "caf/detail/critical.hpp"
+#include "caf/detail/format.hpp"
 
 namespace caf::detail {
 
-[[noreturn]] void assertion_failed(const char* file, int line,
-                                   const char* stmt) {
-  fprintf(stderr, "%s:%u: assertion '%s' failed\n", file, line, stmt);
-  ::abort();
+[[noreturn]] void assertion_failed(const char* stmt,
+                                   const std::source_location& loc) {
+  auto errmsg = format("assertion '{}' failed", stmt);
+  critical(errmsg.c_str(), loc, 1);
 }
 
 } // namespace caf::detail
-
-#else // defined(CAF_LINUX) || defined(CAF_MACOS)
-
-#  include <execinfo.h>
-
-namespace caf::detail {
-
-[[noreturn]] void assertion_failed(const char* file, int line,
-                                   const char* stmt) {
-  fprintf(stderr, "%s:%u: assertion '%s' failed\n", file, line, stmt);
-  void* array[20];
-  auto caf_bt_size = ::backtrace(array, 20);
-  ::backtrace_symbols_fd(array + 1, caf_bt_size - 1, 2);
-  ::abort();
-}
-
-} // namespace caf::detail
-
-#endif

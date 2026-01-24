@@ -10,6 +10,7 @@
 
 #include "caf/chunk.hpp"
 #include "caf/detail/connection_acceptor.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/op/mcast.hpp"
 #include "caf/internal/accept_handler.hpp"
@@ -162,8 +163,8 @@ public:
   }
 
   expected<disposable> start_client_impl(uri&) override {
-    // Connecting via URI is not supported in the `with` interface.
-    CAF_CRITICAL("Unreachable");
+    detail::critical("connecting via URI is not supported in the `with` "
+                     "interface for the length-prefix framing protocol");
   }
 
   // State for servers.
