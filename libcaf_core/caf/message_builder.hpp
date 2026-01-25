@@ -74,8 +74,7 @@ public:
 
   template <class... Ts>
   message_builder& append_tuple(std::tuple<Ts...> xs) {
-    return append_tuple(std::integral_constant<size_t, 0>{},
-                        std::integral_constant<size_t, sizeof...(Ts)>{}, xs);
+    return append_tuple(xs, std::index_sequence_for<Ts...>{});
   }
 
   /// Converts the buffer to an actual message object without
