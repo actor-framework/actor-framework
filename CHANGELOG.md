@@ -54,6 +54,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   handshake validation. HTTP header names are case-insensitive according to the
   standard, so servers responding with lowercase headers like `upgrade` instead
   of `Upgrade` were incorrectly rejected.
+- Fix an indexing bug when using `message_builder::append_tuple`.
 
 ## [1.1.0] - 2025-07-25
 
