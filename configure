@@ -40,6 +40,13 @@ Convenience options:
                               --enable-runtime-checks
                               --enable-trace-logging
                               --sanitizers=address,undefined
+  --coverage                shortcut for passing:
+                              --build-type=Debug
+                              --disable-shared-libs
+                              --enable-examples
+                              --enable-robot-tests
+                              --enable-runtime-checks
+                              --cxx-flags='--coverage'
 
 Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
 
@@ -162,10 +169,18 @@ while [ $# -ne 0 ]; do
     --dev-mode)
       append_cache_entry CAF_ENABLE_TRACE_LOGGING BOOL ON
       append_cache_entry CAF_SANITIZERS STRING 'address,undefined'
-      append_cache_entry CMAKE_BUILD_TYPE STRING 'Debug'
-      set_build_flag shared-libs OFF
-      set_build_flag runtime-checks ON
+      append_cache_entry CMAKE_BUILD_TYPE STRING Debug
       set_build_flag robot-tests ON
+      set_build_flag runtime-checks ON
+      set_build_flag shared-libs OFF
+      ;;
+    --coverage)
+      append_cache_entry CMAKE_BUILD_TYPE STRING Debug
+      append_cache_entry CMAKE_CXX_FLAGS STRING --coverage
+      set_build_flag examples ON
+      set_build_flag robot-tests ON
+      set_build_flag runtime-checks ON
+      set_build_flag shared-libs OFF
       ;;
    --enable-*)
       set_build_flag $optarg ON

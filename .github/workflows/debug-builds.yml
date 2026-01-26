@@ -59,12 +59,7 @@ jobs:
       - name: install-robot
         run:  pip install -r robot/dependencies.txt
       - name: configure
-        run: |
-          cmake \
-            -S . \
-            -B build \
-            -G Ninja \
-            -C .ci/linux/coverage.cmake
+        run: ./configure --coverage --generator=Ninja
       - name: build
         run: cmake --build build
       - name: test
