@@ -121,6 +121,13 @@ TEST("message_builder can build messages incrementally") {
       check_eq(msg2.get_as<int32_t>(0), 3);
     }
   }
+  SECTION("append_tuple() adds values from a tuple") {
+    builder.append_tuple(std::tuple{42, "answer"});
+    auto msg = builder.to_message();
+    check_eq(msg.size(), 2u);
+    check_eq(msg.get_as<int32_t>(0), 42);
+    check_eq(msg.get_as<std::string>(1), "answer");
+  }
   SECTION("to_message copies all elements into a message") {
     builder.append("foo");
     builder.append(make_counted<counted_int>(42));
