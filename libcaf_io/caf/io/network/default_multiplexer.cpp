@@ -19,6 +19,7 @@
 #include "caf/detail/call_cfun.hpp"
 #include "caf/detail/cleanup_and_release.hpp"
 #include "caf/detail/critical.hpp"
+#include "caf/detail/panic.hpp"
 #include "caf/detail/socket_guard.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/format_to_unexpected.hpp"
@@ -28,6 +29,7 @@
 #include "caf/scheduler.hpp"
 
 #include <cstdio>
+#include <cstring>
 #include <optional>
 #include <utility>
 
@@ -181,8 +183,8 @@ bool default_multiplexer::poll_once_impl(bool block) {
           continue;
         }
         default: {
-          perror("epoll_wait() failed");
-          CAF_CRITICAL("epoll_wait() failed");
+          detail::panic("epoll_wait() failed: {} (errno: {})", strerror(errno),
+                        errno);
         }
       }
     }
@@ -254,8 +256,8 @@ void default_multiplexer::handle(const default_multiplexer::event& e) {
         break;
       default:
         log::system::error("epoll_ctl failed: {}", strerror(errno));
-        perror("epoll_ctl() failed");
-        CAF_CRITICAL("epoll_ctl() failed");
+        detail::panic("epoll_ctl() failed: {} (errno: {})", strerror(errno),
+                      errno);
     }
   }
   if (e.ptr) {
@@ -337,8 +339,8 @@ bool default_multiplexer::poll_once_impl(bool block) {
           break;
         }
         default: {
-          perror("poll() failed");
-          CAF_CRITICAL("poll() failed");
+          detail::panic("poll() failed: {} (errno: {})", strerror(errno),
+                        errno);
         }
       }
       continue; // rinse and repeat
@@ -577,7 +579,7 @@ void default_multiplexer::init() {
   if (!system().has_network_manager()) {
     WSADATA WinsockData;
     if (WSAStartup(MAKEWORD(2, 2), &WinsockData) != 0) {
-      CAF_CRITICAL("WSAStartup failed");
+      detail::critical("WSAStartup failed");
     }
   }
 #endif

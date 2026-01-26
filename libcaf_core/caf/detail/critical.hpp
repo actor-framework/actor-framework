@@ -6,11 +6,14 @@
 
 #include "caf/detail/core_export.hpp"
 
+#include <cstddef>
+#include <source_location>
+
 namespace caf::detail {
 
-[[noreturn]] CAF_CORE_EXPORT void critical(const char* file, int line,
-                                           const char* msg);
+[[noreturn]] CAF_CORE_EXPORT void
+critical(const char* msg,
+         const std::source_location& loc = std::source_location::current(),
+         int stack_offset = 0);
 
 } // namespace caf::detail
-
-#define CAF_CRITICAL(msg) ::caf::detail::critical(__FILE__, __LINE__, msg)

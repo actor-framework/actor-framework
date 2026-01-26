@@ -863,8 +863,8 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         return visit(f, sres);
       }
     }
-    // Unreachable.
-    CAF_CRITICAL("invalid message type");
+    // Should be unreachable.
+    detail::critical("categorize() returned an invalid message category");
   };
   // Post-process the returned value from the function body.
   auto result = body();

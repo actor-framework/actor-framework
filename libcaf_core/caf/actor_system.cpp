@@ -15,6 +15,7 @@
 #include "caf/detail/daemons.hpp"
 #include "caf/detail/glob_match.hpp"
 #include "caf/detail/meta_object.hpp"
+#include "caf/detail/panic.hpp"
 #include "caf/detail/private_thread_pool.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/log/core.hpp"
@@ -414,7 +415,7 @@ public:
     print_state = std::make_unique<print_state_impl>(cfg);
     meta_objects_guard = detail::global_meta_objects_guard();
     if (!meta_objects_guard)
-      CAF_CRITICAL("unable to obtain the global meta objects guard");
+      detail::critical("unable to obtain the global meta objects guard");
     for (auto& hook : cfg.thread_hooks())
       hook->init(*parent);
     // Cache some configuration parameters for faster lookups at runtime.
@@ -442,14 +443,14 @@ public:
     auto gmos = detail::global_meta_objects();
     if (gmos.size() < id_block::core_module::end
         || gmos[id_block::core_module::begin].type_name.empty()) {
-      CAF_CRITICAL("actor_system created without calling "
-                   "caf::init_global_meta_objects<>() before");
+      detail::critical("actor_system created without calling "
+                       "caf::init_global_meta_objects<>() before");
     }
     if (modules[actor_system_module::middleman] != nullptr) {
       if (gmos.size() < detail::io_module_end
           || gmos[detail::io_module_begin].type_name.empty()) {
-        CAF_CRITICAL("I/O module loaded without calling "
-                     "caf::io::middleman::init_global_meta_objects() before");
+        detail::critical("I/O module loaded without calling "
+                         "caf::io::middleman::init_global_meta_objects()");
       }
     }
     // Allow the callback to override any configuration parameter and to
@@ -667,7 +668,8 @@ actor_system::actor_system(actor_system_config& cfg,
                            void* custom_setup_data, version::abi_token token) {
   // Make sure the ABI token matches the expected version.
   if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
-    CAF_CRITICAL("CAF ABI token mismatch");
+    detail::panic("CAF ABI token mismatch: got {}, expected {}",
+                  static_cast<int>(token), CAF_VERSION_MAJOR);
   }
   // This is a convoluted way to construct the implementation, but we cannot
   // just use new and delete here. The `custom_setup` function might call member
