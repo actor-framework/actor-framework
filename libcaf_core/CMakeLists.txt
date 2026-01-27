@@ -82,6 +82,7 @@ caf_add_component(
     caf/actor_companion.cpp
     caf/actor_companion.test.cpp
     caf/actor_config.cpp
+    caf/actor_config.test.cpp
     caf/actor_control_block.cpp
     caf/actor_factory.test.cpp
     caf/actor_from_state.test.cpp
