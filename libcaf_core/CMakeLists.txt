@@ -317,6 +317,7 @@ caf_add_component(
     caf/log/event.cpp
     caf/log/event.test.cpp
     caf/logger.cpp
+    caf/logger.test.cpp
     caf/mail_cache.cpp
     caf/mail_cache.test.cpp
     caf/mailbox_element.cpp

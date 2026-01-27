@@ -113,16 +113,40 @@ void foo([[maybe_unused]] int value, bool use_legacy_api) {
   }
 }
 
+void test_formatted_messages() {
+  using caf::logger;
+  logger::log(caf::log::level::debug, app::component,
+              "formatted message: {} + {} = {}", "foo", "bar", "foobar");
+  logger::log(caf::log::level::debug, app::component)
+    .message("value = {}", 42)
+    .field("key", "value")
+    .field("n", 123)
+    .send();
+}
+
+void test_thread_runtime_format() {
+  using caf::logger;
+  logger::log(caf::log::level::debug, app::component, "thread_runtime_check");
+}
+
 class config : public caf::actor_system_config {
 public:
   config() {
     opt_group{custom_options_, "global"} //
-      .add<std::string>("api", "sets the API");
+      .add<std::string>("api", "sets the API")
+      .add<std::string>("test", "sets the test to run");
   }
 };
 
 void caf_main(caf::actor_system&, const config& cfg) {
-  foo(42, get_or(cfg, "api", "default") == "legacy");
+  auto test = get_or(cfg, "test", std::string{"default"});
+  if (test == "formatted") {
+    test_formatted_messages();
+  } else if (test == "thread_runtime") {
+    test_thread_runtime_format();
+  } else {
+    foo(42, get_or(cfg, "api", "default") == "legacy");
+  }
 }
 
 CAF_MAIN(caf::id_block::driver)
