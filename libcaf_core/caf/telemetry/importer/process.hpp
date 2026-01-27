@@ -27,6 +27,34 @@ public:
   /// @note has no effect if `platform_supported()` returns `false`.
   void update();
 
+  /// Returns the gauge for the resident memory size.
+  /// @returns `nullptr` when the platform is unsupported, i.e., when
+  ///          `platform_supported()` returns `false`.
+  auto* rss() const noexcept {
+    return rss_;
+  }
+
+  /// Returns the gauge for the virtual memory size.
+  /// @returns `nullptr` when the platform is unsupported, i.e., when
+  ///          `platform_supported()` returns `false`.
+  auto* vms() const noexcept {
+    return vms_;
+  }
+
+  /// Returns the gauge for the total user and system CPU time spent.
+  /// @returns `nullptr` when the platform is unsupported, i.e., when
+  ///          `platform_supported()` returns `false`.
+  auto* cpu() const noexcept {
+    return cpu_;
+  }
+
+  /// Returns the gauge for the number of open file descriptors.
+  /// @returns `nullptr` when the platform is unsupported, i.e., when
+  ///          `platform_supported()` returns `false`.
+  auto* fds() const noexcept {
+    return fds_;
+  }
+
 private:
   telemetry::int_gauge* rss_ = nullptr;
   telemetry::int_gauge* vms_ = nullptr;

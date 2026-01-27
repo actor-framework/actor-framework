@@ -377,6 +377,7 @@ caf_add_component(
     caf/telemetry/gauge.test.cpp
     caf/telemetry/histogram.test.cpp
     caf/telemetry/importer/process.cpp
+    caf/telemetry/importer/process.test.cpp
     caf/telemetry/label.cpp
     caf/telemetry/label.test.cpp
     caf/telemetry/label_view.cpp
