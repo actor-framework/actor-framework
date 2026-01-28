@@ -9,7 +9,6 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/default_attachable.hpp"
-#include "caf/detail/glob_match.hpp"
 #include "caf/disposable.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/log/core.hpp"

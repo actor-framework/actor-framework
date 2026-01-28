@@ -48,6 +48,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   purpose of `max_connections` tracking. Previously, only open sockets counted
   against the limit, which could cause the server to accept new connections
   while there were still pending requests being processed.
+- Metrics actor name filters (`caf.metrics.filters.include` and
+  `caf.metrics.filters.exclude`) now use simple wildcard matching with `*`
+  (zero or more characters) and `?` (exactly one character) only. Glob-style
+  patterns (`**`, `/`, `\`) are no longer supported.
 
 ### Deprecated
 

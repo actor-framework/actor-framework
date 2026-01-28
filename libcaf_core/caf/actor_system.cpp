@@ -13,7 +13,7 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/daemons.hpp"
-#include "caf/detail/glob_match.hpp"
+#include "caf/detail/match_wildcard_pattern.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/panic.hpp"
 #include "caf/detail/private_thread_pool.hpp"
@@ -533,8 +533,7 @@ public:
         = base_metrics.running_count->get_or_add({{"name", name}});
     }
     auto matches = [name](const std::string& glob) {
-      // Note: name.data() is guaranteed to be null-terminated in this case.
-      return detail::glob_match(name.data(), glob.c_str());
+      return detail::match_wildcard_pattern(name, glob);
     };
     auto enable_optional_metrics
       = std::ranges::any_of(metrics_actors_includes, matches)
