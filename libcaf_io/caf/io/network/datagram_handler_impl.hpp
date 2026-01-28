@@ -6,8 +6,8 @@
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/datagram_handler.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+#include "caf/net/socket_id.hpp"
 
 namespace caf::io::network {
 
@@ -16,7 +16,7 @@ template <class ProtocolPolicy>
 class datagram_handler_impl : public datagram_handler {
 public:
   template <class... Ts>
-  datagram_handler_impl(default_multiplexer& mpx, native_socket sockfd,
+  datagram_handler_impl(default_multiplexer& mpx, net::socket_id sockfd,
                         Ts&&... xs)
     : datagram_handler(mpx, sockfd), policy_(std::forward<Ts>(xs)...) {
     // nop

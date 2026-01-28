@@ -8,8 +8,8 @@
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/protocol.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/detail/io_export.hpp"
 #include "caf/expected.hpp"
@@ -33,7 +33,7 @@ public:
 
   /// Creates a new `scribe` from a native socket handle.
   /// @threadsafe
-  virtual scribe_ptr new_scribe(native_socket fd) = 0;
+  virtual scribe_ptr new_scribe(net::socket_id fd) = 0;
 
   /// Tries to connect to `host` on given `port` and returns a `scribe` instance
   /// on success.
@@ -43,7 +43,7 @@ public:
 
   /// Creates a new doorman from a native socket handle.
   /// @threadsafe
-  virtual doorman_ptr new_doorman(native_socket fd) = 0;
+  virtual doorman_ptr new_doorman(net::socket_id fd) = 0;
 
   /// Tries to create an unbound TCP doorman bound to `port`, optionally
   /// accepting only connections from IP address `in`.
@@ -55,10 +55,10 @@ public:
 
   /// Creates a new `datagram_servant` from a native socket handle.
   /// @threadsafe
-  virtual datagram_servant_ptr new_datagram_servant(native_socket fd) = 0;
+  virtual datagram_servant_ptr new_datagram_servant(net::socket_id fd) = 0;
 
   virtual datagram_servant_ptr
-  new_datagram_servant_for_endpoint(native_socket fd, const ip_endpoint& ep)
+  new_datagram_servant_for_endpoint(net::socket_id fd, const ip_endpoint& ep)
     = 0;
 
   /// Create a new `datagram_servant` to contact a remote endpoint `host` and

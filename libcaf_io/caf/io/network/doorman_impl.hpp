@@ -7,7 +7,7 @@
 #include "caf/io/doorman.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/acceptor_impl.hpp"
-#include "caf/io/network/native_socket.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/detail/io_export.hpp"
 #include "caf/policy/tcp.hpp"
@@ -17,7 +17,7 @@ namespace caf::io::network {
 /// Default doorman implementation.
 class CAF_IO_EXPORT doorman_impl : public doorman {
 public:
-  doorman_impl(default_multiplexer& mx, native_socket sockfd);
+  doorman_impl(default_multiplexer& mx, net::socket_id sockfd);
 
   bool new_connection() override;
 

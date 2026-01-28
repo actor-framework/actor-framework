@@ -6,21 +6,16 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
+#include "caf/byte_span.hpp"
 #include "caf/logger.hpp"
+#include "caf/net/pipe_socket.hpp"
 
 #include <cstdint>
-
-#ifdef CAF_WINDOWS
-#  include <winsock2.h>
-#else
-#  include <sys/socket.h>
-#  include <unistd.h>
-#endif
 
 namespace caf::io::network {
 
 pipe_reader::pipe_reader(default_multiplexer& dm)
-  : event_handler(dm, invalid_native_socket) {
+  : event_handler(dm, net::invalid_socket_id) {
   // nop
 }
 
@@ -29,19 +24,14 @@ void pipe_reader::removed_from_loop(operation) {
 }
 
 void pipe_reader::graceful_shutdown() {
-  shutdown_read(fd_);
+  net::shutdown_read(net::socket{fd_});
 }
 
 resumable* pipe_reader::try_read_next() {
   std::intptr_t ptrval;
-  // on windows, we actually have sockets, otherwise we have file handles
-#ifdef CAF_WINDOWS
-  auto res = recv(fd(), reinterpret_cast<socket_recv_ptr>(&ptrval),
-                  sizeof(ptrval), 0);
-#else
-  auto res = read(fd(), &ptrval, sizeof(ptrval));
-#endif
-  if (res != sizeof(ptrval))
+  auto buf = byte_span{reinterpret_cast<std::byte*>(&ptrval), sizeof(ptrval)};
+  auto res = net::read(net::pipe_socket{fd()}, buf);
+  if (res != static_cast<ptrdiff_t>(sizeof(ptrval)))
     return nullptr;
   return reinterpret_cast<resumable*>(ptrval);
 }
@@ -56,7 +46,7 @@ void pipe_reader::handle_event(operation op) {
   // else: ignore errors
 }
 
-void pipe_reader::init(native_socket sock_fd) {
+void pipe_reader::init(net::socket_id sock_fd) {
   fd_ = sock_fd;
 }
 

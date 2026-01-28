@@ -4,8 +4,7 @@
 
 #include "caf/io/network/ip_endpoint.hpp"
 
-#include "caf/io/network/native_socket.hpp"
-
+#include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/error_code.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/log/system.hpp"
@@ -161,14 +160,14 @@ std::string host(const ip_endpoint& ep) {
                 &const_cast<sockaddr_in*>(
                    reinterpret_cast<const sockaddr_in*>(ep.caddress()))
                    ->sin_addr,
-                addr, static_cast<socket_size_type>(*ep.clength()));
+                addr, static_cast<net::socket_size_type>(*ep.clength()));
       break;
     case AF_INET6:
       inet_ntop(AF_INET6,
                 &const_cast<sockaddr_in6*>(
                    reinterpret_cast<const sockaddr_in6*>(ep.caddress()))
                    ->sin6_addr,
-                addr, static_cast<socket_size_type>(*ep.clength()));
+                addr, static_cast<net::socket_size_type>(*ep.clength()));
       break;
     default:
       addr[0] = '\0';

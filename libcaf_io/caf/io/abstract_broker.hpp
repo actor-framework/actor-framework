@@ -11,8 +11,8 @@
 #include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
+#include "caf/net/socket_id.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/system_messages.hpp"
 
@@ -172,7 +172,7 @@ public:
   void add_scribe(scribe_ptr ptr);
 
   /// Creates and assigns a new `scribe` from given native socked `fd`.
-  connection_handle add_scribe(network::native_socket fd);
+  connection_handle add_scribe(net::socket_id fd);
 
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
@@ -188,7 +188,7 @@ public:
   void add_doorman(doorman_ptr ptr);
 
   /// Creates and assigns a new `doorman` from given native socked `fd`.
-  accept_handle add_doorman(network::native_socket fd);
+  accept_handle add_doorman(net::socket_id fd);
 
   /// Adds a `doorman` instance to this broker.
   void move_doorman(doorman_ptr ptr);
@@ -209,12 +209,12 @@ public:
                                     datagram_handle hdl);
 
   /// Creates and assigns a new `datagram_servant` from a given socket `fd`.
-  datagram_handle add_datagram_servant(network::native_socket fd);
+  datagram_handle add_datagram_servant(net::socket_id fd);
 
   /// Creates and assigns a new `datagram_servant` from a given socket `fd`
   /// for the remote endpoint `ep`.
   datagram_handle
-  add_datagram_servant_for_endpoint(network::native_socket fd,
+  add_datagram_servant_for_endpoint(net::socket_id fd,
                                     const network::ip_endpoint& ep);
 
   /// Creates a new `datagram_servant` for the remote endpoint `host` and

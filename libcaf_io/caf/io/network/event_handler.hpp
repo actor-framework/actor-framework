@@ -5,8 +5,8 @@
 #pragma once
 
 #include "caf/io/fwd.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+#include "caf/net/socket_id.hpp"
 #include "caf/io/receive_policy.hpp"
 
 #include "caf/detail/io_export.hpp"
@@ -34,7 +34,7 @@ public:
     unsigned rd_flag : 2;
   };
 
-  event_handler(default_multiplexer& dm, native_socket sockfd);
+  event_handler(default_multiplexer& dm, net::socket_id sockfd);
 
   virtual ~event_handler();
 
@@ -52,7 +52,7 @@ public:
   virtual void graceful_shutdown() = 0;
 
   /// Returns the native socket handle for this handler.
-  native_socket fd() const {
+  net::socket_id fd() const {
     return fd_;
   }
 
@@ -98,7 +98,7 @@ protected:
   /// Sets flags for asynchronous event handling on the socket handle.
   void set_fd_flags();
 
-  native_socket fd_;
+  net::socket_id fd_;
   state state_;
   int eventbf_;
   default_multiplexer& backend_;

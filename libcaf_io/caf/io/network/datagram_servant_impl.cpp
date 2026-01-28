@@ -5,6 +5,7 @@
 #include "caf/io/network/datagram_servant_impl.hpp"
 
 #include "caf/io/network/default_multiplexer.hpp"
+#include "caf/net/network_socket.hpp"
 
 #include "caf/detail/assert.hpp"
 #include "caf/logger.hpp"
@@ -14,7 +15,7 @@
 namespace caf::io::network {
 
 datagram_servant_impl::datagram_servant_impl(default_multiplexer& mx,
-                                             native_socket sockfd, int64_t id)
+                                             net::socket_id sockfd, int64_t id)
   : datagram_servant(datagram_handle::from_int(id)),
     launched_(false),
     handler_(mx, sockfd) {
@@ -85,7 +86,7 @@ uint16_t datagram_servant_impl::port(datagram_handle hdl) const {
 }
 
 uint16_t datagram_servant_impl::local_port() const {
-  auto x = local_port_of_fd(handler_.fd());
+  auto x = net::local_port(net::network_socket{handler_.fd()});
   if (!x)
     return 0;
   return *x;

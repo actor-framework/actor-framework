@@ -373,6 +373,9 @@ if(CAF_ENABLE_NET_MODULE)
 endif()
 
 if(CAF_ENABLE_IO_MODULE)
+  if(NOT CAF_ENABLE_NET_MODULE)
+    message(FATAL_ERROR "Invalid options: cannot build IO without NET")
+  endif()
   add_subdirectory(libcaf_io)
 endif()
 

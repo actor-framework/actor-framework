@@ -7,16 +7,13 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/log/io.hpp"
-
-#ifdef CAF_WINDOWS
-#  include <winsock2.h>
-#else
-#  include <sys/socket.h>
-#endif
+#include "caf/net/network_socket.hpp"
+#include "caf/net/socket.hpp"
+#include "caf/net/stream_socket.hpp"
 
 namespace caf::io::network {
 
-event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
+event_handler::event_handler(default_multiplexer& dm, net::socket_id sockfd)
   : fd_(sockfd),
     state_{true, false, false, false,
            to_integer(receive_policy_flag::at_least)},
@@ -26,9 +23,9 @@ event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
 }
 
 event_handler::~event_handler() {
-  if (fd_ != invalid_native_socket) {
+  if (fd_ != net::invalid_socket_id) {
     log::io::debug("close socket fd = {}", fd_);
-    close_socket(fd_);
+    net::close(net::socket{fd_});
   }
 }
 
@@ -41,12 +38,12 @@ void event_handler::activate() {
 }
 
 void event_handler::set_fd_flags() {
-  if (fd_ == invalid_native_socket)
+  if (fd_ == net::invalid_socket_id)
     return;
   // enable nonblocking IO, disable Nagle's algorithm, and suppress SIGPIPE
-  nonblocking(fd_, true);
-  tcp_nodelay(fd_, true);
-  allow_sigpipe(fd_, false);
+  net::nonblocking(net::socket{fd_}, true);
+  net::nodelay(net::stream_socket{fd_}, true);
+  net::allow_sigpipe(net::network_socket{fd_}, false);
 }
 
 } // namespace caf::io::network

@@ -7,6 +7,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/net/socket.hpp"
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
@@ -16,7 +17,7 @@
 
 namespace caf::io::network {
 
-stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
+stream::stream(default_multiplexer& backend_ref, net::socket_id sockfd)
   : event_handler(backend_ref, sockfd),
     max_consecutive_reads_(get_or(backend().system().config(),
                                   "caf.middleman.max-consecutive-reads",
@@ -217,7 +218,7 @@ void stream::send_fin() {
   // graceful shutdown sequence. The peer then closes its connection as well
   // and we will notice this by getting 0 as return value of recv without error
   // (connection closed).
-  shutdown_write(fd_);
+  net::shutdown_write(net::socket{fd_});
 }
 
 } // namespace caf::io::network

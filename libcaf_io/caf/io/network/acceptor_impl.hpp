@@ -6,8 +6,8 @@
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/acceptor.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+#include "caf/net/socket_id.hpp"
 
 namespace caf::io::network {
 
@@ -16,7 +16,7 @@ template <class ProtocolPolicy>
 class acceptor_impl : public acceptor {
 public:
   template <class... Ts>
-  acceptor_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
+  acceptor_impl(default_multiplexer& mpx, net::socket_id sockfd, Ts&&... xs)
     : acceptor(mpx, sockfd), policy_(std::forward<Ts>(xs)...) {
     // nop
   }

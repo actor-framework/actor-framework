@@ -6,6 +6,8 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
+#include "caf/net/network_socket.hpp"
+
 #include "caf/actor_system_config.hpp"
 #include "caf/config_value.hpp"
 #include "caf/defaults.hpp"
@@ -23,7 +25,7 @@ constexpr size_t receive_buffer_size = std::numeric_limits<uint16_t>::max();
 namespace caf::io::network {
 
 datagram_handler::datagram_handler(default_multiplexer& backend_ref,
-                                   native_socket sockfd)
+                                   net::socket_id sockfd)
   : event_handler(backend_ref, sockfd),
     max_consecutive_reads_(get_or(backend().system().config(),
                                   "caf.middleman.max-consecutive-reads",
@@ -31,12 +33,15 @@ datagram_handler::datagram_handler(default_multiplexer& backend_ref,
     max_datagram_size_(receive_buffer_size),
     rd_buf_(receive_buffer_size),
     send_buffer_size_(0) {
-  allow_udp_connreset(sockfd, false);
-  auto es = send_buffer_size(sockfd);
-  if (!es)
-    log::io::error("cannot determine socket buffer size");
-  else
-    send_buffer_size_ = *es;
+  if (auto err = net::allow_udp_connreset(net::network_socket{sockfd}, false);
+      err.valid()) {
+    log::io::error("allow udp connreset on fd {} failed: {}", sockfd, err);
+  }
+  if (auto es = net::send_buffer_size(net::network_socket{sockfd})) {
+    send_buffer_size_ = static_cast<int>(*es);
+  } else {
+    log::io::error("cannot determine socket buffer size: {}", es.error());
+  }
 }
 
 void datagram_handler::start(datagram_manager* mgr) {

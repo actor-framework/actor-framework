@@ -6,11 +6,12 @@
 
 #include "caf/detail/assert.hpp"
 #include "caf/log/io.hpp"
+#include "caf/net/socket.hpp"
 
 namespace caf::io::network {
 
-acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
-  : event_handler(backend_ref, sockfd), sock_(invalid_native_socket) {
+acceptor::acceptor(default_multiplexer& backend_ref, net::socket_id sockfd)
+  : event_handler(backend_ref, sockfd), sock_(net::invalid_socket_id) {
   // nop
 }
 
@@ -40,7 +41,8 @@ void acceptor::graceful_shutdown() {
     return;
   state_.shutting_down = true;
   // Shutdown socket activity.
-  shutdown_both(fd_);
+  net::shutdown_read(net::socket{fd_});
+  net::shutdown_write(net::socket{fd_});
 }
 
 } // namespace caf::io::network

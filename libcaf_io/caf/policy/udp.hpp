@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/io/network/ip_endpoint.hpp"
-#include "caf/io/network/native_socket.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/detail/io_export.hpp"
 
@@ -17,21 +17,20 @@ struct CAF_IO_EXPORT udp {
   /// at the endpoint in `sa` with size `sa_len`. Returns true as long
   /// as no IO error occurs. The number of written bytes is stored in
   /// `result` and the sender is stored in `ep`.
-  static bool read_datagram(size_t& result, io::network::native_socket fd,
-                            void* buf, size_t buf_len,
-                            io::network::ip_endpoint& ep);
+  static bool read_datagram(size_t& result, net::socket_id fd, void* buf,
+                            size_t buf_len, io::network::ip_endpoint& ep);
 
   /// Reveice a datagram of up to `len` bytes. Larger datagrams are truncated.
   /// Up to `sender_len` bytes of the receiver address is written into
   /// `sender_addr`. Returns `true` if no IO error occurred. The number of
   /// received bytes is stored in `result` (can be 0).
-  static bool write_datagram(size_t& result, io::network::native_socket fd,
-                             void* buf, size_t buf_len,
+  static bool write_datagram(size_t& result, net::socket_id fd, void* buf,
+                             size_t buf_len,
                              const io::network::ip_endpoint& ep);
 
   /// Always returns `false`. Native UDP I/O event handlers only rely on the
   /// socket buffer.
-  static constexpr bool must_read_more(io::network::native_socket, size_t) {
+  static constexpr bool must_read_more(net::socket_id, size_t) {
     return false;
   }
 };

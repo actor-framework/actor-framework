@@ -14,7 +14,7 @@ template <class ProtocolPolicy>
 class stream_impl : public stream {
 public:
   template <class... Ts>
-  stream_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
+  stream_impl(default_multiplexer& mpx, net::socket_id sockfd, Ts&&... xs)
     : stream(mpx, sockfd), policy_(std::forward<Ts>(xs)...) {
     // nop
   }

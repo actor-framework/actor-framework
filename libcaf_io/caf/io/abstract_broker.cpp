@@ -135,7 +135,7 @@ void abstract_broker::add_scribe(scribe_ptr ptr) {
   add_servant(std::move(ptr));
 }
 
-connection_handle abstract_broker::add_scribe(network::native_socket fd) {
+connection_handle abstract_broker::add_scribe(net::socket_id fd) {
   auto lg = log::io::trace("fd = {}", fd);
   return add_servant(backend().new_scribe(fd));
 }
@@ -158,7 +158,7 @@ void abstract_broker::add_doorman(doorman_ptr ptr) {
   add_servant(std::move(ptr));
 }
 
-accept_handle abstract_broker::add_doorman(network::native_socket fd) {
+accept_handle abstract_broker::add_doorman(net::socket_id fd) {
   auto lg = log::io::trace("fd = {}", fd);
   return add_servant(backend().new_doorman(fd));
 }
@@ -200,7 +200,7 @@ void abstract_broker::add_hdl_for_datagram_servant(datagram_servant_ptr ptr,
 }
 
 datagram_handle
-abstract_broker::add_datagram_servant(network::native_socket fd) {
+abstract_broker::add_datagram_servant(net::socket_id fd) {
   auto lg = log::io::trace("fd = {}", fd);
   auto ptr = backend().new_datagram_servant(fd);
   auto hdl = ptr->hdl();
@@ -209,7 +209,7 @@ abstract_broker::add_datagram_servant(network::native_socket fd) {
 }
 
 datagram_handle abstract_broker::add_datagram_servant_for_endpoint(
-  network::native_socket fd, const network::ip_endpoint& ep) {
+  net::socket_id fd, const network::ip_endpoint& ep) {
   auto lg = log::io::trace("fd = {}", fd);
   auto ptr = backend().new_datagram_servant_for_endpoint(fd, ep);
   auto hdl = ptr->hdl();

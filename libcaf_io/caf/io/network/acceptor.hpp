@@ -7,8 +7,8 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/event_handler.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/detail/io_export.hpp"
 #include "caf/log/io.hpp"
@@ -25,11 +25,11 @@ public:
   /// A smart pointer to an acceptor manager.
   using manager_ptr = intrusive_ptr<manager_type>;
 
-  acceptor(default_multiplexer& backend_ref, native_socket sockfd);
+  acceptor(default_multiplexer& backend_ref, net::socket_id sockfd);
 
   /// Returns the accepted socket. This member function should
   /// be called only from the `new_connection` callback.
-  native_socket& accepted_socket() {
+  net::socket_id& accepted_socket() {
     return sock_;
   }
 
@@ -50,9 +50,9 @@ protected:
   void handle_event_impl(io::network::operation op, Policy& policy) {
     auto lg = log::io::trace("fd = {}, op = {}", fd(), op);
     if (mgr_ && op == operation::read) {
-      native_socket sockfd = invalid_native_socket;
+      net::socket_id sockfd = net::invalid_socket_id;
       if (policy.try_accept(sockfd, fd())) {
-        if (sockfd != invalid_native_socket) {
+        if (sockfd != net::invalid_socket_id) {
           sock_ = sockfd;
           mgr_->new_connection();
         }
@@ -62,7 +62,7 @@ protected:
 
 private:
   manager_ptr mgr_;
-  native_socket sock_;
+  net::socket_id sock_;
 };
 
 } // namespace caf::io::network

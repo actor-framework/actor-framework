@@ -13,7 +13,7 @@ CAF_PUSH_WARNINGS
 CAF_POP_WARNINGS
 
 #include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/native_socket.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/detail/openssl_export.hpp"
@@ -28,7 +28,7 @@ CAF_POP_WARNINGS
 
 namespace caf::openssl {
 
-using native_socket = io::network::native_socket;
+using native_socket = net::socket_id;
 
 using rw_state = io::network::rw_state;
 

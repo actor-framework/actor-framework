@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include "caf/io/network/native_socket.hpp"
+#include "caf/net/socket.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/error.hpp"
 #include "caf/format_to_error.hpp"
@@ -32,8 +33,8 @@ inline bool cc_not_minus1(int value) {
 }
 
 /// Predicate for `ccall` meaning "expected result of f is a valid socket".
-inline bool cc_valid_socket(caf::io::network::native_socket fd) {
-  return fd != caf::io::network::invalid_native_socket;
+inline bool cc_valid_socket(caf::net::socket_id fd) {
+  return fd != caf::net::invalid_socket_id;
 }
 
 /// Calls a C functions and returns an error if `predicate(var)` returns false.
@@ -41,7 +42,7 @@ inline bool cc_valid_socket(caf::io::network::native_socket fd) {
   auto var = expr;                                                             \
   if (!predicate(var))                                                         \
   return format_to_unexpected(sec::network_syscall_failed, "{}: {}", fun_name, \
-                              last_socket_error_as_string())
+                              caf::net::last_socket_error_as_string())
 
 /// Calls a C functions and calls exit() if `predicate(var)` returns false.
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
@@ -49,7 +50,7 @@ inline bool cc_valid_socket(caf::io::network::native_socket fd) {
   if (!predicate(var)) {                                                       \
     fprintf(stderr, "[FATAL] %s:%u: syscall failed: %s returned %s\n",         \
             __FILE__, __LINE__, funname,                                       \
-            last_socket_error_as_string().c_str());                            \
+            caf::net::last_socket_error_as_string().c_str());                  \
     abort();                                                                   \
   }                                                                            \
   static_cast<void>(0)

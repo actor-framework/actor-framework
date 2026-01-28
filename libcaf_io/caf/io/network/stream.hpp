@@ -8,6 +8,7 @@
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/rw_state.hpp"
 #include "caf/io/network/stream_manager.hpp"
+#include "caf/net/socket_id.hpp"
 #include "caf/io/receive_policy.hpp"
 
 #include "caf/byte_buffer.hpp"
@@ -26,7 +27,7 @@ public:
   /// A smart pointer to a stream manager.
   using manager_ptr = intrusive_ptr<stream_manager>;
 
-  stream(default_multiplexer& backend_ref, native_socket sockfd);
+  stream(default_multiplexer& backend_ref, net::socket_id sockfd);
 
   /// Starts reading data from the socket, forwarding incoming data to `mgr`.
   void start(stream_manager* mgr);

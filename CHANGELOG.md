@@ -48,6 +48,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   purpose of `max_connections` tracking. Previously, only open sockets counted
   against the limit, which could cause the server to accept new connections
   while there were still pending requests being processed.
+- The I/O module now uses the `caf::net` socket API and no longer ships its own
+  `native_socket` implementation. Building the I/O module now requires the NET
+  module.
 
 ### Deprecated
 
@@ -139,6 +142,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   called by users.
 - Removed the implicit conversions from `caf::error_code` to `caf::error` and
   from error code enums to `caf::error_code`.
+- Legacy utility classes in `caf::io::network` have been removed. They have long
+  been superseded by the `caf::net` socket API.
 
 ## [1.1.0] - 2025-07-25
 

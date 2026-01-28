@@ -15,8 +15,8 @@
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+#include "caf/net/socket_id.hpp"
 #include "caf/io/network/pipe_reader.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 #include "caf/io/network/rw_state.hpp"
@@ -63,7 +63,7 @@ using multiplexer_poll_shadow_data = std::vector<event_handler*>;
 
 using event_mask_type = int;
 using multiplexer_data = epoll_event;
-using multiplexer_poll_shadow_data = native_socket;
+using multiplexer_poll_shadow_data = net::socket_id;
 
 #endif // CAF_POLL_MULTIPLEXER
 
@@ -82,16 +82,16 @@ public:
   friend class supervisor;
 
   struct event {
-    native_socket fd;
+    net::socket_id fd;
     int mask;
     event_handler* ptr;
   };
 
   struct event_less {
-    bool operator()(native_socket lhs, const event& rhs) const noexcept {
+    bool operator()(net::socket_id lhs, const event& rhs) const noexcept {
       return lhs < rhs.fd;
     }
-    bool operator()(const event& lhs, native_socket rhs) const noexcept {
+    bool operator()(const event& lhs, net::socket_id rhs) const noexcept {
       return lhs.fd < rhs;
     }
     bool operator()(const event& lhs, const event& rhs) const noexcept {
@@ -99,20 +99,20 @@ public:
     }
   };
 
-  scribe_ptr new_scribe(native_socket fd) override;
+  scribe_ptr new_scribe(net::socket_id fd) override;
 
   expected<scribe_ptr> new_tcp_scribe(const std::string& host,
                                       uint16_t port) override;
 
-  doorman_ptr new_doorman(native_socket fd) override;
+  doorman_ptr new_doorman(net::socket_id fd) override;
 
   expected<doorman_ptr> new_tcp_doorman(uint16_t port, const char* in,
                                         bool reuse_addr) override;
 
-  datagram_servant_ptr new_datagram_servant(native_socket fd) override;
+  datagram_servant_ptr new_datagram_servant(net::socket_id fd) override;
 
   datagram_servant_ptr
-  new_datagram_servant_for_endpoint(native_socket fd,
+  new_datagram_servant_for_endpoint(net::socket_id fd,
                                     const ip_endpoint& ep) override;
 
   expected<datagram_servant_ptr>
@@ -150,9 +150,9 @@ public:
 
   void run() override;
 
-  void add(operation op, native_socket fd, event_handler* ptr);
+  void add(operation op, net::socket_id fd, event_handler* ptr);
 
-  void del(operation op, native_socket fd, event_handler* ptr);
+  void del(operation op, net::socket_id fd, event_handler* ptr);
 
   /// Calls `ptr->resume`.
   void resume(intrusive_ptr<resumable> ptr);
@@ -174,8 +174,8 @@ private:
   void init();
 
   template <class F>
-  void new_event(F fun, operation op, native_socket fd, event_handler* ptr) {
-    CAF_ASSERT(fd != invalid_native_socket);
+  void new_event(F fun, operation op, net::socket_id fd, event_handler* ptr) {
+    CAF_ASSERT(fd != net::invalid_socket_id);
     CAF_ASSERT(ptr != nullptr || fd == pipe_.first);
     // the only valid input where ptr == nullptr is our pipe
     // read handle which is only registered for reading
@@ -214,7 +214,7 @@ private:
 
   void handle(const event& e);
 
-  void handle_socket_event(native_socket fd, int mask, event_handler* ptr);
+  void handle_socket_event(net::socket_id fd, int mask, event_handler* ptr);
 
   void close_pipe();
 
@@ -222,7 +222,7 @@ private:
 
   /// Socket handle to an OS-level event loop such as `epoll`. Unused in the
   /// `poll` implementation.
-  native_socket epollfd_; // unused in poll() implementation
+  net::socket_id epollfd_; // unused in poll() implementation
 
   /// Platform-dependent bookkeeping data, e.g., `pollfd` or `epoll_event`.
   std::vector<multiplexer_data> pollset_;
@@ -235,7 +235,7 @@ private:
   multiplexer_poll_shadow_data shadow_;
 
   /// Pipe for pushing events and callbacks into the multiplexer's thread.
-  std::pair<native_socket, native_socket> pipe_;
+  std::pair<net::socket_id, net::socket_id> pipe_;
 
   /// Special-purpose event handler for the pipe.
   pipe_reader pipe_reader_;
@@ -250,27 +250,31 @@ private:
   int64_t servant_ids_;
 };
 
-inline connection_handle conn_hdl_from_socket(native_socket fd) {
-  return connection_handle::from_int(int64_from_native_socket(fd));
+inline int64_t int64_from_socket_id(net::socket_id id) {
+  return id == net::invalid_socket_id ? -1 : static_cast<int64_t>(id);
 }
 
-inline accept_handle accept_hdl_from_socket(native_socket fd) {
-  return accept_handle::from_int(int64_from_native_socket(fd));
+inline connection_handle conn_hdl_from_socket(net::socket_id fd) {
+  return connection_handle::from_int(int64_from_socket_id(fd));
 }
 
-CAF_IO_EXPORT expected<native_socket>
+inline accept_handle accept_hdl_from_socket(net::socket_id fd) {
+  return accept_handle::from_int(int64_from_socket_id(fd));
+}
+
+CAF_IO_EXPORT expected<net::socket_id>
 new_tcp_connection(const std::string& host, uint16_t port,
                    std::optional<protocol::network> preferred = std::nullopt);
 
-CAF_IO_EXPORT expected<native_socket>
+CAF_IO_EXPORT expected<net::socket_id>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
 
-expected<std::pair<native_socket, ip_endpoint>>
+expected<std::pair<net::socket_id, ip_endpoint>>
 new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
                              std::optional<protocol::network> preferred
                              = std::nullopt);
 
-expected<std::pair<native_socket, protocol::network>>
+expected<std::pair<net::socket_id, protocol::network>>
 new_local_udp_endpoint_impl(uint16_t port, const char* addr,
                             bool reuse_addr = false,
                             std::optional<protocol::network> preferred

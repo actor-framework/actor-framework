@@ -8,8 +8,10 @@
 #include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/receive_policy.hpp"
+
+#include "caf/net/network_socket.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
@@ -32,7 +34,7 @@ public:
   /// A job for sending a datagram consisting of the sender and a buffer.
   using job_type = std::pair<datagram_handle, byte_buffer>;
 
-  datagram_handler(default_multiplexer& backend_ref, native_socket sockfd);
+  datagram_handler(default_multiplexer& backend_ref, net::socket_id sockfd);
 
   /// Starts reading data from the socket, forwarding incoming data to `mgr`.
   void start(datagram_manager* mgr);
@@ -123,7 +125,12 @@ protected:
         auto size_as_int = static_cast<int>(buf.size());
         if (size_as_int > send_buffer_size_) {
           send_buffer_size_ = size_as_int;
-          send_buffer_size(fd(), size_as_int);
+          if (auto err = net::send_buffer_size(
+                net::network_socket{fd()}, static_cast<size_t>(size_as_int));
+              err.valid()) {
+            log::io::error("set send buffer size on fd {} failed: {}", fd(),
+                           err);
+          }
         }
         auto res = policy.write_datagram(wb, fd(), buf.data(), buf.size(), ep);
         handle_write_result(res, id, buf, wb);

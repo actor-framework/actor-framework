@@ -7,7 +7,7 @@
 #include "caf/io/datagram_servant.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/datagram_handler_impl.hpp"
-#include "caf/io/network/native_socket.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/detail/io_export.hpp"
 #include "caf/policy/udp.hpp"
@@ -21,7 +21,7 @@ class CAF_IO_EXPORT datagram_servant_impl : public datagram_servant {
 public:
   using id_type = int64_t;
 
-  datagram_servant_impl(default_multiplexer& mx, native_socket sockfd,
+  datagram_servant_impl(default_multiplexer& mx, net::socket_id sockfd,
                         id_type id);
 
   bool new_endpoint(network::receive_buffer& buf) override;

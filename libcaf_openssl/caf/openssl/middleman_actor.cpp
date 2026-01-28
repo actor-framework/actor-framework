@@ -20,11 +20,15 @@
 #include "caf/io/network/stream_impl.hpp"
 #include "caf/io/system_messages.hpp"
 
+#include "caf/net/network_socket.hpp"
+#include "caf/net/socket.hpp"
+#include "caf/net/socket_guard.hpp"
+
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/socket_guard.hpp"
+#include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/log/openssl.hpp"
 #include "caf/log/system.hpp"
 #include "caf/node_id.hpp"
@@ -65,7 +69,7 @@ namespace caf::openssl {
 
 namespace {
 
-using native_socket = io::network::native_socket;
+using native_socket = net::socket_id;
 using default_mpx = io::network::default_multiplexer;
 
 struct ssl_policy {
@@ -88,17 +92,22 @@ struct ssl_policy {
     auto lg = log::openssl::trace("fd = {}", fd);
     sockaddr_storage addr;
     memset(&addr, 0, sizeof(addr));
-    caf::io::network::socket_size_type addrlen = sizeof(addr);
+    net::socket_size_type addrlen = sizeof(addr);
     result = accept(fd, reinterpret_cast<sockaddr*>(&addr), &addrlen);
     // note accept4 is better to avoid races in setting CLOEXEC (but not posix)
-    if (result == io::network::invalid_native_socket) {
-      auto err = io::network::last_socket_error();
-      if (!io::network::would_block_or_temporarily_unavailable(err))
+    if (result == net::invalid_socket_id) {
+      if (!net::last_socket_error_is_temporary())
         log::openssl::error("accept failed: {}",
-                            io::network::socket_error_as_string(err));
+                            net::last_socket_error_as_string());
       return false;
     }
-    io::network::child_process_inherit(result, false);
+    if (auto err = net::child_process_inherit(net::socket{result}, false);
+        err.valid()) {
+      log::openssl::error("child process inherit on fd {} failed: {}", result,
+                          err);
+      net::close(net::socket{result});
+      return false;
+    }
     log::openssl::debug("fd = {}, result = {}", fd, result);
     return session_->try_accept(result);
   }
@@ -156,14 +165,14 @@ public:
   }
 
   std::string addr() const override {
-    auto x = io::network::remote_addr_of_fd(stream_.fd());
+    auto x = net::remote_addr(net::network_socket{stream_.fd()});
     if (!x)
       return "";
     return *x;
   }
 
   uint16_t port() const override {
-    auto x = io::network::remote_port_of_fd(stream_.fd());
+    auto x = net::remote_port(net::network_socket{stream_.fd()});
     if (!x)
       return 0;
     return *x;
@@ -197,7 +206,7 @@ private:
 
 class doorman_impl : public io::network::doorman_impl {
 public:
-  doorman_impl(default_mpx& mx, native_socket sockfd)
+  doorman_impl(default_mpx& mx, net::socket_id sockfd)
     : io::network::doorman_impl(mx, sockfd) {
     // nop
   }
@@ -212,8 +221,11 @@ public:
       return false;
     auto& dm = acceptor_.backend();
     auto fd = acceptor_.accepted_socket();
-    detail::socket_guard sguard{fd};
-    io::network::nonblocking(fd, true);
+    net::socket_guard sguard(net::socket{fd});
+    if (auto err = net::nonblocking(sguard.get(), true); err.valid()) {
+      log::openssl::error("nonblocking on fd {} failed: {}", fd, err);
+      return false;
+    }
     auto sssn = make_session(parent()->system(), fd, true);
     if (sssn == nullptr) {
       log::system::error("unable to create SSL session for accepted socket");
@@ -245,7 +257,11 @@ protected:
     auto fd = io::network::new_tcp_connection(host, port);
     if (!fd)
       return expected<io::scribe_ptr>{unexpect, std::move(fd.error())};
-    io::network::nonblocking(*fd, true);
+    if (auto err = net::nonblocking(net::socket{*fd}, true); err.valid()) {
+      log::openssl::error("nonblocking on fd {} failed: {}", *fd, err);
+      net::close(net::socket{*fd});
+      return expected<io::scribe_ptr>{unexpect, std::move(err)};
+    }
     auto sssn = make_session(system(), *fd, false);
     if (!sssn) {
       log::system::error("unable to create SSL session for connection");

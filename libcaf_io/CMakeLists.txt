@@ -9,6 +9,7 @@ caf_add_component(
   DEPENDENCIES
     PUBLIC
       CAF::core
+      CAF::net
       $<$<CXX_COMPILER_ID:MSVC>:ws2_32>
     PRIVATE
       CAF::internal
@@ -20,7 +21,6 @@ caf_add_component(
     ${CAF_IO_HEADERS}
   SOURCES
     caf/detail/prometheus_broker.cpp
-    caf/detail/socket_guard.cpp
     caf/io/abstract_broker.cpp
     caf/io/basp/connection_state.test.cpp
     caf/io/basp/header.cpp
@@ -53,7 +53,6 @@ caf_add_component(
     caf/io/network/ip_endpoint.test.cpp
     caf/io/network/manager.cpp
     caf/io/network/multiplexer.cpp
-    caf/io/network/native_socket.cpp
     caf/io/network/pipe_reader.cpp
     caf/io/network/protocol.cpp
     caf/io/network/protocol.test.cpp

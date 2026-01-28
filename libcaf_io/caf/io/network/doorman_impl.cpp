@@ -5,6 +5,7 @@
 #include "caf/io/network/doorman_impl.hpp"
 
 #include "caf/io/network/default_multiplexer.hpp"
+#include "caf/net/network_socket.hpp"
 
 #include "caf/logger.hpp"
 
@@ -12,7 +13,7 @@
 
 namespace caf::io::network {
 
-doorman_impl::doorman_impl(default_multiplexer& mx, native_socket sockfd)
+doorman_impl::doorman_impl(default_multiplexer& mx, net::socket_id sockfd)
   : doorman(network::accept_hdl_from_socket(sockfd)), acceptor_(mx, sockfd) {
   // nop
 }
@@ -44,14 +45,14 @@ void doorman_impl::launch() {
 }
 
 std::string doorman_impl::addr() const {
-  auto x = local_addr_of_fd(acceptor_.fd());
+  auto x = net::local_addr(net::network_socket{acceptor_.fd()});
   if (!x)
     return "";
   return std::move(*x);
 }
 
 uint16_t doorman_impl::port() const {
-  auto x = local_port_of_fd(acceptor_.fd());
+  auto x = net::local_port(net::network_socket{acceptor_.fd()});
   if (!x)
     return 0;
   return *x;

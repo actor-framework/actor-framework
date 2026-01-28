@@ -5,6 +5,7 @@
 #include "caf/io/network/scribe_impl.hpp"
 
 #include "caf/io/network/default_multiplexer.hpp"
+#include "caf/net/network_socket.hpp"
 
 #include "caf/detail/assert.hpp"
 #include "caf/logger.hpp"
@@ -13,7 +14,7 @@
 
 namespace caf::io::network {
 
-scribe_impl::scribe_impl(default_multiplexer& mx, native_socket sockfd)
+scribe_impl::scribe_impl(default_multiplexer& mx, net::socket_id sockfd)
   : scribe(network::conn_hdl_from_socket(sockfd)),
     launched_(false),
     stream_(mx, sockfd) {
@@ -52,14 +53,14 @@ void scribe_impl::flush() {
 }
 
 std::string scribe_impl::addr() const {
-  auto x = remote_addr_of_fd(stream_.fd());
+  auto x = net::remote_addr(net::network_socket{stream_.fd()});
   if (!x)
     return "";
   return *x;
 }
 
 uint16_t scribe_impl::port() const {
-  auto x = remote_port_of_fd(stream_.fd());
+  auto x = net::remote_port(net::network_socket{stream_.fd()});
   if (!x)
     return 0;
   return *x;

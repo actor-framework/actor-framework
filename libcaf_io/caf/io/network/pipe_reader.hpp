@@ -6,8 +6,8 @@
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/event_handler.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+#include "caf/net/socket_id.hpp"
 
 #include "caf/detail/io_export.hpp"
 
@@ -24,7 +24,7 @@ public:
 
   void handle_event(operation op) override;
 
-  void init(native_socket sock_fd);
+  void init(net::socket_id sock_fd);
 
   resumable* try_read_next();
 };

@@ -5,8 +5,8 @@
 #pragma once
 
 #include "caf/io/fwd.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_impl.hpp"
+#include "caf/net/socket_id.hpp"
 #include "caf/io/scribe.hpp"
 
 #include "caf/detail/io_export.hpp"
@@ -17,7 +17,7 @@ namespace caf::io::network {
 /// Default scribe implementation.
 class CAF_IO_EXPORT scribe_impl : public scribe {
 public:
-  scribe_impl(default_multiplexer& mx, native_socket sockfd);
+  scribe_impl(default_multiplexer& mx, net::socket_id sockfd);
 
   void configure_read(receive_policy::config config) override;
 
