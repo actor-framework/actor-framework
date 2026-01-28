@@ -164,6 +164,7 @@ caf_add_component(
     caf/detail/blocking_behavior.cpp
     caf/detail/bounds_checker.test.cpp
     caf/detail/cleanup_and_release.cpp
+    caf/detail/cleanup_and_release.test.cpp
     caf/detail/config_consumer.cpp
     caf/detail/config_consumer.test.cpp
     caf/detail/counted_disposable.cpp
