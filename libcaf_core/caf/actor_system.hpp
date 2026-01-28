@@ -13,6 +13,7 @@
 #include "caf/callback.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
+#include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/spawnable.hpp"
@@ -22,7 +23,6 @@
 #include "caf/make_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 #include "caf/spawn_options.hpp"
-#include "caf/stateful_actor.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/telemetry/actor_metrics.hpp"
 #include "caf/term.hpp"
@@ -31,6 +31,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <span>
 #include <string>
 #include <thread>
 
@@ -347,10 +348,10 @@ public:
     requires(is_unbound(Os))
   infer_handle_from_fun_t<F>
   spawn_functor(std::true_type, actor_config& cfg, F& fun, Ts&&... xs) {
-    using base = infer_impl_from_fun_t<F>;
-    using state = detail::functor_state<base>;
-    using impl = stateful_actor<state, base>;
-    return spawn_class<impl, Os>(cfg, std::move(fun), std::forward<Ts>(xs)...);
+    using impl = infer_impl_from_fun_t<F>;
+    detail::init_fun_factory<impl, F> fac;
+    cfg.init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
+    return spawn_impl<impl, Os>(cfg);
   }
 
   /// Fallback no-op overload.
