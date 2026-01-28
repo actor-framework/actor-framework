@@ -175,7 +175,8 @@ void blocking_actor::await_all_other_actors_done() {
 
 void blocking_actor::act() {
   auto lg = log::core::trace("");
-  // Default implementation does nothing.
+  if (initial_behavior_fac_)
+    initial_behavior_fac_(this);
 }
 
 void blocking_actor::fail_state(error err) {

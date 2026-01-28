@@ -37,11 +37,6 @@ public:
     // nop
   }
 
-  // Convenience overload to allow "unsafe" initialization of any behavior_type.
-  explicit behavior(unsafe_behavior_init_t) {
-    // nop
-  }
-
   /// Creates a behavior from `fun` without timeout.
   behavior(const message_handler& mh);
 

@@ -10,7 +10,6 @@
 #include "caf/io/scribe.hpp"
 
 #include "caf/detail/assert.hpp"
-#include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/dynamically_typed.hpp"
 #include "caf/extend.hpp"
