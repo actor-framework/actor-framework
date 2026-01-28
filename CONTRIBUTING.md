@@ -77,8 +77,8 @@ Coding Style
 ============
 
 When contributing source code, please adhere to the following coding style,
-which is loosely based the C++ Core Guidelines and the coding conventions used
-by the C++ Standard Library.
+which is loosely based on the C++ Core Guidelines and the coding conventions
+used by the C++ Standard Library.
 
 Example for the Impatient
 -------------------------
@@ -172,7 +172,7 @@ void my_class::print_name() const {
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#include "caf/example/my_class.hpp" // the header-under-test
+#include "caf/foo/my_class.hpp" // the header-under-test
 
 #include "caf/test/caf_test_main.hpp"
 #include "caf/test/test.hpp"
@@ -263,7 +263,7 @@ Naming
     }
 
     const std::string& name() const noexcept {
-      return name_
+      return name_;
     }
 
     void name(const std::string& new_name) {
@@ -318,5 +318,5 @@ multiple `.cpp` files in the same module. An `internal` component is never
 exported (and thus does not become part of the CAF ABI) and we do not install
 headers for it. We prefer `internal` whenever possible to keep the ABI minimal.
 
-However, there cases where `internal` is not suitable, e.g., when a type must be
-included in a public CAF header. In such cases, use `detail` instead.
+However, there are cases where `internal` is not suitable, e.g., when a type
+must be included in a public CAF header. In such cases, use `detail` instead.
