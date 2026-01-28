@@ -391,6 +391,7 @@ caf_add_component(
     caf/thread_hook.cpp
     caf/thread_hook.test.cpp
     caf/timestamp.cpp
+    caf/timestamp.test.cpp
     caf/type_id.cpp
     caf/type_id.test.cpp
     caf/type_id_list.cpp

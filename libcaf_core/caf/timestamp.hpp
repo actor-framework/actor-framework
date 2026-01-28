@@ -21,14 +21,14 @@ using timestamp = std::chrono::time_point<std::chrono::system_clock, timespan>;
 /// the current system time.
 CAF_CORE_EXPORT timestamp make_timestamp();
 
-/// Prints `x` in ISO 8601 format, e.g., `2018-11-15T06:25:01.462`.
+/// Converts `x` to a string representation of its nanosecond count since
+/// epoch.
 CAF_CORE_EXPORT std::string timestamp_to_string(timestamp x);
 
 /// Converts an ISO 8601 formatted timestamp into its native representation.
 CAF_CORE_EXPORT expected<timestamp> timestamp_from_string(std::string_view str);
 
-/// Appends the timestamp `x` in ISO 8601 format, e.g.,
-/// `2018-11-15T06:25:01.462`, to `y`.
+/// Appends the string representation of `y` (via `timestamp_to_string`) to `x`.
 CAF_CORE_EXPORT void append_timestamp_to_string(std::string& x, timestamp y);
 
 } // namespace caf
