@@ -3,6 +3,7 @@ Documentation       A test suite for --dump-config.
 
 Library             OperatingSystem
 Library             Process
+Library             String
 
 
 *** Variables ***
@@ -163,3 +164,28 @@ The file logger prints nothing when setting the log level to QUIET
     File Should Not Exist    app.log
     Run File Logger  quiet  default
     File Should Not Exist    app.log
+
+The file logger renders formatted messages with fields
+    [Tags]    logging
+    Remove File    app.log
+    Run Process    ${BINARY_PATH}
+    ...    --config-file\=${CURDIR}${/}base.cfg
+    ...    --caf.logger.file.verbosity\=debug
+    ...    --caf.logger.file.format\=%p %m%n
+    ...    --test\=formatted
+    ${found}=    Get File    app.log
+    Should Contain    ${found}    formatted message: foo + bar = foobar
+    Should Contain    ${found}    value = 42
+    Should Contain    ${found}    key = value
+    Should Contain    ${found}    n = 123
+
+The file logger includes thread id and runtime in formatted output
+    [Tags]    logging
+    Remove File    app.log
+    Run Process    ${BINARY_PATH}
+    ...    --config-file\=${CURDIR}${/}base.cfg
+    ...    --caf.logger.file.verbosity\=debug
+    ...    --caf.logger.file.format\=%r %t %m%n
+    ...    --test\=thread_runtime
+    ${found}=    Get File    app.log
+    Should Match Regexp    ${found}    \\d+\\s+\\d+\\s+thread_runtime_check
