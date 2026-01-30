@@ -177,7 +177,6 @@ caf_add_component(
     caf/detail/default_thread_count.cpp
     caf/detail/format.test.cpp
     caf/detail/get_process_id.cpp
-    caf/detail/glob_match.cpp
     caf/detail/ieee_754.test.cpp
     caf/detail/invoke_result_visitor.cpp
     caf/detail/json.cpp
@@ -186,6 +185,8 @@ caf_add_component(
     caf/detail/log_level_map.cpp
     caf/detail/log_level_map.test.cpp
     caf/detail/mailbox_factory.cpp
+    caf/detail/match_wildcard_pattern.cpp
+    caf/detail/match_wildcard_pattern.test.cpp
     caf/detail/mbr_list.test.cpp
     caf/detail/message_builder_element.cpp
     caf/detail/message_data.cpp
