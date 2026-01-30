@@ -61,13 +61,6 @@ TEST("repeated asterisks have the same effect as a single asterisk") {
   check(detail::match_wildcard_pattern("file.txt"sv, "file.***"sv));
 }
 
-TEST("asterisk and question mark combined") {
-  check(detail::match_wildcard_pattern("file1.txt"sv, "file?.txt"sv));
-  check(detail::match_wildcard_pattern("filea.txt"sv, "file?.txt"sv));
-  check(detail::match_wildcard_pattern("file123.txt"sv, "file*.txt"sv));
-  check(detail::match_wildcard_pattern("file456.txt"sv, "file*.txt"sv));
-}
-
 TEST("trailing asterisks") {
   check(detail::match_wildcard_pattern("file.txt"sv, "file*"sv));
   check(detail::match_wildcard_pattern("file.txt"sv, "file**"sv));
@@ -75,7 +68,17 @@ TEST("trailing asterisks") {
 }
 
 TEST("mixing asterisk and question mark wildcards") {
-  check(detail::match_wildcard_pattern("a"sv, "*"sv));
   check(detail::match_wildcard_pattern("a"sv, "?*"sv));
   check(detail::match_wildcard_pattern("a"sv, "*?"sv));
+  check(detail::match_wildcard_pattern("a"sv, "*?*"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "??*"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "*?*?*"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "?*?*?"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "?*?"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "a*?"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "?*?c"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "a*b?"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "a*b?"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "a?*c"sv));
+  check(detail::match_wildcard_pattern("abc"sv, "?*c"sv));
 }
