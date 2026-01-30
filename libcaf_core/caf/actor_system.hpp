@@ -43,6 +43,8 @@ class abstract_actor_shell;
 
 namespace caf::detail {
 
+class asynchronous_logger;
+
 struct printer_actor_state;
 
 template <class>
@@ -103,7 +105,6 @@ public:
   friend class detail::actor_system_access;
   friend class detail::response_promise_state;
   friend class local_actor;
-  friend class logger;
   friend class net::abstract_actor_shell;
   friend class net::middleman;
   friend class scheduled_actor;
@@ -550,7 +551,7 @@ private:
 
   // -- callbacks for actor_system_access --------------------------------------
 
-  void set_logger(intrusive_ptr<caf::logger> ptr);
+  void set_logger(intrusive_ptr<detail::asynchronous_logger> ptr);
 
   void set_clock(std::unique_ptr<actor_clock> ptr);
 

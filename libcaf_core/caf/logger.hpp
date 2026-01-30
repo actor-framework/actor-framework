@@ -35,10 +35,6 @@ public:
 
   class trace_exit_guard;
 
-  friend class actor_system;
-
-  friend class detail::actor_system_access;
-
   friend class trace_exit_guard;
 
   friend class log::event_sender;
@@ -144,7 +140,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  virtual ~logger() = default;
+  virtual ~logger();
 
   // -- logging ----------------------------------------------------------------
 
@@ -230,11 +226,6 @@ public:
   /// component and log level.
   virtual bool accepts(unsigned level, std::string_view component_name) = 0;
 
-  // -- static utility functions -----------------------------------------------
-
-  /// Creates a new logger instance.
-  static intrusive_ptr<logger> make(actor_system& sys);
-
   // -- thread-local properties ------------------------------------------------
 
   static void set_current_actor_system();
@@ -273,17 +264,6 @@ private:
   // -- internal logging API ---------------------------------------------------
 
   virtual void do_log(log::event_ptr&& event) = 0;
-
-  // -- initialization (called by the actor_system) ----------------------------
-
-  /// Allows the logger to read its configuration from the actor system config.
-  virtual void init(const actor_system_config& cfg) = 0;
-
-  /// Starts any background threads needed by the logger.
-  virtual void start() = 0;
-
-  /// Stops all background threads of the logger.
-  virtual void stop() = 0;
 };
 
 } // namespace caf

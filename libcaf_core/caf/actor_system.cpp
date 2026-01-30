@@ -11,6 +11,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/asynchronous_logger.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/daemons.hpp"
 #include "caf/detail/match_wildcard_pattern.hpp"
@@ -460,8 +461,7 @@ public:
     }
     // Initialize the logger before any other module.
     if (!logger) {
-      logger = logger::make(*parent);
-      logger->init(cfg);
+      logger = detail::asynchronous_logger::make(*parent);
       CAF_SET_LOGGER_SYS(parent);
     }
     // Make sure we have a clock.
@@ -608,7 +608,7 @@ public:
   mutable std::condition_variable running_actors_cv;
 
   /// Manages log output.
-  intrusive_ptr<caf::logger> logger;
+  intrusive_ptr<detail::asynchronous_logger> logger;
 
   /// Stores the system-wide clock.
   std::unique_ptr<actor_clock> clock;
@@ -908,9 +908,8 @@ void actor_system::do_launch(local_actor* ptr, caf::scheduler* ctx,
 
 // -- callbacks for actor_system_access ----------------------------------------
 
-void actor_system::set_logger(intrusive_ptr<caf::logger> ptr) {
+void actor_system::set_logger(intrusive_ptr<detail::asynchronous_logger> ptr) {
   impl_->logger = std::move(ptr);
-  impl_->logger->init(config());
   CAF_SET_LOGGER_SYS(this);
 }
 
