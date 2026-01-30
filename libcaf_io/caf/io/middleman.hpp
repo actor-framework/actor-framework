@@ -34,8 +34,6 @@ namespace caf::io {
 /// Manages brokers and network backends.
 class CAF_IO_EXPORT middleman : public actor_system::networking_module {
 public:
-  friend class actor_system;
-
   /// Metrics that the middleman collects by default.
   struct metric_singletons_t {
     /// Samples the size of inbound messages before deserializing them.
