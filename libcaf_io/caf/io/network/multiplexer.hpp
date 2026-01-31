@@ -11,7 +11,9 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/protocol.hpp"
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 #include "caf/expected.hpp"
 #include "caf/extend.hpp"
 #include "caf/make_counted.hpp"
@@ -24,10 +26,11 @@
 
 namespace caf::io::network {
 
-class multiplexer_backend;
+class CAF_DEPRECATED("use caf.net instead") multiplexer_backend;
 
 /// Low-level backend for IO multiplexing.
-class CAF_IO_EXPORT multiplexer : public scheduler {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED multiplexer
+  : public scheduler {
 public:
   explicit multiplexer(actor_system& sys);
 
@@ -76,7 +79,9 @@ public:
     = 0;
 
   /// Simple wrapper for runnables
-  class CAF_IO_EXPORT runnable : public resumable, public ref_counted {
+  class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED runnable
+    : public resumable,
+      public ref_counted {
   public:
     void ref_resumable() const noexcept final;
     void deref_resumable() const noexcept final;
@@ -84,7 +89,7 @@ public:
 
   /// Makes sure the multiplier does not exit its event loop until
   /// the destructor of `supervisor` has been called.
-  class CAF_IO_EXPORT supervisor {
+  class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED supervisor {
   public:
     virtual ~supervisor();
   };
@@ -168,6 +173,7 @@ protected:
   actor_system* sys_;
 };
 
-using multiplexer_ptr = std::unique_ptr<multiplexer>;
+using multiplexer_ptr CAF_DEPRECATED("use caf.net instead")
+  = std::unique_ptr<multiplexer>;
 
 } // namespace caf::io::network

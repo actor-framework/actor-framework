@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/datagram_handler.hpp"
 #include "caf/io/network/native_socket.hpp"
@@ -13,7 +14,8 @@ namespace caf::io::network {
 
 /// A concrete datagram_handler with a technology-dependent policy.
 template <class ProtocolPolicy>
-class datagram_handler_impl : public datagram_handler {
+class CAF_DEPRECATED("use caf.net instead") datagram_handler_impl
+  : public datagram_handler {
 public:
   template <class... Ts>
   datagram_handler_impl(default_multiplexer& mpx, native_socket sockfd,

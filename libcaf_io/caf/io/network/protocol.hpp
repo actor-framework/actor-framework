@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 
 #include <cstddef>
@@ -12,7 +13,7 @@
 namespace caf::io::network {
 
 /// Bundles protocol information for network and transport layer communication.
-struct protocol {
+struct CAF_DEPRECATED("use caf.net instead") protocol {
   /// Denotes a network protocol, i.e., IPv4 or IPv6.
   enum network { ipv4, ipv6 };
   /// Denotes a transport protocol, i.e., TCP or UDP.
@@ -21,19 +22,23 @@ struct protocol {
   network net;
 };
 
+CAF_DEPRECATED("use caf.net instead")
 constexpr bool operator==(const protocol& lhs, const protocol& rhs) noexcept {
   return lhs.trans == rhs.trans && lhs.net == rhs.net;
 }
 
+CAF_DEPRECATED("use caf.net instead")
 constexpr bool operator!=(const protocol& lhs, const protocol& rhs) noexcept {
   return !(lhs == rhs);
 }
 
+CAF_DEPRECATED("use caf.net instead")
 inline std::string to_string(protocol::transport x) {
   return x == protocol::tcp ? "TCP" : "UDP";
 }
 
 template <class Inspector>
+CAF_DEPRECATED("use caf.net instead")
 bool inspect(Inspector& f, protocol::transport& x) {
   using integer_type = std::underlying_type_t<protocol::transport>;
   auto get = [&x] { return static_cast<integer_type>(x); };
@@ -44,11 +49,13 @@ bool inspect(Inspector& f, protocol::transport& x) {
   return f.apply(get, set);
 }
 
+CAF_DEPRECATED("use caf.net instead")
 inline std::string to_string(protocol::network x) {
   return x == protocol::ipv4 ? "IPv4" : "IPv6";
 }
 
 template <class Inspector>
+CAF_DEPRECATED("use caf.net instead")
 bool inspect(Inspector& f, protocol::network& x) {
   using integer_type = std::underlying_type_t<protocol::network>;
   auto get = [&x] { return static_cast<integer_type>(x); };
@@ -60,12 +67,14 @@ bool inspect(Inspector& f, protocol::network& x) {
 }
 
 template <class Inspector>
+CAF_DEPRECATED("use caf.net instead")
 bool inspect(Inspector& f, protocol& x) {
   return f.object(x).fields(f.field("trans", x.trans), f.field("net", x.net));
 }
 
 /// Converts a protocol into a transport/network string representation, e.g.,
 /// "TCP/IPv4".
+CAF_DEPRECATED("use caf.net instead")
 CAF_IO_EXPORT std::string to_string(const protocol& x);
 
 } // namespace caf::io::network

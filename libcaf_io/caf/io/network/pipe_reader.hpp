@@ -9,12 +9,15 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 
 namespace caf::io::network {
 
 /// An event handler for the internal event pipe.
-class CAF_IO_EXPORT pipe_reader : public event_handler {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED pipe_reader
+  : public event_handler {
 public:
   pipe_reader(default_multiplexer& dm);
 
