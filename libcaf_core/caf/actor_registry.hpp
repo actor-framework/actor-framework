@@ -22,8 +22,6 @@ namespace caf {
 /// needed.
 class CAF_CORE_EXPORT actor_registry {
 public:
-  friend class actor_system;
-
   virtual ~actor_registry();
 
   /// Returns the local actor associated to `key`.
