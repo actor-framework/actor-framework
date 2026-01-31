@@ -81,6 +81,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   use the new `add_ref` and `adopt_ref` tags instead.
 - Deprecate all member functions in `caf::expected` that are not present in
   `std::expected`.
+- Deprecate all members of `caf::io::network`. This namespace contains legacy
+  networking APIs that have been replaced by the `caf::net` module.
 
 ### Added
 

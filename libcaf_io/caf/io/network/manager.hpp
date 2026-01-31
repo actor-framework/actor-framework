@@ -9,6 +9,7 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/message.hpp"
@@ -18,7 +19,8 @@ namespace caf::io::network {
 
 /// A manager configures an I/O device and provides callbacks
 /// for various I/O operations.
-class CAF_IO_EXPORT manager : public ref_counted {
+class CAF_DEPRECATED("use caf.net instead") CAF_IO_EXPORT manager
+  : public ref_counted {
 public:
   manager();
 

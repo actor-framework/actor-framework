@@ -2,6 +2,8 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
+#define CAF_SUPPRESS_DEPRECATION_WARNINGS
+
 #include "caf/openssl/session.hpp"
 
 CAF_PUSH_WARNINGS

@@ -9,12 +9,13 @@
 #include "caf/io/network/operation.hpp"
 #include "caf/io/receive_policy.hpp"
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 
 namespace caf::io::network {
 
 /// A socket I/O event handler.
-class CAF_IO_EXPORT event_handler {
+class CAF_DEPRECATED("use caf.net instead") CAF_IO_EXPORT event_handler {
 public:
   /// Stores various status flags and user-defined config parameters.
   struct state {

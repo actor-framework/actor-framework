@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/protocol.hpp"
 
@@ -21,13 +22,15 @@ namespace caf::io::network {
 
 // {protocol => address}
 /// @memberof std::map
-using address_listing = std::map<protocol::network, std::vector<std::string>>;
+using address_listing CAF_DEPRECATED("use caf.net instead")
+  = std::map<protocol::network, std::vector<std::string>>;
 
 // {interface_name => {protocol => address}}
-using interfaces_map = std::map<std::string, address_listing>;
+using interfaces_map CAF_DEPRECATED("use caf.net instead")
+  = std::map<std::string, address_listing>;
 
 /// Utility class bundling access to network interface names and addresses.
-class CAF_IO_EXPORT interfaces {
+class CAF_DEPRECATED("use caf.net instead") CAF_IO_EXPORT interfaces {
 public:
   /// Consumes `{interface_name, protocol_type, is_localhost, address}` entries.
   using consumer

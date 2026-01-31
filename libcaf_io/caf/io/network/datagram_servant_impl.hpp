@@ -9,6 +9,7 @@
 #include "caf/io/network/datagram_handler_impl.hpp"
 #include "caf/io/network/native_socket.hpp"
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/policy/udp.hpp"
 
@@ -17,7 +18,8 @@
 namespace caf::io::network {
 
 /// Default datagram servant implementation.
-class CAF_IO_EXPORT datagram_servant_impl : public datagram_servant {
+class CAF_DEPRECATED("use caf.net instead") CAF_IO_EXPORT datagram_servant_impl
+  : public datagram_servant {
 public:
   using id_type = int64_t;
 
