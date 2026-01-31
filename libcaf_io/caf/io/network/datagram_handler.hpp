@@ -12,6 +12,7 @@
 #include "caf/io/receive_policy.hpp"
 
 #include "caf/byte_buffer.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/log/io.hpp"
 #include "caf/raise_error.hpp"
@@ -22,7 +23,8 @@
 
 namespace caf::io::network {
 
-class CAF_IO_EXPORT datagram_handler : public event_handler {
+class CAF_DEPRECATED("use caf.net instead") CAF_IO_EXPORT datagram_handler
+  : public event_handler {
 public:
   /// A smart pointer to a datagram manager.
   using manager_ptr = intrusive_ptr<datagram_manager>;
