@@ -11,7 +11,7 @@
 
 namespace caf::detail {
 
-void actor_system_access::logger(intrusive_ptr<caf::logger> ptr) {
+void actor_system_access::logger(intrusive_ptr<asynchronous_logger> ptr) {
   sys_->set_logger(std::move(ptr));
 }
 

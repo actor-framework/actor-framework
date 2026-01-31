@@ -1,0 +1,636 @@
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
+
+#include "caf/detail/asynchronous_logger.hpp"
+
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/chunked_string.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/format.hpp"
+#include "caf/detail/get_process_id.hpp"
+#include "caf/detail/log_level_map.hpp"
+#include "caf/detail/meta_object.hpp"
+#include "caf/detail/set_thread_name.hpp"
+#include "caf/detail/stringification_inspector.hpp"
+#include "caf/detail/sync_ring_buffer.hpp"
+#include "caf/inspector_access.hpp"
+#include "caf/log/core.hpp"
+#include "caf/log/event.hpp"
+#include "caf/log/level.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/term.hpp"
+#include "caf/thread_owner.hpp"
+#include "caf/timestamp.hpp"
+
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
+#include <thread>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+namespace caf {
+
+namespace {
+
+// The default capacity of the render buffer in bytes for pre-allocated memory.
+constexpr size_t default_render_buffer_capacity = 1024;
+
+/// Utility class for buffered rendering of log output.
+class render_buffer {
+public:
+  using value_type = char;
+  using iterator = std::vector<char>::iterator;
+  using const_iterator = std::vector<char>::const_iterator;
+
+  render_buffer() {
+    buf_.reserve(default_render_buffer_capacity);
+  }
+
+  void clear() {
+    buf_.clear();
+  }
+
+  template <class T>
+    requires(!std::is_pointer_v<T>)
+  void append(const T& value) {
+    detail::format_to(std::back_inserter(buf_), "{}", value);
+  }
+
+  void append(char value) {
+    buf_.push_back(value);
+  }
+
+  void append(std::string_view value) {
+    buf_.insert(buf_.end(), value.begin(), value.end());
+  }
+
+  void append(const chunked_string& str) {
+    str.copy_to(std::back_inserter(buf_));
+  }
+
+  void append(const std::thread::id& tid) {
+    append(std::hash<std::thread::id>{}(tid));
+  }
+
+  void write_to(FILE* out) const {
+    if (!buf_.empty()) {
+      fwrite(buf_.data(), 1, buf_.size(), out);
+      fflush(out);
+    }
+  }
+
+private:
+  std::vector<char> buf_;
+};
+
+// Note: not part of the public API on purpose. This is only used for render()
+//       and the format may change at any time.
+void render_fields(render_buffer& buf, log::event::field_list fields) {
+  if (fields.empty())
+    return;
+  auto i = fields.begin();
+  auto e = fields.end();
+  for (;;) {
+    auto fn = [&buf, i](const auto& value) {
+      using value_t = std::decay_t<decltype(value)>;
+      if constexpr (std::is_same_v<value_t, std::nullopt_t>) {
+        buf.append(i->key);
+        buf.append(" = null");
+      } else if constexpr (std::is_same_v<value_t, log::event::field_list>) {
+        buf.append(i->key);
+        buf.append(" { ");
+        render_fields(buf, value);
+        buf.append(" }");
+      } else {
+        buf.append(i->key);
+        buf.append(" = ");
+        buf.append(value);
+      }
+    };
+    std::visit(fn, i->value);
+    if (++i == e)
+      return;
+    buf.append(", ");
+  }
+}
+
+void render_fields_formatted(render_buffer& buf,
+                             log::event::field_list fields) {
+  if (fields.empty())
+    return;
+  buf.append(" ; "); // separates the message from the fields
+  render_fields(buf, fields);
+}
+
+// Custom deleter for FILE* to use with unique_ptr.
+struct file_deleter {
+  void operator()(FILE* ptr) const noexcept {
+    if (ptr)
+      fclose(ptr);
+  }
+};
+
+// RAII wrapper for FILE*.
+using file_ptr = std::unique_ptr<FILE, file_deleter>;
+
+// Default logger implementation.
+class default_logger : public detail::asynchronous_logger,
+                       public detail::atomic_ref_counted {
+public:
+  // -- constants --------------------------------------------------------------
+
+  /// Configures the size of the circular event queue.
+  static constexpr size_t queue_size = 128;
+
+  // -- member types -----------------------------------------------------------
+
+  enum field_type {
+    invalid_field,
+    category_field,
+    class_name_field,
+    date_field,
+    file_field,
+    line_field,
+    message_field,
+    method_field,
+    newline_field,
+    priority_field,
+    runtime_field,
+    thread_field,
+    actor_field,
+    percent_sign_field,
+    plain_text_field,
+  };
+
+  /// Combines various logging-related flags and parameters.
+  struct config {
+    /// Stores `max(file_verbosity, console_verbosity)`.
+    unsigned verbosity = log::level::quiet;
+
+    /// Configures the verbosity for file output.
+    unsigned file_verbosity = log::level::quiet;
+
+    /// Configures the verbosity for console output.
+    unsigned console_verbosity = log::level::quiet;
+
+    /// Configures whether the logger immediately writes its output in the
+    /// calling thread, bypassing its queue. Use this option only in
+    /// single-threaded test environments.
+    bool inline_output = false;
+
+    /// Configures whether the logger generates colored output.
+    bool console_coloring = false;
+  };
+
+  /// Represents a single format string field.
+  struct field {
+    field_type kind;
+    std::string text;
+  };
+
+  /// Stores a parsed format string as list of fields.
+  using line_format = std::vector<field>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit default_logger(actor_system& sys)
+    : t0_(make_timestamp()), system_(sys) {
+    log_level_names_.set("WARN", log::level::warning);
+    namespace lg = defaults::logger;
+    using std::string;
+    using string_list = std::vector<std::string>;
+    const auto& cfg = sys.config();
+    const auto get_verbosity = [&cfg](std::string_view key) -> unsigned {
+      detail::log_level_map tmp;
+      if (auto str = get_if<string>(&cfg, key))
+        return tmp.by_name(*str);
+      return log::level::quiet;
+    };
+    const auto read_filter = [&cfg](string_list& var, std::string_view key) {
+      if (auto lst = get_as<string_list>(cfg, key))
+        var = std::move(*lst);
+    };
+    cfg_.inline_output = get_or(cfg, "caf.scheduler.policy", "") == "testing";
+    cfg_.file_verbosity = get_verbosity("caf.logger.file.verbosity");
+    cfg_.console_verbosity = get_verbosity("caf.logger.console.verbosity");
+    cfg_.verbosity = std::max(cfg_.file_verbosity, cfg_.console_verbosity);
+    if (cfg_.verbosity != log::level::quiet) {
+      if (cfg_.file_verbosity > log::level::quiet
+          && cfg_.console_verbosity > log::level::quiet) {
+        read_filter(file_filter_, "caf.logger.file.excluded-components");
+        read_filter(console_filter_, "caf.logger.console.excluded-components");
+        std::sort(file_filter_.begin(), file_filter_.end());
+        std::sort(console_filter_.begin(), console_filter_.end());
+        std::set_intersection(file_filter_.begin(), file_filter_.end(),
+                              console_filter_.begin(), console_filter_.end(),
+                              std::back_inserter(global_filter_));
+      } else if (cfg_.file_verbosity > log::level::quiet) {
+        read_filter(file_filter_, "caf.logger.file.excluded-components");
+        global_filter_ = file_filter_;
+      } else {
+        read_filter(console_filter_, "caf.logger.console.excluded-components");
+        global_filter_ = console_filter_;
+      }
+      file_format_
+        = parse_format(get_or(cfg, "caf.logger.file.format", lg::file::format));
+      console_format_ = parse_format(
+        get_or(cfg, "caf.logger.console.format", lg::console::format));
+      cfg_.console_coloring = get_or(cfg, "caf.logger.console.colored", true);
+    }
+  }
+
+  // -- logging ----------------------------------------------------------------
+
+  /// Writes an entry to the event-queue of the logger.
+  /// @threadsafe
+  void do_log(log::event_ptr&& event) override {
+    if (cfg_.inline_output)
+      handle_event(*event);
+    else
+      queue_.push(std::move(event));
+  }
+
+  // -- properties -------------------------------------------------------------
+  /// Returns whether the logger is configured to accept input for given
+  /// component and log level.
+  bool accepts(unsigned level, std::string_view component_name) override {
+    if (level > cfg_.verbosity)
+      return false;
+    return std::ranges::none_of(global_filter_, [=](std::string_view name) {
+      return name == component_name;
+    });
+  }
+
+  /// Returns the output format used for the log file.
+  const line_format& file_format() const {
+    return file_format_;
+  }
+
+  /// Returns the output format used for the console.
+  const line_format& console_format() const {
+    return console_format_;
+  }
+
+  unsigned verbosity() const noexcept {
+    return cfg_.verbosity;
+  }
+
+  unsigned file_verbosity() const noexcept {
+    return cfg_.file_verbosity;
+  }
+
+  unsigned console_verbosity() const noexcept {
+    return cfg_.console_verbosity;
+  }
+
+  // -- static utility functions -----------------------------------------------
+
+  /// Renders the date of `x` in ISO 8601 format.
+  static void render_date(render_buffer& buf, timestamp x) {
+    buf.append(x);
+  }
+
+  /// Parses `format_str` into a format description vector.
+  static line_format parse_format(const std::string& format_str) {
+    std::vector<field> res;
+    auto plain_text_first = format_str.begin();
+    bool read_percent_sign = false;
+    auto i = format_str.begin();
+    for (; i != format_str.end(); ++i) {
+      if (read_percent_sign) {
+        field_type ft;
+        switch (*i) { // clang-format off
+          case 'c': ft = category_field;     break;
+          case 'C': ft = class_name_field;   break;
+          case 'd': ft = date_field;         break;
+          case 'F': ft = file_field;         break;
+          case 'L': ft = line_field;         break;
+          case 'm': ft = message_field;      break;
+          case 'M': ft = method_field;       break;
+          case 'n': ft = newline_field;      break;
+          case 'p': ft = priority_field;     break;
+          case 'r': ft = runtime_field;      break;
+          case 't': ft = thread_field;       break;
+          case 'a': ft = actor_field;        break;
+          case '%': ft = percent_sign_field; break;
+          default: // clang-format on
+            ft = invalid_field;
+            fprintf(stderr, "invalid field specifier in format string: %c\n",
+                    *i);
+        }
+        if (ft != invalid_field)
+          res.emplace_back(field{ft, std::string{}});
+        plain_text_first = i + 1;
+        read_percent_sign = false;
+      } else {
+        if (*i == '%') {
+          if (plain_text_first != i)
+            res.emplace_back(
+              field{plain_text_field, std::string{plain_text_first, i}});
+          read_percent_sign = true;
+        }
+      }
+    }
+    if (plain_text_first != i)
+      res.emplace_back(
+        field{plain_text_field, std::string{plain_text_first, i}});
+    return res;
+  }
+
+  /// Renders `x` using the line format `lf` to `buf`.
+  void render(render_buffer& buf, const line_format& lf,
+              const log::event& x) const {
+    auto ms_time_diff = [](timestamp t0, timestamp tn) {
+      using namespace std::chrono;
+      return duration_cast<milliseconds>(tn - t0).count();
+    };
+    // clang-format off
+    for (auto& f : lf)
+      switch (f.kind) {
+        case category_field:     buf.append(x.component());                    break;
+        case class_name_field:   buf.append("null");                           break;
+        case date_field:         render_date(buf, x.timestamp());              break;
+        case file_field:         buf.append(x.file_name());                    break;
+        case line_field:         buf.append(x.line_number());                    break;
+        case method_field:       buf.append(x.function_name());                break;
+        case newline_field:      buf.append('\n');                             break;
+        case priority_field:     buf.append(log_level_names_[x.level()]);      break;
+        case runtime_field:      buf.append(ms_time_diff(t0_, x.timestamp())); break;
+        case thread_field:       buf.append(x.thread_id());                    break;
+        case actor_field:        buf.append("actor");
+                                 buf.append(x.actor_id());                     break;
+        case percent_sign_field: buf.append('%');                              break;
+        case plain_text_field:   buf.append(f.text);                           break;
+        case message_field:      buf.append(x.message());
+                                 render_fields_formatted(buf, x.fields());     break;
+        default: ; // nop
+      }
+    // clang-format on
+  }
+
+  // -- reference counting -----------------------------------------------------
+
+  /// Increases the reference count of the coordinated.
+  void ref_logger() const noexcept final {
+    ref();
+  }
+
+  /// Decreases the reference count of the coordinated and destroys the object
+  /// if necessary.
+  void deref_logger() const noexcept final {
+    deref();
+  }
+
+  bool open_file() {
+    if (file_verbosity() == log::level::quiet || file_name_.empty())
+      return false;
+    file_.reset(fopen(file_name_.c_str(), "a"));
+    if (!file_) {
+      fprintf(stderr, "unable to open log file %s\n", file_name_.c_str());
+      return false;
+    }
+    return true;
+  }
+
+  // -- event handling ---------------------------------------------------------
+
+  void handle_event(const log::event& x) {
+    handle_file_event(x);
+    handle_console_event(x);
+  }
+
+  void handle_file_event(const log::event& x) {
+    // Print to file if available.
+    if (file_ && x.level() <= file_verbosity()
+        && std::ranges::none_of(file_filter_, [&x](std::string_view name) {
+             return name == x.component();
+           })) {
+      buf_.clear();
+      render(buf_, file_format_, x);
+      buf_.write_to(file_.get());
+    }
+  }
+
+  void handle_console_event(const log::event& x) {
+    if (x.level() > console_verbosity())
+      return;
+    if (std::ranges::any_of(console_filter_, [&x](std::string_view name) {
+          return name == x.component();
+        }))
+      return;
+    buf_.clear();
+    render(buf_, console_format_, x);
+    if (cfg_.console_coloring) {
+      term color = term::reset;
+      switch (x.level()) {
+        default:
+          break;
+        case log::level::error:
+          color = term::red;
+          break;
+        case log::level::warning:
+          color = term::yellow;
+          break;
+        case log::level::info:
+          color = term::green;
+          break;
+        case log::level::debug:
+          color = term::cyan;
+          break;
+        case log::level::trace:
+          color = term::blue;
+          break;
+      }
+      detail::set_color(stderr, color);
+      buf_.write_to(stderr);
+      detail::set_color(stderr, term::reset_endl);
+    } else {
+      buf_.append('\n');
+      buf_.write_to(stderr);
+    }
+  }
+
+  void log_first_line() {
+    if (!accepts(log::level::debug, log::core::component))
+      return;
+    std::string msg;
+    msg.reserve(128);
+    auto set_message = [&](int level, const auto& filter) {
+      auto lvl_str = log_level_names_[level];
+      msg = "verbosity = ";
+      msg.insert(msg.end(), lvl_str.begin(), lvl_str.end());
+      msg += ", node = ";
+      msg += to_string(system_.node());
+      msg += ", excluded-components = ";
+      detail::stringification_inspector f{msg};
+      detail::save(f, filter);
+      return msg;
+    };
+    namespace lg = defaults::logger;
+    set_message(cfg_.file_verbosity, file_filter_);
+    auto file_event = log::event::make(log::level::debug, log::core::component,
+                                       std::source_location::current(), 0, msg);
+    handle_file_event(*file_event);
+    set_message(cfg_.console_verbosity, console_filter_);
+    auto console_event = file_event->with_message(msg, log::keep_timestamp);
+    handle_console_event(*console_event);
+  }
+
+  void log_last_line() {
+    if (!accepts(log::level::debug, log::core::component))
+      return;
+    auto event = log::event::make(log::level::debug, log::core::component,
+                                  std::source_location::current(), 0, "stop");
+    handle_event(*event);
+  }
+
+  // -- thread management ------------------------------------------------------
+
+  void run() {
+    // Bail out without printing anything if the first event we receive is the
+    // shutdown (empty) event.
+    if (auto first = queue_.pop(); first == nullptr) {
+      return;
+    } else {
+      if (!open_file() && console_verbosity() == log::level::quiet)
+        return;
+      log_first_line();
+      handle_event(*first);
+    }
+    // Loop until receiving an empty message.
+    for (;;) {
+      if (auto next = queue_.pop()) {
+        handle_event(*next);
+      } else {
+        log_last_line();
+        return;
+      }
+    }
+  }
+
+  void start() override {
+    parent_thread_ = std::this_thread::get_id();
+    if (verbosity() == log::level::quiet)
+      return;
+    file_name_ = get_or(system_.config(), "caf.logger.file.path",
+                        defaults::logger::file::path);
+    if (file_name_.empty()) {
+      // No need to continue if console and log file are disabled.
+      if (console_verbosity() == log::level::quiet)
+        return;
+    } else {
+      // Replace placeholders.
+      const char pid[] = "[PID]";
+      auto i = std::search(file_name_.begin(), file_name_.end(),
+                           std::begin(pid), std::end(pid) - 1);
+      if (i != file_name_.end()) {
+        auto id = std::to_string(detail::get_process_id());
+        file_name_.replace(i, i + sizeof(pid) - 1, id);
+      }
+      const char ts[] = "[TIMESTAMP]";
+      i = std::search(file_name_.begin(), file_name_.end(), std::begin(ts),
+                      std::end(ts) - 1);
+      if (i != file_name_.end()) {
+        auto t0_str = timestamp_to_string(t0_);
+        file_name_.replace(i, i + sizeof(ts) - 1, t0_str);
+      }
+      const char node[] = "[NODE]";
+      i = std::search(file_name_.begin(), file_name_.end(), std::begin(node),
+                      std::end(node) - 1);
+      if (i != file_name_.end()) {
+        auto nid = to_string(system_.node());
+        file_name_.replace(i, i + sizeof(node) - 1, nid);
+      }
+    }
+    if (cfg_.inline_output) {
+      // Open file immediately for inline output.
+      open_file();
+      log_first_line();
+    } else {
+      // Note: we don't call system_->launch_thread here since we don't want to
+      //       set a logger context in the logger thread.
+      auto f = [this](auto) {
+        detail::set_thread_name("caf.logger");
+        system_.thread_started(thread_owner::system);
+        run();
+        system_.thread_terminates();
+      };
+      thread_ = std::thread{f, detail::global_meta_objects_guard()};
+    }
+  }
+
+  void stop() override {
+    if (cfg_.inline_output) {
+      log_last_line();
+      return;
+    }
+    if (!thread_.joinable())
+      return;
+    // Send an empty message to the logger thread to make it terminate.
+    queue_.push(log::event_ptr{});
+    thread_.join();
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  // Configures verbosity and output generation.
+  config cfg_;
+
+  // Filters events by component name before enqueuing a log event. Intersection
+  // of file_filter_ and console_filter_ if both outputs are enabled.
+  std::vector<std::string> global_filter_;
+
+  // Filters events by component name for file output.
+  std::vector<std::string> file_filter_;
+
+  // Filters events by component name for console output.
+  std::vector<std::string> console_filter_;
+
+  // Identifies the thread that called `asynchronous_logger::start`.
+  std::thread::id parent_thread_;
+
+  // Format for generating file output.
+  line_format file_format_;
+
+  // Format for generating console output.
+  line_format console_format_;
+
+  // File handle for file output.
+  file_ptr file_;
+
+  // Buffer for rendering log output before writing.
+  render_buffer buf_;
+
+  // Filled with log events by other threads.
+  detail::sync_ring_buffer<log::event_ptr, queue_size> queue_;
+
+  // Stores the assembled name of the log file.
+  std::string file_name_;
+
+  // Executes the logger run loop.
+  std::thread thread_;
+
+  // Timestamp of the first log event.
+  timestamp t0_;
+
+  // References the parent system.
+  actor_system& system_;
+
+  // Maps log levels to their string representation and vice versa.
+  detail::log_level_map log_level_names_;
+};
+
+} // namespace
+
+intrusive_ptr<detail::asynchronous_logger>
+detail::asynchronous_logger::make(actor_system& sys) {
+  return make_counted<default_logger>(sys);
+}
+
+} // namespace caf

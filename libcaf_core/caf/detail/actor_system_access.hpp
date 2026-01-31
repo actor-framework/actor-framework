@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/asynchronous_logger.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
@@ -18,7 +19,7 @@ public:
     // nop
   }
 
-  void logger(intrusive_ptr<caf::logger> ptr);
+  void logger(intrusive_ptr<asynchronous_logger> ptr);
 
   void clock(std::unique_ptr<actor_clock> ptr);
 

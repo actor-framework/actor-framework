@@ -9,6 +9,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/asynchronous_logger.hpp"
 #include "caf/log/level.hpp"
 #include "caf/scoped_actor.hpp"
 
@@ -38,10 +39,10 @@ TEST("line_builder appends strings with space separators") {
   }
 }
 
-TEST("logger make returns a non-null intrusive_ptr") {
+TEST("asynchronous_logger::make returns a non-null intrusive_ptr") {
   actor_system_config cfg;
   actor_system sys{cfg};
-  auto lg = logger::make(sys);
+  auto lg = detail::asynchronous_logger::make(sys);
   check_ne(lg, nullptr);
 }
 
