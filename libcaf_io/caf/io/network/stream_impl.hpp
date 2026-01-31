@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/io/network/stream.hpp"
 
 namespace caf::io::network {
@@ -11,7 +12,7 @@ namespace caf::io::network {
 /// A concrete stream with a technology-dependent policy for sending and
 /// receiving data from a socket.
 template <class ProtocolPolicy>
-class stream_impl : public stream {
+class CAF_DEPRECATED("use caf.net instead") stream_impl : public stream {
 public:
   template <class... Ts>
   stream_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)

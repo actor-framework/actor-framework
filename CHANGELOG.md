@@ -103,6 +103,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The method `actor_system::redirect_text_output` is now deprecated. Configure a
   console printer instead via `actor_system_config::console_printer_factory()`
   before constructing the actor system.
+- Deprecate all members of `caf::io::network`. This namespace contains legacy
+  networking APIs that have been replaced by the `caf::net` module.
 
 ### Added
 
@@ -412,7 +414,6 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   might reintroduce this feature in the future, but we think the new `logger`
   interface class is not yet stable enough to expose it to users and to allow
   custom logger implementations.
-
 
 ### Changed
 
@@ -1235,9 +1236,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   actors).
 - In order to stay more consistent with naming conventions of the standard
   library, we have renamed some values of the `pec` enumeration:
-  + `illegal_escape_sequence` => `invalid_escape_sequence`
-  + `illegal_argument` => `invalid_argument`
-  + `illegal_category` => `invalid_category`
+  - `illegal_escape_sequence` => `invalid_escape_sequence`
+  - `illegal_argument` => `invalid_argument`
+  - `illegal_category` => `invalid_category`
 - CAF no longer automagically flattens `tuple`, `optional`, or `expected` when
   returning these types from message handlers. Users can simply replace
   `std::tuple<A, B, C>` with `caf::result<A, B, C>` for returning more than one
@@ -1498,19 +1499,23 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Relax ini syntax for maps by making `=` for defining maps and `,` for
   separating key-value pairs optional. For example, this change allows to
   rewrite an entry like this:
+
   ```ini
   logger = {
     console-verbosity='trace',
     console='colored'
   }
   ```
+
   to a slightly less noisy version such as this:
+
   ```ini
   logger {
     console-verbosity='trace'
     console='colored'
   }
   ```
+
 - Allow apps to always use the `logger`, whether or not CAF was compiled with
   logging enabled.
 - Streamline direct node-to-node communication and support multiple app
@@ -1621,34 +1626,34 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Going forward, the preferred way to access configuration parameters is using
   the new `get_or` API. Hence, these member variables are now deprecated in
   `actor_system_config`:
-  + `scheduler_policy`
-  + `scheduler_max_threads`
-  + `scheduler_max_throughput`
-  + `scheduler_enable_profiling`
-  + `scheduler_profiling_ms_resolution`
-  + `scheduler_profiling_output_file`
-  + `work_stealing_aggressive_poll_attempts`
-  + `work_stealing_aggressive_steal_interval`
-  + `work_stealing_moderate_poll_attempts`
-  + `work_stealing_moderate_steal_interval`
-  + `work_stealing_moderate_sleep_duration_us`
-  + `work_stealing_relaxed_steal_interval`
-  + `work_stealing_relaxed_sleep_duration_us`
-  + `logger_file_name`
-  + `logger_file_format`
-  + `logger_console`
-  + `logger_console_format`
-  + `logger_verbosity`
-  + `logger_inline_output`
-  + `middleman_network_backend`
-  + `middleman_app_identifier`
-  + `middleman_enable_automatic_connections`
-  + `middleman_max_consecutive_reads`
-  + `middleman_heartbeat_interval`
-  + `middleman_detach_utility_actors`
-  + `middleman_detach_multiplexer`
-  + `middleman_cached_udp_buffers`
-  + `middleman_max_pending_msgs`
+  - `scheduler_policy`
+  - `scheduler_max_threads`
+  - `scheduler_max_throughput`
+  - `scheduler_enable_profiling`
+  - `scheduler_profiling_ms_resolution`
+  - `scheduler_profiling_output_file`
+  - `work_stealing_aggressive_poll_attempts`
+  - `work_stealing_aggressive_steal_interval`
+  - `work_stealing_moderate_poll_attempts`
+  - `work_stealing_moderate_steal_interval`
+  - `work_stealing_moderate_sleep_duration_us`
+  - `work_stealing_relaxed_steal_interval`
+  - `work_stealing_relaxed_sleep_duration_us`
+  - `logger_file_name`
+  - `logger_file_format`
+  - `logger_console`
+  - `logger_console_format`
+  - `logger_verbosity`
+  - `logger_inline_output`
+  - `middleman_network_backend`
+  - `middleman_app_identifier`
+  - `middleman_enable_automatic_connections`
+  - `middleman_max_consecutive_reads`
+  - `middleman_heartbeat_interval`
+  - `middleman_detach_utility_actors`
+  - `middleman_detach_multiplexer`
+  - `middleman_cached_udp_buffers`
+  - `middleman_max_pending_msgs`
 
 ### Removed
 

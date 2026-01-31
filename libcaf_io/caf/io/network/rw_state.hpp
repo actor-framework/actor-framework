@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
+
 namespace caf::io::network {
 
 /// Denotes the returned state of read and write operations on sockets.

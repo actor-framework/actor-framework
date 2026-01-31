@@ -11,7 +11,9 @@
 #include "caf/io/receive_policy.hpp"
 
 #include "caf/byte_buffer.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 #include "caf/log/io.hpp"
 #include "caf/ref_counted.hpp"
 
@@ -21,7 +23,8 @@ namespace caf::io::network {
 
 /// A stream capable of both reading and writing. The stream's input
 /// data is forwarded to its @ref stream_manager.
-class CAF_IO_EXPORT stream : public event_handler {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED stream
+  : public event_handler {
 public:
   /// A smart pointer to a stream manager.
   using manager_ptr = intrusive_ptr<stream_manager>;

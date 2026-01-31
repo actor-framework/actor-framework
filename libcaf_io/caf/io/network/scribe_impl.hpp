@@ -9,13 +9,16 @@
 #include "caf/io/network/stream_impl.hpp"
 #include "caf/io/scribe.hpp"
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 #include "caf/policy/tcp.hpp"
 
 namespace caf::io::network {
 
 /// Default scribe implementation.
-class CAF_IO_EXPORT scribe_impl : public scribe {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED scribe_impl
+  : public scribe {
 public:
   scribe_impl(default_multiplexer& mx, native_socket sockfd);
 
