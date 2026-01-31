@@ -11,6 +11,7 @@
 #include "caf/io/middleman_actor.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/multiplexer.hpp"
+#include "caf/io/network/multiplexer_base.hpp"
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/publish.hpp"
 #include "caf/io/receive_policy.hpp"

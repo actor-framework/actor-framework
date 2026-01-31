@@ -52,7 +52,7 @@ caf_add_component(
     caf/io/network/ip_endpoint.cpp
     caf/io/network/ip_endpoint.test.cpp
     caf/io/network/manager.cpp
-    caf/io/network/multiplexer.cpp
+    caf/io/network/multiplexer_base.cpp
     caf/io/network/native_socket.cpp
     caf/io/network/pipe_reader.cpp
     caf/io/network/protocol.cpp
@@ -65,3 +65,5 @@ caf_add_component(
     caf/io/scribe.cpp
     caf/policy/tcp.cpp
     caf/policy/udp.cpp)
+
+caf_silence_deprecation_warnings(libcaf_io)

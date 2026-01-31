@@ -143,7 +143,7 @@ const event_mask_type output_mask = EPOLLOUT;
 // registered to epoll.
 
 default_multiplexer::default_multiplexer(actor_system& sys)
-  : multiplexer(sys),
+  : multiplexer_base(sys),
     epollfd_(invalid_native_socket),
     shadow_(1),
     pipe_reader_(*this),
@@ -291,7 +291,7 @@ size_t default_multiplexer::num_socket_handlers() const noexcept {
 // i.e., O(1), access the actual object when handling socket events.
 
 default_multiplexer::default_multiplexer(actor_system& sys)
-  : multiplexer(sys), epollfd_(-1), pipe_reader_(*this), servant_ids_(0) {
+  : multiplexer_base(sys), epollfd_(-1), pipe_reader_(*this), servant_ids_(0) {
   init();
   // initial setup
   pipe_ = create_pipe();
@@ -525,8 +525,8 @@ void default_multiplexer::wr_dispatch_request(resumable* ptr) {
   }
 }
 
-multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
-  class impl : public multiplexer::supervisor {
+multiplexer_supervisor_ptr default_multiplexer::make_supervisor() {
+  class impl : public multiplexer_supervisor {
   public:
     explicit impl(default_multiplexer* thisptr) : this_(thisptr) {
       // nop
@@ -539,7 +539,7 @@ multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
   private:
     default_multiplexer* this_;
   };
-  return supervisor_ptr{new impl(this)};
+  return multiplexer_supervisor_ptr{new impl(this)};
 }
 
 void default_multiplexer::close_pipe() {

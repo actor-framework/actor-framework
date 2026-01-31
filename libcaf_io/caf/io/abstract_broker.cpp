@@ -3,7 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 #include "caf/io/broker.hpp"
-#include "caf/io/network/multiplexer.hpp"
+#include "caf/io/network/multiplexer_base.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/add_ref.hpp"
@@ -25,9 +25,9 @@ void abstract_broker::launch(caf::detail::private_thread* worker,
   caf::detail::current_actor_guard ctx_guard{this};
   CAF_ASSERT(ctx != nullptr);
 #ifdef CAF_ENABLE_RTTI
-  CAF_ASSERT(dynamic_cast<network::multiplexer*>(ctx) != nullptr);
+  CAF_ASSERT(dynamic_cast<network::multiplexer_base*>(ctx) != nullptr);
 #endif
-  backend_ = static_cast<network::multiplexer*>(ctx);
+  backend_ = static_cast<network::multiplexer_base*>(ctx);
   auto lg = log::io::trace("");
   (void) worker; // Brokers run on the multiplexer.
   ctx->delay(resumable_ptr{this, add_ref}, resumable::initialization_event_id);

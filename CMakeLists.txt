@@ -167,6 +167,17 @@ add_custom_target(caf-code-gen COMMENT "Generating enum .cpp files")
 
 # -- utility functions ---------------------------------------------------------
 
+# Turns off deprecation warnings for a target.
+function(caf_silence_deprecation_warnings target)
+  target_compile_definitions(${target} PRIVATE
+                             CAF_SUPPRESS_DEPRECATION_WARNINGS)
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /wd4996)
+  else()
+    target_compile_options(${target} PRIVATE -Wno-deprecated-declarations)
+  endif()
+endfunction()
+
 # generates the implementation file for the enum that contains to_string,
 # from_string and from_integer
 function(caf_add_enum_type target enum_name)

@@ -68,7 +68,8 @@ using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
 namespace network {
 
 class default_multiplexer;
-class multiplexer;
+class multiplexer_base;
+class multiplexer_supervisor;
 class receive_buffer;
 
 using address_listing = std::map<protocol::network, std::vector<std::string>>;

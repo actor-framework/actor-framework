@@ -1,0 +1,170 @@
+// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
+// the main distribution directory for license terms and copyright or visit
+// https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
+
+#pragma once
+
+#include "caf/io/accept_handle.hpp"
+#include "caf/io/connection_handle.hpp"
+#include "caf/io/fwd.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
+#include "caf/io/network/multiplexer_supervisor.hpp"
+#include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/protocol.hpp"
+
+#include "caf/adopt_ref.hpp"
+#include "caf/detail/io_export.hpp"
+#include "caf/expected.hpp"
+#include "caf/extend.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/resumable.hpp"
+#include "caf/scheduler.hpp"
+
+#include <functional>
+#include <string>
+#include <thread>
+
+namespace caf::io::network {
+
+class multiplexer_backend;
+
+/// Low-level backend for IO multiplexing.
+class CAF_IO_EXPORT multiplexer_base : public scheduler {
+public:
+  explicit multiplexer_base(actor_system& sys);
+
+  /// Creates a new `scribe` from a native socket handle.
+  /// @threadsafe
+  virtual scribe_ptr new_scribe(native_socket fd) = 0;
+
+  /// Tries to connect to `host` on given `port` and returns a `scribe` instance
+  /// on success.
+  /// @threadsafe
+  virtual expected<scribe_ptr> new_tcp_scribe(const std::string& host,
+                                              uint16_t port) = 0;
+
+  /// Creates a new doorman from a native socket handle.
+  /// @threadsafe
+  virtual doorman_ptr new_doorman(native_socket fd) = 0;
+
+  /// Tries to create an unbound TCP doorman bound to `port`, optionally
+  /// accepting only connections from IP address `in`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<doorman_ptr> new_tcp_doorman(uint16_t port,
+                                                const char* in = nullptr,
+                                                bool reuse_addr = false) = 0;
+
+  /// Creates a new `datagram_servant` from a native socket handle.
+  /// @threadsafe
+  virtual datagram_servant_ptr new_datagram_servant(native_socket fd) = 0;
+
+  virtual datagram_servant_ptr
+  new_datagram_servant_for_endpoint(native_socket fd, const ip_endpoint& ep)
+    = 0;
+
+  /// Create a new `datagram_servant` to contact a remote endpoint `host` and
+  /// `port`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<datagram_servant_ptr>
+  new_remote_udp_endpoint(const std::string& host, uint16_t port) = 0;
+
+  /// Create a new `datagram_servant` that receives datagrams on the local
+  /// `port`, optionally only accepting connections from IP address `in`.
+  /// @warning Do not call from outside the multiplexer's event loop.
+  virtual expected<datagram_servant_ptr>
+  new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
+                         bool reuse_addr = false) = 0;
+
+  /// Makes sure the multiplier does not exit its event loop until
+  /// the destructor of `supervisor` has been called.
+  using supervisor = multiplexer_supervisor;
+
+  using supervisor_ptr = multiplexer_supervisor_ptr;
+
+  /// Creates a supervisor to keep the event loop running.
+  virtual multiplexer_supervisor_ptr make_supervisor() = 0;
+
+  /// Creates an instance using the networking backend compiled with CAF.
+  static std::unique_ptr<multiplexer_base> make(actor_system& sys);
+
+  /// Executes all pending events without blocking.
+  /// @returns `true` if at least one event was called, `false` otherwise.
+  virtual bool try_run_once() = 0;
+
+  /// Runs at least one event and blocks if needed.
+  virtual void run_once() = 0;
+
+  /// Runs events until all connection are closed.
+  virtual void run() = 0;
+
+  /// Invokes @p fun in the multiplexer's event loop, calling `fun()`
+  /// immediately when called from inside the event loop.
+  /// @threadsafe
+  template <class F>
+  void dispatch(F fun) {
+    if (std::this_thread::get_id() == thread_id()) {
+      fun();
+      return;
+    }
+    post(std::move(fun));
+  }
+
+  /// Invokes @p fun in the multiplexer's event loop, forcing
+  /// execution to be delayed when called from inside the event loop.
+  /// @threadsafe
+  template <class F>
+  void post(F fun) {
+    struct impl : resumable {
+      mutable detail::atomic_ref_count ref_count;
+      F f;
+      explicit impl(F&& mf) : f(std::move(mf)) {
+        // nop
+      }
+      void resume(scheduler*, uint64_t event_id) override {
+        if (event_id != resumable::dispose_event_id) {
+          f();
+        }
+      }
+      void ref() const noexcept final {
+        ref_count.inc();
+      }
+      void deref() const noexcept final {
+        ref_count.dec(this);
+      }
+    };
+    delay(resumable_ptr{new impl(std::move(fun)), adopt_ref},
+          resumable::default_event_id);
+  }
+
+  /// Retrieves a pointer to the implementation or `nullptr` if CAF was
+  /// compiled using the default backend.
+  virtual multiplexer_backend* pimpl();
+
+  const std::thread::id& thread_id() const {
+    return tid_;
+  }
+
+  void thread_id(std::thread::id tid) {
+    tid_ = std::move(tid);
+  }
+
+  actor_system& system() {
+    return *sys_;
+  }
+
+  void start() override;
+
+  void stop() override;
+
+  bool is_system_scheduler() const noexcept final;
+
+protected:
+  /// Identifies the thread this multiplexer
+  /// is running in. Must be set by the subclass.
+  std::thread::id tid_;
+
+  /// Stores the actor system this multiplexer is part of.
+  actor_system* sys_;
+};
+
+} // namespace caf::io::network
