@@ -11,6 +11,7 @@
 #include "caf/actor_system_module.hpp"
 #include "caf/caf_deprecated.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/actor_system_impl.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/init_fun_factory.hpp"
@@ -506,6 +507,16 @@ public:
   actor_system(actor_system_config& cfg, custom_setup_fn custom_setup,
                void* custom_setup_data, version::abi_token = make_abi_token());
 
+  /// Returns the pointer to the implementation.
+  detail::actor_system_impl* impl() noexcept {
+    return impl_.get();
+  }
+
+  /// Returns the pointer to the implementation.
+  const detail::actor_system_impl* impl() const noexcept {
+    return impl_.get();
+  }
+
   /// @endcond
 
 private:
@@ -563,9 +574,7 @@ private:
 
   // -- member variables -------------------------------------------------------
 
-  class impl;
-
-  impl* impl_;
+  std::unique_ptr<detail::actor_system_impl> impl_;
 };
 
 } // namespace caf
