@@ -48,18 +48,6 @@ private:
   void do_log(log::event_ptr&& ptr) override {
     event = std::move(ptr);
   }
-
-  void init(const actor_system_config&) override {
-    // nop
-  }
-
-  void start() override {
-    // nop
-  }
-
-  void stop() override {
-    // nop
-  }
 };
 
 std::pair<std::string_view, std::string>
