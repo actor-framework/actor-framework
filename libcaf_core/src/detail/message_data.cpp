@@ -4,6 +4,7 @@
 
 #include "caf/detail/message_data.hpp"
 
+#include <cstdlib>
 #include <cstring>
 #include <numeric>
 
@@ -22,18 +23,39 @@ message_data::message_data(type_id_list types) noexcept
   // nop
 }
 
+namespace {
+
+const meta_object& get_meta_object(type_id_t id) {
+  if (auto* meta = global_meta_object(id)) {
+    return *meta;
+  }
+  fprintf(
+    stderr,
+    "found no meta object for type ID %d!\n"
+    "        This usually means that run-time type initialization is "
+    "missing.\n"
+    "        With CAF_MAIN, make sure to pass all custom type ID blocks.\n"
+    "        With a custom main, call (before any other CAF function):\n"
+    "        - caf::core::init_global_meta_objects()\n"
+    "        - <module>::init_global_meta_objects() for all loaded modules\n"
+    "        - caf::init_global_meta_objects<T>() for all custom ID blocks",
+    static_cast<int>(id));
+  ::abort();
+}
+
+} // namespace
+
 message_data::~message_data() noexcept {
-  auto gmos = global_meta_objects();
   auto ptr = storage();
   if (constructed_elements_ == types_.size()) {
     for (auto id : types_) {
-      auto& meta = gmos[id];
+      auto& meta = get_meta_object(id);
       meta.destroy(ptr);
       ptr += meta.padded_size;
     }
   } else {
     for (size_t index = 0; index < constructed_elements_; ++index) {
-      auto& meta = gmos[types_[index]];
+      auto& meta = get_meta_object(types_[index]);
       meta.destroy(ptr);
       ptr += meta.padded_size;
     }
