@@ -32,17 +32,17 @@ TEST("IP endpoints are empty by default, copyable and movable") {
   check(!is_ipv4(uut));
   check(!is_ipv6(uut));
   SECTION("IP endpoints are copyable") {
-    auto cpy = uut;
-    check_eq(*cpy.length(), 0u);
-    check_eq(*cpy.clength(), 0u);
-    check_eq(uut, cpy);
-    check_ne(addr_int(cpy.address()), addr_int(uut.address()));
+    auto copy = uut;
+    check_eq(*copy.length(), 0u);
+    check_eq(*copy.clength(), 0u);
+    check_eq(uut, copy);
+    check_ne(addr_int(copy.address()), addr_int(uut.address()));
   }
   SECTION("IP endpoints are movable") {
-    auto cpy = uut;
-    auto cpy_addr = cpy.address();
-    auto mv = std::move(cpy);
-    check_eq(addr_int(mv.address()), addr_int(cpy_addr));
+    auto copy = uut;
+    auto copy_addr = copy.address();
+    auto mv = std::move(copy);
+    check_eq(addr_int(mv.address()), addr_int(copy_addr));
   }
 }
 

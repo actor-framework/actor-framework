@@ -189,8 +189,8 @@ public:
       auto event = log::event::make(log::level::trace, component,
                                     fmt_str.location, thread_local_aid(), msg,
                                     std::forward<Ts>(args)...);
-      auto event_cpy = event;
-      instance->do_log(std::move(event_cpy));
+      auto event_copy = event;
+      instance->do_log(std::move(event_copy));
       return {instance, event};
     }
     return {nullptr, {}};
@@ -212,8 +212,8 @@ public:
                                         = std::source_location::current()) {
     auto event = log::event::make(log::level::trace, component, loc,
                                   thread_local_aid(), msg);
-    auto event_cpy = event;
-    do_log(std::move(event_cpy));
+    auto event_copy = event;
+    do_log(std::move(event_copy));
     return {this, event};
   }
 

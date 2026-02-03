@@ -61,13 +61,13 @@ public:
     std::unique_lock<std::mutex> guard{mx_};
     auto m = std::ranges::find_if(metrics_, has_label_values);
     if (m == metrics_.end()) {
-      std::vector<label> cpy{labels.begin(), labels.end()};
-      std::sort(cpy.begin(), cpy.end());
+      std::vector<label> copy{labels.begin(), labels.end()};
+      std::sort(copy.begin(), copy.end());
       std::unique_ptr<impl_type> ptr;
       if constexpr (std::is_same_v<extra_setting_type, unit_t>)
-        ptr.reset(new impl_type(std::move(cpy)));
+        ptr.reset(new impl_type(std::move(copy)));
       else
-        ptr.reset(new impl_type(std::move(cpy), config_, extra_setting_));
+        ptr.reset(new impl_type(std::move(copy), config_, extra_setting_));
       m = metrics_.emplace(m, std::move(ptr));
     }
     return std::addressof(m->get()->impl());

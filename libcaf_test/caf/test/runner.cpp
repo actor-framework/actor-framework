@@ -232,9 +232,9 @@ public:
   }
 
   parse_cli_result parse_cli(int argc, char** argv) {
-    std::vector<std::string> args_cpy{argv + 1, argv + argc};
+    std::vector<std::string> args_copy{argv + 1, argv + argc};
     auto options = make_option_set();
-    auto res = options.parse(cfg_, args_cpy);
+    auto res = options.parse(cfg_, args_copy);
     if (res.first != caf::pec::success) {
       println_to(stderr, "error while parsing argument '{}': {}\n\n{}",
                  *res.second, to_string(res.first), options.help_text());

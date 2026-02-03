@@ -69,16 +69,16 @@ OUTLINE("config options parse their parameters for long, short and env names") {
                 loc);
         };
         log::test::debug("copy and move construct must return equal objects");
-        auto cpy = uut;
-        equal_to_uut(cpy);
-        auto mv = std::move(cpy);
+        auto copy = uut;
+        equal_to_uut(copy);
+        auto mv = std::move(copy);
         equal_to_uut(mv);
         log::test::debug("copy and move assignment must return equal objects");
-        auto cpy2 = config_option{"abc", "def", "ghi", &dummy};
-        cpy2 = uut;
-        equal_to_uut(cpy2);
+        auto copy2 = config_option{"abc", "def", "ghi", &dummy};
+        copy2 = uut;
+        equal_to_uut(copy2);
         auto mv2 = config_option{"abc", "def", "ghi", &dummy};
-        mv2 = std::move(cpy2);
+        mv2 = std::move(copy2);
         equal_to_uut(mv2);
       }
     }
