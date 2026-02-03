@@ -801,7 +801,17 @@ actor_system::actor_system(actor_system_config& cfg,
                   static_cast<int>(token), CAF_VERSION_MAJOR);
   }
   impl_.reset(new default_actor_system_impl(cfg));
+#ifdef CAF_ENABLE_EXCEPTIONS
+  try {
+    impl_->start(*this, custom_setup, custom_setup_data);
+  } catch (...) {
+    // Prevent destructor from calling `stop` if `start` failed.
+    impl_.reset();
+    throw;
+  }
+#else
   impl_->start(*this, custom_setup, custom_setup_data);
+#endif
 }
 
 actor_system::~actor_system() {

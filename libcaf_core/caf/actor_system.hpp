@@ -507,16 +507,6 @@ public:
   actor_system(actor_system_config& cfg, custom_setup_fn custom_setup,
                void* custom_setup_data, version::abi_token = make_abi_token());
 
-  /// Returns the pointer to the implementation.
-  detail::actor_system_impl* impl() noexcept {
-    return impl_.get();
-  }
-
-  /// Returns the pointer to the implementation.
-  const detail::actor_system_impl* impl() const noexcept {
-    return impl_.get();
-  }
-
   /// @endcond
 
 private:
