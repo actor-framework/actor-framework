@@ -177,15 +177,15 @@ SCENARIO("never setting a value or an error breaks the promises") {
           check(fut.pending());
           {
             // copy ctor
-            promise_t cpy{uut};
+            promise_t copy{uut};
             check(fut.pending());
             // move ctor
-            promise_t mv{std::move(cpy)};
+            promise_t mv{std::move(copy)};
             check(fut.pending());
             {
               // copy assign
-              promise_t cpy2;
-              cpy2 = mv;
+              promise_t copy2;
+              copy2 = mv;
               check(fut.pending());
               // move assign
               promise_t mv2;

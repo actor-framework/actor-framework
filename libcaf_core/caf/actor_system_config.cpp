@@ -8,6 +8,7 @@
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/mailbox_factory.hpp"
@@ -619,30 +620,12 @@ void actor_system_config::print_content() const {
   std::cout << std::endl;
 }
 
-// -- module factories ---------------------------------------------------------
-
-void actor_system_config::add_module_factory(module_factory_fn ptr) {
-  fields_->module_factories.emplace_back(ptr);
-}
-
-std::span<actor_system_config::module_factory_fn>
-actor_system_config::module_factories() {
-  return fields_->module_factories;
-}
-
 // -- modifiers ----------------------------------------------------------------
 
 actor_system_config& actor_system_config::add_actor_factory(std::string name,
                                                             actor_factory fun) {
   fields_->actor_factories.insert_or_assign(std::move(name), std::move(fun));
   return *this;
-}
-
-actor_factory* actor_system_config::get_actor_factory(std::string_view name) {
-  auto i = fields_->actor_factories.find(name);
-  if (i == fields_->actor_factories.end())
-    return nullptr;
-  return &i->second;
 }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -656,27 +639,6 @@ actor_system_config::exception_handler() const noexcept {
 }
 #endif // CAF_ENABLE_EXCEPTIONS
 
-// -- thread hooks -------------------------------------------------------------
-
-void actor_system_config::add_thread_hook(std::unique_ptr<thread_hook> ptr) {
-  fields_->thread_hooks.emplace_back(std::move(ptr));
-}
-
-std::span<std::unique_ptr<thread_hook>> actor_system_config::thread_hooks() {
-  return fields_->thread_hooks;
-}
-
-// -- mailbox factory ----------------------------------------------------------
-
-void actor_system_config::mailbox_factory(
-  std::unique_ptr<detail::mailbox_factory> factory) {
-  fields_->mailbox_factory = std::move(factory);
-}
-
-detail::mailbox_factory* actor_system_config::mailbox_factory() {
-  return fields_->mailbox_factory.get();
-}
-
 // -- internal bookkeeping -----------------------------------------------------
 
 bool actor_system_config::helptext_printed() const noexcept {
@@ -685,6 +647,16 @@ bool actor_system_config::helptext_printed() const noexcept {
 
 const std::string& actor_system_config::program_name() const noexcept {
   return fields_->program_name;
+}
+
+void actor_system_config::add_module_factory(module_factory_fn new_factory) {
+  fields_->module_factories.emplace_back(new_factory);
+}
+
+actor_system_config&
+actor_system_config::add_thread_hook_impl(std::unique_ptr<thread_hook> ptr) {
+  fields_->thread_hooks.emplace_back(std::move(ptr));
+  return *this;
 }
 
 void actor_system_config::set_remainder(std::vector<std::string> args) {
@@ -702,3 +674,35 @@ std::pair<int, char**> actor_system_config::c_args_remainder() const noexcept {
 }
 
 } // namespace caf
+
+namespace caf::detail {
+
+std::span<actor_system_config_access::module_factory_fn>
+actor_system_config_access::module_factories() {
+  return cfg_->fields_->module_factories;
+}
+
+caf::actor_factory*
+actor_system_config_access::actor_factory(std::string_view name) {
+  auto i = cfg_->fields_->actor_factories.find(name);
+  if (i != cfg_->fields_->actor_factories.end()) {
+    return &i->second;
+  }
+  return nullptr;
+}
+
+std::span<std::unique_ptr<thread_hook>>
+actor_system_config_access::thread_hooks() {
+  return cfg_->fields_->thread_hooks;
+}
+
+void actor_system_config_access::mailbox_factory(
+  std::unique_ptr<detail::mailbox_factory> factory) {
+  cfg_->fields_->mailbox_factory = std::move(factory);
+}
+
+detail::mailbox_factory* actor_system_config_access::mailbox_factory() {
+  return cfg_->fields_->mailbox_factory.get();
+}
+
+} // namespace caf::detail

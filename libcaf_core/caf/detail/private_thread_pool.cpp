@@ -15,7 +15,8 @@ private_thread_pool::node::~node() {
   // nop
 }
 
-void private_thread_pool::start() {
+void private_thread_pool::start(actor_system& sys) {
+  sys_ = &sys;
   loop_ = sys_->launch_thread("caf.pool", thread_owner::pool,
                               [this] { run_loop(); });
 }

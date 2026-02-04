@@ -30,8 +30,6 @@ class CAF_CORE_EXPORT actor_system_config {
 public:
   // -- friends ----------------------------------------------------------------
 
-  friend class actor_system;
-
   friend class detail::actor_system_config_access;
 
   // -- member types -----------------------------------------------------------
@@ -149,7 +147,7 @@ public:
   /// Adds a hook type to the scheduler.
   template <class Hook, class... Ts>
   actor_system_config& add_thread_hook(Ts&&... ts) {
-    add_thread_hook(std::make_unique<Hook>(std::forward<Ts>(ts)...));
+    add_thread_hook_impl(std::make_unique<Hook>(std::forward<Ts>(ts)...));
     return *this;
   }
 
@@ -262,35 +260,15 @@ protected:
   config_option_set custom_options_;
 
 private:
-  // -- module factories -------------------------------------------------------
+  // -- utility functions ------------------------------------------------------
 
   using module_factory_fn = actor_system_module* (*) (actor_system&);
 
   void add_module_factory(module_factory_fn new_factory);
 
-  std::span<module_factory_fn> module_factories();
-
-  // -- actor factories --------------------------------------------------------
-
-  actor_factory* get_actor_factory(std::string_view name);
-
-  // -- thread hooks -----------------------------------------------------------
-
-  void add_thread_hook(std::unique_ptr<thread_hook> ptr);
-
-  std::span<std::unique_ptr<thread_hook>> thread_hooks();
-
-  // -- mailbox factory --------------------------------------------------------
-
-  void mailbox_factory(std::unique_ptr<detail::mailbox_factory> factory);
-
-  detail::mailbox_factory* mailbox_factory();
-
-  // -- internal bookkeeping ---------------------------------------------------
+  actor_system_config& add_thread_hook_impl(std::unique_ptr<thread_hook> ptr);
 
   void set_remainder(std::vector<std::string> args);
-
-  // -- utility functions ------------------------------------------------------
 
   actor_system_config& set_impl(std::string_view name, config_value value);
 

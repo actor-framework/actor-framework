@@ -152,6 +152,7 @@ class serializer;
 class skip_t;
 class skippable_result;
 class stream;
+class thread_hook;
 class type_id_list;
 class uri;
 class uri_builder;
@@ -296,16 +297,6 @@ using int_gauge_family = metric_family_impl<int_gauge>;
 
 } // namespace telemetry
 
-namespace detail {
-
-struct make_actor_util;
-
-class actor_system_access;
-class actor_system_config_access;
-class mailbox_factory;
-
-} // namespace detail
-
 // -- I/O classes --------------------------------------------------------------
 
 namespace io {
@@ -359,17 +350,22 @@ class manager;
 
 namespace detail {
 
+struct make_actor_util;
+struct meta_object;
+
 class abstract_worker;
 class abstract_worker_hub;
+class actor_system_access;
+class actor_system_config_access;
+class asynchronous_logger;
 class disposer;
 class dynamic_message_data;
+class mailbox_factory;
 class message_data;
 class private_thread;
 class response_promise_state;
 class stream_bridge;
 class stream_bridge_sub;
-
-struct meta_object;
 
 // enable intrusive_cow_ptr<dynamic_message_data> with forward declaration only
 CAF_CORE_EXPORT void intrusive_ptr_add_ref(const dynamic_message_data*);

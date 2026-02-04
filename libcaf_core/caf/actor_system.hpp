@@ -11,6 +11,7 @@
 #include "caf/actor_system_module.hpp"
 #include "caf/caf_deprecated.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/actor_system_impl.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/init_fun_factory.hpp"
@@ -563,9 +564,7 @@ private:
 
   // -- member variables -------------------------------------------------------
 
-  class impl;
-
-  impl* impl_;
+  std::unique_ptr<detail::actor_system_impl> impl_;
 };
 
 } // namespace caf

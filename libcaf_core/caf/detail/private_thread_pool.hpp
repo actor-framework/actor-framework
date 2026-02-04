@@ -25,11 +25,7 @@ public:
     virtual bool stop() = 0;
   };
 
-  explicit private_thread_pool(actor_system* sys) : sys_(sys) {
-    // nop
-  }
-
-  void start();
+  void start(actor_system& sys);
 
   void stop();
 
@@ -44,7 +40,7 @@ public:
 private:
   std::pair<node*, size_t> dequeue();
 
-  actor_system* sys_;
+  actor_system* sys_ = nullptr;
   std::thread loop_;
   mutable std::mutex mtx_;
   std::condition_variable cv_;

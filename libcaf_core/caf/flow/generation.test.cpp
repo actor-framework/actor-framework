@@ -274,8 +274,8 @@ SCENARIO("asynchronous buffers can generate flow items") {
     WHEN("trying to read from it") {
       THEN("the observer receives an error") {
         auto [pull, push] = async::make_spsc_buffer_resource<int>();
-        auto pull_cpy = pull;
-        auto buf = pull_cpy.try_open();
+        auto pull_copy = pull;
+        auto buf = pull_copy.try_open();
         check(buf != nullptr);
         auto res = ivec{};
         auto err = error{};
