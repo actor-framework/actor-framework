@@ -230,6 +230,16 @@ public:
         std::set_intersection(file_filter_.begin(), file_filter_.end(),
                               console_filter_.begin(), console_filter_.end(),
                               std::back_inserter(global_filter_));
+        std::erase_if(file_filter_,
+                      [&global = global_filter_](const auto& filter) {
+                        return std::ranges::binary_search(global.begin(),
+                                                          global.end(), filter);
+                      });
+        std::erase_if(console_filter_,
+                      [&global = global_filter_](const auto& filter) {
+                        return std::ranges::binary_search(global.begin(),
+                                                          global.end(), filter);
+                      });
       } else if (cfg_.file_verbosity > log::level::quiet) {
         read_filter(file_filter_, "caf.logger.file.excluded-components");
         global_filter_ = file_filter_;
