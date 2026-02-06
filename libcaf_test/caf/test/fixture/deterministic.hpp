@@ -31,26 +31,6 @@ class CAF_TEST_EXPORT deterministic {
 private:
   // -- private member types (implementation details) --------------------------
 
-  class mailbox_impl;
-
-  class scheduler_impl;
-
-  class mailbox_factory_impl;
-
-  /// Wraps a resumable pointer and a mailbox element pointer.
-  struct scheduling_event {
-    scheduling_event(resumable* target, mailbox_element_ptr payload)
-      : target(target, add_ref), item(std::move(payload)) {
-      // nop
-    }
-
-    /// The target of the event.
-    intrusive_ptr<resumable> target;
-
-    /// The message for the event or `nullptr` if the target is not an actor.
-    mailbox_element_ptr item;
-  };
-
   /// A predicate for checking of single value. When constructing from a
   /// reference wrapper, the predicate assigns the found value to the reference
   /// instead of checking it.
@@ -162,18 +142,23 @@ private:
 public:
   // -- public member types ----------------------------------------------------
 
-  /// The custom system implementation for this fixture.
-  class system_impl : public actor_system {
-  public:
-    system_impl(actor_system_config& cfg, deterministic* fix);
+  /// Wraps a resumable pointer and a mailbox element pointer.
+  struct scheduling_event {
+    scheduling_event(resumable* target, mailbox_element_ptr payload)
+      : target(target, add_ref), item(std::move(payload)) {
+      // nop
+    }
 
-  private:
-    static actor_system_config& prepare(actor_system_config& cfg,
-                                        deterministic* fix);
+    /// The target of the event.
+    intrusive_ptr<resumable> target;
 
-    static void custom_setup(actor_system& sys, actor_system_config& cfg,
-                             void* custom_setup_data);
+    /// The message for the event or `nullptr` if the target is not an actor.
+    mailbox_element_ptr item;
   };
+
+  using events_list = std::list<std::unique_ptr<scheduling_event>>;
+
+  using events_list_ptr = std::shared_ptr<events_list>;
 
   /// Configures the algorithm to evaluate for an `evaluator` instances.
   enum class evaluator_algorithm {
@@ -445,10 +430,6 @@ public:
 
   // -- friends ----------------------------------------------------------------
 
-  friend class mailbox_impl;
-
-  friend class scheduler_impl;
-
   template <class... Ts>
   friend class evaluator;
 
@@ -655,8 +636,10 @@ public:
   /// Iterates over all pending messages.
   template <class Fn>
   void for_each_message(Fn&& fn) {
-    for (auto& event : events_) {
-      fn(event->item->payload);
+    for (auto& event : *events_) {
+      if (event->item) {
+        fn(event->item->payload);
+      }
     }
   }
 
@@ -671,31 +654,23 @@ public:
     if (ptr == nullptr) {
       return;
     }
-    for (auto& event : events_) {
-      if (event->target == ptr) {
+    for (auto& event : *events_) {
+      if (event->target == ptr && event->item) {
         fn(event->item->payload);
       }
     }
   }
 
-private:
-  // Note: this is put here because this member variable must be destroyed
-  //       *after* the actor system (and thus must come before `sys` in
-  //       the declaration order).
+  // -- member variables -------------------------------------------------------
 
-  /// Stores all pending messages of scheduled actors.
-  std::list<std::unique_ptr<scheduling_event>> events_;
-
-public:
-  /// Configures the actor system with deterministic scheduling.
+  /// The actor system configuration.
   actor_system_config cfg;
 
   /// The actor system instance for the tests.
-  system_impl sys;
+  actor_system sys;
 
 private:
-  /// Removes all events from the queue.
-  void drop_events();
+  explicit deterministic(events_list_ptr events);
 
   /// Tries find a message in `events_` that matches the given predicate and
   /// moves it to the front of the queue.
@@ -707,14 +682,10 @@ private:
                           actor_predicate& sender_pred,
                           abstract_message_predicate& payload_pred);
 
-  /// Returns the scheduler implementation.
-  scheduler_impl& sched_impl();
-
   /// Returns the next event for `receiver` or `nullptr` if there is none.
   scheduling_event* find_event_impl(const strong_actor_ptr& receiver);
-
-  /// Removes the next message for `receiver` from the queue and returns it.
-  mailbox_element_ptr pop_msg_impl(scheduled_actor* receiver);
+  /// Stores all pending messages of scheduled actors.
+  events_list_ptr events_;
 };
 
 } // namespace caf::test::fixture

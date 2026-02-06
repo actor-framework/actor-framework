@@ -18,8 +18,6 @@ namespace caf::detail {
 /// Abstract base type for actor system implementations.
 class CAF_CORE_EXPORT actor_system_impl {
 public:
-  using custom_setup_fn = void (*)(actor_system&, actor_system_config&, void*);
-
   // -- constructors, destructors, and assignment operators --------------------
 
   actor_system_impl() = default;
@@ -33,9 +31,7 @@ public:
   virtual telemetry::actor_metrics make_actor_metrics(std::string_view name)
     = 0;
 
-  virtual void start(actor_system& owner, custom_setup_fn custom_setup,
-                     void* custom_setup_data)
-    = 0;
+  virtual void start(actor_system& owner) = 0;
 
   virtual void stop() = 0;
 
@@ -100,12 +96,6 @@ public:
     = 0;
 
   virtual void do_print(term color, const char* buf, size_t num_bytes) = 0;
-
-  virtual void set_logger(intrusive_ptr<asynchronous_logger> ptr) = 0;
-
-  virtual void set_clock(std::unique_ptr<actor_clock> ptr) = 0;
-
-  virtual void set_scheduler(std::unique_ptr<caf::scheduler> ptr) = 0;
 
   virtual void set_node(node_id id) = 0;
 

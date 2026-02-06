@@ -19,14 +19,6 @@ public:
     // nop
   }
 
-  void logger(intrusive_ptr<asynchronous_logger> ptr);
-
-  void clock(std::unique_ptr<actor_clock> ptr);
-
-  void scheduler(std::unique_ptr<caf::scheduler> ptr);
-
-  void printer(strong_actor_ptr ptr);
-
   void node(node_id id);
 
   detail::mailbox_factory* mailbox_factory();

@@ -75,6 +75,9 @@ public:
     = 0;
 
   /// Prints a message to the output stream if `verbosity() >= level`.
+  virtual void println(unsigned level, std::string_view msg) = 0;
+
+  /// Prints a message to the output stream if `verbosity() >= level`.
   virtual void print(const log::event& event) = 0;
 
   /// Prints a message to the output stream if `verbosity() >= level`.

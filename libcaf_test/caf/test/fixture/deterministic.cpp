@@ -7,40 +7,106 @@
 #include "caf/test/reporter.hpp"
 
 #include "caf/actor_control_block.hpp"
+#include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/detail/actor_system_access.hpp"
+#include "caf/actor_system_module.hpp"
 #include "caf/detail/actor_system_config_access.hpp"
+#include "caf/detail/actor_system_impl.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/critical.hpp"
+#include "caf/detail/daemons.hpp"
 #include "caf/detail/mailbox_factory.hpp"
+#include "caf/detail/meta_object.hpp"
+#include "caf/detail/panic.hpp"
 #include "caf/detail/print.hpp"
+#include "caf/detail/private_thread_pool.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/log/test.hpp"
+#include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler.hpp"
+#include "caf/telemetry/actor_metrics.hpp"
+#include "caf/telemetry/metric_registry.hpp"
+#include "caf/version.hpp"
 
 #include <algorithm>
+#include <array>
+#include <atomic>
 #include <cassert>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <numeric>
+#include <shared_mutex>
 #include <source_location>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
 using namespace std::literals;
 
 namespace caf::test::fixture {
 
-// -- mailbox ------------------------------------------------------------------
+namespace {
 
-class deterministic::mailbox_impl : public ref_counted,
+using events_list_ptr = deterministic::events_list_ptr;
+
+size_t mail_count(const deterministic::events_list& events) {
+  size_t result = 0;
+  for (auto& event : events)
+    if (event->target && event->item)
+      ++result;
+  return result;
+}
+
+size_t mail_count(const deterministic::events_list& events,
+                  scheduled_actor* receiver) {
+  if (receiver == nullptr)
+    return 0;
+  auto pred = [&](const auto& event) { return event->target == receiver; };
+  return std::ranges::count_if(events, pred);
+}
+
+size_t mail_count(const deterministic::events_list& events,
+                  const strong_actor_ptr& receiver) {
+  auto raw_ptr = actor_cast<abstract_actor*>(receiver);
+  return mail_count(events, dynamic_cast<scheduled_actor*>(raw_ptr));
+}
+
+/// Removes the next message for `receiver` from the queue and returns it.
+mailbox_element_ptr next_msg(deterministic::events_list& events,
+                             scheduled_actor* receiver) {
+  auto pred = [&](const auto& event) { return event->target == receiver; };
+  auto first = events.begin();
+  auto last = events.end();
+  auto i = std::find_if(first, last, pred);
+  if (i == last)
+    return nullptr;
+  auto result = std::move((*i)->item);
+  events.erase(i);
+  return result;
+}
+
+void drop_events(deterministic::events_list& events) {
+  // Note: We cannot just call `events_.clear()`, because that would potentially
+  //       cause an actor to become unreachable and close its mailbox. This
+  //       could modify the events list in turn, which then tries to alter the
+  //       list while we're clearing it.
+  while (!events.empty()) {
+    deterministic::events_list tmp;
+    tmp.splice(tmp.end(), events);
+  }
+}
+
+class deterministic_mailbox final : public ref_counted,
                                     public abstract_mailbox {
 public:
-  mailbox_impl(deterministic* fix, scheduled_actor* owner)
-    : fix_(fix), owner_(owner) {
+  deterministic_mailbox(events_list_ptr events, scheduled_actor* owner)
+    : events_(std::move(events)), owner_(owner) {
   }
 
   intrusive::inbox_result push_back(mailbox_element_ptr ptr) override {
@@ -50,9 +116,9 @@ public:
       return intrusive::inbox_result::queue_closed;
     }
     using event_t = deterministic::scheduling_event;
-    auto unblocked = fix_->mail_count(owner_) == 0;
+    auto unblocked = mail_count(*events_, owner_) == 0;
     auto event = std::make_unique<event_t>(owner_, std::move(ptr));
-    fix_->events_.push_back(std::move(event));
+    events_->push_back(std::move(event));
     return unblocked ? intrusive::inbox_result::unblocked_reader
                      : intrusive::inbox_result::success;
   }
@@ -60,11 +126,11 @@ public:
   void push_front(mailbox_element_ptr ptr) override {
     using event_t = deterministic::scheduling_event;
     auto event = std::make_unique<event_t>(owner_, std::move(ptr));
-    fix_->events_.emplace_front(std::move(event));
+    events_->emplace_front(std::move(event));
   }
 
   mailbox_element_ptr pop_front() override {
-    return fix_->pop_msg_impl(owner_);
+    return next_msg(*events_, owner_);
   }
 
   bool closed() const noexcept override {
@@ -92,17 +158,17 @@ public:
     close_reason_ = reason;
     auto result = size_t{0};
     auto bounce = detail::sync_request_bouncer{};
-    auto envelope = fix_->pop_msg_impl(owner_);
+    auto envelope = next_msg(*events_, owner_);
     while (envelope != nullptr) {
       ++result;
       bounce(*envelope);
-      envelope = fix_->pop_msg_impl(owner_);
+      envelope = next_msg(*events_, owner_);
     }
     return result;
   }
 
   size_t size() override {
-    return fix_->mail_count(owner_);
+    return mail_count(*events_, owner_);
   }
 
   void ref_mailbox() noexcept override {
@@ -117,18 +183,19 @@ private:
   bool blocked_ = false;
   bool closed_ = false;
   error close_reason_;
-  deterministic* fix_;
+  deterministic::events_list_ptr events_;
   scheduled_actor* owner_;
 };
 
-class deterministic::mailbox_factory_impl : public detail::mailbox_factory {
+class deterministic_mailbox_factory final : public detail::mailbox_factory {
 public:
-  explicit mailbox_factory_impl(deterministic* fix) : fix_(fix) {
+  explicit deterministic_mailbox_factory(deterministic::events_list_ptr events)
+    : events_(events) {
     // nop
   }
 
   abstract_mailbox* make(scheduled_actor* owner) override {
-    return new deterministic::mailbox_impl(fix_, owner);
+    return new deterministic_mailbox(events_, owner);
   }
 
   abstract_mailbox* make(blocking_actor*) override {
@@ -136,14 +203,89 @@ public:
   }
 
 private:
-  deterministic* fix_;
+  deterministic::events_list_ptr events_;
 };
 
-// -- scheduler ----------------------------------------------------------------
+class deterministic_registry final : public actor_registry {
+public:
+  void erase(actor_id key) override {
+    auto i = entries_.find(key);
+    if (i != entries_.end()) {
+      entries_.erase(i);
+    }
+  }
 
-namespace {
+  void erase(const std::string& key) override {
+    auto i = named_entries_.find(key);
+    if (i != named_entries_.end()) {
+      named_entries_.erase(i);
+    }
+  }
 
-class deterministic_actor_clock : public actor_clock {
+  name_map named_actors() const override {
+    return named_entries_;
+  }
+
+  void start() {
+    // nop
+  }
+
+  void stop() {
+    entries_.clear();
+    named_entries_.clear();
+  }
+
+private:
+  strong_actor_ptr get_impl(actor_id key) const override {
+    auto i = entries_.find(key);
+    if (i != entries_.end()) {
+      return i->second;
+    }
+    return nullptr;
+  }
+
+  void put_impl(actor_id key, strong_actor_ptr val) override {
+    if (!val || !entries_.emplace(key, val).second) {
+      return;
+    }
+    val->get()->attach_functor([key, this]() { erase(key); });
+  }
+
+  strong_actor_ptr get_impl(const std::string& key) const override {
+    if (auto i = named_entries_.find(key); i != named_entries_.end()) {
+      return i->second;
+    }
+    return nullptr;
+  }
+
+  void put_impl(const std::string& key, strong_actor_ptr val) override {
+    if (val == nullptr) {
+      erase(key);
+      return;
+    }
+    named_entries_.emplace(std::move(key), std::move(val));
+  }
+
+  std::unordered_map<actor_id, strong_actor_ptr> entries_;
+  name_map named_entries_;
+};
+
+class test_print_state {
+public:
+  using print_fun = void (*)(void*, term, const char*, size_t);
+  using cleanup = void (*)(void*);
+
+  void reset(void*, print_fun, cleanup) {
+    // nop
+  }
+
+  void print(term, const char* buf, size_t buf_size) {
+    reporter::instance().println(log::level::info,
+                                 std::string_view{buf, buf_size});
+  }
+};
+
+class deterministic_actor_clock final : public actor_clock {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -320,13 +462,11 @@ private:
   }
 };
 
-} // namespace
-
-class deterministic::scheduler_impl final : public scheduler {
+class deterministic_scheduler final : public scheduler {
 public:
   using super = caf::scheduler;
 
-  explicit scheduler_impl(deterministic* fix) : fix_(fix) {
+  explicit deterministic_scheduler(events_list_ptr events) : events_(events) {
     // nop
   }
 
@@ -341,7 +481,7 @@ public:
       }
     } else {
       // "Regular" resumables still need to be scheduled here.
-      fix_->events_.push_back(std::make_unique<event_t>(ptr, nullptr));
+      events_->push_back(std::make_unique<event_t>(ptr, nullptr));
     }
     // Before calling this function, CAF *always* bumps the reference count.
     // Hence, we need to release one reference count here.
@@ -357,7 +497,7 @@ public:
   }
 
   void stop() override {
-    fix_->drop_events();
+    drop_events(*events_);
   }
 
   bool is_system_scheduler() const noexcept override {
@@ -365,36 +505,218 @@ public:
   }
 
 private:
-  /// The fixture this scheduler belongs to.
-  deterministic* fix_;
+  /// The events list that this scheduler is attached to.
+  events_list_ptr events_;
 };
 
-// -- system -------------------------------------------------------------------
+class deterministic_actor_system final : public detail::actor_system_impl {
+public:
+  deterministic_actor_system(actor_system_config& cfg, events_list_ptr events)
+    : cfg_(&cfg), events_(events), mailbox_factory_(events) {
+    meta_objects_guard_ = detail::global_meta_objects_guard();
+    if (!meta_objects_guard_)
+      detail::critical("unable to obtain the global meta objects guard");
+  }
 
-deterministic::system_impl::system_impl(actor_system_config& cfg,
-                                        deterministic* fix)
-  : actor_system(prepare(cfg, fix), custom_setup, fix) {
-  // nop
-}
+  void start(actor_system& owner) override {
+    detail::actor_system_config_access cfg_access{*cfg_};
+    for (auto& hook : cfg_access.thread_hooks())
+      hook->init(owner);
+    logger_ = reporter::make_logger();
+    CAF_SET_LOGGER_SYS(&owner);
+    clock_ = std::make_unique<deterministic_actor_clock>();
+    scheduler_ = std::make_unique<deterministic_scheduler>(events_);
+    modules_[actor_system_module::daemons].reset(new detail::daemons(owner));
+    for (auto& mod : modules_)
+      if (mod)
+        mod->init(*cfg_);
+    registry_.start();
+    private_threads_.start(owner);
+    for (auto& mod : modules_)
+      if (mod)
+        mod->start();
+    logger_->start();
+  }
 
-actor_system_config&
-deterministic::system_impl::prepare(actor_system_config& cfg,
-                                    deterministic* fix) {
-  cfg.set("caf.scheduler.max-throughput", 1);
-  detail::actor_system_config_access access{cfg};
-  access.mailbox_factory(std::make_unique<mailbox_factory_impl>(fix));
-  return cfg;
-}
+  void stop() override {
+    clock_->drop_actions();
+    drop_events(*events_);
+    for (auto i = modules_.rbegin(); i != modules_.rend(); ++i) {
+      if (*i)
+        (*i)->stop();
+    }
+    if (scheduler_)
+      scheduler_->stop();
+    private_threads_.stop();
+    registry_.stop();
+    clock_ = nullptr;
+    CAF_SET_LOGGER_SYS(nullptr);
+    if (logger_) {
+      logger_->stop();
+      logger_ = nullptr;
+    }
+  }
 
-void deterministic::system_impl::custom_setup(actor_system& sys,
-                                              actor_system_config&,
-                                              void* custom_setup_data) {
-  auto* fix = static_cast<deterministic*>(custom_setup_data);
-  auto setter = detail::actor_system_access{sys};
-  setter.logger(reporter::make_logger());
-  setter.clock(std::make_unique<deterministic_actor_clock>());
-  setter.scheduler(std::make_unique<scheduler_impl>(fix));
-}
+  telemetry::actor_metrics make_actor_metrics(std::string_view) override {
+    return {};
+  }
+
+  size_t inc_running_actors_count(actor_id) override {
+    return ++running_actors_count_;
+  }
+
+  size_t dec_running_actors_count(actor_id) override {
+    auto count = --running_actors_count_;
+    if (count <= 1) {
+      std::unique_lock guard{running_actors_mtx_};
+      running_actors_cv_.notify_all();
+    }
+    return count;
+  }
+
+  void await_running_actors_count_equal(size_t expected,
+                                        timespan timeout) override {
+    CAF_ASSERT(expected == 0 || expected == 1);
+    std::unique_lock guard{running_actors_mtx_};
+    auto pred = [this, expected] {
+      return running_actors_count_.load() == expected;
+    };
+    if (timeout == infinite)
+      running_actors_cv_.wait(guard, pred);
+    else
+      running_actors_cv_.wait_for(guard, timeout, pred);
+  }
+
+  void thread_started(thread_owner) override {
+    // nop
+  }
+
+  void thread_terminates() override {
+    // nop
+  }
+
+  detail::global_meta_objects_guard_type
+  meta_objects_guard() const noexcept override {
+    return meta_objects_guard_;
+  }
+
+  actor_system_config& config() override {
+    return *cfg_;
+  }
+
+  const actor_system_config& config() const override {
+    return *cfg_;
+  }
+
+  actor_clock& clock() noexcept override {
+    return *clock_;
+  }
+
+  size_t detached_actors() const noexcept override {
+    return private_threads_.running();
+  }
+
+  bool await_actors_before_shutdown() const override {
+    return await_actors_before_shutdown_;
+  }
+
+  void await_actors_before_shutdown(bool new_value) override {
+    await_actors_before_shutdown_ = new_value;
+  }
+
+  telemetry::metric_registry& metrics() noexcept override {
+    return metrics_;
+  }
+
+  const telemetry::metric_registry& metrics() const noexcept override {
+    return metrics_;
+  }
+
+  const node_id& node() const override {
+    return node_;
+  }
+
+  caf::scheduler& scheduler() override {
+    return *scheduler_;
+  }
+
+  caf::logger& logger() override {
+    return *logger_;
+  }
+
+  actor_registry& registry() override {
+    return registry_;
+  }
+
+  std::span<std::unique_ptr<actor_system_module>> modules() override {
+    return modules_;
+  }
+
+  actor_id next_actor_id() override {
+    return ++ids_;
+  }
+
+  actor_id latest_actor_id() const override {
+    return ids_.load();
+  }
+
+  size_t running_actors_count() const override {
+    return running_actors_count_.load();
+  }
+
+  detail::private_thread* acquire_private_thread() override {
+    return private_threads_.acquire();
+  }
+
+  void release_private_thread(detail::private_thread* ptr) override {
+    private_threads_.release(ptr);
+  }
+
+  detail::mailbox_factory* mailbox_factory() override {
+    return &mailbox_factory_;
+  }
+
+  void redirect_text_output(void* out,
+                            void (*write)(void*, term, const char*, size_t),
+                            void (*cleanup)(void*)) override {
+    print_state_.reset(out, write, cleanup);
+  }
+
+  void do_print(term color, const char* buf, size_t num_bytes) override {
+    print_state_.print(color, buf, num_bytes);
+  }
+
+  void set_node(node_id id) override {
+    node_ = id;
+  }
+
+  void message_rejected(abstract_actor*) override {
+    // nop for test impl
+  }
+
+private:
+  actor_system_config* cfg_;
+  events_list_ptr events_;
+  std::atomic<size_t> ids_{0};
+  telemetry::metric_registry metrics_;
+  node_id node_;
+  deterministic_registry registry_;
+  deterministic_mailbox_factory mailbox_factory_;
+  std::atomic<size_t> running_actors_count_{0};
+  mutable std::mutex running_actors_mtx_;
+  mutable std::condition_variable running_actors_cv_;
+  intrusive_ptr<detail::asynchronous_logger> logger_;
+  std::unique_ptr<deterministic_actor_clock> clock_;
+  std::unique_ptr<caf::scheduler> scheduler_;
+  std::array<std::unique_ptr<actor_system_module>, actor_system_module::num_ids>
+    modules_;
+  bool await_actors_before_shutdown_ = true;
+  detail::global_meta_objects_guard_type meta_objects_guard_;
+  detail::private_thread_pool private_threads_;
+  test_print_state print_state_;
+};
+
+} // namespace
 
 // -- abstract_message_predicate -----------------------------------------------
 
@@ -404,7 +726,24 @@ deterministic::abstract_message_predicate::~abstract_message_predicate() {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-deterministic::deterministic() : sys(cfg, this) {
+namespace {
+
+std::unique_ptr<detail::actor_system_impl>
+make_deterministic_actor_system(actor_system_config& cfg,
+                                events_list_ptr events) {
+  cfg.set("caf.scheduler.max-throughput", 1);
+  return std::make_unique<deterministic_actor_system>(cfg, events);
+}
+
+} // namespace
+
+deterministic::deterministic()
+  : deterministic(std::make_shared<events_list>()) {
+  // nop
+}
+
+deterministic::deterministic(events_list_ptr events)
+  : sys(make_deterministic_actor_system(cfg, events)), events_(events) {
   // nop
 }
 
@@ -415,21 +754,10 @@ deterministic::~deterministic() {
   //       actors, potentially waiting forever. The same holds true for pending
   //       timeouts.
   dynamic_cast<deterministic_actor_clock&>(sys.clock()).drop_actions();
-  drop_events();
+  drop_events(*events_);
 }
 
 // -- private utilities --------------------------------------------------------
-
-void deterministic::drop_events() {
-  // Note: We cannot just call `events_.clear()`, because that would potentially
-  //       cause an actor to become unreachable and close its mailbox. This
-  //       could call `pop_msg_impl` in turn, which then tries to alter the list
-  //       while we're clearing it.
-  while (!events_.empty()) {
-    std::list<std::unique_ptr<scheduling_event>> tmp;
-    tmp.splice(tmp.end(), events_);
-  }
-}
 
 bool deterministic::prepone_event_impl(const strong_actor_ptr& receiver) {
   actor_predicate any_sender{std::ignore};
@@ -440,10 +768,10 @@ bool deterministic::prepone_event_impl(const strong_actor_ptr& receiver) {
 bool deterministic::prepone_event_impl(
   const strong_actor_ptr& receiver, actor_predicate& sender_pred,
   abstract_message_predicate& payload_pred) {
-  if (events_.empty() || !receiver)
+  if (events_->empty() || !receiver)
     return false;
-  auto first = events_.begin();
-  auto last = events_.end();
+  auto first = events_->begin();
+  auto last = events_->end();
   auto i = std::find_if(first, last, [&](const auto& event) {
     auto self = actor_cast<abstract_actor*>(receiver);
     return event->target == dynamic_cast<scheduled_actor*>(self)
@@ -454,18 +782,18 @@ bool deterministic::prepone_event_impl(
     return false;
   if (i != first) {
     auto ptr = std::move(*i);
-    events_.erase(i);
-    events_.insert(events_.begin(), std::move(ptr));
+    events_->erase(i);
+    events_->insert(events_->begin(), std::move(ptr));
   }
   return true;
 }
 
 deterministic::scheduling_event*
 deterministic::find_event_impl(const strong_actor_ptr& receiver) {
-  if (events_.empty() || !receiver)
+  if (events_->empty() || !receiver)
     return nullptr;
-  auto last = events_.end();
-  auto i = std::find_if(events_.begin(), last, [&](const auto& event) {
+  auto last = events_->end();
+  auto i = std::find_if(events_->begin(), last, [&](const auto& event) {
     auto raw_ptr = actor_cast<abstract_actor*>(receiver);
     return event->target == dynamic_cast<scheduled_actor*>(raw_ptr);
   });
@@ -474,38 +802,18 @@ deterministic::find_event_impl(const strong_actor_ptr& receiver) {
   return nullptr;
 }
 
-mailbox_element_ptr deterministic::pop_msg_impl(scheduled_actor* receiver) {
-  auto pred = [&](const auto& event) { return event->target == receiver; };
-  auto first = events_.begin();
-  auto last = events_.end();
-  auto i = std::find_if(first, last, pred);
-  if (i == last)
-    return nullptr;
-  auto result = std::move((*i)->item);
-  events_.erase(i);
-  return result;
-}
-
 // -- properties ---------------------------------------------------------------
 
 size_t deterministic::mail_count() {
-  size_t result = 0;
-  for (auto& event : events_)
-    if (event->target)
-      ++result;
-  return result;
+  return fixture::mail_count(*events_);
 }
 
 size_t deterministic::mail_count(scheduled_actor* receiver) {
-  if (receiver == nullptr)
-    return 0;
-  auto pred = [&](const auto& event) { return event->target == receiver; };
-  return std::ranges::count_if(events_, pred);
+  return fixture::mail_count(*events_, receiver);
 }
 
 size_t deterministic::mail_count(const strong_actor_ptr& receiver) {
-  auto raw_ptr = actor_cast<abstract_actor*>(receiver);
-  return mail_count(dynamic_cast<scheduled_actor*>(raw_ptr));
+  return fixture::mail_count(*events_, receiver);
 }
 
 // -- control flow -------------------------------------------------------------
@@ -520,18 +828,18 @@ bool deterministic::terminated(const strong_actor_ptr& hdl) {
 }
 
 bool deterministic::dispatch_message() {
-  if (events_.empty())
+  if (events_->empty())
     return false;
-  if (events_.front()->item == nullptr) {
+  if (events_->front()->item == nullptr) {
     // Regular resumable.
-    auto ev = std::move(events_.front());
-    events_.pop_front();
+    auto ev = std::move(events_->front());
+    events_->pop_front();
     auto hdl = ev->target;
     hdl->resume(&sys.scheduler(), resumable::default_event_id);
     return true;
   }
   // Actor: we simply resume the next actor and it will pick up its message.
-  auto next = events_.front()->target;
+  auto next = events_->front()->target;
   next->resume(&sys.scheduler(), resumable::default_event_id);
   return true;
 }
@@ -599,12 +907,6 @@ actor_clock::time_point
 deterministic::last_timeout(const std::source_location& loc) {
   auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
   return clock.last_timeout(loc);
-}
-
-// -- private utilities --------------------------------------------------------
-
-deterministic::scheduler_impl& deterministic::sched_impl() {
-  return dynamic_cast<scheduler_impl&>(sys.scheduler());
 }
 
 } // namespace caf::test::fixture
