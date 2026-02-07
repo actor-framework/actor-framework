@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/callback.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -13,10 +14,10 @@
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/histogram.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
+#include "caf/timespan.hpp"
 
 #include <algorithm>
 #include <initializer_list>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <string_view>
@@ -476,10 +477,90 @@ public:
 
   template <class Collector>
   void collect(Collector& collector) const {
-    auto f = [&](auto* ptr) { ptr->collect(collector); };
+    auto f = [&collector](auto* ptr) { ptr->collect(collector); };
     std::unique_lock<std::mutex> guard{families_mx_};
     for (auto& ptr : families_)
       visit_family(f, ptr.get());
+  }
+
+  /// Blocks until the predicate returns true for the counter or gauge metric
+  /// with given prefix and name or the timeout expires.
+  /// @param prefix The prefix (namespace) this metric belongs to.
+  /// @param name The human-readable name of the metric.
+  /// @param labels Label values identifying the metric instance to wait for.
+  /// @param rel_timeout The duration to wait for the predicate to become true.
+  /// @param poll_interval The interval between polling the metric value.
+  /// @param pred The predicate to call with the metric value.
+  /// @returns the latest result of the predicate.
+  /// @throws std::runtime_error if (1) the metric with given prefix and name
+  ///                            does not exist, or (2) the metric exists but
+  ///                            has a different value type, (3) the metric
+  ///                            exists but is neither a counter nor a gauge, or
+  ///                            (4) one of the durations is zero or negative.
+  template <class Rep1, class Period1, class Rep2, class Period2,
+            class Predicate>
+  bool wait_for(std::string_view prefix, std::string_view name,
+                std::span<const label_view> labels,
+                std::chrono::duration<Rep1, Period1> rel_timeout,
+                std::chrono::duration<Rep2, Period2> poll_interval,
+                Predicate pred) const {
+    if (rel_timeout.count() <= 0) {
+      CAF_RAISE_ERROR("relative timeout must be positive");
+    }
+    if (poll_interval.count() <= 0) {
+      CAF_RAISE_ERROR("poll interval must be positive");
+    }
+    static constexpr bool is_int_predicate
+      = std::is_invocable_r_v<bool, Predicate, int64_t>;
+    static constexpr bool is_dbl_predicate
+      = std::is_invocable_r_v<bool, Predicate, double>;
+    static_assert(is_int_predicate || is_dbl_predicate,
+                  "Predicate must be invocable with int64_t or double");
+    auto f = [&pred]<class T>(T x) -> bool {
+      if constexpr (std::is_same_v<T, int64_t>) {
+        if constexpr (is_int_predicate) {
+          return pred(x);
+        } else {
+          CAF_RAISE_ERROR("type mismatch: Predicate not invocable with int64");
+        }
+      } else {
+        static_assert(std::is_same_v<T, double>);
+        if constexpr (is_dbl_predicate) {
+          return pred(x);
+        } else {
+          CAF_RAISE_ERROR("type mismatch: Predicate not invocable with double");
+        }
+      }
+    };
+    callback_ref_impl<decltype(f), bool(int64_t)> int_cb{f};
+    callback_ref_impl<decltype(f), bool(double)> dbl_cb{f};
+    return wait_for_impl(prefix, name, labels,
+                         std::chrono::duration_cast<timespan>(rel_timeout),
+                         std::chrono::duration_cast<timespan>(poll_interval),
+                         int_cb, dbl_cb);
+  }
+
+  /// @copydoc wait_for
+  template <class Rep1, class Period1, class Rep2, class Period2,
+            class Predicate>
+  bool wait_for(std::string_view prefix, std::string_view name,
+                std::initializer_list<label_view> labels,
+                std::chrono::duration<Rep1, Period1> rel_timeout,
+                std::chrono::duration<Rep2, Period2> poll_interval,
+                Predicate pred) const {
+    return wait_for(prefix, name, std::span{labels.begin(), labels.size()},
+                    rel_timeout, poll_interval, pred);
+  }
+
+  /// @copydoc wait_for
+  template <class Rep1, class Period1, class Rep2, class Period2,
+            class Predicate>
+  bool wait_for(std::string_view prefix, std::string_view name,
+                std::chrono::duration<Rep1, Period1> rel_timeout,
+                std::chrono::duration<Rep2, Period2> poll_interval,
+                Predicate pred) const {
+    return wait_for(prefix, name, std::span<const label_view>{}, rel_timeout,
+                    poll_interval, pred);
   }
 
   // -- static utility functions -----------------------------------------------
@@ -503,6 +584,11 @@ private:
   static std::vector<std::string> to_sorted_vec(span_t<std::string_view> xs);
 
   static std::vector<std::string> to_sorted_vec(span_t<label_view> xs);
+
+  bool wait_for_impl(std::string_view prefix, std::string_view name,
+                     std::span<const label_view> labels, timespan rel_timeout,
+                     timespan poll_interval, callback<bool(int64_t)>& int_pred,
+                     callback<bool(double)>& dbl_pred) const;
 
   template <class F>
   static auto visit_family(F& f, const metric_family* ptr) {

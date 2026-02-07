@@ -4,6 +4,7 @@
 
 #include "caf/telemetry/metric_registry.hpp"
 
+#include "caf/test/approx.hpp"
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
@@ -18,6 +19,8 @@
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label_view.hpp"
 #include "caf/telemetry/metric_type.hpp"
+
+#include <thread>
 
 using namespace caf;
 using namespace caf::telemetry;
@@ -275,6 +278,229 @@ SCENARIO("instance methods provide a shortcut for using the family manually") {
     }
   }
 }
+
+TEST("wait_for blocks until predicate is true or timeout") {
+  std::thread updater;
+  auto do_update = [](auto* what) {
+    std::this_thread::sleep_for(50ms);
+    what->inc(10);
+  };
+  SECTION("int gauge") {
+    auto* gauge = reg.gauge_singleton("test", "value", "test");
+    updater = std::thread{do_update, gauge};
+    check(reg.wait_for("test", "value", 1s, 10ms,
+                       [](int64_t x) { return x >= 10; }));
+    check_eq(gauge->value(), 10);
+  }
+  SECTION("int counter") {
+    auto* counter = reg.counter_singleton("test", "value", "test");
+    updater = std::thread{do_update, counter};
+    check(reg.wait_for("test", "value", 1s, 10ms,
+                       [](int64_t x) { return x >= 10; }));
+    check_eq(counter->value(), 10);
+  }
+  SECTION("double gauge") {
+    auto* gauge = reg.gauge_singleton<double>("test", "value", "test.");
+    updater = std::thread{do_update, gauge};
+    check(reg.wait_for("test", "value", 1s, 10ms,
+                       [](double x) { return x >= 10.0; }));
+    check_eq(gauge->value(), test::approx{10.0});
+  }
+  SECTION("double counter") {
+    auto* counter = reg.counter_singleton<double>("test", "value", "test");
+    updater = std::thread{do_update, counter};
+    check(reg.wait_for("test", "value", 1s, 10ms,
+                       [](double x) { return x >= 10.0; }));
+    check_eq(counter->value(), test::approx{10.0});
+  }
+  if (updater.joinable()) {
+    updater.join();
+  }
+}
+
+TEST("wait_for returns false when timeout expires") {
+  SECTION("int gauge") {
+    auto* gauge = reg.gauge_singleton("test", "never", "test");
+    check(!reg.wait_for("test", "never", 10ms, 5ms,
+                        [](int64_t x) { return x > 0; }));
+    check_eq(gauge->value(), 0);
+  }
+  SECTION("int counter") {
+    auto* counter = reg.counter_singleton("test", "never", "test");
+    check(!reg.wait_for("test", "never", 10ms, 5ms,
+                        [](int64_t x) { return x > 0; }));
+    check_eq(counter->value(), 0);
+  }
+  SECTION("double gauge") {
+    auto* gauge = reg.gauge_singleton<double>("test", "never", "test");
+    check(!reg.wait_for("test", "never", 10ms, 5ms,
+                        [](double x) { return x > 0; }));
+    check_eq(gauge->value(), test::approx{0.0});
+  }
+  SECTION("double counter") {
+    auto* counter = reg.counter_singleton<double>("test", "never", "test");
+    check(!reg.wait_for("test", "never", 10ms, 5ms,
+                        [](double x) { return x > 0; }));
+    check_eq(counter->value(), test::approx{0.0});
+  }
+}
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+TEST("wait_for throws when metric does not exist") {
+  SECTION("name mismatch") {
+    SECTION("int gauge") {
+      check_throws([this] {
+        reg.wait_for("nonexistent", "metric", 1s, 10ms,
+                     [](int64_t) { return true; });
+      });
+    }
+    SECTION("int counter") {
+      check_throws([this] {
+        reg.wait_for("nonexistent", "metric", 1s, 10ms,
+                     [](int64_t) { return true; });
+      });
+    }
+    SECTION("double gauge") {
+      check_throws([this] {
+        reg.wait_for("nonexistent", "metric", 1s, 10ms,
+                     [](double) { return true; });
+      });
+    }
+    SECTION("double counter") {
+      check_throws([this] {
+        reg.wait_for("nonexistent", "metric", 1s, 10ms,
+                     [](double) { return true; });
+      });
+    }
+  }
+  SECTION("label mismatch") {
+    SECTION("no labels (singleton) but family has labeled instances only") {
+      SECTION("int gauge") {
+        reg.gauge_family("test", "labeled", {"var1", "var2"}, "Labeled gauge.");
+        reg
+          .gauge_instance("test", "labeled", {{"var1", "foo"}, {"var2", "bar"}},
+                          "Labeled gauge.")
+          ->value(0);
+        check_throws([this] {
+          reg.wait_for("test", "labeled", 1s, 10ms,
+                       [](int64_t) { return true; });
+        });
+      }
+      SECTION("int counter") {
+        reg.counter_family("test", "labeled", {"var1", "var2"},
+                           "Labeled counter.");
+        reg.counter_instance("test", "labeled",
+                             {{"var1", "foo"}, {"var2", "bar"}},
+                             "Labeled counter.");
+        check_throws([this] {
+          reg.wait_for("test", "labeled", 1s, 10ms,
+                       [](int64_t) { return true; });
+        });
+      }
+      SECTION("double gauge") {
+        reg.gauge_family<double>("test", "labeled", {"var1", "var2"},
+                                 "Labeled gauge.");
+        reg
+          .gauge_instance<double>("test", "labeled",
+                                  {{"var1", "foo"}, {"var2", "bar"}},
+                                  "Labeled gauge.")
+          ->value(0.0);
+        check_throws([this] {
+          reg.wait_for("test", "labeled", 1s, 10ms,
+                       [](double) { return true; });
+        });
+      }
+      SECTION("double counter") {
+        reg.counter_family<double>("test", "labeled", {"var1", "var2"},
+                                   "Labeled counter.");
+        reg.counter_instance<double>("test", "labeled",
+                                     {{"var1", "foo"}, {"var2", "bar"}},
+                                     "Labeled counter.");
+        check_throws([this] {
+          reg.wait_for("test", "labeled", 1s, 10ms,
+                       [](double) { return true; });
+        });
+      }
+    }
+    SECTION("labels match keys but have different values") {
+      SECTION("int gauge") {
+        reg.gauge_family("test", "labeled", {"var1", "var2"}, "Labeled gauge.");
+        reg
+          .gauge_instance("test", "labeled", {{"var1", "foo"}, {"var2", "bar"}},
+                          "Labeled gauge.")
+          ->value(0);
+        check_throws([this] {
+          reg.wait_for("test", "labeled",
+                       {{"var1", "other"}, {"var2", "values"}}, 1s, 10ms,
+                       [](int64_t) { return true; });
+        });
+      }
+      SECTION("int counter") {
+        reg.counter_family("test", "labeled", {"var1", "var2"},
+                           "Labeled counter.");
+        reg.counter_instance("test", "labeled",
+                             {{"var1", "foo"}, {"var2", "bar"}},
+                             "Labeled counter.");
+        check_throws([this] {
+          reg.wait_for("test", "labeled",
+                       {{"var1", "other"}, {"var2", "values"}}, 1s, 10ms,
+                       [](int64_t) { return true; });
+        });
+      }
+      SECTION("double gauge") {
+        reg.gauge_family<double>("test", "labeled", {"var1", "var2"},
+                                 "Labeled gauge.");
+        reg
+          .gauge_instance<double>("test", "labeled",
+                                  {{"var1", "foo"}, {"var2", "bar"}},
+                                  "Labeled gauge.")
+          ->value(0.0);
+        check_throws([this] {
+          reg.wait_for("test", "labeled",
+                       {{"var1", "other"}, {"var2", "values"}}, 1s, 10ms,
+                       [](double) { return true; });
+        });
+      }
+      SECTION("double counter") {
+        reg.counter_family<double>("test", "labeled", {"var1", "var2"},
+                                   "Labeled counter.");
+        reg.counter_instance<double>("test", "labeled",
+                                     {{"var1", "foo"}, {"var2", "bar"}},
+                                     "Labeled counter.");
+        check_throws([this] {
+          reg.wait_for("test", "labeled",
+                       {{"var1", "other"}, {"var2", "values"}}, 1s, 10ms,
+                       [](double) { return true; });
+        });
+      }
+    }
+  }
+}
+
+TEST("wait_for throws when timeout or poll_interval is zero or negative") {
+  reg.gauge_singleton("test", "value", "test");
+  SECTION("relative timeout is zero") {
+    check_throws([this] {
+      reg.wait_for("test", "value", 0s, 10ms, [](int64_t) { return true; });
+    });
+  }
+  SECTION("relative timeout is negative") {
+    check_throws([this] {
+      reg.wait_for("test", "value", -1s, 10ms, [](int64_t) { return true; });
+    });
+  }
+  SECTION("poll interval is zero") {
+    check_throws([this] {
+      reg.wait_for("test", "value", 1s, 0ms, [](int64_t) { return true; });
+    });
+  }
+  SECTION("poll interval is negative") {
+    check_throws([this] {
+      reg.wait_for("test", "value", 1s, -1ms, [](int64_t) { return true; });
+    });
+  }
+}
+#endif
 
 SCENARIO("metric registries can merge families from other registries") {
   GIVEN("a registry with some metrics") {
