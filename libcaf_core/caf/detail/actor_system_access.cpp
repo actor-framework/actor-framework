@@ -4,24 +4,9 @@
 
 #include "caf/detail/actor_system_access.hpp"
 
-#include "caf/actor_clock.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/logger.hpp"
-#include "caf/scheduler.hpp"
 
 namespace caf::detail {
-
-void actor_system_access::logger(intrusive_ptr<asynchronous_logger> ptr) {
-  sys_->set_logger(std::move(ptr));
-}
-
-void actor_system_access::clock(std::unique_ptr<actor_clock> ptr) {
-  sys_->set_clock(std::move(ptr));
-}
-
-void actor_system_access::scheduler(std::unique_ptr<caf::scheduler> ptr) {
-  sys_->set_scheduler(std::move(ptr));
-}
 
 void actor_system_access::node(node_id id) {
   sys_->set_node(id);

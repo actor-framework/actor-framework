@@ -502,10 +502,8 @@ public:
 
   void release_private_thread(detail::private_thread*);
 
-  using custom_setup_fn = void (*)(actor_system&, actor_system_config&, void*);
-
-  actor_system(actor_system_config& cfg, custom_setup_fn custom_setup,
-               void* custom_setup_data, version::abi_token = make_abi_token());
+  explicit actor_system(std::unique_ptr<detail::actor_system_impl> impl,
+                        version::abi_token = make_abi_token());
 
   /// @endcond
 
@@ -551,12 +549,6 @@ private:
   void do_launch(local_actor* ptr, caf::scheduler* ctx, spawn_options options);
 
   // -- callbacks for actor_system_access --------------------------------------
-
-  void set_logger(intrusive_ptr<detail::asynchronous_logger> ptr);
-
-  void set_clock(std::unique_ptr<actor_clock> ptr);
-
-  void set_scheduler(std::unique_ptr<caf::scheduler> ptr);
 
   void set_node(node_id id);
 

@@ -418,8 +418,7 @@ public:
       detail::critical("unable to obtain the global meta objects guard");
   }
 
-  void start(actor_system& owner, custom_setup_fn custom_setup,
-             void* custom_setup_data) override {
+  void start(actor_system& owner) override {
     detail::actor_system_config_access cfg_access{*cfg_};
     for (auto& hook : cfg_access.thread_hooks())
       hook->init(owner);
@@ -457,11 +456,6 @@ public:
         detail::critical("I/O module loaded without calling "
                          "caf::io::middleman::init_global_meta_objects()");
       }
-    }
-    // Allow the callback to override any configuration parameter and to
-    // initialize member variables before we set the defaults.
-    if (custom_setup != nullptr) {
-      custom_setup(owner, *cfg_, custom_setup_data);
     }
     // Initialize the logger before any other module.
     if (!logger_) {
@@ -690,18 +684,6 @@ public:
     print_state_->print(color, buf, num_bytes);
   }
 
-  void set_logger(intrusive_ptr<detail::asynchronous_logger> ptr) override {
-    logger_ = std::move(ptr);
-  }
-
-  void set_clock(std::unique_ptr<actor_clock> ptr) override {
-    clock_ = std::move(ptr);
-  }
-
-  void set_scheduler(std::unique_ptr<caf::scheduler> ptr) override {
-    scheduler_ = std::move(ptr);
-  }
-
   void set_node(node_id id) override {
     node_ = id;
   }
@@ -787,14 +769,7 @@ actor_system::networking_module::~networking_module() {
   // nop
 }
 
-actor_system::actor_system(actor_system_config& cfg, version::abi_token token)
-  : actor_system(cfg, nullptr, nullptr, token) {
-  // nop
-}
-
-actor_system::actor_system(actor_system_config& cfg,
-                           custom_setup_fn custom_setup,
-                           void* custom_setup_data, version::abi_token token) {
+actor_system::actor_system(actor_system_config& cfg, version::abi_token token) {
   // Make sure the ABI token matches the expected version.
   if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
     detail::panic("CAF ABI token mismatch: got {}, expected {}",
@@ -803,14 +778,34 @@ actor_system::actor_system(actor_system_config& cfg,
   impl_.reset(new default_actor_system_impl(cfg));
 #ifdef CAF_ENABLE_EXCEPTIONS
   try {
-    impl_->start(*this, custom_setup, custom_setup_data);
+    impl_->start(*this);
   } catch (...) {
     // Prevent destructor from calling `stop` if `start` failed.
     impl_.reset();
     throw;
   }
 #else
-  impl_->start(*this, custom_setup, custom_setup_data);
+  impl_->start(*this);
+#endif
+}
+
+actor_system::actor_system(std::unique_ptr<detail::actor_system_impl> impl,
+                           version::abi_token token) {
+  // Make sure the ABI token matches the expected version.
+  if (static_cast<int>(token) != CAF_VERSION_MAJOR) {
+    detail::panic("CAF ABI token mismatch: got {}, expected {}",
+                  static_cast<int>(token), CAF_VERSION_MAJOR);
+  }
+  impl_ = std::move(impl);
+#ifdef CAF_ENABLE_EXCEPTIONS
+  try {
+    impl_->start(*this);
+  } catch (...) {
+    impl_.reset();
+    throw;
+  }
+#else
+  impl_->start(*this);
 #endif
 }
 
@@ -1042,19 +1037,6 @@ void actor_system::do_launch(local_actor* ptr, caf::scheduler* ctx,
 }
 
 // -- callbacks for actor_system_access ----------------------------------------
-
-void actor_system::set_logger(intrusive_ptr<detail::asynchronous_logger> ptr) {
-  impl_->set_logger(std::move(ptr));
-  CAF_SET_LOGGER_SYS(this);
-}
-
-void actor_system::set_clock(std::unique_ptr<actor_clock> ptr) {
-  impl_->set_clock(std::move(ptr));
-}
-
-void actor_system::set_scheduler(std::unique_ptr<caf::scheduler> ptr) {
-  impl_->set_scheduler(std::move(ptr));
-}
 
 void actor_system::set_node(node_id id) {
   impl_->set_node(id);

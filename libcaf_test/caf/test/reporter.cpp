@@ -430,6 +430,16 @@ public:
       do_print(field);
   }
 
+  /// Prints a message to the output stream if `verbosity() >= level`.
+  void println(unsigned level, std::string_view msg) override {
+    if (level_ < level) {
+      return;
+    }
+    set_live();
+    detail::format_to(colored(), "{0:{1}}${2}({3}): {4}\n", ' ', indent_,
+                      color_by_log_level(level), log_level_names_[level], msg);
+  }
+
   void print_actor_output(local_actor* self, std::string_view msg) override {
     if (level_ < log::level::info)
       return;
