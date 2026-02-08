@@ -101,3 +101,55 @@ SCENARIO("logger accepts returns false for levels above verbosity") {
     }
   }
 }
+
+SCENARIO("loggers reject excluded components") {
+  GIVEN("an actor system with excluded core component for file and console") {
+    actor_system_config cfg;
+    cfg.set("caf.logger.console.excluded-components", R"(["core"])");
+    cfg.set("caf.logger.file.excluded-components", R"(["core"])");
+    cfg.set("caf.logger.console.verbosity", "trace");
+    cfg.set("caf.logger.file.verbosity", "trace");
+    actor_system sys{cfg};
+    WHEN("checking accepts for core component") {
+      THEN("accepts is false for all levels") {
+        check(!sys.logger().accepts(log::level::error, "core"));
+        check(!sys.logger().accepts(log::level::warning, "core"));
+        check(!sys.logger().accepts(log::level::info, "core"));
+        check(!sys.logger().accepts(log::level::debug, "core"));
+        check(!sys.logger().accepts(log::level::trace, "core"));
+      }
+    }
+  }
+  GIVEN("an actor system with excluded core component for console only") {
+    actor_system_config cfg;
+    cfg.set("caf.logger.console.excluded-components", R"(["core"])");
+    cfg.set("caf.logger.console.verbosity", "trace");
+    cfg.set("caf.logger.file.verbosity", "trace");
+    actor_system sys{cfg};
+    WHEN("checking accepts for core component") {
+      THEN("accepts is true for all levels") {
+        check(sys.logger().accepts(log::level::error, "core"));
+        check(sys.logger().accepts(log::level::warning, "core"));
+        check(sys.logger().accepts(log::level::info, "core"));
+        check(sys.logger().accepts(log::level::debug, "core"));
+        check(sys.logger().accepts(log::level::trace, "core"));
+      }
+    }
+  }
+  GIVEN("an actor system with excluded core component for file only") {
+    actor_system_config cfg;
+    cfg.set("caf.logger.file.excluded-components", R"(["core"])");
+    cfg.set("caf.logger.console.verbosity", "trace");
+    cfg.set("caf.logger.file.verbosity", "trace");
+    actor_system sys{cfg};
+    WHEN("checking accepts for core component") {
+      THEN("accepts is true for all levels") {
+        check(sys.logger().accepts(log::level::error, "core"));
+        check(sys.logger().accepts(log::level::warning, "core"));
+        check(sys.logger().accepts(log::level::info, "core"));
+        check(sys.logger().accepts(log::level::debug, "core"));
+        check(sys.logger().accepts(log::level::trace, "core"));
+      }
+    }
+  }
+}
