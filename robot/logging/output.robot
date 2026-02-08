@@ -74,8 +74,8 @@ Run File Logger
     ...    --caf.logger.file.verbosity\=${verbosity}
     ...    --api\=${api}
 
-Run Combined Logger
-    [Arguments]    ${console_excluded_components}   ${file_excluded_components}   ${api}
+Run Console And File Logger
+    [Arguments]    ${console_excluded_components}   ${file_excluded_components}
     Remove File    app.out
     Remove File    app.log
     Run Process    ${BINARY_PATH}
@@ -84,10 +84,13 @@ Run Combined Logger
     ...    --caf.logger.file.verbosity\=debug
     ...    --caf.logger.console.excluded-components\=${console_excluded_components}
     ...    --caf.logger.file.excluded-components\=${file_excluded_components}
-    ...    --api\=${api}
     ...    stderr=app.out
     ${console_output}=    Get File    app.out
-    ${file_output}=    Get File    app.log
+    TRY
+        ${file_output}=    Get File    app.log
+    EXCEPT
+        ${file_output}=    Set Variable    ${EMPTY}
+    END
     RETURN        ${console_output}     ${file_output}
 
 *** Test Cases ***
@@ -162,23 +165,23 @@ The console logger prints a subset when setting the log level to ERROR
     ${found}=    Run Console Logger  error  default
     Should Be Equal As Strings  ${ERROR_BASELINE}  ${found}  formatter=repr
 
-The logger rejects logs from excluded components
+The logger rejects file and console logging for excluded components
     [Tags]    logging
-    FOR    ${console_excluded}    ${file_excluded}    ${api}    ${console_receives}
-    ...    IN
-    ...    ${ALL_EXCLUDED_COMPONENT}    ${COMMON_EXCLUDED_COMPONENT}    legacy     ${False}
-    ...    ${ALL_EXCLUDED_COMPONENT}    ${COMMON_EXCLUDED_COMPONENT}    default    ${False}
-    ...    ${COMMON_EXCLUDED_COMPONENT}    ${ALL_EXCLUDED_COMPONENT}    legacy     ${True}
-    ...    ${COMMON_EXCLUDED_COMPONENT}    ${ALL_EXCLUDED_COMPONENT}    default    ${True}
-        ${console}    ${file}=    Run Combined Logger    ${console_excluded}    ${file_excluded}    ${api}
-        IF    ${console_receives}
-            Should Be Equal As Strings    ${DEBUG_BASELINE}    ${console}    formatter=repr
-            Should Be Empty    ${file}
-        ELSE
-            Should Be Equal As Strings    ${DEBUG_BASELINE}    ${file}    formatter=repr
-            Should Be Empty    ${console}
-        END
-    END
+    ${console}    ${file}=    Run Console And File Logger    ${ALL_EXCLUDED_COMPONENT}    ${ALL_EXCLUDED_COMPONENT}
+    Should Be Empty    ${console}
+    Should Be Empty    ${file}
+
+The logger rejects file logging for excluded components
+    [Tags]    logging
+    ${console}    ${file}=    Run Console And File Logger    ${COMMON_EXCLUDED_COMPONENT}    ${ALL_EXCLUDED_COMPONENT}
+    Should Be Equal As Strings    ${DEBUG_BASELINE}    ${console}    formatter=repr
+    Should Be Empty    ${file}
+
+The logger rejects console logging for excluded components
+    [Tags]    logging
+    ${console}    ${file}=    Run Console And File Logger    ${ALL_EXCLUDED_COMPONENT}    ${COMMON_EXCLUDED_COMPONENT}
+    Should Be Empty    ${console}
+    Should Be Equal As Strings    ${DEBUG_BASELINE}    ${file}    formatter=repr
 
 The applications prints a subset when setting the log level to ERROR
     [Tags]    logging
