@@ -19,16 +19,16 @@
 
 namespace caf::io {
 
-void abstract_broker::launch(scheduler* sched, bool lazy) {
-  detail::current_actor_guard ctx_guard{this};
-  CAF_ASSERT(sched != nullptr);
-  CAF_ASSERT(dynamic_cast<network::multiplexer*>(sched) != nullptr);
-  backend_ = static_cast<network::multiplexer*>(sched);
-  auto lg = log::io::trace("lazy = {}", lazy);
-  if (lazy && mailbox().try_block())
-    return;
+void abstract_broker::launch(caf::detail::private_thread* worker,
+                             scheduler* ctx) {
+  caf::detail::current_actor_guard ctx_guard{this};
+  CAF_ASSERT(ctx != nullptr);
+  CAF_ASSERT(dynamic_cast<network::multiplexer*>(ctx) != nullptr);
+  backend_ = static_cast<network::multiplexer*>(ctx);
+  auto lg = log::io::trace("");
+  (void) worker; // Brokers run on the multiplexer.
   intrusive_ptr_add_ref(ctrl());
-  sched->delay(this, resumable::initialization_event_id);
+  ctx->delay(this, resumable::initialization_event_id);
 }
 
 void abstract_broker::on_cleanup(const error& reason) {

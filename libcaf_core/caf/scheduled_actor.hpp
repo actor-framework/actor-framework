@@ -110,6 +110,10 @@ public:
     dropped
   };
 
+  // -- constants --------------------------------------------------------------
+
+  static constexpr auto forced_spawn_options = spawn_options::no_flags;
+
   // -- nested and member types ------------------------------------------------
 
   /// Base type.
@@ -203,7 +207,11 @@ public:
 
   const char* name() const override;
 
-  void launch(scheduler* sched, bool lazy) override;
+  bool initialize(scheduler* ctx) override;
+
+  bool launch_delayed() final;
+
+  void launch(detail::private_thread* worker, scheduler* ctx) override;
 
   void on_cleanup(const error& reason) override;
 
@@ -722,6 +730,8 @@ private:
 
   disposable do_monitor(abstract_actor* ptr,
                         detail::abstract_monitor_action_ptr on_down);
+
+  virtual behavior type_erased_initial_behavior() = 0;
 
   /// Encodes how an actor is currently handling timeouts.
   enum class timeout_mode {

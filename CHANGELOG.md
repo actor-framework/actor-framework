@@ -81,6 +81,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   use the new `add_ref` and `adopt_ref` tags instead.
 - Deprecate all member functions in `caf::expected` that are not present in
   `std::expected`.
+- The enumerator `spawn_options::priority_aware_flag` is a relict of pre-0.18
+  versions of CAF and had no effect for a long time. It is now deprecated and
+  will be removed in the next major release.
 
 ### Added
 

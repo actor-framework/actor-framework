@@ -51,7 +51,9 @@ public:
 
   bool enqueue(mailbox_element_ptr ptr, scheduler* sched) override;
 
-  void launch(scheduler* sched, bool lazy) override;
+  bool initialize(scheduler*) override;
+
+  void launch(detail::private_thread* worker, scheduler* ctx) override;
 
   void on_exit() override;
 
@@ -96,6 +98,8 @@ public:
   }
 
 private:
+  behavior type_erased_initial_behavior() final;
+
   // set by parent to define custom enqueue action
   enqueue_handler on_enqueue_;
 

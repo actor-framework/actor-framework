@@ -44,10 +44,6 @@ public:
 
   ~event_based_actor() override;
 
-  // -- overridden functions of local_actor ------------------------------------
-
-  void initialize() override;
-
   // -- messaging --------------------------------------------------------------
 
   /// Starts a new message.
@@ -82,6 +78,9 @@ public:
 protected:
   /// Returns the initial actor behavior.
   virtual behavior make_behavior();
+
+private:
+  behavior type_erased_initial_behavior() final;
 };
 
 } // namespace caf

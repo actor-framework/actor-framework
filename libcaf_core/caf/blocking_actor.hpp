@@ -57,6 +57,11 @@ public:
   /// Declared message passing interface.
   using signatures = none_t;
 
+  // -- constants --------------------------------------------------------------
+
+  static constexpr auto forced_spawn_options = spawn_options::detach_flag
+                                               + spawn_options::blocking_flag;
+
   // -- nested classes ---------------------------------------------------------
 
   /// Represents pre- and postconditions for receive loops.
@@ -168,7 +173,11 @@ public:
 
   const char* name() const override;
 
-  void launch(scheduler* sched, bool lazy) override;
+  bool initialize(scheduler* sched) override;
+
+  bool launch_delayed() override;
+
+  void launch(detail::private_thread* worker, scheduler* ctx) override;
 
   // -- virtual modifiers ------------------------------------------------------
 

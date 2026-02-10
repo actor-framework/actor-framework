@@ -113,7 +113,7 @@ public:
       return;
     }
     self_->context(ctx);
-    self_->initialize();
+    self_->initialize(ctx);
     error rsn;
 #ifdef CAF_ENABLE_EXCEPTIONS
     try {
@@ -148,15 +148,19 @@ private:
 
 } // namespace
 
-void blocking_actor::launch(scheduler*, bool) {
+bool blocking_actor::initialize(scheduler*) {
+  return true;
+}
+
+bool blocking_actor::launch_delayed() {
+  return false;
+}
+
+void blocking_actor::launch(detail::private_thread* worker, scheduler*) {
+  CAF_ASSERT(worker != nullptr);
   detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("");
-  CAF_ASSERT(getf(is_blocking_flag));
-  // Try to acquire a thread before incrementing the running count, since this
-  // may throw.
-  auto& sys = home_system();
-  auto thread = sys.acquire_private_thread();
-  thread->resume(new blocking_actor_runner(this, thread));
+  worker->resume(new blocking_actor_runner(this, worker));
 }
 
 blocking_actor::receive_while_helper

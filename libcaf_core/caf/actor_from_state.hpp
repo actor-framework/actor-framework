@@ -58,9 +58,9 @@ public:
   using handle_type = infer_handle_from_behavior_t<behavior_type>;
 
 private:
-  template <spawn_options Os, class... Args>
+  template <class... Args>
   static auto do_spawn(actor_system& sys, actor_config& cfg, Args&&... args) {
-    return sys.template spawn_impl<stateful_actor<State, base_type>, Os>(
+    return sys.template spawn_impl<stateful_actor<State, base_type>>(
       cfg, std::forward<Args>(args)...);
   }
 };

@@ -112,7 +112,7 @@ actor_factory make_actor_factory(F fun) {
         return result;
       },
     };
-    handle hdl = sys.spawn_class<impl, no_spawn_options>(cfg);
+    handle hdl = sys.spawn_class<impl>(cfg);
     return {actor_cast<strong_actor_ptr>(std::move(hdl)),
             sys.message_types<handle>()};
   };
@@ -126,7 +126,7 @@ struct dyn_spawn_class_helper {
   actor_system& sys;
   actor_config& cfg;
   void operator()(Ts... xs) {
-    result = sys.spawn_class<T, no_spawn_options>(cfg, xs...);
+    result = sys.spawn_class<T>(cfg, xs...);
   }
 };
 

@@ -132,8 +132,8 @@ public:
     auto actual_port = dptr->port();
     using impl = detail::prometheus_broker;
     mpx_supervisor_ = mpx_.make_supervisor();
-    actor_config cfg{&mpx_};
-    broker_ = mpx_.system().spawn_impl<impl, hidden>(cfg, std::move(dptr));
+    actor_config cfg{hidden, &mpx_};
+    broker_ = mpx_.system().spawn_impl<impl>(cfg, std::move(dptr));
     detail::latch sync{1};
     auto run_mpx = [this, sync_ptr{&sync}] {
       auto lg = log::io::trace("");

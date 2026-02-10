@@ -692,6 +692,27 @@ public:
     base_metrics_.rejected_messages->inc();
   }
 
+  void launch(local_actor* ptr, caf::scheduler* ctx,
+              spawn_options options) override {
+    auto inc_running_count = [this, ptr, options] {
+      if (!has_hide_flag(options)) {
+        ptr->setf(abstract_actor::is_registered_flag);
+        inc_running_actors_count(ptr->id());
+        // Note: decrementing the count happens in abstract_actor::cleanup().
+      }
+    };
+    if (has_detach_flag(options)) {
+      auto* worker = acquire_private_thread();
+      inc_running_count();
+      ptr->launch(worker, ctx);
+      return;
+    }
+    inc_running_count();
+    if (!has_lazy_init_flag(options) || !ptr->launch_delayed()) {
+      ptr->launch(nullptr, ctx);
+    }
+  }
+
 private:
   /// Used to generate ascending actor IDs.
   std::atomic<size_t> ids_;
@@ -948,9 +969,9 @@ void actor_system::demonitor(const node_id& node, const actor_addr& observer) {
 }
 
 intrusive_ptr<actor_companion> actor_system::make_companion() {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   cfg.mbox_factory = mailbox_factory();
-  auto hdl = spawn_class<actor_companion, no_spawn_options>(cfg);
+  auto hdl = spawn_class<actor_companion>(cfg);
   return intrusive_ptr<actor_companion>{actor_cast<actor_companion*>(hdl),
                                         add_ref};
 }
@@ -967,12 +988,8 @@ std::pair<event_based_actor*, actor_launcher>
 actor_system::spawn_inactive_impl(spawn_options options) {
   using actor_type = event_based_actor;
   CAF_SET_LOGGER_SYS(this);
-  actor_config cfg{&scheduler(), nullptr};
-  cfg.flags = abstract_actor::is_inactive_flag;
-  if (has_detach_flag(options))
-    cfg.flags |= abstract_actor::is_detached_flag;
-  if (has_hide_flag(options))
-    cfg.flags |= abstract_actor::is_hidden_flag;
+  actor_config cfg{options, &scheduler(), nullptr};
+  cfg.flags |= abstract_actor::is_inactive_flag;
   cfg.mbox_factory = mailbox_factory();
   auto res = make_actor<actor_type>(next_actor_id(), node(), this, cfg);
   auto* ptr = actor_cast<actor_type*>(res);
@@ -994,7 +1011,7 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   auto* fs = cfg_access.actor_factory(name);
   if (fs == nullptr)
     return result_type{unexpect, sec::unknown_type};
-  actor_config cfg{sched != nullptr ? sched : &scheduler()};
+  actor_config cfg{no_spawn_options, sched != nullptr ? sched : &scheduler()};
   auto res = (*fs)(*this, cfg, args);
   if (!res.first)
     return result_type{unexpect, sec::cannot_spawn_actor_from_arguments};
@@ -1028,12 +1045,7 @@ void actor_system::do_print(term color, const char* buf, size_t num_bytes) {
 
 void actor_system::do_launch(local_actor* ptr, caf::scheduler* ctx,
                              spawn_options options) {
-  if (!has_hide_flag(options)) {
-    ptr->setf(abstract_actor::is_registered_flag);
-    inc_running_actors_count(ptr->id());
-    // Note: decrementing the count happens in abstract_actor::cleanup().
-  }
-  ptr->launch(ctx, has_lazy_init_flag(options));
+  impl_->launch(ptr, ctx, options);
 }
 
 // -- callbacks for actor_system_access ----------------------------------------

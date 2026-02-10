@@ -16,21 +16,6 @@
 
 namespace caf::io {
 
-void broker::initialize() {
-  auto lg = log::io::trace("");
-  init_broker();
-  auto bhvr = make_behavior();
-  if (!bhvr) {
-    log::io::debug("make_behavior() did not return a behavior: alive = {}",
-                   alive());
-  }
-  if (bhvr) {
-    // make_behavior() did return a behavior instead of using become()
-    log::io::debug("make_behavior() did return a valid behavior");
-    become(std::move(bhvr));
-  }
-}
-
 behavior broker::make_behavior() {
   behavior res;
   if (initial_behavior_fac_) {
@@ -38,6 +23,11 @@ behavior broker::make_behavior() {
     initial_behavior_fac_ = nullptr;
   }
   return res;
+}
+
+behavior broker::type_erased_initial_behavior() {
+  init_broker();
+  return make_behavior();
 }
 
 } // namespace caf::io
