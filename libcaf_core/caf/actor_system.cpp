@@ -13,6 +13,7 @@
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/asynchronous_actor_clock.hpp"
 #include "caf/detail/asynchronous_logger.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/daemons.hpp"
@@ -61,68 +62,72 @@ namespace {
 // process. Batch messages and ACKs are treated equally. Open, close, and error
 // messages are evaluated to add and remove state as needed.
 
+namespace {
+
+// Handling a single message generally should take microseconds. Going up to
+// several milliseconds usually indicates a problem (or blocking operations)
+// but may still be expected for very compute-intense tasks. Single messages
+// that approach seconds to process most likely indicate a severe issue.
+// Hence, the default bucket settings focus on micro- and milliseconds.
+constexpr std::array<double, 9> default_buckets{{
+  .00001, // 10us
+  .0001,  // 100us
+  .0005,  // 500us
+  .001,   // 1ms
+  .01,    // 10ms
+  .1,     // 100ms
+  .5,     // 500ms
+  1.,     // 1s
+  5.,     // 5s
+}};
+
+} // namespace
+
 /// Metrics that the actor system collects.
 struct base_metrics_t {
+  explicit base_metrics_t(telemetry::metric_registry& reg) {
+    rejected_messages = reg.counter_singleton("caf.system", "rejected-messages",
+                                              "Number of rejected messages.");
+    queued_messages = reg.gauge_singleton(
+      "caf.system", "queued-messages", "Number of messages in all mailboxes.");
+    running_count = reg.gauge_family("caf.system", "running-actors", {"name"},
+                                     "Number of currently running actors.");
+    processed_messages = reg.counter_family("caf.actor", "processed-messages",
+                                            {"name"},
+                                            "Number of processed messages.");
+    processing_time = reg.histogram_family<double>(
+      "caf.actor", "processing-time", {"name"}, default_buckets,
+      "Time an actor needs to process messages.", "seconds");
+    mailbox_time = reg.histogram_family<double>(
+      "caf.actor", "mailbox-time", {"name"}, default_buckets,
+      "Time a message waits in the mailbox before processing.", "seconds");
+    mailbox_size = reg.gauge_family("caf.actor", "mailbox-size", {"name"},
+                                    "Number of messages in the mailbox.");
+  }
+
   /// Counts the number of messages that were rejected because the target
   /// mailbox was closed or did not exist.
-  telemetry::int_counter* rejected_messages = nullptr;
+  telemetry::int_counter* rejected_messages;
 
   /// Counts the total number of messages that wait in a mailbox.
-  telemetry::int_gauge* queued_messages = nullptr;
+  telemetry::int_gauge* queued_messages;
 
   /// Counts the number of actors that are currently running.
-  telemetry::int_gauge_family* running_count = nullptr;
+  telemetry::int_gauge_family* running_count;
 
   /// Counts the total number of processed messages by actor type.
-  telemetry::int_counter_family* processed_messages = nullptr;
+  telemetry::int_counter_family* processed_messages;
 
   /// Samples how long the actor needs to process messages by actor type.
-  telemetry::dbl_histogram_family* processing_time = nullptr;
+  telemetry::dbl_histogram_family* processing_time;
 
   /// Samples how long a message waits in the mailbox before the actor
   /// processes it.
-  telemetry::dbl_histogram_family* mailbox_time = nullptr;
+  telemetry::dbl_histogram_family* mailbox_time;
 
   /// Counts how many messages are currently waiting in the mailbox.
-  telemetry::int_gauge_family* mailbox_size = nullptr;
+  telemetry::int_gauge_family* mailbox_size;
 };
-
-auto make_base_metrics(telemetry::metric_registry& reg) {
-  // Handling a single message generally should take microseconds. Going up to
-  // several milliseconds usually indicates a problem (or blocking operations)
-  // but may still be expected for very compute-intense tasks. Single messages
-  // that approach seconds to process most likely indicate a severe issue.
-  // Hence, the default bucket settings focus on micro- and milliseconds.
-  std::array<double, 9> default_buckets{{
-    .00001, // 10us
-    .0001,  // 100us
-    .0005,  // 500us
-    .001,   // 1ms
-    .01,    // 10ms
-    .1,     // 100ms
-    .5,     // 500ms
-    1.,     // 1s
-    5.,     // 5s
-  }};
-  return base_metrics_t{
-    .rejected_messages = reg.counter_singleton(
-      "caf.system", "rejected-messages", "Number of rejected messages."),
-    .queued_messages = reg.gauge_singleton(
-      "caf.system", "queued-messages", "Number of messages in all mailboxes."),
-    .running_count = reg.gauge_family("caf.system", "running-actors", {"name"},
-                                      "Number of currently running actors."),
-    .processed_messages = reg.counter_family("caf.actor", "processed-messages",
-                                             {"name"},
-                                             "Number of processed messages."),
-    .processing_time = reg.histogram_family<double>(
-      "caf.actor", "processing-time", {"name"}, default_buckets,
-      "Time an actor needs to process messages.", "seconds"),
-    .mailbox_time = reg.histogram_family<double>(
-      "caf.actor", "mailbox-time", {"name"}, default_buckets,
-      "Time a message waits in the mailbox before processing.", "seconds"),
-    .mailbox_size = reg.gauge_family("caf.actor", "mailbox-size", {"name"},
-                                     "Number of messages in the mailbox.")};
-}
 
 class print_state_impl {
 public:
@@ -310,105 +315,23 @@ private:
   mutable std::shared_mutex named_entries_mtx_;
 };
 
-class actor_clock_impl : public caf::actor_clock {
-public:
-  explicit actor_clock_impl(caf::actor_system& sys) {
-    worker_ = sys.launch_thread("caf.clock", caf::thread_owner::system,
-                                [this] { run(); });
-  }
-
-  ~actor_clock_impl() override {
-    {
-      std::unique_lock guard{mutex_};
-      push({time_point::min(), caf::action{}});
-    }
-    cv_.notify_one();
-    worker_.join();
-  }
-
-  caf::disposable schedule(time_point timeout, caf::action callback) override {
-    if (!callback) {
-      return {};
-    }
-    // Only wake up the dispatcher if the new timeout is smaller than the
-    // current timeout.
-    auto do_wakeup = false;
-    {
-      std::unique_lock guard{mutex_};
-      do_wakeup = queue_.empty() || timeout < queue_.front().timeout;
-      push({timeout, callback});
-    }
-    if (do_wakeup) {
-      cv_.notify_one();
-    }
-    return std::move(callback).as_disposable();
-  }
-
-private:
-  struct entry {
-    time_point timeout;
-    caf::action callback;
-  };
-
-  static constexpr auto entry_cmp = [](const entry& lhs, const entry& rhs) {
-    // We want the smallest entry to be at the front of the queue. Since
-    // std::push_heap will put the largest element at the front, we need to
-    // invert the comparison.
-    return lhs.timeout > rhs.timeout;
-  };
-
-  void push(entry e) {
-    queue_.push_back(std::move(e));
-    std::push_heap(queue_.begin(), queue_.end(), entry_cmp);
-  }
-
-  void pop() {
-    std::pop_heap(queue_.begin(), queue_.end(), entry_cmp);
-    queue_.pop_back();
-  }
-
-  void run() {
-    std::unique_lock guard{mutex_};
-    while (queue_.empty()) {
-      cv_.wait(guard);
-    }
-    for (;;) {
-      auto& job = queue_.front();
-      if (!job.callback) {
-        return;
-      }
-      auto timeout = job.timeout;
-      if (now() >= timeout) {
-        auto fn = std::move(job.callback);
-        pop();
-        guard.unlock();
-        fn.run();
-        guard.lock();
-        while (queue_.empty()) {
-          cv_.wait(guard);
-        }
-      } else {
-        cv_.wait_until(guard, timeout);
-      }
-    }
-  }
-
-  std::thread worker_;
-  std::mutex mutex_;
-  std::condition_variable cv_;
-  std::vector<entry> queue_;
-};
-
 class default_actor_system_impl : public detail::actor_system_impl {
 public:
   using module_ptr = std::unique_ptr<actor_system_module>;
 
   using module_array = std::array<module_ptr, actor_system_module::num_ids>;
 
+  static auto* actor_clock_queue_size_gauge(telemetry::metric_registry& reg) {
+    return reg.gauge_singleton("caf.system", "actor-clock-queue-size",
+                               "Number of entries in the actor clock queue.");
+  }
+
   default_actor_system_impl(actor_system_config& cfg)
     : ids_(0),
       metrics_(cfg),
-      base_metrics_(make_base_metrics(metrics_)),
+      base_metrics_(metrics_),
+      clock_(detail::asynchronous_actor_clock::make(
+        actor_clock_queue_size_gauge(metrics_))),
       cfg_(&cfg),
       private_threads_() {
     memset(&flags_, 0xFF, sizeof(flags_)); // All flags are ON by default.
@@ -462,10 +385,6 @@ public:
       logger_ = detail::asynchronous_logger::make(owner);
       CAF_SET_LOGGER_SYS(&owner);
     }
-    // Make sure we have a clock.
-    if (!clock_) {
-      clock_ = std::make_unique<actor_clock_impl>(owner);
-    }
     // Make sure we have a scheduler up and running.
     if (!scheduler_) {
       using defaults::scheduler::policy;
@@ -495,6 +414,7 @@ public:
       if (mod)
         mod->start();
     logger_->start();
+    clock_->start(owner);
   }
 
   void stop() override {
@@ -742,7 +662,7 @@ private:
   intrusive_ptr<detail::asynchronous_logger> logger_;
 
   /// Stores the system-wide clock.
-  std::unique_ptr<actor_clock> clock_;
+  std::unique_ptr<detail::asynchronous_actor_clock> clock_;
 
   /// Stores the actor system scheduler.
   std::unique_ptr<caf::scheduler> scheduler_;

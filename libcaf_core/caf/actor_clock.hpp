@@ -9,7 +9,6 @@
 
 #include <chrono>
 #include <cstddef>
-#include <string>
 
 namespace caf {
 

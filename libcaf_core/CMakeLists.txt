@@ -153,9 +153,11 @@ caf_add_component(
     caf/detail/abstract_worker_hub.cpp
     caf/detail/actor_system_access.cpp
     caf/detail/actor_system_impl.cpp
-    caf/detail/asynchronous_logger.cpp
     caf/detail/aligned_alloc.cpp
     caf/detail/assert.cpp
+    caf/detail/asynchronous_actor_clock.cpp
+    caf/detail/asynchronous_actor_clock.test.cpp
+    caf/detail/asynchronous_logger.cpp
     caf/detail/atomic_ref_counted.cpp
     caf/detail/base64.cpp
     caf/detail/base64.test.cpp
