@@ -321,10 +321,9 @@ public:
   /// Should not be called by users of the library directly.
   /// @param cfg To-be-filled config for the actor.
   /// @param xs Constructor arguments for `C`.
-  template <class C, spawn_options Os, class... Ts>
-    requires(is_unbound(Os))
+  template <class C, class... Ts>
   infer_handle_from_class_t<C> spawn_class(actor_config& cfg, Ts&&... xs) {
-    return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
+    return spawn_impl<C>(cfg, detail::spawn_fwd<Ts>(xs)...);
   }
 
   /// Returns a new actor of type `C` using `xs...` as constructor
@@ -335,9 +334,9 @@ public:
     requires(is_unbound(Os))
   infer_handle_from_class_t<C> spawn(Ts&&... xs) {
     check_invariants<C>();
-    actor_config cfg;
+    actor_config cfg{Os};
     cfg.mbox_factory = mailbox_factory();
-    return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
+    return spawn_impl<C>(cfg, detail::spawn_fwd<Ts>(xs)...);
   }
 
   /// Called by `spawn` when used to create a functor-based actor to select a
@@ -346,20 +345,18 @@ public:
   /// @param fun Function object for the actor's behavior; will be moved.
   /// @param xs Arguments for `fun`.
   /// @private
-  template <spawn_options Os = no_spawn_options, class F, class... Ts>
-    requires(is_unbound(Os))
+  template <class F, class... Ts>
   infer_handle_from_fun_t<F>
   spawn_functor(std::true_type, actor_config& cfg, F& fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
     detail::init_fun_factory<impl, F> fac;
     cfg.init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
-    return spawn_impl<impl, Os>(cfg);
+    return spawn_impl<impl>(cfg);
   }
 
   /// Fallback no-op overload.
   /// @private
-  template <spawn_options Os = no_spawn_options, class F, class... Ts>
-    requires(is_unbound(Os))
+  template <class F, class... Ts>
   infer_handle_from_fun_t<F>
   spawn_functor(std::false_type, actor_config&, F&, Ts&&...) {
     return {};
@@ -377,10 +374,10 @@ public:
     static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
     static_assert(spawnable,
                   "cannot spawn function-based actor with given arguments");
-    actor_config cfg;
+    actor_config cfg{Os};
     cfg.mbox_factory = mailbox_factory();
-    return spawn_functor<Os>(std::bool_constant<spawnable>{}, cfg, fun,
-                             std::forward<Ts>(xs)...);
+    return spawn_functor(std::bool_constant<spawnable>{}, cfg, fun,
+                         std::forward<Ts>(xs)...);
   }
 
   /// Returns a new stateful actor.
@@ -388,10 +385,9 @@ public:
             class... Args>
     requires(is_unbound(Options))
   typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
-    actor_config cfg{&scheduler(), nullptr};
+    actor_config cfg{Options, &scheduler(), nullptr};
     cfg.mbox_factory = mailbox_factory();
-    return CustomSpawn::template do_spawn<Options>(*this, cfg,
-                                                   std::forward<Args>(args)...);
+    return CustomSpawn::do_spawn(*this, cfg, std::forward<Args>(args)...);
   }
 
   /// Returns a new actor with run-time type `name`, constructed
@@ -463,19 +459,20 @@ public:
     return std::thread{std::move(body), meta_objects_guard()};
   }
 
-  template <class C, spawn_options Os, class... Ts>
-    requires(is_unbound(Os))
+  template <class C, class... Ts>
   infer_handle_from_class_t<C> spawn_impl(actor_config& cfg, Ts&&... xs) {
-    if constexpr (has_detach_flag(Os) || std::is_base_of_v<blocking_actor, C>)
-      cfg.flags |= abstract_actor::is_detached_flag;
-    if constexpr (has_hide_flag(Os))
-      cfg.flags |= abstract_actor::is_hidden_flag;
-    if (cfg.sched == nullptr)
+    static constexpr auto forced_flags = C::forced_spawn_options;
+    if constexpr (forced_flags != no_spawn_options) {
+      cfg.flags |= static_cast<int>(forced_flags);
+    }
+    if (cfg.sched == nullptr) {
       cfg.sched = &scheduler();
+    }
     CAF_SET_LOGGER_SYS(this);
     auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
                              std::forward<Ts>(xs)...);
-    do_launch(actor_cast<C*>(res), cfg.sched, Os);
+    do_launch(actor_cast<C*>(res), cfg.sched,
+              static_cast<spawn_options>(cfg.flags));
     return res;
   }
 

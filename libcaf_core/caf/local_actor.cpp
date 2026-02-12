@@ -127,10 +127,6 @@ void local_actor::do_delegate_error() {
   mid.mark_as_answered();
 }
 
-void local_actor::initialize() {
-  auto lg = log::core::trace("id = {}, name = {}", id(), name());
-}
-
 void local_actor::on_cleanup([[maybe_unused]] const error& reason) {
   auto lg = log::core::trace("reason = {}", reason);
   if (auto* running_count = metrics_.running_count) {

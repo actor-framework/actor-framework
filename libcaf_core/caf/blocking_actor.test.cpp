@@ -7,6 +7,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/actor_system_config.hpp"
 #include "caf/message.hpp"
 #include "caf/scoped_actor.hpp"
 
@@ -18,8 +19,21 @@ void testee(blocking_actor* self) {
   self->receive([](int i) { return i; });
 }
 
-struct fixture : test::fixture::deterministic {
-  scoped_actor self{sys};
+struct fixture {
+  fixture() : sys(adjust(cfg)), self(sys) {
+    // nop
+  }
+
+  actor_system_config cfg;
+
+  actor_system sys;
+
+  scoped_actor self;
+
+  static actor_system_config& adjust(actor_system_config& what) {
+    put(what.content, "caf.scheduler.max-threads", 1u);
+    return what;
+  }
 };
 
 } // namespace
@@ -50,10 +64,11 @@ TEST("timeout_in_scoped_actor") {
   check(timeout_called);
 }
 
+// Blocking actors cannot be spawned in deterministic test mode (they require
+// detach_flag). This test uses a normal actor system.
 TEST("spawn blocking actor") {
   auto aut = sys.spawn(testee);
   self->mail(42).send(aut);
-  dispatch_messages();
   auto received = std::make_shared<bool>(false);
   self->receive([this, received](int i) {
     *received = true;

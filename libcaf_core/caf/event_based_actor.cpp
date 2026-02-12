@@ -18,23 +18,6 @@ event_based_actor::~event_based_actor() {
   // nop
 }
 
-void event_based_actor::initialize() {
-  auto lg = log::core::trace("subtype = {}",
-                             detail::pretty_type_name(typeid(*this)).c_str());
-  super::initialize();
-  setf(is_initialized_flag);
-  auto bhvr = make_behavior();
-  if (!bhvr) {
-    log::core::debug("make_behavior() did not return a behavior: alive = {}",
-                     alive());
-  }
-  if (bhvr) {
-    // make_behavior() did return a behavior instead of using become()
-    log::core::debug("make_behavior() did return a valid behavior");
-    become(std::move(bhvr));
-  }
-}
-
 behavior event_based_actor::make_behavior() {
   auto lg = log::core::trace("");
   behavior res;
@@ -43,6 +26,10 @@ behavior event_based_actor::make_behavior() {
     initial_behavior_fac_ = nullptr;
   }
   return res;
+}
+
+behavior event_based_actor::type_erased_initial_behavior() {
+  return make_behavior();
 }
 
 } // namespace caf

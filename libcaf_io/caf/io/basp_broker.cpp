@@ -457,7 +457,7 @@ strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
   // use a direct route if possible, i.e., when talking to a third node
   // create proxy and add functor that will be called if we
   // receive a basp::down_message
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(aid, nid,
                                                                   &(system()),
                                                                   cfg, this);

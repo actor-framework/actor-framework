@@ -15,6 +15,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/message_id.hpp"
 #include "caf/node_id.hpp"
+#include "caf/spawn_options.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -159,47 +160,51 @@ public:
 
   /// @cond
 
-  /// Indicates that the actor system shall not wait for this actor to
-  /// finish execution on shutdown.
-  static constexpr int is_hidden_flag = 0b0000'0000'0001;
-
-  /// Indicates that the actor is registered at the actor system.
-  static constexpr int is_registered_flag = 0b0000'0000'0010;
-
-  /// Indicates that the actor has been initialized.
-  static constexpr int is_initialized_flag = 0b0000'0000'0100;
-
-  /// Indicates that the actor uses blocking message handlers.
-  static constexpr int is_blocking_flag = 0b0000'0000'1000;
+  // note: the lowest byte is reserved for the spawn_options flags
 
   /// Indicates that the actor runs in its own thread.
-  static constexpr int is_detached_flag = 0b0000'0001'0000;
+  static constexpr int is_detached_flag
+    = static_cast<int>(spawn_options::detach_flag);
+
+  /// Indicates that the actor system shall not wait for this actor to
+  /// finish execution on shutdown.
+  static constexpr int is_hidden_flag
+    = static_cast<int>(spawn_options::hide_flag);
+
+  /// Indicates that the actor is registered at the actor system.
+  static constexpr int is_registered_flag = 0x0100;
+
+  /// Indicates that the actor has been initialized.
+  static constexpr int is_initialized_flag = 0x0200;
+
+  /// Indicates that the actor uses blocking message handlers.
+  static constexpr int is_blocking_flag = 0x0400;
 
   /// Indicates that the actor collects metrics.
-  static constexpr int collects_metrics_flag = 0b0000'0010'0000;
+  static constexpr int collects_metrics_flag = 0x0800;
 
   /// Indicates that the actor has terminated and waits for its destructor to
   /// run.
-  static constexpr int is_terminated_flag = 0b0000'1000'0000;
+  static constexpr int is_terminated_flag = 0x1000;
 
   /// Indicates that the actor is currently shutting down and thus may no longer
   /// set a new behavior.
-  static constexpr int is_shutting_down_flag = 0b0001'0000'0000;
+  static constexpr int is_shutting_down_flag = 0x2000;
 
   /// Indicates that the actor is currently inactive.
-  static constexpr int is_inactive_flag = 0b0010'0000'0000;
+  static constexpr int is_inactive_flag = 0x4000;
 
-  void setf(int flag) {
+  void setf(int flag) noexcept {
     auto x = flags();
     flags(x | flag);
   }
 
-  void unsetf(int flag) {
+  void unsetf(int flag) noexcept {
     auto x = flags();
     flags(x & ~flag);
   }
 
-  bool getf(int flag) const {
+  bool getf(int flag) const noexcept {
     return (flags() & flag) != 0;
   }
 

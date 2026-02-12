@@ -9,6 +9,7 @@
 #include "caf/all.hpp"
 #include "caf/config.hpp"
 #include "caf/log/test.hpp"
+#include "caf/spawn_options.hpp"
 #include "caf/type_id.hpp"
 
 using namespace caf;
@@ -26,7 +27,7 @@ struct fixture {
     log::test::debug("set aut");
     strong_actor_ptr res;
     std::set<std::string> ifs;
-    actor_config actor_cfg{&system.scheduler()};
+    actor_config actor_cfg{no_spawn_options, &system.scheduler()};
     auto aut = system.spawn<actor>("test_actor", std::move(args));
     if (expect_fail) {
       test::runnable::current().require(!aut);

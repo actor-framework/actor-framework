@@ -694,6 +694,28 @@ public:
     // nop for test impl
   }
 
+  void launch(local_actor* ptr, caf::scheduler* ctx,
+              spawn_options options) override {
+    if (!has_hide_flag(options)) {
+      ptr->setf(abstract_actor::is_registered_flag);
+      inc_running_actors_count(ptr->id());
+      // Note: decrementing the count happens in abstract_actor::cleanup().
+    }
+    // The detached flag is ignored in deterministic test mode. However,
+    // blocking actors require detaching, so we need to abort the test if a user
+    // attempts to spawn a blocking actor. The only exception is scoped actors,
+    // which are blocking but not detached.
+    if (has_detach_flag(options)
+        && has_spawn_option(options, spawn_options::blocking_flag)) {
+      detail::panic("blocking actors are not supported "
+                    "in deterministic test mode");
+    }
+    // In the deterministic test mode, we never call launch and initialize
+    // actors inline instead.
+    ptr->launch_delayed();
+    ptr->initialize(ctx);
+  }
+
 private:
   actor_system_config* cfg_;
   events_list_ptr events_;

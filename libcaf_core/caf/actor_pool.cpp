@@ -81,7 +81,7 @@ actor_pool::~actor_pool() {
 }
 
 actor actor_pool::make(actor_system& sys, policy pol) {
-  actor_config cfg{&sys.scheduler()};
+  actor_config cfg{no_spawn_options, &sys.scheduler()};
   auto res = make_actor<actor_pool, actor>(sys.next_actor_id(), sys.node(),
                                            &sys, cfg);
   auto ptr = actor_cast<actor_pool*>(res);

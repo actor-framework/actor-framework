@@ -7,6 +7,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/fwd.hpp"
+#include "caf/spawn_options.hpp"
 
 #include <string>
 
@@ -21,7 +22,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit actor_config(scheduler* sched = nullptr,
+  explicit actor_config(spawn_options options, scheduler* sched = nullptr,
                         local_actor* parent = nullptr);
 
   // -- member variables -------------------------------------------------------

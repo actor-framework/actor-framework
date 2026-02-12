@@ -17,6 +17,8 @@ namespace {
 
 class impl : public blocking_actor {
 public:
+  static constexpr auto forced_spawn_options = spawn_options::blocking_flag;
+
   impl(actor_config& cfg) : blocking_actor(cfg) {
     // nop
   }
@@ -29,11 +31,13 @@ public:
     return "scoped_actor";
   }
 
-  void launch(scheduler*, bool) override {
+  void launch([[maybe_unused]] detail::private_thread* worker,
+              scheduler* ctx) override {
+    CAF_ASSERT(worker == nullptr);
     detail::current_actor_guard ctx_guard{this};
     auto lg = log::system::trace("");
     CAF_ASSERT(getf(is_blocking_flag));
-    initialize();
+    initialize(ctx);
   }
 };
 
@@ -41,10 +45,11 @@ public:
 
 scoped_actor::scoped_actor(actor_system& sys, bool hide) {
   CAF_SET_LOGGER_SYS(&sys);
-  actor_config cfg;
-  if (hide)
+  actor_config cfg{no_spawn_options};
+  if (hide) {
     cfg.flags |= abstract_actor::is_hidden_flag;
-  auto hdl = sys.spawn_impl<impl, no_spawn_options>(cfg);
+  }
+  auto hdl = sys.spawn_impl<impl>(cfg);
   self_ = actor_cast<strong_actor_ptr>(std::move(hdl));
   prev_ = detail::current_actor();
   detail::current_actor(self_->get());

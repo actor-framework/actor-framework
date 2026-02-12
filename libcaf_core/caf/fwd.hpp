@@ -192,6 +192,7 @@ enum class exit_reason : uint8_t;
 enum class invoke_message_result;
 enum class pec : uint8_t;
 enum class sec : uint8_t;
+enum class spawn_options : int;
 enum class term;
 enum class thread_owner;
 

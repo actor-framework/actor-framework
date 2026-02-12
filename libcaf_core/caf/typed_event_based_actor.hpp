@@ -48,22 +48,6 @@ public:
     return this->system().message_types(token);
   }
 
-  void initialize() override {
-    auto lg = log::core::trace("");
-    super::initialize();
-    this->setf(abstract_actor::is_initialized_flag);
-    auto bhvr = make_behavior();
-    if (!bhvr) {
-      log::core::debug("make_behavior() did not return a behavior: alive = {}",
-                       this->alive());
-    }
-    if (bhvr) {
-      // make_behavior() did return a behavior instead of using become()
-      log::core::debug("make_behavior() did return a valid behavior");
-      this->do_become(std::move(bhvr.unbox()), true);
-    }
-  }
-
   // -- messaging --------------------------------------------------------------
 
   /// Starts a new message.
@@ -103,6 +87,11 @@ protected:
         this->do_become(std::move(bhvr), true);
     }
     return behavior_type::make_empty_behavior();
+  }
+
+private:
+  behavior type_erased_initial_behavior() final {
+    return make_behavior().unbox();
   }
 };
 

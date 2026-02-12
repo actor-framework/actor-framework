@@ -219,25 +219,53 @@ const char* scheduled_actor::name() const {
   return "user.scheduled-actor";
 }
 
-void scheduled_actor::launch(scheduler* sched, bool lazy) {
+bool scheduled_actor::initialize(scheduler* ctx) {
+  auto lg = log::core::trace("subtype = {}",
+                             detail::pretty_type_name(typeid(*this)).c_str());
+  CAF_ASSERT(!getf(is_initialized_flag));
+  setf(is_initialized_flag);
+  context(ctx);
+#ifdef CAF_ENABLE_EXCEPTIONS
+  behavior bhvr;
+  try {
+    bhvr = type_erased_initial_behavior();
+  } catch (...) {
+    quit(make_error(sec::runtime_error, "failed to initialize actor"));
+    return !finalize();
+  }
+#else
+  auto bhvr = type_erased_initial_behavior();
+#endif
+  if (!bhvr) {
+    log::core::debug("make_behavior() did not return a behavior: alive = {}",
+                     alive());
+  } else {
+    // make_behavior() did return a behavior instead of using become()
+    log::core::debug("make_behavior() did return a valid behavior");
+    do_become(std::move(bhvr), true);
+  }
+  return !finalize();
+}
+
+bool scheduled_actor::launch_delayed() {
+  return mailbox().try_block();
+}
+
+void scheduled_actor::launch(detail::private_thread* worker, scheduler* ctx) {
   detail::current_actor_guard ctx_guard{this};
-  auto lg = log::core::trace("lazy = {}", lazy);
-  if (auto* pinned = pinned_scheduler(); pinned != nullptr) {
-    sched = pinned;
-  }
-  CAF_ASSERT(sched != nullptr);
-  CAF_ASSERT(!getf(is_blocking_flag));
-  auto delay_first_scheduling = lazy && mailbox().try_block();
-  if (getf(is_detached_flag)) {
-    private_thread_ = system().acquire_private_thread();
-    if (!delay_first_scheduling) {
-      intrusive_ptr_add_ref(ctrl());
-      private_thread_->resume(this);
-    }
-  } else if (!delay_first_scheduling) {
+  auto lg = log::core::trace("");
+  if (worker) {
+    private_thread_ = worker;
     intrusive_ptr_add_ref(ctrl());
-    sched->delay(this, resumable::initialization_event_id);
+    private_thread_->resume(this);
+    return;
   }
+  if (auto* pinned = pinned_scheduler()) {
+    ctx = pinned;
+  }
+  CAF_ASSERT(ctx != nullptr);
+  intrusive_ptr_add_ref(ctrl());
+  ctx->delay(this, resumable::initialization_event_id);
 }
 
 void scheduled_actor::on_cleanup(const error& reason) {
@@ -897,12 +925,11 @@ bool scheduled_actor::activate(scheduler* sched) {
   try {
 #endif // CAF_ENABLE_EXCEPTIONS
     if (!getf(is_initialized_flag)) {
-      initialize();
-      if (finalize()) {
-        log::core::debug(
-          "finalize() returned true right after make_behavior()");
+      if (!initialize(sched)) {
+        log::core::debug("actor terminated immediately after initialization");
         return false;
       }
+      CAF_ASSERT(getf(is_initialized_flag));
       log::core::debug("initialized actor: name = {}", name());
     }
 #ifdef CAF_ENABLE_EXCEPTIONS

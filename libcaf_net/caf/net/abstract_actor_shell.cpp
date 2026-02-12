@@ -167,7 +167,16 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
 
 // -- overridden functions of local_actor --------------------------------------
 
-void abstract_actor_shell::launch(scheduler*, bool) {
+bool abstract_actor_shell::initialize(scheduler*) {
+  setf(is_initialized_flag);
+  return true;
+}
+
+bool abstract_actor_shell::launch_delayed() {
+  return mailbox().try_block();
+}
+
+void abstract_actor_shell::launch(caf::detail::private_thread*, scheduler*) {
   CAF_ASSERT(!getf(is_blocking_flag));
 }
 

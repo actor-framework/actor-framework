@@ -100,6 +100,10 @@ public:
   virtual void set_node(node_id id) = 0;
 
   virtual void message_rejected(abstract_actor*) = 0;
+
+  virtual void
+  launch(local_actor* ptr, caf::scheduler* ctx, spawn_options options)
+    = 0;
 };
 
 } // namespace caf::detail

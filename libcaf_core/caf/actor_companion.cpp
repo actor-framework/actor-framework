@@ -32,8 +32,14 @@ bool actor_companion::enqueue(mailbox_element_ptr ptr, scheduler*) {
   }
 }
 
-void actor_companion::launch(scheduler*, bool) {
-  // nop
+bool actor_companion::initialize(scheduler*) {
+  setf(is_initialized_flag);
+  return true;
+}
+
+void actor_companion::launch([[maybe_unused]] detail::private_thread* worker,
+                             scheduler*) {
+  CAF_ASSERT(worker == nullptr);
 }
 
 void actor_companion::on_exit() {
@@ -44,6 +50,10 @@ void actor_companion::on_exit() {
   }
   if (on_exit_)
     on_exit_();
+}
+
+behavior actor_companion::type_erased_initial_behavior() {
+  return {};
 }
 
 } // namespace caf

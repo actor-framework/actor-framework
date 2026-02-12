@@ -70,21 +70,6 @@ public:
 
   /// @endcond
 
-  void initialize() override {
-    auto lg = log::io::trace("");
-    this->init_broker();
-    auto bhvr = make_behavior();
-    if (!bhvr) {
-      log::io::debug("make_behavior() did not return a behavior: alive = {}",
-                     this->alive());
-    }
-    if (bhvr) {
-      // make_behavior() did return a behavior instead of using become()
-      log::io::debug("make_behavior() did return a valid behavior");
-      this->do_become(std::move(bhvr.unbox()), true);
-    }
-  }
-
   template <class F, class... Ts>
   infer_handle_from_fun_t<F> fork(F fun, connection_handle hdl, Ts&&... xs) {
     CAF_ASSERT(this->context() != nullptr);
@@ -94,7 +79,7 @@ public:
     static_assert(
       std::is_convertible<typename impl::actor_hdl, connection_handler>::value,
       "Cannot fork: new broker misses required handlers");
-    actor_config cfg{this->context()};
+    actor_config cfg{no_spawn_options, this->context()};
     detail::init_fun_factory<impl, F> fac;
     cfg.init_fun = fac(std::move(fun), hdl, std::forward<Ts>(xs)...);
     using impl = infer_impl_from_fun_t<F>;
@@ -174,6 +159,12 @@ protected:
         this->do_become(std::move(bhvr), true);
     }
     return behavior_type::make_empty_behavior();
+  }
+
+private:
+  behavior type_erased_initial_behavior() final {
+    this->init_broker();
+    return make_behavior().unbox();
   }
 };
 

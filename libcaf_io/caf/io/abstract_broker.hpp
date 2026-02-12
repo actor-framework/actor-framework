@@ -63,6 +63,8 @@ class middleman;
 class CAF_IO_EXPORT abstract_broker : public scheduled_actor,
                                       public prohibit_top_level_spawn_marker {
 public:
+  static constexpr auto forced_spawn_options = spawn_options::no_flags;
+
   abstract_broker(abstract_broker&&) = delete;
 
   abstract_broker(const abstract_broker&&) = delete;
@@ -81,7 +83,7 @@ public:
 
   // -- overridden modifiers of local_actor ------------------------------------
 
-  void launch(scheduler* sched, bool lazy) override;
+  void launch(caf::detail::private_thread* worker, scheduler* ctx) override;
 
   // -- overridden modifiers of abstract_broker --------------------------------
 

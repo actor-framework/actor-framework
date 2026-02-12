@@ -130,8 +130,8 @@ public:
     auto i = named_brokers_.find(name);
     if (i != named_brokers_.end())
       return i->second;
-    actor_config cfg{&backend()};
-    auto result = system().spawn_impl<Impl, hidden>(cfg);
+    actor_config cfg{hidden, &backend()};
+    auto result = system().spawn_impl<Impl>(cfg);
     named_brokers_.emplace(name, result);
     return result;
   }
@@ -204,9 +204,9 @@ public:
     static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
     static_assert(spawnable,
                   "cannot spawn function-based broker with given arguments");
-    actor_config cfg{&backend()};
-    return system().spawn_functor<Os>(std::bool_constant<spawnable>{}, cfg, fun,
-                                      std::forward<Ts>(xs)...);
+    actor_config cfg{Os, &backend()};
+    return system().spawn_functor(std::bool_constant<spawnable>{}, cfg, fun,
+                                  std::forward<Ts>(xs)...);
   }
 
   /// Returns a new functor-based broker connected
@@ -282,13 +282,13 @@ private:
     auto ptr = std::move(*eptr);
     CAF_ASSERT(ptr != nullptr);
     detail::init_fun_factory<Impl, F> fac;
-    actor_config cfg{&backend()};
+    actor_config cfg{Os, &backend()};
     auto fptr = fac.make(std::move(fun), ptr->hdl(), std::forward<Ts>(xs)...);
     fptr->hook([=](local_actor* self) mutable {
       static_cast<abstract_broker*>(self)->add_scribe(std::move(ptr));
     });
     cfg.init_fun.assign(fptr.release());
-    return system().spawn_class<Impl, Os>(cfg);
+    return system().spawn_class<Impl>(cfg);
   }
 
   template <spawn_options Os, class Impl, class F, class... Ts>
@@ -304,9 +304,9 @@ private:
     fptr->hook([=](local_actor* self) mutable {
       static_cast<abstract_broker*>(self)->add_doorman(std::move(ptr));
     });
-    actor_config cfg{&backend()};
+    actor_config cfg{Os, &backend()};
     cfg.init_fun.assign(fptr.release());
-    return system().spawn_class<Impl, Os>(cfg);
+    return system().spawn_class<Impl>(cfg);
   }
 
   expected<strong_actor_ptr>

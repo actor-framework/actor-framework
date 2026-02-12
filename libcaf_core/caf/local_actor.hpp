@@ -66,7 +66,9 @@ public:
 
   // -- pure virtual modifiers -------------------------------------------------
 
-  virtual void launch(scheduler* sched, bool lazy) = 0;
+  virtual bool launch_delayed() = 0;
+
+  virtual void launch(detail::private_thread* worker, scheduler* ctx) = 0;
 
   // -- time -------------------------------------------------------------------
 
@@ -97,20 +99,18 @@ public:
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   infer_handle_from_class_t<T> spawn(Ts&&... xs) {
-    actor_config cfg{context(), this};
+    actor_config cfg{Os, context(), this};
     cfg.mbox_factory = system().mailbox_factory();
-    return eval_opts(Os, system().spawn_class<T, make_unbound(Os)>(
-                           cfg, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class<T>(cfg, std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Options = no_spawn_options, class CustomSpawn,
             class... Args>
   typename CustomSpawn::handle_type spawn(CustomSpawn, Args&&... args) {
-    actor_config cfg{context(), this};
+    actor_config cfg{Options, context(), this};
     cfg.mbox_factory = system().mailbox_factory();
-    return eval_opts(Options,
-                     CustomSpawn::template do_spawn<make_unbound(Options)>(
-                       system(), cfg, std::forward<Args>(args)...));
+    return eval_opts(Options, CustomSpawn::do_spawn(
+                                system(), cfg, std::forward<Args>(args)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
@@ -119,12 +119,11 @@ public:
     static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
     static_assert(spawnable,
                   "cannot spawn function-based actor with given arguments");
-    actor_config cfg{context(), this};
+    actor_config cfg{Os, context(), this};
     cfg.mbox_factory = system().mailbox_factory();
-    static constexpr spawn_options unbound = make_unbound(Os);
     std::bool_constant<spawnable> enabled;
-    return eval_opts(Os, system().spawn_functor<unbound>(
-                           enabled, cfg, fun, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_functor(enabled, cfg, fun,
+                                                std::forward<Ts>(xs)...));
   }
 
   // -- sending asynchronous messages ------------------------------------------
@@ -324,7 +323,7 @@ public:
     return {result, std::move(current_element_->sender)};
   }
 
-  virtual void initialize();
+  virtual bool initialize(scheduler* sched) = 0;
 
   message_id new_request_id(message_priority mp) noexcept;
 

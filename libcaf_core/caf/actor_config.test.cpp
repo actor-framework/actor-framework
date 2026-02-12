@@ -14,7 +14,7 @@
 using namespace caf;
 
 TEST("default constructor initializes members to nullptr") {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   check(cfg.sched == nullptr);
   check(cfg.parent == nullptr);
   check(cfg.init_fun.is_nullptr());
@@ -25,7 +25,7 @@ TEST("default constructor initializes members to nullptr") {
 TEST("constructor with scheduler sets sched member") {
   actor_system_config sys_cfg;
   actor_system sys{sys_cfg};
-  actor_config cfg{&sys.scheduler()};
+  actor_config cfg{no_spawn_options, &sys.scheduler()};
   check(cfg.sched == &sys.scheduler());
   check(cfg.parent == nullptr);
   check_eq(cfg.flags, 0);
@@ -35,37 +35,37 @@ TEST("constructor with scheduler and parent sets both members") {
   actor_system_config sys_cfg;
   actor_system sys{sys_cfg};
   scoped_actor self{sys};
-  actor_config cfg{&sys.scheduler(), self.ptr()};
+  actor_config cfg{no_spawn_options, &sys.scheduler(), self.ptr()};
   check(cfg.sched == &sys.scheduler());
   check(cfg.parent == self.ptr());
   check_eq(cfg.flags, 0);
 }
 
 TEST("to_string with no flags returns empty parentheses") {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   check_eq(to_string(cfg), "actor_config()");
 }
 
 TEST("to_string with detached_flag") {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   cfg.add_flag(abstract_actor::is_detached_flag);
   check_eq(to_string(cfg), "actor_config(detached_flag)");
 }
 
 TEST("to_string with blocking_flag") {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   cfg.add_flag(abstract_actor::is_blocking_flag);
   check_eq(to_string(cfg), "actor_config(blocking_flag)");
 }
 
 TEST("to_string with hidden_flag") {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   cfg.add_flag(abstract_actor::is_hidden_flag);
   check_eq(to_string(cfg), "actor_config(hidden_flag)");
 }
 
 TEST("to_string with detached and blocking flags") {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   cfg.add_flag(abstract_actor::is_detached_flag)
     .add_flag(abstract_actor::is_blocking_flag);
   auto result = to_string(cfg);
@@ -77,7 +77,7 @@ TEST("to_string with detached and blocking flags") {
 }
 
 TEST("to_string with all three flags") {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   cfg.add_flag(abstract_actor::is_detached_flag)
     .add_flag(abstract_actor::is_blocking_flag)
     .add_flag(abstract_actor::is_hidden_flag);
@@ -90,7 +90,7 @@ TEST("to_string with all three flags") {
 }
 
 TEST("add_flag returns reference for chaining") {
-  actor_config cfg;
+  actor_config cfg{no_spawn_options};
   auto& ref = cfg.add_flag(abstract_actor::is_detached_flag);
   check_eq(&ref, &cfg);
   check_eq(cfg.flags, abstract_actor::is_detached_flag);

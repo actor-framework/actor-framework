@@ -8,8 +8,9 @@
 
 namespace caf {
 
-actor_config::actor_config(scheduler* sptr, local_actor* aptr)
-  : sched(sptr), parent(aptr) {
+actor_config::actor_config(spawn_options options, scheduler* sptr,
+                           local_actor* aptr)
+  : sched(sptr), parent(aptr), flags(static_cast<int>(options)) {
   // nop
 }
 

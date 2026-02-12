@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
+
 namespace caf {
 
 /// @addtogroup ActorCreation
@@ -12,15 +14,16 @@ namespace caf {
 /// Stores options passed to the `spawn` function family.
 enum class spawn_options : int {
   no_flags = 0x00,
+  priority_aware_flag CAF_DEPRECATED("no longer has any effect") = 0x00,
   link_flag = 0x01,
-  detach_flag = 0x04,
-  hide_flag = 0x08,
-  priority_aware_flag = 0x20,
-  lazy_init_flag = 0x40
+  detach_flag = 0x02,
+  hide_flag = 0x04,
+  lazy_init_flag = 0x08,
+  blocking_flag = 0x80,
 };
 
 /// Concatenates two @ref spawn_options.
-constexpr spawn_options operator+(spawn_options x, spawn_options y) {
+constexpr spawn_options operator+(spawn_options x, spawn_options y) noexcept {
   return static_cast<spawn_options>(static_cast<int>(x) | static_cast<int>(y));
 }
 
@@ -45,7 +48,8 @@ constexpr spawn_options lazy_init = spawn_options::lazy_init_flag;
 /// @param haystack Bitmask to search in.
 /// @param needle Flag to search for.
 /// @returns `true` if `needle` is set in `haystack`, otherwise `false`.
-constexpr bool has_spawn_option(spawn_options haystack, spawn_options needle) {
+constexpr bool has_spawn_option(spawn_options haystack,
+                                spawn_options needle) noexcept {
   return (static_cast<int>(haystack) & static_cast<int>(needle)) != 0;
 }
 
@@ -53,35 +57,33 @@ constexpr bool has_spawn_option(spawn_options haystack, spawn_options needle) {
 /// @param opts Bitmask to search in.
 /// @returns `true` if the @ref detached flag is set in `opts`, otherwise
 ///          `false`.
-constexpr bool has_detach_flag(spawn_options opts) {
+constexpr bool has_detach_flag(spawn_options opts) noexcept {
   return has_spawn_option(opts, detached);
 }
 
-/// Obsolete, since the `priority_aware` flag no longer exists.
-/// @param opts Bitmask to search in.
-/// @returns `true`.
-constexpr bool has_priority_aware_flag([[maybe_unused]] spawn_options opts) {
+CAF_DEPRECATED("the priority_aware flag no longer exists")
+constexpr bool has_priority_aware_flag(spawn_options) noexcept {
   return true;
 }
 
 /// Checks whether the @ref hidden flag is set in `opts`.
 /// @param opts Bitmask to search in.
 /// @returns `true` if the @ref hidden flag is set in `opts`, otherwise
-constexpr bool has_hide_flag(spawn_options opts) {
+constexpr bool has_hide_flag(spawn_options opts) noexcept {
   return has_spawn_option(opts, hidden);
 }
 
 /// Checks whether the @ref linked flag is set in `opts`.
 /// @param opts Bitmask to search in.
 /// @returns `true` if the @ref linked flag is set in `opts`, otherwise
-constexpr bool has_link_flag(spawn_options opts) {
+constexpr bool has_link_flag(spawn_options opts) noexcept {
   return has_spawn_option(opts, linked);
 }
 
 /// Checks whether the @ref lazy_init flag is set in `opts`.
 /// @param opts Bitmask to search in.
 /// @returns `true` if the @ref lazy_init flag is set in `opts`, otherwise
-constexpr bool has_lazy_init_flag(spawn_options opts) {
+constexpr bool has_lazy_init_flag(spawn_options opts) noexcept {
   return has_spawn_option(opts, lazy_init);
 }
 
@@ -89,11 +91,11 @@ constexpr bool has_lazy_init_flag(spawn_options opts) {
 
 /// @cond
 
-constexpr bool is_unbound(spawn_options opts) {
+constexpr bool is_unbound(spawn_options opts) noexcept {
   return !has_link_flag(opts);
 }
 
-constexpr spawn_options make_unbound(spawn_options opts) {
+constexpr spawn_options make_unbound(spawn_options opts) noexcept {
   return static_cast<spawn_options>(
     (static_cast<int>(opts) & ~static_cast<int>(linked)));
 }
