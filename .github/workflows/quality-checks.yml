@@ -17,11 +17,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install clang-format-19
+        run: |
+          sudo apt-get update -y \
+            && sudo apt-get install -y --no-install-recommends \
+              clang-format-19
       - name: clang-format
-        uses: jidicula/clang-format-action@v4.11.0
-        with:
-          clang-format-version: '20'
-
+        run: |
+          find libcaf* -name '*.[ch]pp' | xargs clang-format-19 --dry-run --Werror
 
   spell-checking:
     runs-on: ubuntu-latest
