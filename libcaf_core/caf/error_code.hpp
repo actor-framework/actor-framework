@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code_enum.hpp"
 #include "caf/expected.hpp"
@@ -42,7 +43,18 @@ public:
     return *this;
   }
 
+  CAF_DEPRECATED("use valid() instead")
   constexpr explicit operator bool() const noexcept {
+    return static_cast<underlying_type>(value_) != 0;
+  }
+
+  /// Returns whether this error code was default-constructed.
+  [[nodiscard]] constexpr bool empty() const noexcept {
+    return static_cast<underlying_type>(value_) == 0;
+  }
+
+  /// Returns whether this error code is not default-constructed.
+  [[nodiscard]] constexpr bool valid() const noexcept {
     return static_cast<underlying_type>(value_) != 0;
   }
 
