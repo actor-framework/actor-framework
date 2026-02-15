@@ -84,6 +84,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The enumerator `spawn_options::priority_aware_flag` is a relict of pre-0.18
   versions of CAF and had no effect for a long time. It is now deprecated and
   will be removed in the next major release.
+- The `operator bool` on `caf::error_code` is now deprecated. Use `.empty()` or
+  `.valid()` instead to determine whether an error code was default-constructed
+  or holds a non-zero value (#2211).
 
 ### Added
 

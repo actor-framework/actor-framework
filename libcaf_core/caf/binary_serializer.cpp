@@ -386,7 +386,7 @@ public:
       return false;
     }
     if (ptr != nullptr) {
-      if (auto err = save_actor(ptr, aid, nid)) {
+      if (auto err = save_actor(ptr, aid, nid); err.valid()) {
         set_error(error{err.value()});
         return false;
       }

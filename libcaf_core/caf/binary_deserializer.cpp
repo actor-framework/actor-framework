@@ -413,7 +413,7 @@ public:
     }
     if (aid == 0) {
       ptr = nullptr;
-    } else if (auto err = load_actor(ptr, context_, aid, nid)) {
+    } else if (auto err = load_actor(ptr, context_, aid, nid); err.valid()) {
       set_error(error{err.value()});
       return false;
     }
