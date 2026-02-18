@@ -69,7 +69,7 @@ runnable::~runnable() {
   // nop
 }
 
-/// Sets the thread-local metric registry.
+/// Sets the current metric registry.
 void runnable::current_metric_registry(const telemetry::metric_registry* ptr) {
   test_state_->current_registry_ = ptr;
 }
