@@ -185,6 +185,30 @@ bool labels_match(std::span<const label_view> want,
   return true;
 }
 
+using fetch_metric_result
+  = std::variant<std::monostate, const int_counter*, const dbl_counter*,
+                 const int_gauge*, const dbl_gauge*>;
+
+fetch_metric_result fetch_metric(const metric_registry* reg,
+                                 std::string_view prefix, std::string_view name,
+                                 std::span<const label_view> labels) {
+  fetch_metric_result result;
+  auto collector = [prefix, name, labels,
+                    &result]<class Wrapped>(const metric_family* family,
+                                            const metric* instance,
+                                            const Wrapped* wrapped) {
+    if constexpr (detail::one_of<Wrapped, int_counter, dbl_counter, int_gauge,
+                                 dbl_gauge>) {
+      if (family->prefix() == prefix && family->name() == name
+          && labels_match(labels, instance->labels())) {
+        result = wrapped;
+      }
+    }
+  };
+  reg->collect(collector);
+  return result;
+}
+
 } // namespace
 
 bool metric_registry::wait_for_impl(std::string_view prefix,
@@ -202,69 +226,26 @@ bool metric_registry::wait_for_impl(std::string_view prefix,
       return dbl_pred(x);
     }
   };
-  auto deadline = std::chrono::steady_clock::now() + rel_timeout;
-  auto poll_loop = [&](const auto* ptr) {
-    for (;;) {
-      if (pred(ptr->value())) {
-        return true;
-      }
-      if (std::chrono::steady_clock::now() >= deadline)
-        return false;
-      std::this_thread::sleep_for(
-        std::chrono::duration_cast<std::chrono::steady_clock::duration>(
-          poll_interval));
-    }
-  };
-  using collect_result
-    = std::variant<std::monostate, const int_counter*, const dbl_counter*,
-                   const int_gauge*, const dbl_gauge*>;
-  collect_result result;
-  auto collector = [prefix, name, labels,
-                    &result]<class Wrapped>(const metric_family* family,
-                                            const metric* instance,
-                                            const Wrapped* wrapped) {
-    if constexpr (detail::one_of<Wrapped, int_counter, dbl_counter, int_gauge,
-                                 dbl_gauge>) {
-      if (family->prefix() == prefix && family->name() == name
-          && labels_match(labels, instance->labels())) {
-        result = wrapped;
-      }
-    }
-  };
-  collect(collector);
-  auto ok = true;
-  auto visit = [&poll_loop, &ok]<class T>(T res) {
-    if constexpr (std::is_same_v<std::monostate, T>) {
-      ok = false;
-      return false;
+  auto pred_fwd = [&pred]<class T>(T arg) -> bool {
+    if constexpr (std::is_pointer_v<T>) {
+      return pred(arg->value());
     } else {
-      return poll_loop(res);
+      return false;
     }
   };
-  auto loop_res = std::visit(visit, result);
-  if (ok) {
-    return loop_res;
-  }
-  std::string labels_str;
-  if (labels.empty()) {
-    labels_str = "[]";
-  } else {
-    labels_str += '[';
-    auto i = labels.begin();
-    labels_str += i->name();
-    labels_str += '=';
-    labels_str += i->value();
-    for (++i; i != labels.end(); ++i) {
-      labels_str += ',';
-      labels_str += i->name();
-      labels_str += '=';
-      labels_str += i->value();
+  auto deadline = std::chrono::steady_clock::now() + rel_timeout;
+  for (;;) {
+    auto maybe_metric = fetch_metric(this, prefix, name, labels);
+    if (std::visit(pred_fwd, maybe_metric)) {
+      return true;
     }
-    labels_str += ']';
+    if (std::chrono::steady_clock::now() >= deadline) {
+      return false;
+    }
+    std::this_thread::sleep_for(
+      std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        poll_interval));
   }
-  auto msg = detail::format("metric '{}.{}' not found for labels {}", prefix,
-                            name, labels_str);
-  CAF_RAISE_ERROR(msg.c_str());
 }
 
 } // namespace caf::telemetry
