@@ -5,15 +5,15 @@
 #include "caf/test/runnable.hpp"
 
 #include "caf/test/block_type.hpp"
-#include "caf/test/context.hpp"
 #include "caf/test/outline.hpp"
 #include "caf/test/scenario.hpp"
-#include "caf/test/scope.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/detail/format.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/telemetry/metric_registry.hpp"
 
+#include <chrono>
 #include <regex>
 
 namespace caf::test {
@@ -109,4 +109,55 @@ block& runnable::current_block() {
   return *ctx_->call_stack.back();
 }
 
+namespace {
+
+bool labels_match(std::span<const telemetry::label_view> want,
+                  std::span<const telemetry::label> found) {
+  if (want.size() != found.size())
+    return false;
+  for (const auto& lbl : want) {
+    auto is_match = [&lbl](const telemetry::label& other) {
+      return lbl.name() == other.name() && lbl.value() == other.value();
+    };
+    if (std::ranges::none_of(found, is_match))
+      return false;
+  }
+  return true;
+}
+
+} // namespace
+
+bool runnable::do_check_metric(const telemetry::metric_registry& metrics,
+                               std::string_view prefix, std::string_view name,
+                               std::span<const telemetry::label_view> labels,
+                               callback<bool(int64_t)>& pred,
+                               const std::source_location& location) {
+  using namespace std::literals;
+  auto result = metrics.wait_for(prefix, name, labels, 1s, 10ms, pred);
+  if (result) {
+    reporter::instance().pass(location);
+    return true;
+  }
+  std::string msg;
+  auto collector = [prefix, name, labels,
+                    &msg]<class Wrapped>(const telemetry::metric_family* family,
+                                         const telemetry::metric* instance,
+                                         const Wrapped* wrapped) {
+    if constexpr (detail::one_of<Wrapped, telemetry::int_counter,
+                                 telemetry::dbl_counter, telemetry::int_gauge,
+                                 telemetry::dbl_gauge>) {
+      if (family->prefix() == prefix && family->name() == name
+          && labels_match(labels, instance->labels())) {
+        msg = detail::format("metric \"{}.{}\" has value {}", prefix, name,
+                             wrapped->value());
+      }
+    }
+  };
+  metrics.collect(collector);
+  if (msg.empty()) {
+    msg = detail::format("metric \"{}.{}\" does not exist", prefix, name);
+  }
+  reporter::instance().fail(msg, location);
+  return false;
+}
 } // namespace caf::test

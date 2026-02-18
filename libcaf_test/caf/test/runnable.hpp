@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/test/approx.hpp"
 #include "caf/test/binary_predicate.hpp"
 #include "caf/test/block.hpp"
 #include "caf/test/block_type.hpp"
@@ -12,7 +13,7 @@
 #include "caf/test/reporter.hpp"
 #include "caf/test/requirement_failed.hpp"
 
-#include "caf/config.hpp"
+#include "caf/callback.hpp"
 #include "caf/config_value.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/format.hpp"
@@ -22,9 +23,13 @@
 #include "caf/format_string_with_location.hpp"
 #include "caf/log/level.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/telemetry/label_view.hpp"
 
+#include <concepts>
+#include <functional>
 #include <source_location>
 #include <string_view>
+#include <type_traits>
 
 namespace caf::test {
 
@@ -74,6 +79,16 @@ public:
     reporter::instance().fail(binary_predicate::eq, stringify(lhs),
                               stringify(rhs), location);
     return false;
+  }
+
+  template <class ValueType>
+  bool check_metric_eq(const telemetry::metric_registry& metrics,
+                       std::string_view prefix, std::string_view name,
+                       ValueType value,
+                       const std::source_location& location
+                       = std::source_location::current()) {
+    auto pred = to_metric_predicate(value, std::equal_to<>{});
+    return do_check_metric(metrics, prefix, name, {}, *pred, location);
   }
 
   /// Checks whether `lhs` and `rhs` are unequal.
@@ -422,6 +437,33 @@ protected:
 private:
   /// Runs the next branch of the test.
   virtual void run();
+
+  template <std::floating_point ValueType, class Predicate>
+  unique_callback_ptr<bool(double)>
+  to_metric_predicate(ValueType value, Predicate pred) {
+    auto fn = [value, pred](double x) { return pred(value, x); };
+    return make_type_erased_callback(fn);
+  }
+
+  template <std::integral ValueType, class Predicate>
+  unique_callback_ptr<bool(int64_t)>
+  to_metric_predicate(ValueType value, Predicate pred) {
+    auto fn = [value, pred](int64_t x) { return pred(value, x); };
+    return make_type_erased_callback(fn);
+  }
+
+  template <std::floating_point ValueType>
+  unique_callback_ptr<bool(double)>
+  to_metric_predicate(approx<ValueType> value, std::equal_to<>) {
+    auto fn = [value](double x) { return x == value; };
+    return make_type_erased_callback(fn);
+  }
+
+  bool do_check_metric(const telemetry::metric_registry& metrics,
+                       std::string_view prefix, std::string_view name,
+                       std::span<const telemetry::label_view> labels,
+                       callback<bool(int64_t)>& pred,
+                       const std::source_location& location);
 
   template <class... Ts, class Array, size_t... Is>
   static auto convert_all(Array& arr, std::index_sequence<Is...>, bool& ok) {
