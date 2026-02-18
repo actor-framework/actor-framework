@@ -123,6 +123,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The class `http::request` now has an `orphaned()` method that returns `true`
   if the underlying connection has been shut down. This allows request handlers
   to safely discard abandoned requests.
+- The new configuration option `caf.clock.cleanup-interval` enables periodic
+  cleanup of disposed jobs from the actor clock. By setting this option, users
+  can reduce the memory usage of the actor clock when the application frequently
+  schedules actions with long delays that usually get disposed before they run.
 
 ### Fixed
 

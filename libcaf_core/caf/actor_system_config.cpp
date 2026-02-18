@@ -120,6 +120,9 @@ actor_system_config::actor_system_config() {
                "same as --help but list options that are omitted by default")
     .add<bool>("dump-config,,", "print configuration and exit")
     .add<std::string>("config-file", "sets a path to a configuration file");
+  opt_group{custom_options_, "caf.clock"} //
+    .add<timespan>("cleanup-interval",
+                   "interval for cleaning up disposed jobs from the clock");
   opt_group{custom_options_, "caf.scheduler"}
     .add<std::string>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")

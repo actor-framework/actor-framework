@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/asynchronous_logger.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
