@@ -345,32 +345,23 @@ TEST("wait_for returns false when timeout expires") {
   }
 }
 
-#ifdef CAF_ENABLE_EXCEPTIONS
-TEST("wait_for throws when metric does not exist") {
+TEST("wait_for returns false when metric does not exist") {
   SECTION("name mismatch") {
     SECTION("int gauge") {
-      check_throws([this] {
-        reg.wait_for("nonexistent", "metric", 1s, 10ms,
-                     [](int64_t) { return true; });
-      });
+      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns,
+                          [](int64_t) { return true; }));
     }
     SECTION("int counter") {
-      check_throws([this] {
-        reg.wait_for("nonexistent", "metric", 1s, 10ms,
-                     [](int64_t) { return true; });
-      });
+      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns,
+                          [](int64_t) { return true; }));
     }
     SECTION("double gauge") {
-      check_throws([this] {
-        reg.wait_for("nonexistent", "metric", 1s, 10ms,
-                     [](double) { return true; });
-      });
+      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns,
+                          [](double) { return true; }));
     }
     SECTION("double counter") {
-      check_throws([this] {
-        reg.wait_for("nonexistent", "metric", 1s, 10ms,
-                     [](double) { return true; });
-      });
+      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns,
+                          [](double) { return true; }));
     }
   }
   SECTION("label mismatch") {
@@ -381,10 +372,8 @@ TEST("wait_for throws when metric does not exist") {
           .gauge_instance("test", "labeled", {{"var1", "foo"}, {"var2", "bar"}},
                           "Labeled gauge.")
           ->value(0);
-        check_throws([this] {
-          reg.wait_for("test", "labeled", 1s, 10ms,
-                       [](int64_t) { return true; });
-        });
+        check(!reg.wait_for("test", "labeled", 1ns, 1ns,
+                            [](int64_t) { return true; }));
       }
       SECTION("int counter") {
         reg.counter_family("test", "labeled", {"var1", "var2"},
@@ -392,10 +381,8 @@ TEST("wait_for throws when metric does not exist") {
         reg.counter_instance("test", "labeled",
                              {{"var1", "foo"}, {"var2", "bar"}},
                              "Labeled counter.");
-        check_throws([this] {
-          reg.wait_for("test", "labeled", 1s, 10ms,
-                       [](int64_t) { return true; });
-        });
+        check(!reg.wait_for("test", "labeled", 1ns, 1ns,
+                            [](int64_t) { return true; }));
       }
       SECTION("double gauge") {
         reg.gauge_family<double>("test", "labeled", {"var1", "var2"},
@@ -405,10 +392,8 @@ TEST("wait_for throws when metric does not exist") {
                                   {{"var1", "foo"}, {"var2", "bar"}},
                                   "Labeled gauge.")
           ->value(0.0);
-        check_throws([this] {
-          reg.wait_for("test", "labeled", 1s, 10ms,
-                       [](double) { return true; });
-        });
+        check(!reg.wait_for("test", "labeled", 1ns, 1ns,
+                            [](double) { return true; }));
       }
       SECTION("double counter") {
         reg.counter_family<double>("test", "labeled", {"var1", "var2"},
@@ -416,10 +401,8 @@ TEST("wait_for throws when metric does not exist") {
         reg.counter_instance<double>("test", "labeled",
                                      {{"var1", "foo"}, {"var2", "bar"}},
                                      "Labeled counter.");
-        check_throws([this] {
-          reg.wait_for("test", "labeled", 1s, 10ms,
-                       [](double) { return true; });
-        });
+        check(!reg.wait_for("test", "labeled", 1ns, 1ns,
+                            [](double) { return true; }));
       }
     }
     SECTION("labels match keys but have different values") {
@@ -429,11 +412,9 @@ TEST("wait_for throws when metric does not exist") {
           .gauge_instance("test", "labeled", {{"var1", "foo"}, {"var2", "bar"}},
                           "Labeled gauge.")
           ->value(0);
-        check_throws([this] {
-          reg.wait_for("test", "labeled",
-                       {{"var1", "other"}, {"var2", "values"}}, 1s, 10ms,
-                       [](int64_t) { return true; });
-        });
+        check(!reg.wait_for("test", "labeled",
+                            {{"var1", "other"}, {"var2", "values"}}, 1ns, 1ns,
+                            [](int64_t) { return true; }));
       }
       SECTION("int counter") {
         reg.counter_family("test", "labeled", {"var1", "var2"},
@@ -441,11 +422,9 @@ TEST("wait_for throws when metric does not exist") {
         reg.counter_instance("test", "labeled",
                              {{"var1", "foo"}, {"var2", "bar"}},
                              "Labeled counter.");
-        check_throws([this] {
-          reg.wait_for("test", "labeled",
-                       {{"var1", "other"}, {"var2", "values"}}, 1s, 10ms,
-                       [](int64_t) { return true; });
-        });
+        check(!reg.wait_for("test", "labeled",
+                            {{"var1", "other"}, {"var2", "values"}}, 1ns, 1ns,
+                            [](int64_t) { return true; }));
       }
       SECTION("double gauge") {
         reg.gauge_family<double>("test", "labeled", {"var1", "var2"},
@@ -455,11 +434,9 @@ TEST("wait_for throws when metric does not exist") {
                                   {{"var1", "foo"}, {"var2", "bar"}},
                                   "Labeled gauge.")
           ->value(0.0);
-        check_throws([this] {
-          reg.wait_for("test", "labeled",
-                       {{"var1", "other"}, {"var2", "values"}}, 1s, 10ms,
-                       [](double) { return true; });
-        });
+        check(!reg.wait_for("test", "labeled",
+                            {{"var1", "other"}, {"var2", "values"}}, 1ns, 1ns,
+                            [](double) { return true; }));
       }
       SECTION("double counter") {
         reg.counter_family<double>("test", "labeled", {"var1", "var2"},
@@ -467,15 +444,15 @@ TEST("wait_for throws when metric does not exist") {
         reg.counter_instance<double>("test", "labeled",
                                      {{"var1", "foo"}, {"var2", "bar"}},
                                      "Labeled counter.");
-        check_throws([this] {
-          reg.wait_for("test", "labeled",
-                       {{"var1", "other"}, {"var2", "values"}}, 1s, 10ms,
-                       [](double) { return true; });
-        });
+        check(!reg.wait_for("test", "labeled",
+                            {{"var1", "other"}, {"var2", "values"}}, 1ns, 1ns,
+                            [](double) { return true; }));
       }
     }
   }
 }
+
+#ifdef CAF_ENABLE_EXCEPTIONS
 
 TEST("wait_for throws when timeout or poll_interval is zero or negative") {
   reg.gauge_singleton("test", "value", "test");
@@ -500,6 +477,7 @@ TEST("wait_for throws when timeout or poll_interval is zero or negative") {
     });
   }
 }
+
 #endif
 
 SCENARIO("metric registries can merge families from other registries") {

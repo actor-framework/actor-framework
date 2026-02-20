@@ -296,10 +296,10 @@ std::unique_ptr<runner> runner::make() {
 }
 
 void runner::do_run(runnable& what) {
-  // The method `runnable::run` is private to ensure users won't call it by
-  // mistake. Since `runner` is a friend class, we can call it here and allow
-  // sub-classes to call it via this simple wrapper.
-  what.run();
+  // The method `runnable::run_next_test_branch` is private to ensure users
+  // won't call it by mistake. Since `runner` is a friend class, we can call it
+  // here and allow sub-classes to call it via this simple wrapper.
+  what.run_next_test_branch();
 }
 
 } // namespace caf::test

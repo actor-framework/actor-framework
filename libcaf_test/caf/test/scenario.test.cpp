@@ -29,7 +29,7 @@ SCENARIO("scenario with <foo> syntax in description") {
   GIVEN("given a <description>") {
     WHEN("when <parsing> the raw description") {
       THEN("then we copy the <description> verbatim") {
-        auto cs = ctx_->call_stack;
+        auto cs = test_context().call_stack;
         require_eq(cs.size(), 4u);
         check_eq(cs[0]->description(),
                  "scenario with <foo> syntax in description");
@@ -92,12 +92,12 @@ SCENARIO("each run starts with a fresh fixture") {
 
 SCENARIO("scenario-1") {
   auto render = [this]() -> std::string {
-    if (ctx_->call_stack.empty())
+    if (test_context().call_stack.empty())
       return "nil";
     std::string result;
-    auto i = ctx_->call_stack.begin();
+    auto i = test_context().call_stack.begin();
     result += (*i++)->description();
-    while (i != ctx_->call_stack.end()) {
+    while (i != test_context().call_stack.end()) {
       result += "/";
       result += (*i++)->description();
     }

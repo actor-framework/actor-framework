@@ -35,14 +35,14 @@ public:
   using super::super;
 
   auto make_examples_setter() {
-    if (ctx_->example_parameters.empty())
-      return examples_setter{&ctx_->example_parameters};
+    if (test_context().example_parameters.empty())
+      return examples_setter{&test_context().example_parameters};
     else
       return examples_setter{nullptr};
   }
 
 protected:
-  void run() override;
+  void run_next_test_branch_init() override;
 };
 
 } // namespace caf::test

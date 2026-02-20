@@ -41,13 +41,13 @@ public:
     : caf::test::runnable_with_examples, caf_test_case_auto_fixture {          \
     using super = caf::test::runnable_with_examples;                           \
     using super::super;                                                        \
-    void do_run() override;                                                    \
+    void run_next_test_branch_impl() override;                                 \
     static ptrdiff_t register_id;                                              \
   };                                                                           \
   ptrdiff_t CAF_PP_UNIFYN(outline_)::register_id                               \
     = caf::test::registry::add<CAF_PP_UNIFYN(outline_)>(                       \
       caf_test_suite_name, description, caf::test::block_type::outline);       \
   }                                                                            \
-  void CAF_PP_UNIFYN(outline_)::do_run()
+  void CAF_PP_UNIFYN(outline_)::run_next_test_branch_impl()
 
 #define EXAMPLES this->make_examples_setter()
