@@ -4,6 +4,7 @@
 
 #include "caf/net/web_socket/with.hpp"
 
+#include "caf/net/middleman.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/ssl/tcp_acceptor.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -11,6 +12,7 @@
 #include "caf/net/web_socket/handshake.hpp"
 #include "caf/net/web_socket/server.hpp"
 
+#include "caf/actor_system.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/ws_conn_acceptor.hpp"
@@ -292,7 +294,7 @@ with_t with(multiplexer* mpx) {
 }
 
 with_t with(actor_system& sys) {
-  return with(multiplexer::from(sys));
+  return with(sys.network_manager().mpx_ptr());
 }
 
 with_t::with_t(multiplexer* mpx) : config_(new config_impl(mpx)) {

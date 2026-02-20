@@ -5,9 +5,11 @@
 #include "caf/net/lp/with.hpp"
 
 #include "caf/net/lp/framing.hpp"
+#include "caf/net/middleman.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include "caf/actor_system.hpp"
 #include "caf/chunk.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/critical.hpp"
@@ -268,7 +270,7 @@ with_t with(multiplexer* mpx) {
 }
 
 with_t with(actor_system& sys) {
-  return with(multiplexer::from(sys));
+  return with(sys.network_manager().mpx_ptr());
 }
 
 with_t::with_t(multiplexer* mpx) : config_(new config_impl(mpx)) {

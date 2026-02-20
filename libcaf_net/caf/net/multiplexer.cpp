@@ -5,7 +5,6 @@
 #include "caf/net/multiplexer.hpp"
 
 #include "caf/net/fwd.hpp"
-#include "caf/net/middleman.hpp"
 #include "caf/net/pipe_socket.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_event_layer.hpp"
@@ -152,7 +151,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit default_multiplexer(middleman* parent) : owner_(parent) {
+  explicit default_multiplexer(actor_system* sys) : sys_(sys) {
     // nop
   }
 
@@ -178,12 +177,9 @@ public:
     return managers_.size();
   }
 
-  middleman& owner() override {
-    CAF_ASSERT(owner_ != nullptr);
-    return *owner_;
-  }
   actor_system& system() override {
-    return owner().system();
+    CAF_ASSERT(sys_ != nullptr);
+    return *sys_;
   }
 
   // -- implementation of execution_context ------------------------------------
@@ -616,8 +612,8 @@ private:
   /// Used for pushing updates to the multiplexer's thread.
   pipe_socket write_handle_;
 
-  /// Points to the owning middleman.
-  middleman* owner_;
+  /// Points to the owning actor system.
+  actor_system* sys_;
 
   /// Signals whether shutdown has been requested.
   bool shutting_down_ = false;
@@ -711,12 +707,8 @@ void multiplexer::block_sigpipe() {
 #endif
 }
 
-multiplexer_ptr multiplexer::make(middleman* parent) {
-  return make_counted<default_multiplexer>(parent);
-}
-
-multiplexer* multiplexer::from(actor_system& sys) {
-  return sys.network_manager().mpx_ptr();
+multiplexer_ptr multiplexer::make(actor_system* sys) {
+  return make_counted<default_multiplexer>(sys);
 }
 
 // -- constructors, destructors, and assignment operators ----------------------

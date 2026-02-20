@@ -33,9 +33,6 @@ public:
   /// effect otherwise.
   static void block_sigpipe();
 
-  /// Returns a pointer to the multiplexer from the actor system.
-  static multiplexer* from(actor_system& sys);
-
   // -- constructors, destructors, and assignment operators --------------------
 
   ~multiplexer() override;
@@ -43,11 +40,10 @@ public:
   // -- factories --------------------------------------------------------------
 
   /// Creates a new multiplexer instance with the default implementation.
-  /// @param parent Points to the owning middleman instance. May be `nullptr`
-  ///               only for the purpose of unit testing if no @ref
-  ///               socket_manager requires access to the @ref middleman or the
-  ///               @ref actor_system.
-  static multiplexer_ptr make(middleman* parent);
+  /// @param sys Points to the owning actor system instance. May be `nullptr`
+  ///            only for the purpose of unit testing if no @ref socket_manager
+  ///            requires access to the @ref actor_system.
+  static multiplexer_ptr make(actor_system* sys);
 
   // -- initialization ---------------------------------------------------------
 
@@ -71,9 +67,6 @@ public:
 
   /// Returns the number of currently active socket managers.
   virtual size_t num_socket_managers() const noexcept = 0;
-
-  /// Returns the owning @ref middleman instance.
-  virtual middleman& owner() = 0;
 
   /// Returns the enclosing @ref actor_system.
   virtual actor_system& system() = 0;
