@@ -503,7 +503,7 @@ public:
                 std::span<const label_view> labels,
                 std::chrono::duration<Rep1, Period1> rel_timeout,
                 std::chrono::duration<Rep2, Period2> poll_interval,
-                Predicate pred) const {
+                Predicate&& pred) const {
     if (rel_timeout.count() <= 0) {
       CAF_RAISE_ERROR("relative timeout must be positive");
     }

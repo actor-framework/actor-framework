@@ -12,7 +12,8 @@ namespace caf::test {
 template <class T>
 class approx {
 public:
-  explicit approx(T value) : value_(value) {
+  constexpr explicit approx(T value) : value_(value) {
+    // nop
   }
 
   approx epsilon(T eps) const {
@@ -21,16 +22,28 @@ public:
     return copy;
   }
 
-  friend bool operator==(T lhs, approx<T> rhs) {
+  friend bool operator==(T lhs, const approx<T>& rhs) {
     return lhs >= rhs.min_value() && lhs <= rhs.max_value();
   }
 
+  friend bool operator==(const approx<T>& lhs, T rhs) {
+    return rhs == lhs;
+  }
+
+  friend bool operator!=(T lhs, const approx<T>& rhs) {
+    return !(lhs == rhs);
+  }
+
+  friend bool operator!=(const approx<T>& lhs, T rhs) {
+    return !(lhs == rhs);
+  }
+
 private:
-  T min_value() {
+  T min_value() const noexcept {
     return value_ - epsilon_;
   }
 
-  T max_value() {
+  T max_value() const noexcept {
     return value_ + epsilon_;
   }
 
