@@ -167,6 +167,9 @@ public:
       return err;
     }
     run_delayed_actions();
+    if (shutting_down_ && handler_ && handler_->finalized()) {
+      cleanup();
+    }
     return none;
   }
 
@@ -297,6 +300,9 @@ private:
   void exec(action& f) {
     f.run();
     run_delayed_actions();
+    if (shutting_down_ && handler_ && handler_->finalized()) {
+      cleanup();
+    }
   }
 
   void run_delayed_actions() override {
