@@ -7,19 +7,18 @@
 #include "caf/test/outline.hpp"
 
 #include "caf/actor_system_config.hpp"
-#include "caf/detail/latch.hpp"
 #include "caf/resumable.hpp"
 
+#include <latch>
 #include <string>
 
 using namespace caf;
 using namespace std::literals;
-using detail::latch;
 
 namespace {
 
 struct testee : resumable, ref_counted {
-  explicit testee(std::shared_ptr<latch> latch_handle)
+  explicit testee(std::shared_ptr<std::latch> latch_handle)
     : rendezvous(std::move(latch_handle)) {
   }
 
@@ -45,7 +44,7 @@ struct testee : resumable, ref_counted {
   }
 
   std::atomic<size_t> runs = 0;
-  std::shared_ptr<latch> rendezvous;
+  std::shared_ptr<std::latch> rendezvous;
 };
 
 } // namespace
@@ -59,12 +58,13 @@ OUTLINE("scheduling resumables") {
     cfg.set("caf.scheduler.policy", sched);
     WHEN("scheduling a resumable") {
       auto sys = std::make_unique<actor_system>(cfg);
-      auto rendezvous = std::make_shared<latch>(2);
+      auto rendezvous = std::make_shared<std::latch>(2);
       auto worker = make_counted<testee>(rendezvous);
       worker->ref();
       sys->scheduler().schedule(worker.get(), resumable::default_event_id);
       THEN("expect the resumable to be executed until done") {
-        rendezvous->count_down_and_wait();
+        rendezvous->count_down();
+        rendezvous->wait();
         check_eq(worker->runs.load(), 10u);
       }
       AND_THEN("the scheduler releases the ref when done") {
@@ -78,7 +78,7 @@ OUTLINE("scheduling resumables") {
     AND_WHEN("scheduling multiple resumables") {
       auto sys = std::make_unique<actor_system>(cfg);
       auto workers = std::vector<intrusive_ptr<testee>>{};
-      auto rendezvous = std::make_shared<latch>(11);
+      auto rendezvous = std::make_shared<std::latch>(11);
       for (int i = 0; i < 10; i++) {
         workers.emplace_back(make_counted<testee>(rendezvous));
         workers.back()->ref();
@@ -87,7 +87,8 @@ OUTLINE("scheduling resumables") {
                                   resumable::default_event_id);
       }
       THEN("expect the resumables to be executed until done") {
-        rendezvous->count_down_and_wait();
+        rendezvous->count_down();
+        rendezvous->wait();
         for (const auto& worker : workers) {
           check_eq(worker->runs, 10u);
         }
@@ -109,7 +110,7 @@ OUTLINE("scheduling resumables") {
 }
 
 struct awaiting_testee : resumable, ref_counted {
-  explicit awaiting_testee(std::shared_ptr<latch> latch_handle)
+  explicit awaiting_testee(std::shared_ptr<std::latch> latch_handle)
     : rendezvous(std::move(latch_handle)) {
   }
 
@@ -131,7 +132,7 @@ struct awaiting_testee : resumable, ref_counted {
   }
 
   std::atomic<size_t> runs = 0;
-  std::shared_ptr<latch> rendezvous;
+  std::shared_ptr<std::latch> rendezvous;
 };
 
 OUTLINE("scheduling units that are awaiting") {
@@ -144,7 +145,7 @@ OUTLINE("scheduling units that are awaiting") {
     auto sys = std::make_unique<actor_system>(cfg);
     WHEN("having resumables that go to an awaiting state") {
       auto workers = std::vector<intrusive_ptr<awaiting_testee>>{};
-      auto rendezvous = std::make_shared<latch>(11);
+      auto rendezvous = std::make_shared<std::latch>(11);
       for (int i = 0; i < 10; i++) {
         workers.push_back(make_counted<awaiting_testee>(rendezvous));
         workers.back()->ref();
@@ -152,7 +153,8 @@ OUTLINE("scheduling units that are awaiting") {
                                   resumable::default_event_id);
       }
       THEN("expect the resumables to be executed once") {
-        rendezvous->count_down_and_wait();
+        rendezvous->count_down();
+        rendezvous->wait();
         for (const auto& worker : workers) {
           check_eq(worker->runs, 1u);
         }
