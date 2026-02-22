@@ -67,7 +67,7 @@ runnable::runnable(context_ptr ctx, std::string_view description,
 }
 
 runnable::~runnable() {
-  // nop
+  current_runnable = nullptr;
 }
 
 /// Sets the current metric registry.
