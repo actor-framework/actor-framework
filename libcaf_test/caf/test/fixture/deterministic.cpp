@@ -766,7 +766,7 @@ deterministic::deterministic()
 
 deterministic::deterministic(events_list_ptr events)
   : sys(make_deterministic_actor_system(cfg, events)), events_(events) {
-  // nop
+  caf::test::runnable::current().current_metric_registry(&sys.metrics());
 }
 
 deterministic::~deterministic() {

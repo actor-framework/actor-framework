@@ -63,6 +63,7 @@ runnable::runnable(context_ptr ctx, std::string_view description,
   }
   test_state_.reset(
     new runnable_state(std::move(ctx), description, root_type, loc));
+  current_runnable = this;
 }
 
 runnable::~runnable() {
