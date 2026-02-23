@@ -87,6 +87,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `operator bool` on `caf::error_code` is now deprecated. Use `.empty()` or
   `.valid()` instead to determine whether an error code was default-constructed
   or holds a non-zero value (#2211).
+- The method `actor_system::redirect_text_output` is now deprecated. Configure a
+  console printer instead via `actor_system_config::console_printer_factory()`
+  before constructing the actor system.
 
 ### Added
 

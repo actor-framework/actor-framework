@@ -49,38 +49,70 @@ TEST("spawn_inactive creates an actor without launching it") {
   //       on to a reference as well that may not be dropped yet.
 }
 
-TEST("println renders its arguments to a text stream") {
-  actor_system_config cfg;
-  put(cfg.content, "caf.scheduler.max-threads", 1);
-  actor_system sys{cfg};
-  auto out = new std::string;
-  auto write = [](void* vptr, term color, const char* buf, size_t len) {
+namespace {
+
+class test_console_printer : public console_printer {
+public:
+  test_console_printer(std::shared_ptr<std::string> str) : str_(str) {
+    // nop
+  }
+
+  void print(term color, const char* buf, size_t len) override {
     if (len == 0)
       return;
-    auto* str = static_cast<std::string*>(vptr);
     if (color <= term::reset_endl) {
-      str->insert(str->end(), buf, buf + len);
+      str_->insert(str_->end(), buf, buf + len);
     } else {
       auto has_nl = false;
-      *str += detail::format("<{}>", to_string(color));
-      str->insert(str->end(), buf, buf + len);
-      if (str->back() == '\n') {
-        str->pop_back();
+      *str_ += detail::format("<{}>", to_string(color));
+      str_->insert(str_->end(), buf, buf + len);
+      if (str_->back() == '\n') {
+        str_->pop_back();
         has_nl = true;
       }
-      *str += detail::format("</{}>", to_string(color));
+      *str_ += detail::format("</{}>", to_string(color));
       if (has_nl)
-        *str += '\n';
+        *str_ += '\n';
     }
+  }
+
+private:
+  std::shared_ptr<std::string> str_;
+};
+
+} // namespace
+
+TEST("println renders its arguments to a text stream") {
+  auto str = std::make_shared<std::string>();
+  actor_system_config cfg;
+  put(cfg.content, "caf.scheduler.max-threads", 1);
+  auto do_print = [](auto& sys) {
+    sys.println("line1");
+    sys.println(term::red, "line{}", 2);
+    sys.spawn([](event_based_actor* self) {
+      self->println("line{}", 3);
+      self->println(term::green, "line{}", 4);
+    });
   };
-  auto cleanup = [](void* vptr) { delete static_cast<std::string*>(vptr); };
-  sys.redirect_text_output(out, write, cleanup);
-  sys.println("line1");
-  sys.println(term::red, "line{}", 2);
-  sys.spawn([](event_based_actor* self) {
-    self->println("line{}", 3);
-    self->println(term::green, "line{}", 4);
-  });
-  sys.await_all_actors_done();
-  check_eq(*out, "line1\n<red>line2</red>\nline3\n<green>line4</green>\n");
+  SECTION("console printer factory") {
+    auto factory = [str] {
+      return std::make_unique<test_console_printer>(str);
+    };
+    cfg.console_printer_factory(std::move(factory));
+    actor_system sys{cfg};
+    do_print(sys);
+  }
+  SECTION("redirect_text_output") {
+    actor_system sys{cfg};
+    auto* out = new test_console_printer(str);
+    auto write = [](void* vptr, term color, const char* buf, size_t len) {
+      static_cast<test_console_printer*>(vptr)->print(color, buf, len);
+    };
+    auto cleanup = [](void* vptr) {
+      delete static_cast<test_console_printer*>(vptr);
+    };
+    sys.redirect_text_output(out, write, cleanup);
+    do_print(sys);
+  }
+  check_eq(*str, "line1\n<red>line2</red>\nline3\n<green>line4</green>\n");
 }

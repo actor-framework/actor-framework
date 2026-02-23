@@ -33,6 +33,8 @@ public:
 
   detail::mailbox_factory* mailbox_factory();
 
+  std::unique_ptr<console_printer> make_console_printer();
+
 private:
   actor_system_config* cfg_;
 };

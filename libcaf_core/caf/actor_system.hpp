@@ -11,6 +11,7 @@
 #include "caf/actor_system_module.hpp"
 #include "caf/caf_deprecated.hpp"
 #include "caf/callback.hpp"
+#include "caf/console_printer.hpp"
 #include "caf/detail/actor_system_impl.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/format.hpp"
@@ -428,11 +429,7 @@ public:
     println(term::reset, fmt, std::forward<Args>(args)...);
   }
 
-  /// Redirects the output of `println` to a custom function.
-  /// @param out The new output stream to write to.
-  /// @param write The new print function to use. Must not be null.
-  /// @param cleanup Deletes the output stream when the actor system shuts down.
-  ///                May be null if no cleanup is necessary.
+  CAF_DEPRECATED("configure a factory for the printer instead")
   void redirect_text_output(void* out,
                             void (*write)(void*, term, const char*, size_t),
                             void (*cleanup)(void*));

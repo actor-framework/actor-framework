@@ -11,6 +11,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/actor_system_module.hpp"
+#include "caf/console_printer.hpp"
 #include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/actor_system_impl.hpp"
 #include "caf/detail/assert.hpp"
@@ -268,21 +269,6 @@ private:
 
   std::unordered_map<actor_id, strong_actor_ptr> entries_;
   name_map named_entries_;
-};
-
-class test_print_state {
-public:
-  using print_fun = void (*)(void*, term, const char*, size_t);
-  using cleanup = void (*)(void*);
-
-  void reset(void*, print_fun, cleanup) {
-    // nop
-  }
-
-  void print(term, const char* buf, size_t buf_size) {
-    reporter::instance().println(log::level::info,
-                                 std::string_view{buf, buf_size});
-  }
 };
 
 class deterministic_actor_clock final : public actor_clock {
@@ -676,14 +662,17 @@ public:
     return &mailbox_factory_;
   }
 
-  void redirect_text_output(void* out,
-                            void (*write)(void*, term, const char*, size_t),
-                            void (*cleanup)(void*)) override {
-    print_state_.reset(out, write, cleanup);
+  void redirect_text_output(std::unique_ptr<console_printer> ptr) override {
+    printer_ = std::move(ptr);
   }
 
   void do_print(term color, const char* buf, size_t num_bytes) override {
-    print_state_.print(color, buf, num_bytes);
+    if (printer_) {
+      printer_->print(color, buf, num_bytes);
+    } else {
+      reporter::instance().println(log::level::info,
+                                   std::string_view{buf, num_bytes});
+    }
   }
 
   void set_node(node_id id) override {
@@ -735,7 +724,7 @@ private:
   bool await_actors_before_shutdown_ = true;
   detail::global_meta_objects_guard_type meta_objects_guard_;
   detail::private_thread_pool private_threads_;
-  test_print_state print_state_;
+  std::unique_ptr<console_printer> printer_;
 };
 
 } // namespace

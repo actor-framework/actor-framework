@@ -142,6 +142,7 @@ class message_handler;
 class message_id;
 class node_id;
 class node_id_data;
+class console_printer;
 class proxy_registry;
 class ref_counted;
 class response_promise;

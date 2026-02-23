@@ -349,6 +349,7 @@ caf_add_component(
     caf/parser_state.cpp
     caf/pec.test.cpp
     caf/proxy_registry.cpp
+    caf/console_printer.cpp
     caf/raise_error.cpp
     caf/ref_counted.cpp
     caf/request_timeout.test.cpp

@@ -34,6 +34,9 @@ public:
 
   // -- member types -----------------------------------------------------------
 
+  using console_printer_factory_ptr
+    = unique_callback_ptr<std::unique_ptr<console_printer>()>;
+
   using opt_group = config_option_adder;
 
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -91,6 +94,24 @@ public:
   /// via `config_file_path` and `config_file_path_alternative` unless the user
   /// provides a config file path on the command line.
   error parse(int argc, char** argv);
+
+  /// Sets the factory for creating the console printer of the actor system.
+  /// @param factory the factory to create the console printer.
+  actor_system_config&
+  console_printer_factory(console_printer_factory_ptr factory);
+
+  /// Sets the factory for creating the console printer of the actor system.
+  /// @param factory the factory to create the console printer.
+  template <class Factory>
+  actor_system_config& console_printer_factory(Factory&& factory)
+    requires std::is_convertible_v<decltype(factory()),
+                                   std::unique_ptr<console_printer>>
+  {
+    using impl = callback_impl<std::decay_t<Factory>,
+                               std::unique_ptr<console_printer>()>;
+    return console_printer_factory(
+      std::make_unique<impl>(std::forward<Factory>(factory)));
+  }
 
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
