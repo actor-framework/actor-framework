@@ -7,6 +7,7 @@
 #include "caf/config.hpp"
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
+#include "caf/console_printer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/assert.hpp"
@@ -93,6 +94,7 @@ struct actor_system_config::fields {
   actor_factory_dictionary actor_factories;
   thread_hook_list thread_hooks;
   std::unique_ptr<detail::mailbox_factory> mailbox_factory;
+  actor_system_config::console_printer_factory_ptr console_printer_factory;
   bool helptext_printed = false;
   std::string program_name;
   std::vector<std::string> args_remainder;
@@ -625,6 +627,12 @@ void actor_system_config::print_content() const {
 
 // -- modifiers ----------------------------------------------------------------
 
+actor_system_config& actor_system_config::console_printer_factory(
+  console_printer_factory_ptr factory) {
+  fields_->console_printer_factory = std::move(factory);
+  return *this;
+}
+
 actor_system_config& actor_system_config::add_actor_factory(std::string name,
                                                             actor_factory fun) {
   fields_->actor_factories.insert_or_assign(std::move(name), std::move(fun));
@@ -706,6 +714,49 @@ void actor_system_config_access::mailbox_factory(
 
 detail::mailbox_factory* actor_system_config_access::mailbox_factory() {
   return cfg_->fields_->mailbox_factory.get();
+}
+
+namespace {
+
+class default_console_printer : public console_printer {
+public:
+  default_console_printer(FILE* out, bool colored)
+    : out_(out), colored_(colored && detail::is_tty(out)) {
+    CAF_ASSERT(out_ != nullptr);
+  }
+
+  void print(term color, const char* buf, size_t len) override {
+    if (!colored_ || color <= term::reset_endl) {
+      fwrite(buf, 1, len, out_);
+    } else {
+      detail::set_color(out_, color);
+      fwrite(buf, 1, len, out_);
+      detail::set_color(out_, term::reset);
+    }
+    fflush(out_);
+  }
+
+private:
+  FILE* out_;
+  bool colored_;
+};
+
+} // namespace
+
+std::unique_ptr<console_printer>
+actor_system_config_access::make_console_printer() {
+  // User-defined factory takes precedence over the default implementation.
+  if (cfg_->fields_->console_printer_factory) {
+    return (*cfg_->fields_->console_printer_factory)();
+  }
+  // Pick a default implementation based on the configuration.
+  auto colored = get_or(*cfg_, "caf.console.colored", true);
+  auto out = get_or(*cfg_, "caf.console.stream", "stdout");
+  if (icase_equal(out, "none")) {
+    return {};
+  }
+  auto* hdl = icase_equal(out, "stderr") ? stderr : stdout;
+  return std::make_unique<default_console_printer>(hdl, colored);
 }
 
 } // namespace caf::detail

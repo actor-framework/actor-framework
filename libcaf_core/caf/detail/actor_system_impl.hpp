@@ -89,11 +89,8 @@ public:
 
   virtual detail::mailbox_factory* mailbox_factory() = 0;
 
-  virtual void
-  redirect_text_output(void* out,
-                       void (*write)(void*, term, const char*, size_t),
-                       void (*cleanup)(void*))
-    = 0;
+  // Note: to be removed in CAF 3.0.
+  virtual void redirect_text_output(std::unique_ptr<console_printer> ptr) = 0;
 
   virtual void do_print(term color, const char* buf, size_t num_bytes) = 0;
 

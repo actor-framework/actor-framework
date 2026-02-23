@@ -9,6 +9,7 @@
 #include "caf/actor_factory.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/console_printer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/actor_system_config_access.hpp"
@@ -129,77 +130,57 @@ struct base_metrics_t {
   telemetry::int_gauge_family* mailbox_size;
 };
 
-class print_state_impl {
+/// Adapter that implements the console_printer interface by forwarding to the
+/// legacy callback-based API (for the deprecated redirect_text_output
+/// overload).
+class callback_printer : public console_printer {
 public:
   using print_fun = void (*)(void*, term, const char*, size_t);
+  using cleanup_fun = void (*)(void*);
 
-  using cleanup = void (*)(void*);
-
-  explicit print_state_impl(const actor_system_config& cfg) {
-    auto colored = get_or(cfg, "caf.console.colored", true);
-    auto out = get_or(cfg, "caf.console.stream", "stdout");
-    // Short-circuit if output is disabled.
-    if (out == "none") {
-      do_print_ = [](void*, term, const char*, size_t) {};
-      return;
-    }
-    // Pick the output stream.
-    if (out == "stderr")
-      out_ = stderr;
-    else
-      out_ = stdout;
-    // Set up our print function depending on whether we want colored output.
-    if (colored && detail::is_tty(stdout)) {
-      do_print_ = [](void* out, term color, const char* buf, size_t len) {
-        auto* fhdl = reinterpret_cast<FILE*>(out);
-        if (color <= term::reset_endl) {
-          fwrite(buf, 1, len, fhdl);
-          return;
-        }
-        detail::set_color(fhdl, color);
-        fwrite(buf, 1, len, fhdl);
-        detail::set_color(fhdl, term::reset);
-      };
-    } else {
-      do_print_ = [](void* out, term, const char* buf, size_t len) {
-        auto* fhdl = reinterpret_cast<FILE*>(out);
-        fwrite(buf, 1, len, fhdl);
-        fflush(fhdl);
-      };
-    }
+  callback_printer(void* out, print_fun write, cleanup_fun cleanup)
+    : out_(out), write_(write), cleanup_(cleanup) {
   }
 
-  ~print_state_impl() {
-    if (do_cleanup_)
-      do_cleanup_(out_);
+  void print(term color, const char* buf, size_t len) override {
+    if (write_)
+      write_(out_, color, buf, len);
   }
 
-  void reset(void* new_out, print_fun do_print, cleanup do_cleanup) {
+  ~callback_printer() override {
+    if (cleanup_)
+      cleanup_(out_);
+  }
+
+private:
+  void* out_;
+  print_fun write_;
+  cleanup_fun cleanup_;
+};
+
+/// Thread-safe holder for the current console printer.
+class printer_holder {
+public:
+  explicit printer_holder(std::unique_ptr<console_printer> ptr) noexcept
+    : printer_(std::move(ptr)) {
+    // nop
+  }
+
+  void assign(std::unique_ptr<console_printer> ptr) noexcept {
     std::lock_guard guard{mtx_};
-    if (do_cleanup_)
-      do_cleanup_(out_);
-    out_ = new_out;
-    do_print_ = do_print;
-    do_cleanup_ = do_cleanup;
+    printer_ = std::move(ptr);
   }
 
   void print(term color, const char* buf, size_t len) {
     std::lock_guard guard{mtx_};
-    do_print_(out_, color, buf, len);
+    if (printer_) {
+      printer_->print(color, buf, len);
+    }
   }
 
 private:
-  /// Mutex for printing to the console.
   std::mutex mtx_;
-
-  /// File descriptor for printing to the console.
-  void* out_ = nullptr;
-
-  /// Function for printing to the console.
-  print_fun do_print_ = nullptr;
-
-  /// Function for cleaning up out_.
-  cleanup do_cleanup_ = nullptr;
+  std::unique_ptr<console_printer> printer_;
 };
 
 class actor_registry_impl : public actor_registry {
@@ -333,9 +314,8 @@ public:
       clock_(detail::asynchronous_actor_clock::make(
         actor_clock_queue_size_gauge(metrics_))),
       cfg_(&cfg),
-      private_threads_() {
+      printer_(detail::actor_system_config_access{cfg}.make_console_printer()) {
     memset(&flags_, 0xFF, sizeof(flags_)); // All flags are ON by default.
-    print_state_ = std::make_unique<print_state_impl>(cfg);
     meta_objects_guard_ = detail::global_meta_objects_guard();
     if (!meta_objects_guard_)
       detail::critical("unable to obtain the global meta objects guard");
@@ -594,14 +574,13 @@ public:
     return detail::actor_system_config_access{*cfg_}.mailbox_factory();
   }
 
-  void redirect_text_output(void* out,
-                            void (*write)(void*, term, const char*, size_t),
-                            void (*cleanup)(void*)) override {
-    print_state_->reset(out, write, cleanup);
+  void
+  redirect_text_output(std::unique_ptr<console_printer> new_printer) override {
+    printer_.assign(std::move(new_printer));
   }
 
   void do_print(term color, const char* buf, size_t num_bytes) override {
-    print_state_->print(color, buf, num_bytes);
+    printer_.print(color, buf, num_bytes);
   }
 
   void set_node(node_id id) override {
@@ -701,7 +680,7 @@ private:
   /// Ties the lifetime of the meta objects table to the actor system.
   detail::global_meta_objects_guard_type meta_objects_guard_;
 
-  std::unique_ptr<print_state_impl> print_state_;
+  printer_holder printer_;
 };
 
 } // namespace
@@ -956,7 +935,8 @@ void actor_system::redirect_text_output(void* out,
                                         void (*write)(void*, term, const char*,
                                                       size_t),
                                         void (*cleanup)(void*)) {
-  impl_->redirect_text_output(out, write, cleanup);
+  impl_->redirect_text_output(
+    std::make_unique<callback_printer>(out, write, cleanup));
 }
 
 void actor_system::do_print(term color, const char* buf, size_t num_bytes) {
