@@ -184,8 +184,6 @@ caf_add_component(
     caf/detail/ieee_754.test.cpp
     caf/detail/invoke_result_visitor.cpp
     caf/detail/json.cpp
-    caf/detail/latch.cpp
-    caf/detail/latch.test.cpp
     caf/detail/log_level_map.cpp
     caf/detail/log_level_map.test.cpp
     caf/detail/mailbox_factory.cpp

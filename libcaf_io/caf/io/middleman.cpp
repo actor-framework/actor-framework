@@ -18,7 +18,6 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/latch.hpp"
 #include "caf/detail/prometheus_broker.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/format_to_unexpected.hpp"
@@ -34,6 +33,7 @@
 #include "caf/version.hpp"
 
 #include <cstring>
+#include <latch>
 #include <memory>
 
 #ifdef CAF_WINDOWS
@@ -134,7 +134,7 @@ public:
     mpx_supervisor_ = mpx_.make_supervisor();
     actor_config cfg{hidden, &mpx_};
     broker_ = mpx_.system().spawn_impl<impl>(cfg, std::move(dptr));
-    detail::latch sync{1};
+    std::latch sync{1};
     auto run_mpx = [this, sync_ptr{&sync}] {
       auto lg = log::io::trace("");
       mpx_.thread_id(std::this_thread::get_id());
@@ -414,7 +414,7 @@ void middleman::start() {
   // Launch backend.
   backend_supervisor_ = backend().make_supervisor();
   CAF_ASSERT(backend_supervisor_ != nullptr);
-  detail::latch sync{1};
+  std::latch sync{1};
   auto run_backend = [this, sync_ptr{&sync}] {
     auto lg = log::io::trace("");
     backend().thread_id(std::this_thread::get_id());

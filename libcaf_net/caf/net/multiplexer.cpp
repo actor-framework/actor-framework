@@ -16,7 +16,6 @@
 #include "caf/config.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/critical.hpp"
-#include "caf/detail/latch.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/detail/panic.hpp"
 #include "caf/error.hpp"
@@ -33,6 +32,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <latch>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -720,7 +720,7 @@ multiplexer::~multiplexer() {
 // -- initialization ---------------------------------------------------------
 
 std::thread multiplexer::launch() {
-  auto l = std::make_shared<detail::latch>(2);
+  auto l = std::make_shared<std::latch>(2);
   auto fn = [mpx = multiplexer_ptr{this, add_ref}, l]() mutable {
     mpx->set_thread_id();
     l->count_down();
@@ -728,7 +728,8 @@ std::thread multiplexer::launch() {
     mpx->run();
   };
   auto result = std::thread{fn};
-  l->count_down_and_wait();
+  l->count_down();
+  l->wait();
   return result;
 }
 

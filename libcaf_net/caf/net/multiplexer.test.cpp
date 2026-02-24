@@ -13,9 +13,9 @@
 
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/latch.hpp"
 #include "caf/log/test.hpp"
 
+#include <latch>
 #include <new>
 #include <span>
 #include <string_view>
@@ -233,13 +233,15 @@ SCENARIO("socket managers can register for read and write operations") {
 SCENARIO("a multiplexer terminates its thread after shutting down") {
   GIVEN("a multiplexer running in its own thread and some socket managers") {
     init();
-    auto go_time = std::make_shared<detail::latch>(2);
+    auto go_time = std::make_shared<std::latch>(2);
     auto mpx_thread = std::thread{[this, go_time] {
       mpx->set_thread_id();
-      go_time->count_down_and_wait();
+      go_time->count_down();
+      go_time->wait();
       mpx->run();
     }};
-    go_time->count_down_and_wait();
+    go_time->count_down();
+    go_time->wait();
     auto [alice_fd, bob_fd] = unbox(net::make_stream_socket_pair());
     auto [alice, alice_mgr] = make_manager(alice_fd, "Alice");
     auto [bob, bob_mgr] = make_manager(bob_fd, "Bob");

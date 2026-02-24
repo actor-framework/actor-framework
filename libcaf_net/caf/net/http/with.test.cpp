@@ -14,11 +14,13 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/detail/latch.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
 
+#include <chrono>
 #include <future>
+#include <latch>
+#include <thread>
 
 using namespace caf;
 using namespace std::literals;
@@ -49,12 +51,25 @@ private:
 
 using error_log_ptr = std::shared_ptr<error_log>;
 
-using latch_ptr = std::shared_ptr<detail::latch>;
+using latch_ptr = std::shared_ptr<std::latch>;
+
+// std::latch has no timed wait; poll try_wait() until timeout.
+static bool latch_count_down_and_wait_for(latch_ptr lptr,
+                                          std::chrono::seconds timeout) {
+  lptr->count_down();
+  auto deadline = std::chrono::steady_clock::now() + timeout;
+  while (!lptr->try_wait()) {
+    if (std::chrono::steady_clock::now() >= deadline)
+      return false;
+    std::this_thread::sleep_for(1ms);
+  }
+  return true;
+}
 
 void test_client(const char* host, uint16_t port, bool wait_before_connect,
                  latch_ptr lptr, error_log_ptr elog_ptr) {
   auto do_wait = [=] {
-    if (!lptr->count_down_and_wait_for(1s)) {
+    if (!latch_count_down_and_wait_for(lptr, 1s)) {
       elog_ptr->append(sec::request_timeout,
                        "timeout while waiting on the latch");
       return;
@@ -315,7 +330,7 @@ TEST("GH-2226 regression") {
                .start();
   require_has_value(hdl);
   // Launch our four clients.
-  auto latch = std::make_shared<detail::latch>(4);
+  auto latch = std::make_shared<std::latch>(4);
   auto elog = std::make_shared<error_log>();
   std::thread clients[4];
   // Two clients connect right away, the other two wait on the latch until the

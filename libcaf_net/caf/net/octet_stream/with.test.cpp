@@ -12,10 +12,11 @@
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
 
-#include "caf/detail/latch.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 #include "caf/log/test.hpp"
+
+#include <latch>
 
 // Note: the test here are similar to flow_bridge.test.cpp, except that they use
 //       the `with` DSL instead of the `flow_bridge` class directly.
@@ -74,7 +75,7 @@ TEST("a flow bridge connects flows to a socket") {
   auto worker = std::thread{};
   // Bridge setup.
   auto received = std::make_shared<std::vector<int>>();
-  auto rendezvous = std::make_shared<detail::latch>(2);
+  auto rendezvous = std::make_shared<std::latch>(2);
   auto start_res
     = net::octet_stream::with(mpx.get())
         .connect(fd1)
@@ -97,7 +98,8 @@ TEST("a flow bridge connects flows to a socket") {
         });
   require(start_res.has_value());
   // Check the results.
-  rendezvous->count_down_and_wait();
+  rendezvous->count_down();
+  rendezvous->wait();
   auto want = std::vector<int>();
   want.resize(50);
   std::iota(want.begin(), want.end(), 2);
