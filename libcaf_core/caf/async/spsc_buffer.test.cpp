@@ -223,6 +223,71 @@ SCENARIO("SPSC buffers may go past their capacity") {
   }
 }
 
+SCENARIO("try_push respects the capacity as a hard limit") {
+  GIVEN("an SPSC buffer with consumer and producer") {
+    auto prod = make_counted<dummy_producer>();
+    auto cons = make_counted<dummy_consumer>();
+    auto buf = make_counted<async::spsc_buffer<int>>(3, 1);
+    buf->set_producer(prod);
+    buf->set_consumer(cons);
+    check_eq(prod->demand, 3u);
+    check_eq(cons->producer_wakeups, 0u);
+    WHEN("pushing with available capacity") {
+      THEN("try_push returns true") {
+        check(buf->try_push(1));
+        check_eq(cons->producer_wakeups, 1u);
+        check(buf->try_push(2));
+        check_eq(cons->producer_wakeups, 1u);
+        check(buf->try_push(3));
+        check_eq(buf->available(), 3u);
+      }
+    }
+    WHEN("pushing when the buffer is exactly at capacity") {
+      buf->try_push(1);
+      buf->try_push(2);
+      buf->try_push(3);
+      check_eq(buf->available(), 3u);
+      THEN("try_push returns false and does not add the item") {
+        check(!buf->try_push(4));
+        check_eq(buf->available(), 3u);
+      }
+    }
+    WHEN("the buffer is above capacity via regular push") {
+      buf->push(1);
+      buf->push(2);
+      buf->push(3);
+      buf->push(4); // Regular push allows going over capacity.
+      check_eq(buf->available(), 4u);
+      THEN("try_push returns false") {
+        check(!buf->try_push(5));
+        check_eq(buf->available(), 4u);
+      }
+    }
+    WHEN("the buffer transitions from empty to non-empty via try_push") {
+      check_eq(cons->producer_wakeups, 0u);
+      check(buf->try_push(1));
+      THEN("the consumer is awakened exactly once") {
+        check_eq(cons->producer_wakeups, 1u);
+      }
+      AND_THEN("subsequent try_push calls do not trigger additional wakeups") {
+        check(buf->try_push(2));
+        check_eq(cons->producer_wakeups, 1u);
+      }
+    }
+    WHEN("try_push is called after draining and refilling the buffer") {
+      buf->try_push(1);
+      check_eq(cons->producer_wakeups, 1u);
+      dummy_observer obs;
+      buf->pull(async::prioritize_errors, 1, obs);
+      check_eq(buf->available(), 0u);
+      THEN("the consumer is awakened again when the buffer becomes non-empty") {
+        check(buf->try_push(2));
+        check_eq(cons->producer_wakeups, 2u);
+      }
+    }
+  }
+}
+
 SCENARIO("the prioritize_errors policy skips processing of pending items") {
   GIVEN("an SPSC buffer with consumer and producer") {
     auto prod = make_counted<dummy_producer>();
