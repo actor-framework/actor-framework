@@ -129,7 +129,6 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  auto collects_metrics = getf(abstract_actor::collects_metrics_flag);
   if (auto* mailbox_size = metrics_.mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
