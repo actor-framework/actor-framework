@@ -105,11 +105,7 @@ public:
   friend class actor_pool;
   friend class blocking_actor;
   friend class detail::actor_system_access;
-  friend class detail::response_promise_state;
   friend class local_actor;
-  friend class net::abstract_actor_shell;
-  friend class net::middleman;
-  friend class scheduled_actor;
 
   template <class>
   friend class actor_from_state_t;
@@ -533,8 +529,6 @@ private:
   expected<strong_actor_ptr>
   dyn_spawn_impl(const std::string& name, message& args, caf::scheduler* ctx,
                  bool check_interface, const mpi* expected_ifs);
-
-  void message_rejected(abstract_actor* receiver);
 
   detail::mailbox_factory* mailbox_factory();
 

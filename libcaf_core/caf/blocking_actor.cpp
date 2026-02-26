@@ -6,6 +6,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/anon_mail.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
@@ -67,7 +68,7 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
-      home_system().message_rejected(this);
+      detail::actor_system_access{home_system()}.message_rejected(this);
       if (auto* mailbox_size = metrics_.mailbox_size) {
         mailbox_size->dec();
       }

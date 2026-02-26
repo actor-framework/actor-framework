@@ -9,6 +9,7 @@
 
 #include "caf/action.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
@@ -152,7 +153,7 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
       return true;
     default: { // intrusive::inbox_result::queue_closed
       CAF_LOG_REJECT_EVENT();
-      home_system().message_rejected(this);
+      detail::actor_system_access{home_system()}.message_rejected(this);
       if (auto* mailbox_size = metrics_.mailbox_size) {
         mailbox_size->dec();
       }

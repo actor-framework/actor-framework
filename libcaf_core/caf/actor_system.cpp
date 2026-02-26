@@ -954,13 +954,13 @@ void actor_system::set_node(node_id id) {
   impl_->set_node(id);
 }
 
-void actor_system::message_rejected(abstract_actor* ptr) {
-  impl_->message_rejected(ptr);
-}
-
 } // namespace caf
 
 namespace caf::detail {
+
+void actor_system_access::message_rejected(abstract_actor* ptr) {
+  sys_->impl_->message_rejected(ptr);
+}
 
 detail::daemons* actor_system_access::daemons() {
   auto ptr = sys_->impl_->modules()[actor_system_module::daemons].get();
