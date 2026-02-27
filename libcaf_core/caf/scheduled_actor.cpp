@@ -16,6 +16,7 @@
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/mailbox_factory.hpp"
+#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
@@ -102,14 +103,21 @@ error scheduled_actor::default_exception_handler(local_actor* ptr,
   CAF_ASSERT(x != nullptr);
   try {
     std::rethrow_exception(x);
-  } catch (std::exception& e) {
-    auto pretty_type = detail::pretty_type_name(typeid(e));
+  } catch (const std::exception& e) {
+#  ifdef CAF_ENABLE_RTTI
+    auto pretty_type = detail::pretty_type_name(typeid(e).name());
     ptr->println(
       "*** unhandled exception: [id: {}, name: {}, exception: {}]: {}",
       ptr->id(), ptr->name(), pretty_type, e.what());
     return format_to_error(sec::runtime_error,
                            "unhandled exception of type {}: {}", pretty_type,
                            e.what());
+#  else
+    ptr->println("*** unhandled exception: [id: {}, name: {}]: {}", ptr->id(),
+                 ptr->name(), e.what());
+    return format_to_error(sec::runtime_error, "unhandled exception: {}",
+                           e.what());
+#  endif
   } catch (...) {
     ptr->println(
       "*** unhandled exception: [id: {}, name: {}]: unknown exception",
@@ -221,8 +229,10 @@ const char* scheduled_actor::name() const {
 }
 
 bool scheduled_actor::initialize(scheduler* ctx) {
+#ifdef CAF_ENABLE_RTTI
   auto lg = log::core::trace("subtype = {}",
-                             detail::pretty_type_name(typeid(*this)).c_str());
+                             detail::pretty_type_name(typeid(*this).name()));
+#endif
   CAF_ASSERT(!getf(is_initialized_flag));
   setf(is_initialized_flag);
   context(ctx);

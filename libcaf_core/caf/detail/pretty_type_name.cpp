@@ -6,21 +6,25 @@
 
 #include "caf/config.hpp"
 
-#if defined(CAF_LINUX) || defined(CAF_MACOS) || defined(CAF_BSD)
-#  define CAF_HAS_CXX_ABI
-#endif
+#ifdef CAF_ENABLE_RTTI
 
-#ifdef CAF_HAS_CXX_ABI
-#  include <cxxabi.h>
-#  include <sys/types.h>
-#  include <unistd.h>
-#endif
+#  if defined(CAF_LINUX) || defined(CAF_MACOS) || defined(CAF_BSD)
+#    define CAF_HAS_CXX_ABI
+#  endif
 
-#include "caf/string_algorithms.hpp"
+#  ifdef CAF_HAS_CXX_ABI
+#    include <cxxabi.h>
+#    include <sys/types.h>
+#    include <unistd.h>
+#  endif
+
+#  include "caf/string_algorithms.hpp"
 
 namespace caf::detail {
 
-void prettify_type_name(std::string& class_name) {
+namespace {
+
+void prettify_type_name_impl(std::string& class_name) {
   // replace_all(class_name, " ", "");
   replace_all(class_name, "::", ".");
   replace_all(class_name, "(anonymous namespace)", "ANON");
@@ -37,23 +41,38 @@ void prettify_type_name(std::string& class_name) {
   replace_all(class_name, " ", "%20");
 }
 
-void prettify_type_name(std::string& class_name, const char* c_class_name) {
-#ifdef CAF_HAS_CXX_ABI
+void prettify_type_name_impl(std::string& class_name,
+                             const char* c_class_name) {
+#  ifdef CAF_HAS_CXX_ABI
   int stat = 0;
   std::unique_ptr<char, decltype(free)*> real_class_name{nullptr, free};
   auto tmp = abi::__cxa_demangle(c_class_name, nullptr, nullptr, &stat);
   real_class_name.reset(tmp);
   class_name = stat == 0 ? real_class_name.get() : c_class_name;
-#else
+#  else
   class_name = c_class_name;
-#endif
-  prettify_type_name(class_name);
+#  endif
+  prettify_type_name_impl(class_name);
 }
 
-std::string pretty_type_name(const std::type_info& x) {
+} // namespace
+
+std::string pretty_type_name(const char* class_name) {
   std::string result;
-  prettify_type_name(result, x.name());
+  prettify_type_name_impl(result, class_name);
   return result;
 }
 
 } // namespace caf::detail
+
+#else // CAF_ENABLE_RTTI
+
+namespace caf::detail {
+
+std::string pretty_type_name(const char* class_name) {
+  return class_name;
+}
+
+} // namespace caf::detail
+
+#endif // CAF_ENABLE_RTTI

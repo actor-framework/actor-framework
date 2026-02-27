@@ -394,6 +394,7 @@ TEST("compare") {
   }
 }
 
+#ifdef CAF_ENABLE_RTTI
 TEST("downcast") {
   SECTION("successful downcast") {
     class0ptr base = make_counted<class1>();
@@ -418,6 +419,7 @@ TEST("downcast") {
   check_eq(class0_instances, 0);
   check_eq(class1_instances, 0);
 }
+#endif
 
 TEST("upcast") {
   SECTION("lvalue upcast adds reference") {

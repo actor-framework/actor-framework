@@ -91,3 +91,21 @@ jobs:
       - name: test
         run: ctest --test-dir build
 
+  no-rtti:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install-robot
+        run:  pip install -r robot/dependencies.txt
+      - name: configure
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -C .ci/linux/no-rtti.cmake
+      - name: build
+        run: cmake --build build
+      - name: test
+        run: ctest --test-dir build
+

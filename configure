@@ -60,6 +60,7 @@ Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
   protobuf-examples         build examples with Google Protobuf [OFF]
   qt6-examples              build examples with the Qt6 framework [OFF]
   robot-tests               add the Robot tests to CTest [OFF]
+  rtti                      build CAF with RTTI support [ON]
   runtime-checks            build CAF with extra runtime assertions [OFF]
   shared-libs               build shared library targets [ON]
   testing                   build unit test suites [ON]
@@ -108,6 +109,7 @@ set_build_flag() {
     protobuf-examples)       FlagName='CAF_ENABLE_PROTOBUF_EXAMPLES' ;;
     qt6-examples)            FlagName='CAF_ENABLE_QT6_EXAMPLES' ;;
     robot-tests)             FlagName='CAF_ENABLE_ROBOT_TESTS' ;;
+    rtti)                    FlagName='CAF_ENABLE_RTTI' ;;
     runtime-checks)          FlagName='CAF_ENABLE_RUNTIME_CHECKS' ;;
     shared-libs)             FlagName='BUILD_SHARED_LIBS' ;;
     testing)                 FlagName='CAF_ENABLE_TESTING' ;;

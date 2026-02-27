@@ -4,6 +4,7 @@
 
 #include "caf/openssl/manager.hpp"
 
+#include "caf/config.hpp"
 #include "caf/version.hpp"
 
 CAF_PUSH_WARNINGS
@@ -170,9 +171,12 @@ void manager::add_module_options(actor_system_config& cfg) {
 actor_system_module* manager::make(actor_system& sys) {
   if (!sys.has_middleman())
     CAF_RAISE_ERROR("Cannot start OpenSSL module without middleman.");
-  auto ptr = &sys.middleman().backend();
-  if (dynamic_cast<io::network::default_multiplexer*>(ptr) == nullptr)
+#ifdef CAF_ENABLE_RTTI
+  auto& backend = sys.middleman().backend();
+  if (dynamic_cast<io::network::default_multiplexer*>(&backend) == nullptr) {
     CAF_RAISE_ERROR("Cannot start OpenSSL module without default backend.");
+  }
+#endif
   return new manager(sys);
 }
 
