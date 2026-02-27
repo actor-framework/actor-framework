@@ -32,9 +32,8 @@ public:
 
   static std::unique_ptr<router> make(std::vector<route_ptr> routes);
 
-  static std::unique_ptr<router>
-  make(std::vector<route_ptr> routes,
-       ::caf::detail::connection_guard_ptr guard);
+  static std::unique_ptr<router> make(std::vector<route_ptr> routes,
+                                      detail::connection_guard_ptr guard);
 
   // -- properties -------------------------------------------------------------
 
