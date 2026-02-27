@@ -13,9 +13,9 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
-#include "caf/scheduled_actor.hpp"
 
 #include <list>
 #include <memory>
@@ -447,7 +447,7 @@ public:
   size_t mail_count();
 
   /// Returns the number of pending messages for `receiver`.
-  size_t mail_count(scheduled_actor* receiver);
+  size_t mail_count(local_actor* receiver);
 
   /// Returns the number of pending messages for `receiver`.
   size_t mail_count(const strong_actor_ptr& receiver);
@@ -650,12 +650,12 @@ public:
       return;
     }
     auto* base_ptr = actor_cast<abstract_actor*>(hdl);
-    auto* ptr = dynamic_cast<scheduled_actor*>(base_ptr);
+    auto* ptr = dynamic_cast<local_actor*>(base_ptr);
     if (ptr == nullptr) {
       return;
     }
     for (auto& event : *events_) {
-      if (event->target == ptr && event->item) {
+      if (event->target == ptr->as_resumable() && event->item) {
         fn(event->item->payload);
       }
     }

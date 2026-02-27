@@ -285,6 +285,10 @@ public:
 
   /// @cond
 
+  /// Returns a pointer to this actor as a resumable if this actor implements
+  /// the resumable interface. Returns `nullptr` otherwise.
+  virtual resumable* as_resumable() noexcept;
+
   auto& builtin_metrics() noexcept {
     return metrics_;
   }

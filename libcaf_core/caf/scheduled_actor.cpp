@@ -283,6 +283,10 @@ void scheduled_actor::on_cleanup(const error& reason) {
   super::on_cleanup(reason);
 }
 
+resumable* scheduled_actor::as_resumable() noexcept {
+  return this;
+}
+
 // -- overridden functions of resumable ----------------------------------------
 
 void scheduled_actor::ref_resumable() const noexcept {

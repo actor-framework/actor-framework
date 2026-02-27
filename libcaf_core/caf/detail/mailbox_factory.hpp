@@ -15,10 +15,7 @@ public:
   virtual ~mailbox_factory();
 
   /// Creates a new mailbox for `owner`.
-  virtual abstract_mailbox* make(scheduled_actor* owner) = 0;
-
-  /// Creates a new mailbox for `owner`.
-  virtual abstract_mailbox* make(blocking_actor* owner) = 0;
+  virtual abstract_mailbox* make(local_actor* owner) = 0;
 };
 
 } // namespace caf::detail
