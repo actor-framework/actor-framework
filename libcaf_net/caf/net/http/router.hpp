@@ -7,20 +7,16 @@
 #include "caf/net/actor_shell.hpp"
 #include "caf/net/http/arg_parser.hpp"
 #include "caf/net/http/lower_layer.hpp"
+#include "caf/net/http/request.hpp"
 #include "caf/net/http/responder.hpp"
 #include "caf/net/http/route.hpp"
 #include "caf/net/http/upper_layer.hpp"
 
 #include "caf/caf_deprecated.hpp"
 #include "caf/detail/connection_guard.hpp"
-#include "caf/detail/print.hpp"
 #include "caf/expected.hpp"
 
-#include <algorithm>
-#include <cassert>
-#include <string_view>
-#include <unordered_map>
-#include <utility>
+#include <memory>
 
 namespace caf::net::http {
 
@@ -29,12 +25,6 @@ namespace caf::net::http {
 class CAF_NET_EXPORT router : public upper_layer::server {
 public:
   // -- constructors and destructors -------------------------------------------
-
-  router();
-
-  explicit router(std::vector<route_ptr> routes);
-
-  router(std::vector<route_ptr> routes, detail::connection_guard_ptr guard);
 
   ~router() override;
 
@@ -48,68 +38,29 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns a pointer to the underlying HTTP layer.
-  lower_layer::server* down() {
-    return down_;
-  }
+  virtual lower_layer::server* down() = 0;
 
   /// Returns an @ref actor_shell for this router that enables routes to
   /// interact with actors.
-  actor_shell* self();
+  virtual actor_shell* self() = 0;
 
   // -- API for the responders -------------------------------------------------
 
   /// Lifts a @ref responder to an @ref request object that allows asynchronous
   /// processing of the HTTP request.
-  request lift(responder&& res);
+  virtual request lift(responder&& res) = 0;
 
   CAF_DEPRECATED("use abort_and_shutdown instead")
   void shutdown(const error& err);
 
-  void abort_and_shutdown(const error& err);
+  virtual void abort_and_shutdown(const error& err) = 0;
 
-  // -- http::upper_layer implementation ---------------------------------------
-
-  error start(lower_layer::server* down) override;
-
-  ptrdiff_t consume(const request_header& hdr,
-                    const_byte_span payload) override;
-
-  error begin_chunked_message(const net::http::request_header&) override;
-
-  error consume_chunk(const_byte_span) override;
-
-  error end_chunked_message() override;
-
-  void prepare_send() override;
-
-  bool done_sending() override;
-
-  void abort(const error& reason) override;
-
-private:
-  /// Handle to the underlying HTTP layer.
-  lower_layer::server* down_ = nullptr;
-
-  /// List of user-defined routes.
-  std::vector<route_ptr> routes_;
-
-  /// Generates ascending IDs for `pending_`.
-  size_t request_id_ = 0;
-
-  /// Keeps track of pending HTTP requests when lifting @ref responder objects.
-  std::unordered_map<size_t, disposable> pending_;
-
-  /// Keeps the request header for incoming chunked request.
-  request_header hdr_;
-
-  /// Aggregates chunks to request body for incoming chunked request.
-  byte_buffer body_;
-
-  /// Lazily initialized for allowing a @ref route to interact with actors.
-  actor_shell_ptr shell_;
-
-  /// Tracks connection lifetime for outstanding requests.
-  detail::connection_guard_ptr guard_;
+protected:
+  /// Creates a request from the given components. Only the router
+  /// implementation may construct requests.
+  static request make_request(request_header hdr, std::vector<std::byte> body,
+                              async::promise<response> prom,
+                              detail::connection_guard_ptr conn_guard);
 };
 
 } // namespace caf::net::http
