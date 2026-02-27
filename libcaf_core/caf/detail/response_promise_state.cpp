@@ -4,6 +4,7 @@
 
 #include "caf/detail/response_promise_state.hpp"
 
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
@@ -41,7 +42,8 @@ void response_promise_state::deliver_impl(message msg) {
     auto element = make_mailbox_element(self, id.response_id(), std::move(msg));
     source->enqueue(std::move(element), selfptr->context());
   } else {
-    selfptr->home_system().message_rejected(nullptr);
+    detail::actor_system_access access{selfptr->home_system()};
+    access.message_rejected(nullptr);
   }
   cancel();
 }
