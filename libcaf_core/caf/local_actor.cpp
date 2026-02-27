@@ -163,4 +163,10 @@ disposable local_actor::do_scheduled_anon_send(strong_actor_ptr receiver,
   return {};
 }
 
+// -- miscellaneous ------------------------------------------------------------
+
+resumable* local_actor::as_resumable() noexcept {
+  return nullptr;
+}
+
 } // namespace caf

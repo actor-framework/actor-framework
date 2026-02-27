@@ -65,23 +65,27 @@ size_t mail_count(const deterministic::events_list& events) {
 }
 
 size_t mail_count(const deterministic::events_list& events,
-                  scheduled_actor* receiver) {
+                  local_actor* receiver) {
   if (receiver == nullptr)
     return 0;
-  auto pred = [&](const auto& event) { return event->target == receiver; };
+  auto pred = [&](const auto& event) {
+    return event->target == receiver->as_resumable();
+  };
   return std::ranges::count_if(events, pred);
 }
 
 size_t mail_count(const deterministic::events_list& events,
                   const strong_actor_ptr& receiver) {
   auto raw_ptr = actor_cast<abstract_actor*>(receiver);
-  return mail_count(events, dynamic_cast<scheduled_actor*>(raw_ptr));
+  return mail_count(events, dynamic_cast<local_actor*>(raw_ptr));
 }
 
 /// Removes the next message for `receiver` from the queue and returns it.
 mailbox_element_ptr next_msg(deterministic::events_list& events,
-                             scheduled_actor* receiver) {
-  auto pred = [&](const auto& event) { return event->target == receiver; };
+                             local_actor* receiver) {
+  auto pred = [&](const auto& event) {
+    return event->target == receiver->as_resumable();
+  };
   auto first = events.begin();
   auto last = events.end();
   auto i = std::find_if(first, last, pred);
@@ -106,7 +110,7 @@ void drop_events(deterministic::events_list& events) {
 class deterministic_mailbox final : public ref_counted,
                                     public abstract_mailbox {
 public:
-  deterministic_mailbox(events_list_ptr events, scheduled_actor* owner)
+  deterministic_mailbox(events_list_ptr events, local_actor* owner)
     : events_(std::move(events)), owner_(owner) {
   }
 
@@ -118,7 +122,8 @@ public:
     }
     using event_t = deterministic::scheduling_event;
     auto unblocked = mail_count(*events_, owner_) == 0;
-    auto event = std::make_unique<event_t>(owner_, std::move(ptr));
+    auto event = std::make_unique<event_t>(owner_->as_resumable(),
+                                           std::move(ptr));
     events_->push_back(std::move(event));
     return unblocked ? intrusive::inbox_result::unblocked_reader
                      : intrusive::inbox_result::success;
@@ -126,7 +131,8 @@ public:
 
   void push_front(mailbox_element_ptr ptr) override {
     using event_t = deterministic::scheduling_event;
-    auto event = std::make_unique<event_t>(owner_, std::move(ptr));
+    auto event = std::make_unique<event_t>(owner_->as_resumable(),
+                                           std::move(ptr));
     events_->emplace_front(std::move(event));
   }
 
@@ -185,7 +191,7 @@ private:
   bool closed_ = false;
   error close_reason_;
   deterministic::events_list_ptr events_;
-  scheduled_actor* owner_;
+  local_actor* owner_;
 };
 
 class deterministic_mailbox_factory final : public detail::mailbox_factory {
@@ -195,12 +201,12 @@ public:
     // nop
   }
 
-  abstract_mailbox* make(scheduled_actor* owner) override {
+  abstract_mailbox* make(local_actor* owner) override {
+    if (owner->as_resumable() == nullptr) {
+      detail::critical("deterministic_mailbox_factory: "
+                       "actor does not implement the resumable interface");
+    }
     return new deterministic_mailbox(events_, owner);
-  }
-
-  abstract_mailbox* make(blocking_actor*) override {
-    return nullptr;
   }
 
 private:
@@ -461,9 +467,9 @@ public:
     // Actors put their messages into events_ directly when calling `push_back`
     // on the mailbox. We simply ignore the delay/schedule calls from actors
     // here except for initialization events (which we simply inline here).
-    if (auto* self = dynamic_cast<scheduled_actor*>(ptr)) {
+    if (auto* self = dynamic_cast<local_actor*>(ptr)) {
       if (event_id == resumable::initialization_event_id) {
-        self->activate(this);
+        self->initialize(this);
       }
     } else {
       // "Regular" resumables still need to be scheduled here.
@@ -819,7 +825,7 @@ size_t deterministic::mail_count() {
   return fixture::mail_count(*events_);
 }
 
-size_t deterministic::mail_count(scheduled_actor* receiver) {
+size_t deterministic::mail_count(local_actor* receiver) {
   return fixture::mail_count(*events_, receiver);
 }
 
