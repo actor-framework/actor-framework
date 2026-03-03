@@ -354,9 +354,13 @@ protected:
       auto delta = bytes.subspan(delta_offset_);
       auto consumed = up_->consume(bytes, delta);
       if (consumed < 0) {
-        // Negative values indicate that the application wants to close the
-        // socket. We still make sure to send any pending data before closing.
-        up_->abort(make_error(caf::sec::runtime_error, "consumed < 0"));
+        // Negative values indicate that the upper layer wants to close the
+        // connection. The upper layer has already performed its shutdown logic
+        // (e.g., WebSocket framing sends a close frame and calls
+        // down_->shutdown() before returning). Calling up_->abort() here would
+        // cause protocols like WebSocket to send a duplicate close frame. We
+        // only need to propagate the shutdown to flush the write buffer and
+        // close.
         shutdown();
         return;
       }

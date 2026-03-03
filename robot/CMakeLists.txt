@@ -117,7 +117,9 @@ if(TARGET CAF::net AND CAF_ENABLE_EXAMPLES)
     web-socket
     echo
     --variable BINARY_PATH:$<TARGET_FILE:echo>
-    --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR})
+    --variable SSL_PATH:${CMAKE_CURRENT_SOURCE_DIR}
+    --variable PYTHON:${Python_EXECUTABLE}
+    --variable CLOSE_FRAME_SCRIPT:${CMAKE_SOURCE_DIR}/scripts/websocket-close-frame-test.py)
 
   add_robot_test(
     web-socket
