@@ -127,7 +127,7 @@ scheduled_actor::batch_forwarder::~batch_forwarder() {
 }
 
 scheduled_actor::scheduled_actor(actor_config& cfg)
-  : super(cfg),
+  : super(cfg.add_flag(is_scheduled_actor_flag)),
     default_handler_(print_and_drop),
     error_handler_(default_error_handler),
     down_handler_(default_down_handler),

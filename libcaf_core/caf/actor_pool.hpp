@@ -88,7 +88,7 @@ public:
 
   bool enqueue(mailbox_element_ptr what, scheduler* sched) override;
 
-  actor_pool(actor_config& cfg);
+  explicit actor_pool(actor_config& cfg);
 
   const char* name() const override;
 

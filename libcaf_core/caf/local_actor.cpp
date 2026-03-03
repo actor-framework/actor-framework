@@ -30,7 +30,7 @@
 namespace caf {
 
 local_actor::local_actor(actor_config& cfg)
-  : abstract_actor(cfg),
+  : abstract_actor(cfg.add_flag(is_local_actor_flag)),
     context_(cfg.sched),
     current_element_(nullptr),
     initial_behavior_fac_(std::move(cfg.init_fun)) {

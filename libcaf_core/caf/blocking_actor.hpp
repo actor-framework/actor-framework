@@ -161,7 +161,7 @@ public:
 
   // -- constructors and destructors -------------------------------------------
 
-  blocking_actor(actor_config& cfg);
+  explicit blocking_actor(actor_config& cfg);
 
   ~blocking_actor() override;
 

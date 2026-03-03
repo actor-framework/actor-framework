@@ -53,7 +53,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  local_actor(actor_config& cfg);
+  explicit local_actor(actor_config& cfg);
 
   ~local_actor() override;
 
