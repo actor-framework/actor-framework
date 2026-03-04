@@ -171,7 +171,7 @@ public:
   explicit actor_system(actor_system_config& cfg,
                         version::abi_token = make_abi_token());
 
-  virtual ~actor_system();
+  ~actor_system();
 
   /// A message passing interface (MPI) in run-time checkable representation.
   using mpi = std::set<std::string>;

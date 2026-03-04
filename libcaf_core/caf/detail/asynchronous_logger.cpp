@@ -7,7 +7,9 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/chunked_string.hpp"
+#include "caf/console_printer.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/get_process_id.hpp"
@@ -21,6 +23,7 @@
 #include "caf/log/event.hpp"
 #include "caf/log/level.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/placement_ptr.hpp"
 #include "caf/term.hpp"
 #include "caf/thread_owner.hpp"
 #include "caf/timestamp.hpp"
@@ -37,6 +40,66 @@
 namespace caf {
 
 namespace {
+
+class plain_console_printer : public console_printer {
+public:
+  explicit plain_console_printer(FILE* out) noexcept : out_(out) {
+    CAF_ASSERT(out_ != nullptr);
+  }
+
+  void print(term, const char* buf, size_t len) override {
+    fwrite(buf, 1, len, out_);
+  }
+
+private:
+  FILE* out_;
+};
+
+class colored_console_printer : public console_printer {
+public:
+  explicit colored_console_printer(FILE* out) noexcept : out_(out) {
+    CAF_ASSERT(out_ != nullptr);
+  }
+
+  void print(term color, const char* buf, size_t len) override {
+    detail::set_color(out_, color);
+    fwrite(buf, 1, len, out_);
+    detail::set_color(out_, term::reset);
+  }
+
+private:
+  FILE* out_;
+};
+
+class plain_system_printer : public console_printer {
+public:
+  explicit plain_system_printer(detail::actor_system_impl* sys) noexcept
+    : sys_(sys) {
+    CAF_ASSERT(sys_ != nullptr);
+  }
+
+  void print(term, const char* buf, size_t len) override {
+    sys_->do_print(term::reset, buf, len);
+  }
+
+private:
+  detail::actor_system_impl* sys_;
+};
+
+class colored_system_printer : public console_printer {
+public:
+  explicit colored_system_printer(detail::actor_system_impl* sys) noexcept
+    : sys_(sys) {
+    CAF_ASSERT(sys_ != nullptr);
+  }
+
+  void print(term color, const char* buf, size_t len) override {
+    sys_->do_print(color, buf, len);
+  }
+
+private:
+  detail::actor_system_impl* sys_;
+};
 
 // The default capacity of the render buffer in bytes for pre-allocated memory.
 constexpr size_t default_render_buffer_capacity = 1024;
@@ -83,6 +146,14 @@ public:
       fwrite(buf_.data(), 1, buf_.size(), out);
       fflush(out);
     }
+  }
+
+  const char* data() const noexcept {
+    return buf_.data();
+  }
+
+  size_t size() const noexcept {
+    return buf_.size();
   }
 
 private:
@@ -136,6 +207,24 @@ struct file_deleter {
   }
 };
 
+// Storage for the console printer.
+struct console_printer_storage {
+  console_printer_storage() noexcept {
+    // nop
+  }
+
+  ~console_printer_storage() noexcept {
+    // nop
+  }
+
+  union {
+    plain_console_printer stderr_plain;
+    colored_console_printer stderr_colored;
+    plain_system_printer system_plain;
+    colored_system_printer system_colored;
+  };
+};
+
 // RAII wrapper for FILE*.
 using file_ptr = std::unique_ptr<FILE, file_deleter>;
 
@@ -178,14 +267,6 @@ public:
 
     /// Configures the verbosity for console output.
     unsigned console_verbosity = log::level::quiet;
-
-    /// Configures whether the logger immediately writes its output in the
-    /// calling thread, bypassing its queue. Use this option only in
-    /// single-threaded test environments.
-    bool inline_output = false;
-
-    /// Configures whether the logger generates colored output.
-    bool console_coloring = false;
   };
 
   /// Represents a single format string field.
@@ -200,7 +281,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit default_logger(actor_system& sys)
-    : t0_(make_timestamp()), system_(sys) {
+    : t0_(make_timestamp()), system_(&sys) {
     log_level_names_.set("WARN", log::level::warning);
     namespace lg = defaults::logger;
     using std::string;
@@ -216,7 +297,6 @@ public:
       if (auto lst = get_as<string_list>(cfg, key))
         var = std::move(*lst);
     };
-    cfg_.inline_output = get_or(cfg, "caf.scheduler.policy", "") == "testing";
     cfg_.file_verbosity = get_verbosity("caf.logger.file.verbosity");
     cfg_.console_verbosity = get_verbosity("caf.logger.console.verbosity");
     cfg_.verbosity = std::max(cfg_.file_verbosity, cfg_.console_verbosity);
@@ -247,7 +327,31 @@ public:
         = parse_format(get_or(cfg, "caf.logger.file.format", lg::file::format));
       console_format_ = parse_format(
         get_or(cfg, "caf.logger.console.format", lg::console::format));
-      cfg_.console_coloring = get_or(cfg, "caf.logger.console.colored", true);
+      auto console_coloring = get_or(cfg, "caf.logger.console.colored", true);
+      auto print_to_stderr = [&cfg] {
+        if (auto str = get_if<string>(&cfg, "caf.logger.console.stream")) {
+          return !icase_equal(*str, "system");
+        }
+        return true;
+      };
+      if (print_to_stderr()) {
+        if (console_coloring) {
+          auto* storage = &console_printer_storage_.stderr_colored;
+          console_printer_.reset(new (storage) colored_console_printer(stderr));
+        } else {
+          auto* storage = &console_printer_storage_.stderr_plain;
+          console_printer_.reset(new (storage) plain_console_printer(stderr));
+        }
+      } else {
+        auto* sys = detail::actor_system_access{*system_}.impl();
+        if (console_coloring) {
+          auto* storage = &console_printer_storage_.system_colored;
+          console_printer_.reset(new (storage) colored_system_printer(sys));
+        } else {
+          auto* storage = &console_printer_storage_.system_plain;
+          console_printer_.reset(new (storage) plain_system_printer(sys));
+        }
+      }
     }
   }
 
@@ -256,10 +360,7 @@ public:
   /// Writes an entry to the event-queue of the logger.
   /// @threadsafe
   void do_log(log::event_ptr&& event) override {
-    if (cfg_.inline_output)
-      handle_event(*event);
-    else
-      queue_.push(std::move(event));
+    queue_.push(std::move(event));
   }
 
   // -- properties -------------------------------------------------------------
@@ -432,34 +533,28 @@ public:
       return;
     buf_.clear();
     render(buf_, console_format_, x);
-    if (cfg_.console_coloring) {
-      term color = term::reset;
-      switch (x.level()) {
-        default:
-          break;
-        case log::level::error:
-          color = term::red;
-          break;
-        case log::level::warning:
-          color = term::yellow;
-          break;
-        case log::level::info:
-          color = term::green;
-          break;
-        case log::level::debug:
-          color = term::cyan;
-          break;
-        case log::level::trace:
-          color = term::blue;
-          break;
-      }
-      detail::set_color(stderr, color);
-      buf_.write_to(stderr);
-      detail::set_color(stderr, term::reset_endl);
-    } else {
-      buf_.append('\n');
-      buf_.write_to(stderr);
+    buf_.append('\n');
+    term color = term::reset;
+    switch (x.level()) {
+      default:
+        break;
+      case log::level::error:
+        color = term::red;
+        break;
+      case log::level::warning:
+        color = term::yellow;
+        break;
+      case log::level::info:
+        color = term::green;
+        break;
+      case log::level::debug:
+        color = term::cyan;
+        break;
+      case log::level::trace:
+        color = term::blue;
+        break;
     }
+    console_printer_->print(color, buf_.data(), buf_.size());
   }
 
   void log_first_line() {
@@ -472,13 +567,12 @@ public:
       msg = "verbosity = ";
       msg.insert(msg.end(), lvl_str.begin(), lvl_str.end());
       msg += ", node = ";
-      msg += to_string(system_.node());
+      msg += to_string(system_->node());
       msg += ", excluded-components = ";
       detail::stringification_inspector f{msg};
       detail::save(f, filter);
       return msg;
     };
-    namespace lg = defaults::logger;
     set_message(cfg_.file_verbosity, file_filter_);
     auto file_event = log::event::make(log::level::debug, log::core::component,
                                        std::source_location::current(), 0, msg);
@@ -524,7 +618,7 @@ public:
     parent_thread_ = std::this_thread::get_id();
     if (verbosity() == log::level::quiet)
       return;
-    file_name_ = get_or(system_.config(), "caf.logger.file.path",
+    file_name_ = get_or(system_->config(), "caf.logger.file.path",
                         defaults::logger::file::path);
     if (file_name_.empty()) {
       // No need to continue if console and log file are disabled.
@@ -550,32 +644,22 @@ public:
       i = std::search(file_name_.begin(), file_name_.end(), std::begin(node),
                       std::end(node) - 1);
       if (i != file_name_.end()) {
-        auto nid = to_string(system_.node());
+        auto nid = to_string(system_->node());
         file_name_.replace(i, i + sizeof(node) - 1, nid);
       }
     }
-    if (cfg_.inline_output) {
-      // Open file immediately for inline output.
-      open_file();
-      log_first_line();
-    } else {
-      // Note: we don't call system_->launch_thread here since we don't want to
-      //       set a logger context in the logger thread.
-      auto f = [this](auto) {
-        detail::set_thread_name("caf.logger");
-        system_.thread_started(thread_owner::system);
-        run();
-        system_.thread_terminates();
-      };
-      thread_ = std::thread{f, detail::global_meta_objects_guard()};
-    }
+    // Note: we don't call system_->launch_thread here since we don't want to
+    //       set a logger context in the logger thread.
+    auto f = [this](auto) {
+      detail::set_thread_name("caf.logger");
+      system_->thread_started(thread_owner::system);
+      run();
+      system_->thread_terminates();
+    };
+    thread_ = std::thread{f, detail::global_meta_objects_guard()};
   }
 
   void stop() override {
-    if (cfg_.inline_output) {
-      log_last_line();
-      return;
-    }
     if (!thread_.joinable())
       return;
     // Send an empty message to the logger thread to make it terminate.
@@ -607,11 +691,17 @@ public:
   // Format for generating console output.
   line_format console_format_;
 
+  // Buffer for rendering log output before writing.
+  render_buffer buf_;
+
   // File handle for file output.
   file_ptr file_;
 
-  // Buffer for rendering log output before writing.
-  render_buffer buf_;
+  // Handle for the console printer.
+  placement_ptr<console_printer> console_printer_;
+
+  // Storage for the object that console_printer_ points to.
+  console_printer_storage console_printer_storage_;
 
   // Filled with log events by other threads.
   detail::sync_ring_buffer<log::event_ptr, queue_size> queue_;
@@ -626,7 +716,7 @@ public:
   timestamp t0_;
 
   // References the parent system.
-  actor_system& system_;
+  actor_system* system_;
 
   // Maps log levels to their string representation and vice versa.
   detail::log_level_map log_level_names_;

@@ -151,7 +151,6 @@ caf_add_component(
     caf/detached_actors.test.cpp
     caf/detail/abstract_worker.cpp
     caf/detail/abstract_worker_hub.cpp
-    caf/detail/actor_system_access.cpp
     caf/detail/actor_system_impl.cpp
     caf/detail/aligned_alloc.cpp
     caf/detail/assert.cpp

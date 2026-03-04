@@ -13,8 +13,68 @@
 #include "caf/log/level.hpp"
 #include "caf/scoped_actor.hpp"
 
+#include <filesystem>
+
 using namespace caf;
 using namespace std::literals;
+
+namespace {
+
+struct mock_console_printer : public console_printer {
+  void print(term color, const char* buf, size_t len) override {
+    if (color <= term::reset_endl) {
+      lines.emplace_back(buf, len);
+    } else {
+      auto color_name = to_string(color);
+      lines.push_back(detail::format("<{}>{}</{}>\n", color_name,
+                                     std::string_view{buf, len}, color_name));
+    }
+  }
+
+  std::vector<std::string> lines;
+};
+
+std::unique_ptr<console_printer> make_mock_console_printer() {
+  return std::make_unique<mock_console_printer>();
+}
+
+struct test_config : public actor_system_config {
+  test_config() {
+    console_printer_factory(make_mock_console_printer);
+    set("caf.logger.console.stream", "system");
+    set("caf.logger.file.path", ".caf-logger-test/output.log");
+  }
+};
+
+struct fixture {
+  fixture() : temp_dir(std::filesystem::current_path() / ".caf-logger-test") {
+    std::error_code err;
+    std::filesystem::create_directories(temp_dir, err);
+    if (err) {
+      auto msg = detail::format("failed to create directory '{}': {}\n",
+                                temp_dir.string(), err.message());
+      fputs(msg.c_str(), stderr);
+    }
+    cfg.set("caf.logger.file.path", (temp_dir / "output.log").string());
+  }
+
+  ~fixture() {
+    std::error_code err;
+    std::filesystem::remove_all(temp_dir, err);
+    if (err) {
+      auto msg = detail::format("failed to remove directory '{}': {}\n",
+                                temp_dir.string(), err.message());
+      fputs(msg.c_str(), stderr);
+    }
+  }
+
+  test_config cfg;
+  std::filesystem::path temp_dir;
+};
+
+} // namespace
+
+WITH_FIXTURE(fixture) {
 
 TEST("line_builder appends strings with space separators") {
   SECTION("string_view") {
@@ -40,7 +100,6 @@ TEST("line_builder appends strings with space separators") {
 }
 
 TEST("asynchronous_logger::make returns a non-null intrusive_ptr") {
-  actor_system_config cfg;
   actor_system sys{cfg};
   auto lg = detail::asynchronous_logger::make(sys);
   check_ne(lg, nullptr);
@@ -52,12 +111,10 @@ TEST("current_logger get and set") {
     check_eq(logger::current_logger(), nullptr);
   }
   SECTION("is automatically set when creating an actor system") {
-    actor_system_config cfg;
     actor_system sys{cfg};
     check_ne(logger::current_logger(), nullptr);
   }
   SECTION("can be manually set to a specific actor system") {
-    actor_system_config cfg;
     actor_system sys{cfg};
     logger::current_logger(nullptr);
     check_eq(logger::current_logger(), nullptr);
@@ -66,7 +123,6 @@ TEST("current_logger get and set") {
   }
   SECTION("is null after actor system is destroyed") {
     {
-      actor_system_config cfg;
       actor_system sys{cfg};
     }
     check_eq(logger::current_logger(), nullptr);
@@ -78,7 +134,6 @@ TEST("thread_local_aid returns the current actor ID") {
     check_eq(logger::thread_local_aid(), 0u);
   }
   SECTION("returns scoped_actor ID when scoped_actor is active") {
-    actor_system_config cfg;
     actor_system sys{cfg};
     scoped_actor self{sys};
     check_eq(logger::thread_local_aid(), self->id());
@@ -87,7 +142,6 @@ TEST("thread_local_aid returns the current actor ID") {
 
 SCENARIO("logger accepts returns false for levels above verbosity") {
   GIVEN("an actor system with warning verbosity") {
-    actor_system_config cfg;
     cfg.set("caf.logger.console.verbosity", "warning");
     actor_system sys{cfg};
     WHEN("checking accepts for each level") {
@@ -104,7 +158,6 @@ SCENARIO("logger accepts returns false for levels above verbosity") {
 
 SCENARIO("loggers reject excluded components") {
   GIVEN("an actor system with excluded core component for file and console") {
-    actor_system_config cfg;
     cfg.set("caf.logger.console.excluded-components", R"(["core"])");
     cfg.set("caf.logger.file.excluded-components", R"(["core"])");
     cfg.set("caf.logger.console.verbosity", "trace");
@@ -121,7 +174,6 @@ SCENARIO("loggers reject excluded components") {
     }
   }
   GIVEN("an actor system with excluded core component for console only") {
-    actor_system_config cfg;
     cfg.set("caf.logger.console.excluded-components", R"(["core"])");
     cfg.set("caf.logger.console.verbosity", "trace");
     cfg.set("caf.logger.file.verbosity", "trace");
@@ -137,7 +189,6 @@ SCENARIO("loggers reject excluded components") {
     }
   }
   GIVEN("an actor system with excluded core component for file only") {
-    actor_system_config cfg;
     cfg.set("caf.logger.file.excluded-components", R"(["core"])");
     cfg.set("caf.logger.console.verbosity", "trace");
     cfg.set("caf.logger.file.verbosity", "trace");
@@ -153,3 +204,5 @@ SCENARIO("loggers reject excluded components") {
     }
   }
 }
+
+} // WITH_FIXTURE(fixture)

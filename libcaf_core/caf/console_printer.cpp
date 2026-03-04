@@ -6,7 +6,7 @@
 
 namespace caf {
 
-console_printer::~console_printer() {
+console_printer::~console_printer() noexcept {
   // nop
 }
 

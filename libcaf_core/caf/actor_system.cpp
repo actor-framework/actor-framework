@@ -958,13 +958,25 @@ void actor_system::set_node(node_id id) {
 
 namespace caf::detail {
 
-void actor_system_access::message_rejected(abstract_actor* ptr) {
-  sys_->impl_->message_rejected(ptr);
+actor_system_impl* actor_system_access::impl() noexcept {
+  return sys_->impl_.get();
+}
+
+void actor_system_access::node(node_id id) {
+  impl()->set_node(id);
+}
+
+detail::mailbox_factory* actor_system_access::mailbox_factory() {
+  return impl()->mailbox_factory();
 }
 
 detail::daemons* actor_system_access::daemons() {
-  auto ptr = sys_->impl_->modules()[actor_system_module::daemons].get();
+  auto* ptr = impl()->modules()[actor_system_module::daemons].get();
   return static_cast<detail::daemons*>(ptr);
+}
+
+void actor_system_access::message_rejected(abstract_actor* ptr) {
+  impl()->message_rejected(ptr);
 }
 
 } // namespace caf::detail
