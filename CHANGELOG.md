@@ -55,6 +55,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   standard, so servers responding with lowercase headers like `upgrade` instead
   of `Upgrade` were incorrectly rejected.
 - Fix an indexing bug when using `message_builder::append_tuple`.
+- Fix handling of fixture management in the unit test framework. Previously, CAF
+  would create a new instance of the fixture before destroying the previous
+  instance. This could lead to surprising results if a fixture has globally
+  visible side effects in its constructor or destructor. By always deleting the
+  previous fixture instance before creating a new one, we ensure that only one
+  fixture instance exists at any time.
 
 ## [1.1.0] - 2025-07-25
 
