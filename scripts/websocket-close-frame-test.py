@@ -39,8 +39,12 @@ def main() -> int:
                 print(f"Received echo: {data!r}")
             elif opcode == ABNF.OPCODE_BINARY:
                 print(f"Received binary: {data!r}")
-        except Exception:
-            pass  # May have closed already
+        except websocket.WebSocketConnectionClosedException:
+            # Connection may have been closed already; ignore.
+            pass
+        except Exception as e:
+            print(f"Unexpected error while receiving initial frame: {e}", file=sys.stderr)
+            raise
         # Send close frame
         print("Sending close frame...")
         ws.send_close(status=1000, reason=b"Client closing")
@@ -63,7 +67,6 @@ def main() -> int:
                 opcode_name = opcode_names.get(frame.opcode, f"unknown({frame.opcode})")
                 if frame.opcode == ABNF.OPCODE_CLOSE:
                     close_frames.append(frame)
-                    # Parse close payload: 2-byte status code (big-endian) + optional reason
                     payload = frame.data
                     if len(payload) >= 2:
                         status = (payload[0] << 8) | payload[1]
