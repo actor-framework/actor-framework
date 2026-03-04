@@ -54,13 +54,6 @@ public:
   void shutdown(const error& err);
 
   virtual void abort_and_shutdown(const error& err) = 0;
-
-protected:
-  /// Creates a request from the given components. Only the router
-  /// implementation may construct requests.
-  static request make_request(request_header hdr, std::vector<std::byte> body,
-                              async::promise<response> prom,
-                              detail::connection_guard_ptr conn_guard);
 };
 
 } // namespace caf::net::http

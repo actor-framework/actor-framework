@@ -71,8 +71,8 @@ public:
     auto fut = prom.get_future();
     auto buf = std::vector<std::byte>{res.payload().begin(),
                                       res.payload().end()};
-    auto lifted = router::make_request(res.header(), std::move(buf),
-                                       std::move(prom), guard_);
+    auto lifted = request{res.header(), std::move(buf), std::move(prom),
+                          guard_};
     auto request_id = request_id_++;
     auto hdl = fut.bind_to(down_->mpx())
                  .then(
@@ -167,15 +167,6 @@ private:
 
 router::~router() {
   // nop
-}
-
-// -- protected factory -------------------------------------------------------
-
-request router::make_request(request_header hdr, std::vector<std::byte> body,
-                             async::promise<response> prom,
-                             detail::connection_guard_ptr conn_guard) {
-  return request{std::move(hdr), std::move(body), std::move(prom),
-                 std::move(conn_guard)};
 }
 
 // -- factories ----------------------------------------------------------------
