@@ -25,9 +25,11 @@ namespace caf::net::http {
 /// promise for the HTTP response.
 class CAF_NET_EXPORT request {
 public:
-  friend class router;
-
   class impl;
+
+  request(request_header hdr, std::vector<std::byte> body,
+          async::promise<response> prom,
+          detail::connection_guard_ptr conn_guard);
 
   request() noexcept = default;
 
@@ -71,10 +73,6 @@ public:
   [[nodiscard]] bool orphaned() const noexcept;
 
 private:
-  request(request_header hdr, std::vector<std::byte> body,
-          async::promise<response> prom,
-          detail::connection_guard_ptr conn_guard);
-
   impl* impl_ = nullptr;
 };
 

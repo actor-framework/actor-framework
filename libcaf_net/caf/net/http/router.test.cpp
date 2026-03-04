@@ -12,6 +12,7 @@
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include <memory>
 #include <source_location>
 
 using namespace caf;
@@ -158,7 +159,7 @@ struct fixture {
   std::thread mpx_thread;
   std::string req;
   http::request_header hdr;
-  http::router rt;
+  std::unique_ptr<http::router> rt = http::router::make({});
   std::vector<config_value> args;
 };
 
@@ -217,33 +218,33 @@ SCENARIO("routes must have one 'arg' entry per argument") {
         if (auto res = make_route("/", [](responder&) {});
             check(res.has_value())) {
           set_get_request("/");
-          check((*res)->exec(hdr, {}, &rt));
+          check((*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
         }
         if (auto res = make_route("/foo/bar", http::method::get,
                                   [](responder&) {});
             check(res.has_value())) {
           set_get_request("/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/bar/baz");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_post_request("/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/bar");
-          check((*res)->exec(hdr, {}, &rt));
+          check((*res)->exec(hdr, {}, rt.get()));
         }
         if (auto res = make_route(
               "/<arg>", [this](responder&, int x) { args = make_args(x); });
             check(res.has_value())) {
           set_get_request("/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/42");
-          if (check((*res)->exec(hdr, {}, &rt)))
+          if (check((*res)->exec(hdr, {}, rt.get())))
             check_eq(args, make_args(42));
         }
         if (auto res
@@ -251,11 +252,11 @@ SCENARIO("routes must have one 'arg' entry per argument") {
                          [this](responder&, int x) { args = make_args(x); });
             check(res.has_value())) {
           set_get_request("/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/123/bar");
-          if (check((*res)->exec(hdr, {}, &rt)))
+          if (check((*res)->exec(hdr, {}, rt.get())))
             check_eq(args, make_args(123));
         }
         if (auto res = make_route("/foo/<arg>/bar",
@@ -264,11 +265,11 @@ SCENARIO("routes must have one 'arg' entry per argument") {
                                   });
             check(res.has_value())) {
           set_get_request("/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/my-arg/bar");
-          if (check((*res)->exec(hdr, {}, &rt)))
+          if (check((*res)->exec(hdr, {}, rt.get())))
             check_eq(args, make_args("my-arg"s));
         }
         if (auto res = make_route("/<arg>/<arg>/<arg>",
@@ -277,11 +278,11 @@ SCENARIO("routes must have one 'arg' entry per argument") {
                                   });
             check(res.has_value())) {
           set_get_request("/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("/1/true/3?foo=bar");
-          if (check((*res)->exec(hdr, {}, &rt)))
+          if (check((*res)->exec(hdr, {}, rt.get())))
             check_eq(args, make_args(1, true, 3));
         }
       }
@@ -291,35 +292,35 @@ SCENARIO("routes must have one 'arg' entry per argument") {
         if (auto res = make_route("/", [](responder&) {});
             check(res.has_value())) {
           set_get_request("http://example.com");
-          check((*res)->exec(hdr, {}, &rt));
+          check((*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/");
-          check((*res)->exec(hdr, {}, &rt));
+          check((*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
         }
         if (auto res = make_route("/foo/bar", http::method::get,
                                   [](responder&) {});
             check(res.has_value())) {
           set_get_request("http://example.com/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/bar/baz");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_post_request("http://example.com/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/bar");
-          check((*res)->exec(hdr, {}, &rt));
+          check((*res)->exec(hdr, {}, rt.get()));
         }
         if (auto res = make_route(
               "/<arg>", [this](responder&, int x) { args = make_args(x); });
             check(res.has_value())) {
           set_get_request("http://example.com/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/42");
-          if (check((*res)->exec(hdr, {}, &rt)))
+          if (check((*res)->exec(hdr, {}, rt.get())))
             check_eq(args, make_args(42));
         }
         if (auto res
@@ -327,11 +328,11 @@ SCENARIO("routes must have one 'arg' entry per argument") {
                          [this](responder&, int x) { args = make_args(x); });
             check(res.has_value())) {
           set_get_request("http://example.com/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/123/bar");
-          if (check((*res)->exec(hdr, {}, &rt)))
+          if (check((*res)->exec(hdr, {}, rt.get())))
             check_eq(args, make_args(123));
         }
         if (auto res = make_route("/foo/<arg>/bar",
@@ -340,11 +341,11 @@ SCENARIO("routes must have one 'arg' entry per argument") {
                                   });
             check(res.has_value())) {
           set_get_request("http://example.com/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/my-arg/bar");
-          if (check((*res)->exec(hdr, {}, &rt)))
+          if (check((*res)->exec(hdr, {}, rt.get())))
             check_eq(args, make_args("my-arg"s));
         }
         if (auto res = make_route("/<arg>/<arg>/<arg>",
@@ -353,11 +354,11 @@ SCENARIO("routes must have one 'arg' entry per argument") {
                                   });
             check(res.has_value())) {
           set_get_request("http://example.com/");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/foo/bar");
-          check(!(*res)->exec(hdr, {}, &rt));
+          check(!(*res)->exec(hdr, {}, rt.get()));
           set_get_request("http://example.com/1/true/3?foo=bar");
-          if (check((*res)->exec(hdr, {}, &rt)))
+          if (check((*res)->exec(hdr, {}, rt.get())))
             check_eq(args, make_args(1, true, 3));
         }
       }
@@ -391,9 +392,9 @@ SCENARIO("catch-all routes match any path") {
       THEN("the factory produces a valid callback") {
         if (auto res = make_route([](responder&) {}); check(res.has_value())) {
           set_get_request("/foo");
-          check((*res)->exec(hdr, {}, &rt));
+          check((*res)->exec(hdr, {}, rt.get()));
           set_post_request("/foo/bar");
-          check((*res)->exec(hdr, {}, &rt));
+          check((*res)->exec(hdr, {}, rt.get()));
         }
       }
     }
