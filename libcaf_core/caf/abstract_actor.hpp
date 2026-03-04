@@ -203,6 +203,9 @@ public:
   /// Indicates that the actor inherits from `scheduled_actor`.
   static constexpr int is_scheduled_actor_flag = 0x00'02'00'00;
 
+  /// Identifies the implementation type of a scoped actor.
+  static constexpr int is_scoped_actor_impl_flag = 0x00'04'00'00;
+
   void setf(int flag) noexcept {
     auto x = flags();
     flags(x | flag);
@@ -225,6 +228,11 @@ public:
   /// Checks whether this actor inherits from `scheduled_actor`.
   bool is_scheduled_actor() const noexcept {
     return getf(is_scheduled_actor_flag);
+  }
+
+  /// Checks whether this actor is a scoped actor implementation.
+  bool is_scoped_actor_impl() const noexcept {
+    return getf(is_scoped_actor_impl_flag);
   }
 
   /// Calls `fun` with exclusive access to an actor's state.

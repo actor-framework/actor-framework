@@ -63,16 +63,26 @@ public:
   virtual size_t size() = 0;
 
   /// Increases the reference count by one.
-  virtual void ref_mailbox() noexcept = 0;
+  virtual void ref_mailbox() const noexcept = 0;
 
   /// Decreases the reference count by one and deletes this instance if the
   /// reference count drops to zero.
-  virtual void deref_mailbox() noexcept = 0;
+  virtual void deref_mailbox() const noexcept = 0;
 
   /// Checks whether the mailbox is empty.
   bool empty() {
     return size() == 0;
   }
 };
+
+inline void intrusive_ptr_add_ref(const abstract_mailbox* ptr) noexcept {
+  ptr->ref_mailbox();
+}
+
+inline void intrusive_ptr_release(const abstract_mailbox* ptr) noexcept {
+  ptr->deref_mailbox();
+}
+
+using abstract_mailbox_ptr = intrusive_ptr<abstract_mailbox>;
 
 } // namespace caf

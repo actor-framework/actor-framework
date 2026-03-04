@@ -24,7 +24,7 @@ public:
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
 
-  scoped_actor(actor_system& sys, bool hide = false);
+  explicit scoped_actor(actor_system& sys, bool hide = false);
 
   scoped_actor(const scoped_actor&) = delete;
   scoped_actor& operator=(const scoped_actor&) = delete;

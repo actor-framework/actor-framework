@@ -19,7 +19,8 @@ class impl : public blocking_actor {
 public:
   static constexpr auto forced_spawn_options = spawn_options::blocking_flag;
 
-  impl(actor_config& cfg) : blocking_actor(cfg) {
+  explicit impl(actor_config& cfg)
+    : blocking_actor(cfg.add_flag(abstract_actor::is_scoped_actor_impl_flag)) {
     // nop
   }
 
@@ -45,12 +46,13 @@ public:
 
 scoped_actor::scoped_actor(actor_system& sys, bool hide) {
   CAF_SET_LOGGER_SYS(&sys);
-  actor_config cfg{no_spawn_options};
-  if (hide) {
-    cfg.flags |= abstract_actor::is_hidden_flag;
-  }
-  auto hdl = sys.spawn_impl<impl>(cfg);
-  self_ = actor_cast<strong_actor_ptr>(std::move(hdl));
+  auto do_spawn = [&sys, hide] {
+    if (hide) {
+      return sys.spawn<impl, hidden>();
+    }
+    return sys.spawn<impl>();
+  };
+  self_ = actor_cast<strong_actor_ptr>(do_spawn());
   prev_ = detail::current_actor();
   detail::current_actor(self_->get());
 }

@@ -324,7 +324,7 @@ public:
 
   /// Returns the queue for storing incoming messages.
   abstract_mailbox& mailbox() {
-    return mailbox_;
+    return *mailbox_;
   }
   /// @cond
 
@@ -370,7 +370,7 @@ public:
   }
 
   bool has_next_message() {
-    return !mailbox_.empty();
+    return !mailbox_->empty();
   }
 
   /// @endcond
@@ -408,7 +408,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   /// Stores incoming messages.
-  detail::default_mailbox mailbox_;
+  abstract_mailbox_ptr mailbox_;
 
   /// Stashes skipped messages until the actor processes the next message.
   intrusive::stack<mailbox_element> stash_;

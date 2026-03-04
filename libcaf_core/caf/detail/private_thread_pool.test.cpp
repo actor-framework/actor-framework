@@ -2,21 +2,19 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#include "caf/detail/private_thread_pool.hpp"
-
-#include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/scenario.hpp"
 
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/log/test.hpp"
-#include "caf/resumable.hpp"
 
 using namespace caf;
 using namespace std::literals;
 
-WITH_FIXTURE(test::fixture::deterministic) {
-
 SCENARIO("private threads count towards detached actors") {
+  caf::actor_system_config cfg;
+  caf::actor_system sys{cfg};
   GIVEN("an actor system with a private thread pool") {
     detail::private_thread* t1 = nullptr;
     detail::private_thread* t2 = nullptr;
@@ -31,20 +29,21 @@ SCENARIO("private threads count towards detached actors") {
         check_eq(sys.detached_actors(), baseline + 2);
       }
       AND_THEN("the detached_actors counter eventually decreases again") {
-        auto next_value = [this, old_value = baseline + 2]() mutable {
-          size_t result = 0;
-          while ((result = sys.detached_actors()) == old_value)
+        auto reaches = [&sys](size_t expected) {
+          auto deadline = std::chrono::steady_clock::now() + 1s;
+          do {
+            if (sys.detached_actors() == expected) {
+              return true;
+            }
             std::this_thread::sleep_for(1ms);
-          old_value = result;
-          return result;
+          } while (std::chrono::steady_clock::now() < deadline);
+          return false;
         };
         sys.release_private_thread(t2);
-        check_eq(next_value(), baseline + 1);
+        require(reaches(baseline + 1));
         sys.release_private_thread(t1);
-        check_eq(next_value(), baseline);
+        require(reaches(baseline));
       }
     }
   }
 }
-
-} // WITH_FIXTURE(test::fixture::deterministic)

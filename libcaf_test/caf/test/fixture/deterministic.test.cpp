@@ -554,6 +554,21 @@ SCENARIO("the deterministic fixture allows setting the actor clock at will") {
   }
 }
 
+TEST("scoped actors use the default mailbox") {
+  caf::scoped_actor self{sys};
+  auto dummy = sys.spawn([] {
+    return caf::behavior{
+      [](int val) { return val * 2; },
+    };
+  });
+  self->mail(1).send(dummy);
+  expect<int>().with(1).from(self).to(dummy);
+  self->receive([this](int val) { check_eq(val, 2); },
+                caf::after(1ms) >> [this] { fail("timeout"); });
+  self->receive([this](int) { fail("unexpected message"); },
+                caf::after(1ms) >> [this] { check(true); });
+}
+
 #ifdef CAF_ENABLE_EXCEPTIONS
 TEST("advance_time requires a positive duration") {
   should_fail_with_exception([this] { advance_time(0s); });

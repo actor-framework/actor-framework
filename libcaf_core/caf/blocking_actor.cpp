@@ -5,12 +5,14 @@
 #include "caf/blocking_actor.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/adopt_ref.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
@@ -46,7 +48,11 @@ bool blocking_actor::accept_one_cond::post() {
 
 blocking_actor::blocking_actor(actor_config& cfg)
   : super(cfg.add_flag(local_actor::is_blocking_flag)) {
-  // nop
+  if (auto* factory = cfg.mbox_factory) {
+    mailbox_.reset(factory->make(this), caf::adopt_ref);
+  } else {
+    mailbox_.reset(new detail::default_mailbox, caf::adopt_ref);
+  }
 }
 
 blocking_actor::~blocking_actor() {
@@ -359,9 +365,9 @@ void blocking_actor::unstash() {
 }
 
 void blocking_actor::close_mailbox(const error& reason) {
-  if (!mailbox_.closed()) {
+  if (!mailbox_->closed()) {
     unstash();
-    auto dropped = mailbox_.close(reason);
+    auto dropped = mailbox_->close(reason);
     if (dropped > 0 && metrics_.mailbox_size)
       metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
   }
