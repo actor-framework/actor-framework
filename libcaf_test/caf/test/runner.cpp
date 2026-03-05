@@ -185,6 +185,7 @@ int runner::run(int argc, char** argv) {
           def->run();
           default_reporter->end_test();
           state->clear_stacks();
+          def.reset();
         } while (state->can_run());
       } catch (const nesting_error& ex) {
         default_reporter->unhandled_exception(ex.message(), ex.location());
