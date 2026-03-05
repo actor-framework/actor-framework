@@ -650,12 +650,12 @@ public:
       return;
     }
     auto* base_ptr = actor_cast<abstract_actor*>(hdl);
-    auto* ptr = dynamic_cast<local_actor*>(base_ptr);
-    if (ptr == nullptr) {
+    if (!base_ptr->is_local_actor()) {
       return;
     }
+    auto* ptr = static_cast<local_actor*>(base_ptr)->as_resumable();
     for (auto& event : *events_) {
-      if (event->target == ptr->as_resumable() && event->item) {
+      if (event->target == ptr && event->item) {
         fn(event->item->payload);
       }
     }

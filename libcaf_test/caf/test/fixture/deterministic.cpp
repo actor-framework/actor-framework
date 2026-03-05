@@ -76,8 +76,15 @@ size_t mail_count(const deterministic::events_list& events,
 
 size_t mail_count(const deterministic::events_list& events,
                   const strong_actor_ptr& receiver) {
-  auto raw_ptr = actor_cast<abstract_actor*>(receiver);
-  return mail_count(events, dynamic_cast<local_actor*>(raw_ptr));
+  if (!receiver) {
+    return 0;
+  }
+  auto* raw_ptr = actor_cast<abstract_actor*>(receiver);
+  if (!raw_ptr->is_local_actor()) {
+    CAF_RAISE_ERROR(std::invalid_argument,
+                    "mail_count: receiver is not a local actor");
+  }
+  return mail_count(events, static_cast<local_actor*>(raw_ptr));
 }
 
 /// Removes the next message for `receiver` from the queue and returns it.
@@ -787,14 +794,23 @@ bool deterministic::prepone_event_impl(
   abstract_message_predicate& payload_pred) {
   if (events_->empty() || !receiver)
     return false;
+  auto* raw_ptr = actor_cast<abstract_actor*>(receiver);
+  if (!raw_ptr->is_local_actor()) {
+    CAF_RAISE_ERROR(std::invalid_argument,
+                    "prepone_event_impl: receiver is not a local actor");
+  }
+  auto* target = static_cast<local_actor*>(raw_ptr)->as_resumable();
+  if (target == nullptr) {
+    CAF_RAISE_ERROR(std::invalid_argument,
+                    "prepone_event_impl: receiver is not a resumable");
+  }
   auto first = events_->begin();
   auto last = events_->end();
-  auto i = std::find_if(first, last, [&](const auto& event) {
-    auto self = actor_cast<abstract_actor*>(receiver);
-    return event->target == dynamic_cast<scheduled_actor*>(self)
-           && sender_pred(event->item->sender)
+  auto pred = [target, &sender_pred, &payload_pred](const auto& event) {
+    return event->target == target && sender_pred(event->item->sender)
            && payload_pred(event->item->payload);
-  });
+  };
+  auto i = std::find_if(first, last, pred);
   if (i == last)
     return false;
   if (i != first) {
@@ -807,15 +823,24 @@ bool deterministic::prepone_event_impl(
 
 deterministic::scheduling_event*
 deterministic::find_event_impl(const strong_actor_ptr& receiver) {
-  if (events_->empty() || !receiver)
+  if (events_->empty() || !receiver) {
     return nullptr;
+  }
+  auto* raw_ptr = actor_cast<abstract_actor*>(receiver);
+  if (!raw_ptr->is_local_actor()) {
+    return nullptr;
+  }
+  auto* target = static_cast<local_actor*>(raw_ptr)->as_resumable();
+  if (target == nullptr) {
+    return nullptr;
+  }
   auto last = events_->end();
-  auto i = std::find_if(events_->begin(), last, [&](const auto& event) {
-    auto raw_ptr = actor_cast<abstract_actor*>(receiver);
-    return event->target == dynamic_cast<scheduled_actor*>(raw_ptr);
+  auto i = std::find_if(events_->begin(), last, [target](const auto& event) {
+    return event->target == target;
   });
-  if (i != last)
+  if (i != last) {
     return i->get();
+  }
   return nullptr;
 }
 
@@ -836,12 +861,15 @@ size_t deterministic::mail_count(const strong_actor_ptr& receiver) {
 // -- control flow -------------------------------------------------------------
 
 bool deterministic::terminated(const strong_actor_ptr& hdl) {
-  auto base_ptr = actor_cast<abstract_actor*>(hdl);
-  auto derived_ptr = dynamic_cast<scheduled_actor*>(base_ptr);
-  if (derived_ptr == nullptr)
+  if (!hdl) {
+    CAF_RAISE_ERROR(std::invalid_argument, "terminated: handle is null");
+  }
+  auto* raw_ptr = actor_cast<abstract_actor*>(hdl);
+  if (!raw_ptr->is_local_actor()) {
     CAF_RAISE_ERROR(std::invalid_argument,
-                    "terminated: actor is not a scheduled actor");
-  return derived_ptr->mailbox().closed();
+                    "terminated: handle is not a local actor");
+  }
+  return raw_ptr->getf(abstract_actor::is_terminated_flag);
 }
 
 bool deterministic::dispatch_message() {

@@ -160,7 +160,10 @@ public:
 
   /// @cond
 
-  // note: the lowest byte is reserved for the spawn_options flags
+  // bits  1 to  8: spawn options
+  // bits  9 to 16: lifetime and status flags
+  // bits 17 to 24: type flags
+  // bits 25 to 32: reserved
 
   /// Indicates that the actor runs in its own thread.
   static constexpr int is_detached_flag
@@ -172,27 +175,33 @@ public:
     = static_cast<int>(spawn_options::hide_flag);
 
   /// Indicates that the actor is registered at the actor system.
-  static constexpr int is_registered_flag = 0x0100;
+  static constexpr int is_registered_flag = 0x00'00'01'00;
 
   /// Indicates that the actor has been initialized.
-  static constexpr int is_initialized_flag = 0x0200;
+  static constexpr int is_initialized_flag = 0x00'00'02'00;
 
   /// Indicates that the actor uses blocking message handlers.
-  static constexpr int is_blocking_flag = 0x0400;
+  static constexpr int is_blocking_flag = 0x00'00'04'00;
 
   /// Indicates that the actor collects metrics.
-  static constexpr int collects_metrics_flag = 0x0800;
+  static constexpr int collects_metrics_flag = 0x00'00'08'00;
 
   /// Indicates that the actor has terminated and waits for its destructor to
   /// run.
-  static constexpr int is_terminated_flag = 0x1000;
+  static constexpr int is_terminated_flag = 0x00'00'10'00;
 
   /// Indicates that the actor is currently shutting down and thus may no longer
   /// set a new behavior.
-  static constexpr int is_shutting_down_flag = 0x2000;
+  static constexpr int is_shutting_down_flag = 0x00'00'20'00;
 
   /// Indicates that the actor is currently inactive.
-  static constexpr int is_inactive_flag = 0x4000;
+  static constexpr int is_inactive_flag = 0x00'00'40'00;
+
+  /// Indicates that the actor inherits from `local_actor`.
+  static constexpr int is_local_actor_flag = 0x00'01'00'00;
+
+  /// Indicates that the actor inherits from `scheduled_actor`.
+  static constexpr int is_scheduled_actor_flag = 0x00'02'00'00;
 
   void setf(int flag) noexcept {
     auto x = flags();
@@ -206,6 +215,16 @@ public:
 
   bool getf(int flag) const noexcept {
     return (flags() & flag) != 0;
+  }
+
+  /// Checks whether this actor inherits from `local_actor`.
+  bool is_local_actor() const noexcept {
+    return getf(is_local_actor_flag);
+  }
+
+  /// Checks whether this actor inherits from `scheduled_actor`.
+  bool is_scheduled_actor() const noexcept {
+    return getf(is_scheduled_actor_flag);
   }
 
   /// Calls `fun` with exclusive access to an actor's state.
