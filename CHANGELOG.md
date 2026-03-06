@@ -61,6 +61,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   visible side effects in its constructor or destructor. By always deleting the
   previous fixture instance before creating a new one, we ensure that only one
   fixture instance exists at any time.
+- Fix an issue during connection cleanup that caused CAF to send a repeated
+  close frame on WebSocket connections.
 
 ## [1.1.0] - 2025-07-25
 
