@@ -9,13 +9,15 @@ Suite Setup       Start Servers
 Suite Teardown    Stop Servers
 
 *** Variables ***
-${HTTP_URL}       http://localhost:55503
-${HTTPS_URL}      https://localhost:55504
-${WS_URL}         ws://localhost:55503
-${WSS_URL}        wss://localhost:55504
-${FRAME_COUNT}    ${10}
-${BINARY_PATH}    /path/to/the/server
-${SSL_PATH}       /path/to/the/pem/files
+${HTTP_URL}              http://localhost:55503
+${HTTPS_URL}             https://localhost:55504
+${WS_URL}                ws://localhost:55503
+${WSS_URL}               wss://localhost:55504
+${FRAME_COUNT}           ${10}
+${BINARY_PATH}           /path/to/the/server
+${SSL_PATH}              /path/to/the/pem/files
+${PYTHON}                python
+${CLOSE_FRAME_SCRIPT}    /path/to/scripts/websocket-close-frame-test.py
 
 *** Test Cases ***
 Test WebSocket Server
@@ -34,6 +36,13 @@ Test WebSocket Over SSL Server
     ${result}=              WebSocketClient.Recv    ${fd}
     WebSocketClient.Close   ${fd}
     Should Be Equal         ${result}    Hello
+
+Test WebSocket Single Close Frame On Client Initiated Close
+    [Tags]      WebSocket  Regression
+    [Timeout]   10
+    ${result}=  Run Process  ${PYTHON}  ${CLOSE_FRAME_SCRIPT}  ${WS_URL}  timeout=10s
+    Should Be Equal As Integers  ${result.rc}  0
+    Log    ${result.stdout}
 
 *** Keywords ***
 Start Servers
