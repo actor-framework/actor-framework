@@ -804,7 +804,7 @@ private:
 
   // -- cleanup ----------------------------------------------------------------
 
-  void close_mailbox(const error& reason);
+  void close_mailbox();
 
   void force_close_mailbox() final;
 

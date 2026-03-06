@@ -39,7 +39,7 @@ TEST("the first item unblocks the mailbox") {
 
 TEST("a closed mailbox no longer accepts new messages") {
   detail::default_mailbox uut;
-  uut.close(error{});
+  uut.close();
   check_eq(uut.push_back(make_int_msg(1)), ires::queue_closed);
 }
 

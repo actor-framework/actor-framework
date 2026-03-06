@@ -121,7 +121,7 @@ private:
 
   void do_unstash(mailbox_element_ptr ptr) override;
 
-  void close_mailbox(const error& reason);
+  void close_mailbox();
 
   void force_close_mailbox() final;
 

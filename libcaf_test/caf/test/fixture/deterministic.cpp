@@ -170,9 +170,8 @@ public:
     return true;
   }
 
-  size_t close(const error& reason) override {
+  size_t close() override {
     closed_ = true;
-    close_reason_ = reason;
     auto result = size_t{0};
     auto bounce = detail::sync_request_bouncer{};
     auto envelope = next_msg(*events_, owner_);
@@ -199,7 +198,6 @@ public:
 private:
   bool blocked_ = false;
   bool closed_ = false;
-  error close_reason_;
   deterministic::events_list_ptr events_;
   local_actor* owner_;
 };
