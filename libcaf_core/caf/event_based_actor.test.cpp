@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/anon_mail.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
 
@@ -57,8 +58,11 @@ TEST("GH-1589 regression") {
     self->set_default_handler(skip);
     return behavior{[](int) {}};
   });
-  inject().with(dummy2.address()).to(dummy2);
-  // No crash means success.
+  // Send a message to the actor and make sure the actor skips it.
+  anon_mail(dummy2.address()).send(dummy2);
+  check_eq(mail_count(), 1u);
+  check(!dispatch_message());
+  check_eq(mail_count(), 1u);
 }
 
 SCENARIO("request(...).await(...) suspends the regular actor behavior") {
@@ -78,11 +82,14 @@ SCENARIO("request(...).await(...) suspends the regular actor behavior") {
       THEN("the actor skips the message until the response arrives") {
         auto server = sys.spawn(server_impl);
         auto aut = sys.spawn(uut_impl, server);
-        inject().with(23).to(aut); // skipped
+        anon_mail(23).send(aut); // will be skipped
+        check_eq(mail_count(), 2u);
+        check(!dispatch_message(aut));
+        check_eq(mail_count(), 2u);
         check_eq(*count, 0);
         expect<int>().with(42).from(aut).to(server);
-        expect<int>().with(42).from(server).to(aut);
-        expect<int>().with(23).to(aut); // put back to the mailbox after await
+        prepone_and_expect<int>().with(42).from(server).to(aut);
+        expect<int>().with(23).to(aut); // can be processed now
         check_eq(*count, 23);
       }
     }

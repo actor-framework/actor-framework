@@ -981,6 +981,11 @@ detail::mailbox_factory* actor_system_access::mailbox_factory() {
 
 detail::daemons* actor_system_access::daemons() {
   auto* ptr = impl()->modules()[actor_system_module::daemons].get();
+  if (ptr != nullptr) {
+    // The default actor system implementation does load the daemons module.
+    // However, the deterministic actor system for example does not load it.
+    detail::critical("daemons module is not available on this actor system");
+  }
   return static_cast<detail::daemons*>(ptr);
 }
 

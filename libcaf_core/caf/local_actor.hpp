@@ -51,6 +51,16 @@ public:
   /// Defines a monotonic clock suitable for measuring intervals.
   using clock_type = std::chrono::steady_clock;
 
+  /// Result of consume.
+  enum class consume_result {
+    /// The actor consumed the message.
+    consumed,
+    /// The actor terminated and `consume` may no longer be called.
+    terminated,
+    /// The actor found no matching handler for the message.
+    skipped,
+  };
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit local_actor(actor_config& cfg);
@@ -328,6 +338,11 @@ public:
   }
 
   virtual bool initialize(scheduler* sched) = 0;
+
+  /// Tries to consume `what`.
+  /// @pre `what != nullptr`
+  /// @post `what` remains non-null if the result is `skipped`
+  virtual consume_result consume(mailbox_element_ptr& what) = 0;
 
   message_id new_request_id(message_priority mp) noexcept;
 

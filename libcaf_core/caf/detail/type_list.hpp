@@ -162,6 +162,19 @@ struct tl_exists<empty_type_list, Pred> {
 template <class List, template <class> class Pred>
 inline constexpr bool tl_exists_v = tl_exists<List, Pred>::value;
 
+/// Counts how many elements of a list satisfy `Pred`.
+template <class List, template <class> class Pred>
+struct tl_count;
+
+template <class... Ts, template <class> class Pred>
+struct tl_count<type_list<Ts...>, Pred> {
+  static constexpr size_t value = ((Pred<Ts>::value ? 1u : 0u) + ...);
+};
+
+/// Convenience alias for `tl_count<List, Pred>::value`.
+template <class List, template <class> class Pred>
+inline constexpr size_t tl_count_v = tl_count<List, Pred>::value;
+
 // list map(list, trait)
 
 /// Creates a new list by applying a "template function" to each element.

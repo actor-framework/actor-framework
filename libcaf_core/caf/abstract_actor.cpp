@@ -29,7 +29,7 @@ abstract_actor::abstract_actor(actor_config& cfg) : flags_(cfg.flags) {
   detail::current_actor(this);
 }
 
-abstract_actor::~abstract_actor() {
+abstract_actor::~abstract_actor() noexcept {
   // nop
 }
 

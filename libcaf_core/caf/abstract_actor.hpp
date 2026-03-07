@@ -60,7 +60,7 @@ public:
   ///       needs to be done by the outer scope
   explicit abstract_actor(actor_config& cfg);
 
-  virtual ~abstract_actor();
+  ~abstract_actor() noexcept override;
 
   abstract_actor(const abstract_actor&) = delete;
 
@@ -278,6 +278,11 @@ public:
     return fun();
   }
 
+  /// Checks whether this actor has terminated.
+  bool is_terminated() const noexcept {
+    return getf(is_terminated_flag);
+  }
+
   /// @endcond
 
 protected:
@@ -306,11 +311,6 @@ protected:
 
   void flags(int new_value) {
     flags_.store(new_value, std::memory_order_relaxed);
-  }
-
-  /// Checks whether this actor has terminated.
-  bool is_terminated() const noexcept {
-    return getf(is_terminated_flag);
   }
 
   // -- attachables ------------------------------------------------------------

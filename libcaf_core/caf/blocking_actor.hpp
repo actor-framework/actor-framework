@@ -11,8 +11,8 @@
 #include "caf/after.hpp"
 #include "caf/behavior.hpp"
 #include "caf/blocking_response_handle.hpp"
+#include "caf/callback.hpp"
 #include "caf/detail/apply_args.hpp"
-#include "caf/detail/blocking_behavior.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/default_mailbox.hpp"
@@ -36,6 +36,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <numeric>
+#include <type_traits>
 
 namespace caf {
 
@@ -178,6 +179,8 @@ public:
 
   bool initialize(scheduler* sched) override;
 
+  consume_result consume(mailbox_element_ptr& what) override;
+
   bool launch_delayed() override;
 
   void launch(detail::private_thread* worker, scheduler* ctx) override;
@@ -256,10 +259,10 @@ public:
   /// ~~~
   template <class... Ts>
   do_receive_helper do_receive(Ts&&... xs) {
-    auto tup = std::make_tuple(std::forward<Ts>(xs)...);
-    auto cb = [this, tup](receive_cond& rc) mutable {
-      varargs_tup_receive(rc, make_message_id(), tup);
-    };
+    auto cb = [this, tup = std::make_tuple(std::forward<Ts>(xs)...)] //
+      (receive_cond & rc) mutable {
+        varargs_tup_receive(rc, make_message_id(), tup);
+      };
     return {cb};
   }
 
@@ -336,17 +339,32 @@ public:
   void varargs_tup_receive(receive_cond& rcc, message_id mid,
                            std::tuple<Ts...>& tup) {
     using namespace detail;
-    static_assert(sizeof...(Ts), "at least one argument required");
+    static_assert(sizeof...(Ts), "at least one argument is required");
     // extract how many arguments are actually the behavior part,
     // i.e., not `after(...) >> ...` (timeout definitions).
-    using filtered
-      = tl_filter_not_t<type_list<std::decay_t<Ts>...>, is_timeout_definition>;
-    filtered tk;
-    behavior bhvr{apply_moved_args(make_behavior_impl, get_indices(tk), tup)};
-    using tail_indices = il_range_t<tl_size_v<filtered>, sizeof...(Ts)>;
-    make_blocking_behavior_t factory;
-    auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, &bhvr);
-    receive_impl(rcc, mid, fun);
+    static constexpr auto timeout_definitions
+      = detail::tl_count_v<type_list<std::decay_t<Ts>...>,
+                           is_timeout_definition>;
+    if constexpr (timeout_definitions == 0) {
+      behavior bhvr{std::apply(make_behavior_impl, std::move(tup))};
+      detail::nop_callback<void()> on_timeout;
+      receive_impl(rcc, mid, bhvr, infinite, on_timeout);
+    } else {
+      // If present, the timeout definition must be the last argument.
+      static_assert(timeout_definitions == 1,
+                    "only one timeout definition may be present");
+      auto indices = std::make_index_sequence<sizeof...(Ts) - 1>{};
+      behavior bhvr{apply_moved_args(make_behavior_impl, indices, tup)};
+      static constexpr auto tail_index = sizeof...(Ts) - 1;
+      auto& tail = std::get<tail_index>(tup);
+      using timeout_type = std::remove_reference_t<decltype(tail)>;
+      static_assert(is_timeout_definition_v<timeout_type>,
+                    "the timeout definition must be the last argument");
+      using handler_type = typename timeout_type::handler_type;
+      using callback_type = callback_ref_impl<handler_type, void()>;
+      callback_type on_timeout_cb{tail.handler};
+      receive_impl(rcc, mid, bhvr, tail.timeout, on_timeout_cb);
+    }
   }
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
@@ -376,13 +394,13 @@ public:
 
 protected:
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
-  virtual void receive_impl(receive_cond& rcc, message_id mid,
-                            detail::blocking_behavior& bhvr);
+  void receive_impl(receive_cond& rcc, message_id mid, behavior& bhvr,
+                    timespan timeout, callback<void()>& on_timeout);
 
 private:
   void do_unstash(mailbox_element_ptr ptr) override;
 
-  void do_receive(message_id mid, behavior& bhvr, timespan timeout) override;
+  void receive_impl(message_id mid, behavior& bhvr, timespan timeout) override;
 
   size_t attach_functor(const actor&);
 
@@ -404,12 +422,16 @@ private:
   template <class Container>
   size_t attach_functor(const Container& xs) {
     auto f = [this](size_t acc, const auto& x) {
-      return acc + attach_functor(x);
+      return acc + this->attach_functor(x);
     };
     return std::accumulate(xs.begin(), xs.end(), size_t{0}, f);
   }
 
   // -- member variables -------------------------------------------------------
+
+  behavior* current_behavior_ = nullptr;
+
+  message_id current_message_id_;
 
   /// Stores incoming messages.
   abstract_mailbox_ptr mailbox_;

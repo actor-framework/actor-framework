@@ -25,6 +25,8 @@ template <class F>
 struct timeout_definition {
   static constexpr bool may_have_timeout = true;
 
+  using handler_type = F;
+
   timespan timeout;
 
   F handler;
