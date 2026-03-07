@@ -6,6 +6,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/config.hpp"
 #include "caf/flow/multicaster.hpp"
 #include "caf/log/test.hpp"
 
@@ -120,7 +121,7 @@ SCENARIO("on_error_resume_next discards items when there is no demand") {
                        on_error_resume_next_predicate,
                        make_observable().iota(1).take(2).as_observable())
                      .subscribe(snk->as_observer());
-        auto* uut = dynamic_cast<impl_t*>(sub.ptr());
+        auto* uut = static_cast<impl_t*>(sub.ptr());
         require(uut != nullptr);
         snk->request(2);
         uut->on_next(1);

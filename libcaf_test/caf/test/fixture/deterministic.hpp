@@ -11,6 +11,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/config.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/local_actor.hpp"

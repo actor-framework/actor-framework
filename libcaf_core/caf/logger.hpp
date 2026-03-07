@@ -12,7 +12,6 @@
 #include "caf/detail/format.hpp"
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/pp.hpp"
-#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/format_string_with_location.hpp"
 #include "caf/fwd.hpp"

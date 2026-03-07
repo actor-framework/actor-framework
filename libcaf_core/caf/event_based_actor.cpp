@@ -4,7 +4,6 @@
 
 #include "caf/event_based_actor.hpp"
 
-#include "caf/detail/pretty_type_name.hpp"
 #include "caf/log/core.hpp"
 #include "caf/message_id.hpp"
 

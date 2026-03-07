@@ -23,7 +23,9 @@ void abstract_broker::launch(caf::detail::private_thread* worker,
                              scheduler* ctx) {
   caf::detail::current_actor_guard ctx_guard{this};
   CAF_ASSERT(ctx != nullptr);
+#ifdef CAF_ENABLE_RTTI
   CAF_ASSERT(dynamic_cast<network::multiplexer*>(ctx) != nullptr);
+#endif
   backend_ = static_cast<network::multiplexer*>(ctx);
   auto lg = log::io::trace("");
   (void) worker; // Brokers run on the multiplexer.

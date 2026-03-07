@@ -7,6 +7,7 @@
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
 #include "caf/caf_deprecated.hpp"
+#include "caf/config.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
@@ -215,11 +216,13 @@ public:
     return reinterpret_cast<ptrdiff_t>(get());
   }
 
+#ifdef CAF_ENABLE_RTTI
   template <class C>
   intrusive_ptr<C> downcast() const noexcept {
     static_assert(std::is_base_of_v<T, C>);
     return {ptr_ ? dynamic_cast<C*>(get()) : nullptr, add_ref};
   }
+#endif
 
   template <class C>
   intrusive_ptr<C> upcast() const& noexcept {

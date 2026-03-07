@@ -9,6 +9,7 @@
 #include "caf/detail/aligned_alloc.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/current_actor.hpp"
+#include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
@@ -70,9 +71,16 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
     auto args = deep_to_string(std::forward_as_tuple(xs...));
     auto* obj = detail::make_actor_util::create_actor<T>(
       obj_mem, std::forward<Ts>(xs)...);
+#  ifdef CAF_ENABLE_RTTI
     lptr->log(log::level::debug, CAF_LOG_FLOW_COMPONENT,
               "SPAWN ; ID = {}; NAME = {}; TYPE = {}; ARGS = {}; NODE = {}",
-              aid, obj->name(), detail::pretty_type_name(typeid(T)), args, nid);
+              aid, obj->name(), detail::pretty_type_name(typeid(T).name()),
+              args, nid);
+#  else
+    lptr->log(log::level::debug, CAF_LOG_FLOW_COMPONENT,
+              "SPAWN ; ID = {}; NAME = {}; ARGS = {}; NODE = {}", aid,
+              obj->name(), args, nid);
+#  endif
     return {ctrl, adopt_ref};
   }
 #endif

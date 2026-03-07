@@ -25,6 +25,8 @@
 
 #cmakedefine CAF_ENABLE_EXCEPTIONS
 
+#cmakedefine CAF_ENABLE_RTTI
+
 #cmakedefine CAF_USE_STD_FORMAT
 
 #cmakedefine CAF_USE_STD_EXPECTED
