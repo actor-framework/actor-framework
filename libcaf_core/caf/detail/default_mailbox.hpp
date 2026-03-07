@@ -45,9 +45,9 @@ public:
 
   size_t size() override;
 
-  void ref_mailbox() noexcept override;
+  void ref_mailbox() const noexcept override;
 
-  void deref_mailbox() noexcept override;
+  void deref_mailbox() const noexcept override;
 
   size_t ref_count() const noexcept {
     return ref_count_.load();
@@ -72,7 +72,7 @@ private:
   alignas(CAF_CACHE_LINE_SIZE) intrusive::lifo_inbox<mailbox_element> inbox_;
 
   /// The intrusive reference count.
-  alignas(CAF_CACHE_LINE_SIZE) std::atomic<size_t> ref_count_;
+  alignas(CAF_CACHE_LINE_SIZE) mutable std::atomic<size_t> ref_count_;
 };
 
 } // namespace caf::detail

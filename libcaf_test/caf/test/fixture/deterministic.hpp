@@ -257,6 +257,7 @@ public:
 
     /// Sets the target actor for this evaluator and evaluate the predicate.
     template <class T>
+      requires(!std::is_same_v<T, scoped_actor>)
     bool to(const T& dst) && {
       auto dst_ptr = actor_cast<strong_actor_ptr>(dst);
       switch (algo_) {
