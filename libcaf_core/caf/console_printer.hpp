@@ -8,14 +8,13 @@
 #include "caf/term.hpp"
 
 #include <cstddef>
-#include <memory>
 
 namespace caf {
 
 /// Interface for redirecting text output from `println` to a custom sink.
 class CAF_CORE_EXPORT console_printer {
 public:
-  virtual ~console_printer();
+  virtual ~console_printer() noexcept;
 
   /// Prints the given text to the output stream.
   virtual void print(term color, const char* buf, size_t len) = 0;

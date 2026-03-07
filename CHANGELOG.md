@@ -130,6 +130,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   cleanup of disposed jobs from the actor clock. By setting this option, users
   can reduce the memory usage of the actor clock when the application frequently
   schedules actions with long delays that usually get disposed before they run.
+- Users can now set the new config parameter `caf.logger.console.stream` to
+  `system` to have the console logger use `actor_system::println` instead of
+  writing to `stderr`. This avoids mangled output on the console when enabling
+  console logging while also printing from actors.
 
 ### Fixed
 

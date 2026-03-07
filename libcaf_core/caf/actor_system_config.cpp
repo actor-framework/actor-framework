@@ -152,6 +152,7 @@ actor_system_config::actor_system_config() {
   opt_group{custom_options_, "caf.logger.console"}
     .add<bool>("colored", "forces colored or uncolored output")
     .add<std::string>("format", "format for printed console lines")
+    .add<std::string>("stream", "'stderr' (default) or 'system'")
     .add<std::string>("verbosity", "minimum severity level for console output")
     .add<std::vector<std::string>>("excluded-components",
                                    "excluded components on console");
