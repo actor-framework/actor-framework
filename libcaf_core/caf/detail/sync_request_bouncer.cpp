@@ -26,4 +26,10 @@ void sync_request_bouncer::operator()(const mailbox_element& e) const {
   (*this)(e.sender, e.mid);
 }
 
+void sync_request_bouncer::operator()(const mailbox_element_ptr& ptr) const {
+  if (ptr) {
+    (*this)(ptr->sender, ptr->mid);
+  }
+}
+
 } // namespace caf::detail

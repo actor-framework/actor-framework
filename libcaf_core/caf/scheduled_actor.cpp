@@ -29,6 +29,8 @@
 #include "caf/send.hpp"
 #include "caf/stream.hpp"
 
+#include <exception>
+
 using namespace std::string_literals;
 
 namespace caf {
@@ -236,12 +238,21 @@ bool scheduled_actor::initialize(scheduler* ctx) {
   setf(is_initialized_flag);
   context(ctx);
 #ifdef CAF_ENABLE_EXCEPTIONS
+  auto handle_exception = [this](std::exception_ptr eptr) {
+    auto err = call_handler(exception_handler_, this, eptr);
+    make_response_promise().deliver(err);
+    quit(std::move(err));
+    return !finalize();
+  };
   behavior bhvr;
   try {
     bhvr = type_erased_initial_behavior();
+  } catch (const std::exception& e) {
+    log::core::info("failed to initialize actor: {}", e.what());
+    return handle_exception(std::current_exception());
   } catch (...) {
-    quit(make_error(sec::runtime_error, "failed to initialize actor"));
-    return !finalize();
+    log::core::info("failed to initialize actor: unknown exception");
+    return handle_exception(std::current_exception());
   }
 #else
   auto bhvr = type_erased_initial_behavior();
@@ -298,6 +309,8 @@ resumable* scheduled_actor::as_resumable() noexcept {
 // -- overridden functions of resumable ----------------------------------------
 
 void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
+  // Note: the deterministic test fixture calls `consume` directly instead of
+  //       going through a scheduler that would call this member function.
   CAF_ASSERT(!private_thread_
              || private_thread_->id() == std::this_thread::get_id());
   detail::current_actor_guard ctx_guard{this};
@@ -306,56 +319,80 @@ void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
     cleanup(make_error(exit_reason::user_shutdown), sched);
     return;
   }
-  if (!activate(sched))
-    return;
-  size_t consumed = 0;
-  auto guard = detail::scope_guard{[this, &consumed]() noexcept {
-    if (consumed > 0) {
-      auto val = static_cast<int64_t>(consumed);
-      if (metrics_.processed_messages)
-        metrics_.processed_messages->inc(val);
+  context(sched);
+  if (!getf(is_initialized_flag)) {
+    if (!initialize(sched)) {
+      log::core::debug("actor terminated immediately after initialization");
+      return;
     }
-  }};
-  auto reset_timeouts_if_needed = [&] {
-    // Set a new receive timeout if we called our behavior at least once.
-    if (consumed > 0)
-      set_receive_timeout();
+  }
+  if (!alive()) {
+    log::system::warning("resume called on a terminated actor "
+                         "with id {} and name {}",
+                         id(), name());
+    return;
+  }
+  size_t consumed = 0;
+#ifdef CAF_ENABLE_EXCEPTIONS
+  auto handle_exception = [this](std::exception_ptr eptr) {
+    auto err = call_handler(exception_handler_, this, eptr);
+    make_response_promise().deliver(err);
+    quit(std::move(err));
+    finalize();
   };
-  mailbox_element_ptr ptr;
+#endif
   // Note: detached actors ignore the max throughput limit.
   while (private_thread_ != nullptr || consumed < max_throughput_) {
     auto ptr = mailbox().pop_front();
     if (!ptr) {
       if (mailbox().try_block()) {
-        reset_timeouts_if_needed();
         log::core::debug("mailbox empty: await new messages");
         return;
       }
       continue; // Interrupted by a new message, try again.
     }
-    auto res = run_with_metrics(*ptr, [this, &ptr, &consumed] {
-      auto res = reactivate(*ptr);
-      switch (res) {
-        case activation_result::success:
+#ifdef CAF_ENABLE_EXCEPTIONS
+    try {
+      switch (consume(ptr)) {
+        case consume_result::consumed:
           ++consumed;
           unstash();
           break;
-        case activation_result::skipped:
-          stash_.push(ptr.release());
-          break;
-        default: // drop
+        case consume_result::terminated:
+          return;
+        default: // skipped
+          CAF_LOG_SKIP_EVENT();
+          push_to_cache(std::move(ptr));
           break;
       }
-      return res;
-    });
-    if (res == activation_result::terminated)
+    } catch (const std::exception& e) {
+      log::core::info("actor died because of an exception, what: {}", e.what());
+      handle_exception(std::current_exception());
       return;
+    } catch (...) {
+      log::core::info("actor died because of an unknown exception");
+      handle_exception(std::current_exception());
+      return;
+    }
+#else
+    switch (consume(ptr)) {
+      case consume_result::consumed:
+        ++consumed;
+        unstash();
+        break;
+      case consume_result::terminated:
+        return;
+      default: // skipped
+        CAF_LOG_SKIP_EVENT();
+        push_to_cache(std::move(ptr));
+        break;
+    }
+#endif
   }
   // Dropping here means we have reached the max throughput limit. Check if we
   // have messages left in the mailbox and if so, tell the scheduler to run this
   // actor again.
   CAF_ASSERT(private_thread_ == nullptr);
-  reset_timeouts_if_needed();
   if (mailbox().try_block()) {
     log::core::debug("mailbox empty: await new messages");
     return;
@@ -577,11 +614,11 @@ flow::coordinator::steady_time_point scheduled_actor::steady_time() {
 }
 
 void scheduled_actor::ref() const noexcept {
-  ctrl()->ref();
+  abstract_actor::ref();
 }
 
 void scheduled_actor::deref() const noexcept {
-  ctrl()->deref();
+  abstract_actor::deref();
 }
 
 void scheduled_actor::schedule(action what) {
@@ -786,79 +823,80 @@ scheduled_actor::categorize(mailbox_element& x) {
   }
 }
 
-invoke_message_result scheduled_actor::consume(mailbox_element& x) {
+scheduled_actor::consume_result
+scheduled_actor::consume(mailbox_element_ptr& what) {
+  CAF_ASSERT(context_ != nullptr);
+  CAF_ASSERT(what != nullptr);
+  auto& x = *what;
   auto lg = log::core::trace("x = {}", x);
   current_element_ = &x;
   CAF_LOG_RECEIVE_EVENT(current_element_);
-  // Wrap the actual body for the function.
+  // Returns `true` if the message was consumed, `false` when it was skipped.
   auto body = [this, &x] {
-    // Helper function for dispatching a message to a response handler.
-    using ptr_t = scheduled_actor*;
-    using fun_t = bool (*)(ptr_t, behavior&, mailbox_element&);
-    auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
-      return f(in.content()) != std::nullopt;
-    };
-    auto select_invoke_fun = [&]() -> fun_t { return ordinary_invoke; };
-    // Short-circuit awaited responses.
+    // Awaited responses have the highest priority and block all other messages.
     if (!awaited_responses_.empty()) {
-      auto invoke = select_invoke_fun();
       auto& pr = awaited_responses_.front();
       // Skip all other messages until we receive the currently awaited response
       // except for internal (system) messages.
       if (x.mid != std::get<0>(pr)) {
         // Responses are never internal messages and must be skipped here.
         // Otherwise, an error to a response would run into the default handler.
-        if (x.mid.is_response())
-          return invoke_message_result::skipped;
         if (categorize(x) == message_category::internal) {
           log::core::debug("handled system message");
-          return invoke_message_result::consumed;
+          return true;
         }
-        return invoke_message_result::skipped;
+        CAF_LOG_SKIP_EVENT();
+        return false;
       }
       auto f = std::move(std::get<1>(pr));
       std::get<2>(pr).dispose(); // Stop the timeout.
       awaited_responses_.pop_front();
-      if (!invoke(this, f, x)) {
-        // try again with error if first attempt failed
+      if (f(x.payload) == std::nullopt) {
+        // Invoke again with error if first attempt failed.
         auto msg = make_message(
           make_error(sec::unexpected_response, std::move(x.payload)));
         f(msg);
       }
-      return invoke_message_result::consumed;
+      return true;
     }
     // Handle multiplexed responses.
     if (x.mid.is_response()) {
-      auto invoke = select_invoke_fun();
-      auto mrh = multiplexed_responses_.find(x.mid);
-      // neither awaited nor multiplexed, probably an expired timeout
-      if (mrh == multiplexed_responses_.end())
-        return invoke_message_result::dropped;
-      auto bhvr = std::move(mrh->second.first);
-      mrh->second.second.dispose(); // Stop the timeout.
-      multiplexed_responses_.erase(mrh);
-      if (!invoke(this, bhvr, x)) {
+      auto iter = multiplexed_responses_.find(x.mid);
+      if (iter == multiplexed_responses_.end()) {
+        // Neither awaited nor multiplexed, probably an expired timeout -> drop.
+        return true;
+      }
+      auto bhvr = std::move(iter->second.first);
+      iter->second.second.dispose(); // Stop the timeout.
+      multiplexed_responses_.erase(iter);
+      if (bhvr(x.payload) == std::nullopt) {
+        // Invoke again with error if first attempt failed.
         log::core::debug("got unexpected_response");
         auto msg = make_message(
           make_error(sec::unexpected_response, std::move(x.payload)));
         bhvr(msg);
       }
-      return invoke_message_result::consumed;
+      return true;
     }
     // Dispatch on the content of x.
     switch (categorize(x)) {
       case message_category::skipped:
-        return invoke_message_result::skipped;
+        log::core::debug("skipped message");
+        CAF_LOG_SKIP_EVENT();
+        return false;
       case message_category::internal:
         log::core::debug("handled system message");
-        return invoke_message_result::consumed;
+        return true;
       case message_category::ordinary: {
+        // Try to process the message with the current behavior.
         detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
         if (!bhvr_stack_.empty()) {
           auto& bhvr = bhvr_stack_.back();
-          if (bhvr(visitor, x.payload))
-            return invoke_message_result::consumed;
+          if (bhvr(visitor, x.payload)) {
+            return true;
+          }
         }
+        // Fall back to default handlers for system messages.
         if (x.payload.size() == 1) {
           switch (x.payload.type_at(0)) {
             default:
@@ -866,135 +904,70 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
             case type_id_v<exit_msg>: {
               auto& em = x.payload.get_mutable_as<exit_msg>(0);
               call_handler(exit_handler_, this, em);
-              return invoke_message_result::consumed;
+              return true;
             }
             case type_id_v<down_msg>: {
               auto& dm = x.payload.get_mutable_as<down_msg>(0);
               call_handler(down_handler_, this, dm);
-              return invoke_message_result::consumed;
+              return true;
             }
             case type_id_v<node_down_msg>: {
               auto& dm = x.payload.get_mutable_as<node_down_msg>(0);
               call_handler(node_down_handler_, this, dm);
-              return invoke_message_result::consumed;
+              return true;
             }
             case type_id_v<error>: {
               auto& err = x.payload.get_mutable_as<error>(0);
               call_handler(error_handler_, this, err);
-              return invoke_message_result::consumed;
+              return true;
             }
           }
         }
+        // No match -> call the default handler.
         auto sres = call_handler(default_handler_, this, x.payload);
-        auto f = detail::make_overload(
-          [&](auto& x) {
-            visitor(x);
-            return invoke_message_result::consumed;
-          },
-          [&](skip_t&) { return invoke_message_result::skipped; });
+        auto f = [&visitor]<class T>(T& res) {
+          if constexpr (std::is_same_v<T, skip_t>) {
+            return false;
+          } else {
+            visitor(res);
+            return true;
+          }
+        };
         return visit(f, sres);
       }
     }
     // Should be unreachable.
     detail::critical("categorize() returned an invalid message category");
   };
-  // Post-process the returned value from the function body.
-  auto result = body();
-  CAF_LOG_SKIP_OR_FINALIZE_EVENT(result);
-  return result;
-}
-
-/// Tries to consume `x`.
-void scheduled_actor::consume(mailbox_element_ptr x) {
-  switch (consume(*x)) {
-    default:
-      break;
-    case invoke_message_result::skipped:
-      push_to_cache(std::move(x));
-  }
-}
-
-bool scheduled_actor::activate(scheduler* sched) {
-  auto lg = log::core::trace("");
-  CAF_ASSERT(sched != nullptr);
-  CAF_ASSERT(!getf(is_blocking_flag));
-  context(sched);
-  if (getf(is_initialized_flag) && !alive()) {
-    log::system::warning("activate called on a terminated actor "
-                         "with id {} and name {}",
-                         id(), name());
-    return false;
-  }
-#ifdef CAF_ENABLE_EXCEPTIONS
-  try {
-#endif // CAF_ENABLE_EXCEPTIONS
-    if (!getf(is_initialized_flag)) {
-      if (!initialize(sched)) {
-        log::core::debug("actor terminated immediately after initialization");
-        return false;
+  if (metrics_.mailbox_time) {
+    // Note: mailbox_time, mailbox_size and processed_messages must be all
+    //       enabled together or not at all.
+    CAF_ASSERT(metrics_.mailbox_size != nullptr);
+    CAF_ASSERT(metrics_.processed_messages != nullptr);
+    auto t0 = std::chrono::steady_clock::now();
+    auto mbox_time = x.seconds_until(t0);
+    if (body()) {
+      set_receive_timeout();
+      auto terminated = finalize();
+      telemetry::timer::observe(metrics_.processing_time, t0);
+      metrics_.mailbox_time->observe(mbox_time);
+      metrics_.mailbox_size->dec();
+      metrics_.processed_messages->inc();
+      if (terminated) {
+        return consume_result::terminated;
       }
-      CAF_ASSERT(getf(is_initialized_flag));
-      log::core::debug("initialized actor: name = {}", name());
+      return consume_result::consumed;
     }
-#ifdef CAF_ENABLE_EXCEPTIONS
-  } catch (...) {
-    log::core::debug("failed to initialize actor due to an exception");
-    auto eptr = std::current_exception();
-    quit(call_handler(exception_handler_, this, eptr));
-    finalize();
-    return false;
+    return consume_result::skipped;
   }
-#endif // CAF_ENABLE_EXCEPTIONS
-  return true;
-}
-
-auto scheduled_actor::activate(scheduler* sched, mailbox_element& x)
-  -> activation_result {
-  auto lg = log::core::trace("x = {}", x);
-  if (!activate(sched))
-    return activation_result::terminated;
-  auto res = reactivate(x);
-  if (res == activation_result::success)
+  if (body()) {
     set_receive_timeout();
-  return res;
-}
-
-auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
-  auto lg = log::core::trace("x = {}", x);
-#ifdef CAF_ENABLE_EXCEPTIONS
-  auto handle_exception = [&](std::exception_ptr eptr) {
-    auto err = call_handler(exception_handler_, this, eptr);
-    auto rp = make_response_promise();
-    rp.deliver(err);
-    quit(std::move(err));
-  };
-  try {
-#endif // CAF_ENABLE_EXCEPTIONS
-    switch (consume(x)) {
-      case invoke_message_result::dropped:
-        return activation_result::dropped;
-      case invoke_message_result::consumed:
-        bhvr_stack_.cleanup();
-        if (finalize()) {
-          log::core::debug("actor finalized");
-          return activation_result::terminated;
-        }
-        return activation_result::success;
-      case invoke_message_result::skipped:
-        return activation_result::skipped;
+    if (finalize()) {
+      return consume_result::terminated;
     }
-#ifdef CAF_ENABLE_EXCEPTIONS
-  } catch (std::exception& e) {
-    log::core::info("actor died because of an exception, what: {}", e.what());
-    static_cast<void>(e); // keep compiler happy when not logging
-    handle_exception(std::current_exception());
-  } catch (...) {
-    log::core::info("actor died because of an unknown exception");
-    handle_exception(std::current_exception());
+    return consume_result::consumed;
   }
-  finalize();
-#endif // CAF_ENABLE_EXCEPTIONS
-  return activation_result::terminated;
+  return consume_result::skipped;
 }
 
 // -- behavior management ----------------------------------------------------
@@ -1025,7 +998,9 @@ void scheduled_actor::do_become(behavior bhvr, bool discard_old) {
 
 bool scheduled_actor::finalize() {
   auto lg = log::core::trace("");
-  // Repeated calls always return `true` but have no side effects.
+  // Make sure to release memory from erased behaviors.
+  bhvr_stack_.cleanup();
+  // Repeated calls on a terminated actor must always return `true`.
   if (is_terminated())
     return true;
   // An actor is considered alive as long as it has a behavior, didn't set
@@ -1035,7 +1010,6 @@ bool scheduled_actor::finalize() {
     return false;
   log::core::debug("actor has no behavior and is ready for cleanup");
   CAF_ASSERT(!has_behavior());
-  bhvr_stack_.cleanup();
   cleanup(std::move(fail_state_), context());
   CAF_ASSERT(is_terminated());
   return true;

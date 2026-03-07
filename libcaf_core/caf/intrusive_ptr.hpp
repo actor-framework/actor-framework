@@ -11,6 +11,7 @@
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
+#include "caf/intrusive_ptr_access.hpp"
 
 #include <algorithm>
 #include <cstddef>

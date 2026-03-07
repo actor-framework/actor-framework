@@ -21,6 +21,7 @@
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
+#include "caf/intrusive_ptr_access.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
@@ -50,6 +51,16 @@ public:
 
   /// Defines a monotonic clock suitable for measuring intervals.
   using clock_type = std::chrono::steady_clock;
+
+  /// Result of consume.
+  enum class consume_result {
+    /// The actor consumed the message.
+    consumed,
+    /// The actor terminated and `consume` may no longer be called.
+    terminated,
+    /// The actor found no matching handler for the message.
+    skipped,
+  };
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -328,6 +339,11 @@ public:
   }
 
   virtual bool initialize(scheduler* sched) = 0;
+
+  /// Tries to consume `what`.
+  /// @pre `what != nullptr`
+  /// @post `what` remains non-null if the result is `skipped`
+  virtual consume_result consume(mailbox_element_ptr& what) = 0;
 
   message_id new_request_id(message_priority mp) noexcept;
 

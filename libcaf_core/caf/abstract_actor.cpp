@@ -29,7 +29,7 @@ abstract_actor::abstract_actor(actor_config& cfg) : flags_(cfg.flags) {
   detail::current_actor(this);
 }
 
-abstract_actor::~abstract_actor() {
+abstract_actor::~abstract_actor() noexcept {
   // nop
 }
 
@@ -139,6 +139,16 @@ actor_addr abstract_actor::address() const noexcept {
 
 abstract_actor* abstract_actor::current() noexcept {
   return detail::current_actor();
+}
+
+// -- intrusive_ptr support --------------------------------------------------
+
+void abstract_actor::ref() const noexcept {
+  ctrl()->ref();
+}
+
+void abstract_actor::deref() const noexcept {
+  ctrl()->deref();
 }
 
 // -- callbacks ----------------------------------------------------------------

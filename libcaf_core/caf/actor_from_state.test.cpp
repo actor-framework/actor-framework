@@ -122,6 +122,7 @@ TEST("actors can spawn stateful actors as children") {
     auto uut = parent->spawn<linked>(actor_from_state<cell_state>, 42);
     static_assert(std::is_same_v<decltype(uut), actor>);
     run_parent();
+    check_eq(mail_count(), 1u);
     expect<exit_msg>().to(uut);
   }
 }

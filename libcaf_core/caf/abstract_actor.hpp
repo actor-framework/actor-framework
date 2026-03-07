@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/attachable.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/concepts.hpp"
@@ -44,7 +45,7 @@ using actor_id = uint64_t;
 constexpr actor_id invalid_actor_id = 0;
 
 /// Base class for all actor implementations.
-class CAF_CORE_EXPORT abstract_actor {
+class CAF_CORE_EXPORT abstract_actor : public abstract_ref_counted {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -59,7 +60,7 @@ public:
   ///       needs to be done by the outer scope
   explicit abstract_actor(actor_config& cfg);
 
-  virtual ~abstract_actor();
+  ~abstract_actor() noexcept override;
 
   abstract_actor(const abstract_actor&) = delete;
 
@@ -136,6 +137,12 @@ public:
   /// Returns the actor currently associated to the calling thread or `nullptr`
   /// if none is associated.
   static abstract_actor* current() noexcept;
+
+  // -- intrusive_ptr support --------------------------------------------------
+
+  void ref() const noexcept override;
+
+  void deref() const noexcept override;
 
   // -- messaging --------------------------------------------------------------
 
@@ -271,6 +278,11 @@ public:
     return fun();
   }
 
+  /// Checks whether this actor has terminated.
+  bool is_terminated() const noexcept {
+    return getf(is_terminated_flag);
+  }
+
   /// @endcond
 
 protected:
@@ -299,11 +311,6 @@ protected:
 
   void flags(int new_value) {
     flags_.store(new_value, std::memory_order_relaxed);
-  }
-
-  /// Checks whether this actor has terminated.
-  bool is_terminated() const noexcept {
-    return getf(is_terminated_flag);
   }
 
   // -- attachables ------------------------------------------------------------
