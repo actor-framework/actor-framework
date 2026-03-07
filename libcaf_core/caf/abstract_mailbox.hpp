@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/inbox_result.hpp"
@@ -54,9 +55,12 @@ public:
   /// Closes the mailbox and discards all pending messages.
   /// @returns The number of dropped messages.
   /// @note Only the owning actor is allowed to call this function.
-  /// @note @p reason is ignored since CAF 1.10.0. A closed mailbox will always
-  ///       report @c sec::request_receiver_down.
-  virtual size_t close(const error& reason) = 0;
+  virtual size_t close() = 0;
+
+  CAF_DEPRECATED("use close() instead")
+  size_t close(const error&) {
+    return close();
+  }
 
   /// Returns the number of pending messages.
   /// @note Only the owning actor is allowed to call this function.

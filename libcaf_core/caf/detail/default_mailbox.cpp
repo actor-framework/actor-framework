@@ -48,7 +48,7 @@ bool default_mailbox::try_unblock() {
   return inbox_.try_unblock();
 }
 
-size_t default_mailbox::close(const error&) {
+size_t default_mailbox::close() {
   size_t result = 0;
   detail::sync_request_bouncer bounce;
   auto bounce_and_count = [&bounce, &result](mailbox_element* ptr) {

@@ -279,7 +279,7 @@ void scheduled_actor::on_cleanup(const error& reason) {
   awaited_responses_.clear();
   multiplexed_responses_.clear();
   cancel_flows_and_streams();
-  close_mailbox(reason);
+  close_mailbox();
   // Dispatch to parent's `on_cleanup` function.
   super::on_cleanup(reason);
 }
@@ -1218,7 +1218,7 @@ void scheduled_actor::cancel_flows_and_streams() {
   run_actions();
 }
 
-void scheduled_actor::close_mailbox(const error& reason) {
+void scheduled_actor::close_mailbox() {
   // Discard stashed messages.
   auto dropped = size_t{0};
   if (!stash_.empty()) {
@@ -1231,13 +1231,13 @@ void scheduled_actor::close_mailbox(const error& reason) {
   }
   // Clear mailbox.
   if (!mailbox().closed())
-    dropped += mailbox().close(reason);
+    dropped += mailbox().close();
   if (dropped > 0 && metrics_.mailbox_size)
     metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
 }
 
 void scheduled_actor::force_close_mailbox() {
-  close_mailbox(make_error(exit_reason::unreachable));
+  close_mailbox();
 }
 
 // -- monitoring ---------------------------------------------------------------
