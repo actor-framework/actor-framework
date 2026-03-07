@@ -29,7 +29,7 @@ abstract_broker* manager::parent() {
   return parent_ ? static_cast<abstract_broker*>(parent_->get()) : nullptr;
 }
 
-void manager::detach(scheduler*, bool invoke_disconnect_message) {
+void manager::detach(scheduler* ctx, bool invoke_disconnect_message) {
   auto lg = log::io::trace("invoke_disconnect_message = {}",
                            invoke_disconnect_message);
   // This function gets called from the multiplexer when an error occurs or
@@ -40,22 +40,24 @@ void manager::detach(scheduler*, bool invoke_disconnect_message) {
   if (!detached()) {
     log::io::debug("disconnect servant from broker");
     auto raw_ptr = parent();
+    raw_ptr->context(ctx);
     // Keep a strong reference to our parent until we go out of scope.
     strong_actor_ptr ptr;
     ptr.swap(parent_);
     detach_from(raw_ptr);
     if (invoke_disconnect_message) {
+      using consume_result = scheduled_actor::consume_result;
       auto mptr = make_mailbox_element(nullptr, make_message_id(),
                                        detach_message());
-      switch (raw_ptr->consume(*mptr)) {
-        case invoke_message_result::consumed:
+      switch (raw_ptr->consume(mptr)) {
+        case consume_result::consumed:
           raw_ptr->finalize();
           break;
-        case invoke_message_result::skipped:
+        case consume_result::skipped:
           raw_ptr->push_to_cache(std::move(mptr));
           break;
-        case invoke_message_result::dropped:
-          log::io::info("broker dropped disconnect message");
+        case consume_result::terminated:
+          log::io::info("broker terminated while consuming disconnect message");
           break;
       }
     }

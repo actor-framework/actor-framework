@@ -17,10 +17,12 @@
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
+#include "caf/scheduler.hpp"
 
 #include <list>
 #include <memory>
 #include <source_location>
+#include <type_traits>
 
 namespace caf::test::fixture {
 
@@ -75,7 +77,7 @@ private:
 
     value_predicate& operator=(const value_predicate&) = default;
 
-    bool operator()(const T& value) {
+    bool operator()(const T& value) const {
       return predicate_(value);
     }
 
@@ -91,7 +93,7 @@ private:
   public:
     virtual ~abstract_message_predicate();
 
-    virtual bool operator()(const message&) = 0;
+    virtual bool operator()(const message&) const = 0;
   };
 
   /// A predicate for checking type and (optionally) content of a message.
@@ -120,7 +122,7 @@ private:
 
     message_predicate& operator=(const message_predicate&) = default;
 
-    bool operator()(const message& msg) override {
+    bool operator()(const message& msg) const override {
       if (!predicates_)
         return true;
       if (auto view = make_const_typed_message_view<Ts...>(msg))
@@ -131,7 +133,7 @@ private:
   private:
     template <size_t... Is>
     bool do_check([[maybe_unused]] const_typed_message_view<Ts...> view, //
-                  std::index_sequence<Is...>) {
+                  std::index_sequence<Is...>) const {
       return (((std::get<Is>(*predicates_))(get<Is>(view))) && ...);
     }
 
@@ -143,23 +145,8 @@ private:
 public:
   // -- public member types ----------------------------------------------------
 
-  /// Wraps a resumable pointer and a mailbox element pointer.
-  struct scheduling_event {
-    scheduling_event(resumable* target, mailbox_element_ptr payload)
-      : target(target, add_ref), item(std::move(payload)) {
-      // nop
-    }
-
-    /// The target of the event.
-    intrusive_ptr<resumable> target;
-
-    /// The message for the event or `nullptr` if the target is not an actor.
-    mailbox_element_ptr item;
-  };
-
-  using events_list = std::list<std::unique_ptr<scheduling_event>>;
-
-  using events_list_ptr = std::shared_ptr<events_list>;
+  /// Opaque data for the deterministic fixture.
+  struct private_data;
 
   /// Configures the algorithm to evaluate for an `evaluator` instances.
   enum class evaluator_algorithm {
@@ -171,17 +158,46 @@ public:
     prepone_and_allow
   };
 
-  /// Provides a fluent interface for matching messages. The `evaluator` allows
-  /// setting `from` and `with` parameters for an algorithm that matches
-  /// messages against a predicate. When setting the only mandatory parameter
-  /// `to`, the `evaluator` evaluates the predicate against the next message
-  /// in the mailbox of the target actor.
+  class CAF_TEST_EXPORT evaluator_base {
+  public:
+    evaluator_base() = delete;
+
+    evaluator_base(deterministic* fix, std::source_location loc,
+                   evaluator_algorithm algorithm)
+      : fix_(fix), loc_(loc), algo_(algorithm) {
+      // nop
+    }
+
+    virtual ~evaluator_base() noexcept;
+
+  protected:
+    bool eval_dispatch(const strong_actor_ptr& dst, bool fail_on_mismatch);
+
+    bool dry_run(const strong_actor_ptr& dst);
+
+    bool eval_prepone(const strong_actor_ptr& dst);
+
+    deterministic* fix_;
+    std::source_location loc_;
+    evaluator_algorithm algo_;
+    actor_predicate from_;
+    std::optional<message_priority> priority_;
+
+  private:
+    virtual const abstract_message_predicate& get_message_predicate() const = 0;
+  };
+
+  /// Provides a fluent interface for matching messages. The `evaluator`
+  /// allows setting `from` and `with` parameters for an algorithm that
+  /// matches messages against a predicate. When setting the only mandatory
+  /// parameter `to`, the `evaluator` evaluates the predicate against the next
+  /// message in the mailbox of the target actor.
   template <class... Ts>
-  class evaluator {
+  class evaluator : public evaluator_base {
   public:
     evaluator(deterministic* fix, std::source_location loc,
               evaluator_algorithm algorithm)
-      : fix_(fix), loc_(loc), algo_(algorithm) {
+      : evaluator_base(fix, loc, algorithm) {
       // nop
     }
 
@@ -198,16 +214,17 @@ public:
     /// Matches the values of the message. The evaluator will match a message
     /// only if all individual values match the corresponding predicate.
     ///
-    /// The template parameter pack `xs...` contains a list of match expressions
-    /// that all must evaluate to true for a message to match. For each match
-    /// expression:
+    /// The template parameter pack `xs...` contains a list of match
+    /// expressions that all must evaluate to true for a message to match. For
+    /// each match expression:
     ///
     /// - Passing a value creates a predicate that matches the value exactly.
     /// - Passing a predicate (a function object taking one argument and
-    ///   returning `bool`) will match any value for which the predicate returns
-    ///   `true`.
+    ///   returning `bool`) will match any value for which the predicate
+    ///   returns `true`.
     /// - Passing `std::ignore` accepts any value at that position.
-    /// - Passing a `std::reference_wrapper<T>` will match any value and stores
+    /// - Passing a `std::reference_wrapper<T>` will match any value and
+    /// stores
     ///   the value in the reference wrapper.
     template <class... Us>
     evaluator&& with(Us... xs) && {
@@ -217,25 +234,25 @@ public:
       return std::move(*this);
     }
 
-    /// Adds a predicate for the sender of the next message that matches only if
-    /// the sender is `src`.
+    /// Adds a predicate for the sender of the next message that matches only
+    /// if the sender is `src`.
     evaluator&& from(const strong_actor_ptr& src) && {
-      from_ = value_predicate<strong_actor_ptr>{src};
+      this->from_ = value_predicate<strong_actor_ptr>{src};
       return std::move(*this);
     }
 
-    /// Adds a predicate for the sender of the next message that matches only if
-    /// the sender is `src`.
+    /// Adds a predicate for the sender of the next message that matches only
+    /// if the sender is `src`.
     evaluator&& from(const actor& src) && {
-      from_ = value_predicate<strong_actor_ptr>{src};
+      this->from_ = value_predicate<strong_actor_ptr>{src};
       return std::move(*this);
     }
 
-    /// Adds a predicate for the sender of the next message that matches only if
-    /// the sender is `src`.
+    /// Adds a predicate for the sender of the next message that matches only
+    /// if the sender is `src`.
     template <class... Us>
     evaluator&& from(const typed_actor<Us...>& src) && {
-      from_ = value_predicate<strong_actor_ptr>{src};
+      this->from_ = value_predicate<strong_actor_ptr>{src};
       return std::move(*this);
     }
 
@@ -245,9 +262,10 @@ public:
       return std::move(*this).from(strong_actor_ptr{});
     }
 
-    /// Causes the evaluator to store the sender of a matched message in `src`.
+    /// Causes the evaluator to store the sender of a matched message in
+    /// `src`.
     evaluator&& from(std::reference_wrapper<strong_actor_ptr> src) && {
-      from_ = value_predicate<strong_actor_ptr>{src};
+      this->from_ = value_predicate<strong_actor_ptr>{src};
       return std::move(*this);
     }
 
@@ -261,7 +279,7 @@ public:
       requires(!std::is_same_v<T, scoped_actor>)
     bool to(const T& dst) && {
       auto dst_ptr = actor_cast<strong_actor_ptr>(dst);
-      switch (algo_) {
+      switch (this->algo_) {
         case evaluator_algorithm::expect:
           return eval_dispatch(dst_ptr, true);
         case evaluator_algorithm::allow:
@@ -285,60 +303,15 @@ public:
     }
 
   private:
-    using predicates = std::tuple<value_predicate<Ts>...>;
-
-    bool eval_dispatch(const strong_actor_ptr& dst, bool fail_on_mismatch) {
-      auto& ctx = runnable::current();
-      auto* event = fix_->find_event_impl(dst);
-      if (!event) {
-        if (fail_on_mismatch)
-          ctx.fail({"no matching message found", loc_});
-        return false;
-      }
-      CAF_ASSERT(event->item != nullptr);
-      if (!from_(event->item->sender) || !with_(event->item->payload)) {
-        if (fail_on_mismatch)
-          ctx.fail({"no matching message found", loc_});
-        return false;
-      }
-      if (priority_) {
-        if (event->item->mid.priority() != *priority_) {
-          if (fail_on_mismatch)
-            ctx.fail({"message priority does not match", loc_});
-          return false;
-        }
-      }
-      fix_->prepone_event_impl(dst);
-      if (fail_on_mismatch) {
-        if (!fix_->dispatch_message())
-          ctx.fail({"failed to dispatch message", loc_});
-        reporter::instance().pass(loc_);
-        return true;
-      }
-      return fix_->dispatch_message();
+    const abstract_message_predicate& get_message_predicate() const override {
+      return with_;
     }
 
-    bool dry_run(const strong_actor_ptr& dst) {
-      auto* event = fix_->find_event_impl(dst);
-      if (!event)
-        return false;
-      return from_(event->item->sender) && !with_(event->item->payload);
-    }
-
-    bool eval_prepone(const strong_actor_ptr& dst) {
-      return fix_->prepone_event_impl(dst, from_, with_);
-    }
-
-    deterministic* fix_;
-    std::source_location loc_;
-    evaluator_algorithm algo_;
-    actor_predicate from_;
     message_predicate<Ts...> with_;
-    std::optional<message_priority> priority_;
   };
 
-  /// Utility class for injecting messages into the mailbox of an actor and then
-  /// checking whether the actor handles the message as expected.
+  /// Utility class for injecting messages into the mailbox of an actor and
+  /// then checking whether the actor handles the message as expected.
   template <class... Ts>
   class injector {
   public:
@@ -357,22 +330,22 @@ public:
 
     injector& operator=(const injector&) = delete;
 
-    /// Adds a predicate for the sender of the next message that matches only if
-    /// the sender is `src`.
+    /// Adds a predicate for the sender of the next message that matches only
+    /// if the sender is `src`.
     injector&& from(const strong_actor_ptr& src) && {
       from_ = src;
       return std::move(*this);
     }
 
-    /// Adds a predicate for the sender of the next message that matches only if
-    /// the sender is `src`.
+    /// Adds a predicate for the sender of the next message that matches only
+    /// if the sender is `src`.
     injector&& from(const actor& src) && {
       from_ = actor_cast<strong_actor_ptr>(src);
       return std::move(*this);
     }
 
-    /// Adds a predicate for the sender of the next message that matches only if
-    /// the sender is `src`.
+    /// Adds a predicate for the sender of the next message that matches only
+    /// if the sender is `src`.
     template <class... Us>
     injector&& from(const typed_actor<Us...>& src) && {
       from_ = actor_cast<strong_actor_ptr>(src);
@@ -445,6 +418,9 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  /// Returns the number of pending jobs in the scheduler.
+  size_t pending_jobs();
+
   /// Returns the number of pending messages in the system.
   size_t mail_count();
 
@@ -476,11 +452,40 @@ public:
 
   // -- control flow -----------------------------------------------------------
 
+  /// Tries to dispatch a job in the scheduler.
+  bool dispatch_job(const std::source_location& loc
+                    = std::source_location::current());
+
+  /// Dispatches all pending jobs in the scheduler.
+  size_t dispatch_jobs(const std::source_location& loc
+                       = std::source_location::current());
+
   /// Tries to dispatch a single message.
-  bool dispatch_message();
+  bool dispatch_message(const std::source_location& loc
+                        = std::source_location::current());
+
+  /// Tries to dispatch a single message for `hdl`.
+  bool dispatch_message(const strong_actor_ptr& hdl,
+                        const std::source_location& loc
+                        = std::source_location::current());
+
+  /// Tries to dispatch a single message for `hdl`.
+  bool dispatch_message(const actor& hdl, const std::source_location& loc
+                                          = std::source_location::current()) {
+    return dispatch_message(actor_cast<strong_actor_ptr>(hdl), loc);
+  }
+
+  /// Tries to dispatch a single message for `hdl`.
+  template <class... Ts>
+  bool dispatch_message(const typed_actor<Ts...>& hdl,
+                        const std::source_location& loc
+                        = std::source_location::current()) {
+    return dispatch_message(actor_cast<strong_actor_ptr>(hdl), loc);
+  }
 
   /// Dispatches all pending messages.
-  size_t dispatch_messages();
+  size_t dispatch_messages(const std::source_location& loc
+                           = std::source_location::current());
 
   // -- actor management -------------------------------------------------------
 
@@ -516,8 +521,8 @@ public:
   bool trigger_timeout(const std::source_location& loc
                        = std::source_location::current());
 
-  /// Triggers all pending timeouts by advancing the clock to the point in time
-  /// where the last timeout is due.
+  /// Triggers all pending timeouts by advancing the clock to the point in
+  /// time where the last timeout is due.
   size_t trigger_all_timeouts(const std::source_location& loc
                               = std::source_location::current());
 
@@ -541,8 +546,8 @@ public:
 
   // -- message-based predicates -----------------------------------------------
 
-  /// Expects a message with types `Ts...` as the next message in the mailbox of
-  /// the receiver and aborts the test if the message is missing. Otherwise
+  /// Expects a message with types `Ts...` as the next message in the mailbox
+  /// of the receiver and aborts the test if the message is missing. Otherwise
   /// executes the message.
   template <class... Ts>
   auto
@@ -577,16 +582,17 @@ public:
     }
   };
 
-  /// Starts an `inject` clause. Inject clauses provide a shortcut for sending a
-  /// message to an actor and then calling `expect` with the same arguments to
-  /// check whether the actor handles the message as expected.
+  /// Starts an `inject` clause. Inject clauses provide a shortcut for sending
+  /// a message to an actor and then calling `expect` with the same arguments
+  /// to check whether the actor handles the message as expected.
   auto
   inject(const std::source_location& loc = std::source_location::current()) {
     return inject_helper{this, loc};
   }
 
-  /// Tries to prepone a message, i.e., reorders the messages in the mailbox of
-  /// the receiver such that the next call to `dispatch_message` will run it.
+  /// Tries to prepone a message, i.e., reorders the messages in the mailbox
+  /// of the receiver such that the next call to `dispatch_message` will run
+  /// it.
   /// @returns `true` if the message could be preponed, `false` otherwise.
   template <class... Ts>
   auto
@@ -594,7 +600,8 @@ public:
     return evaluator<Ts...>{this, loc, evaluator_algorithm::prepone};
   }
 
-  /// Shortcut for calling `prepone` and then `expect` with the same arguments.
+  /// Shortcut for calling `prepone` and then `expect` with the same
+  /// arguments.
   template <class... Ts>
   auto prepone_and_expect(const std::source_location& loc
                           = std::source_location::current()) {
@@ -638,11 +645,9 @@ public:
   /// Iterates over all pending messages.
   template <class Fn>
   void for_each_message(Fn&& fn) {
-    for (auto& event : *events_) {
-      if (event->item) {
-        fn(event->item->payload);
-      }
-    }
+    using fn_t = std::remove_reference_t<Fn>;
+    callback_ref_impl<fn_t, void(const message&)> fn_ref{fn};
+    do_for_each_message(fn_ref);
   }
 
   /// Iterates over all pending messages in the mailbox of `hdl`.
@@ -651,20 +656,17 @@ public:
     if (!hdl) {
       return;
     }
-    auto* base_ptr = actor_cast<abstract_actor*>(hdl);
-    if (!base_ptr->is_local_actor()) {
-      return;
-    }
-    auto* ptr = static_cast<local_actor*>(base_ptr)->as_resumable();
-    for (auto& event : *events_) {
-      if (event->target == ptr && event->item) {
-        fn(event->item->payload);
-      }
-    }
+    using fn_t = std::remove_reference_t<Fn>;
+    callback_ref_impl<fn_t, void(const message&)> fn_ref{fn};
+    do_for_each_message(hdl, fn_ref);
   }
 
   // -- member variables -------------------------------------------------------
 
+private:
+  std::unique_ptr<private_data> private_data_;
+
+public:
   /// The actor system configuration.
   actor_system_config cfg;
 
@@ -672,22 +674,10 @@ public:
   actor_system sys;
 
 private:
-  explicit deterministic(events_list_ptr events);
+  void do_for_each_message(callback<void(const message&)>& fn);
 
-  /// Tries find a message in `events_` that matches the given predicate and
-  /// moves it to the front of the queue.
-  bool prepone_event_impl(const strong_actor_ptr& receiver);
-
-  /// Tries find a message in `events_` that matches the given predicates and
-  /// moves it to the front of the queue.
-  bool prepone_event_impl(const strong_actor_ptr& receiver,
-                          actor_predicate& sender_pred,
-                          abstract_message_predicate& payload_pred);
-
-  /// Returns the next event for `receiver` or `nullptr` if there is none.
-  scheduling_event* find_event_impl(const strong_actor_ptr& receiver);
-  /// Stores all pending messages of scheduled actors.
-  events_list_ptr events_;
+  void do_for_each_message(const strong_actor_ptr& hdl,
+                           callback<void(const message&)>& fn);
 };
 
 } // namespace caf::test::fixture

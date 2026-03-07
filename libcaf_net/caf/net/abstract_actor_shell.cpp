@@ -68,34 +68,44 @@ bool abstract_actor_shell::try_block_mailbox() {
 
 // -- message processing -------------------------------------------------------
 
+local_actor::consume_result
+abstract_actor_shell::consume(mailbox_element_ptr& what) {
+  current_element_ = what.get();
+  CAF_LOG_RECEIVE_EVENT(current_element_);
+  auto mid = what->mid;
+  if (!mid.is_response()) {
+    detail::default_invoke_result_visitor<abstract_actor_shell> visitor{this};
+    if (auto result = bhvr_(what->payload)) {
+      visitor(*result);
+    } else {
+      auto fallback_result = (*fallback_)(this, what->payload);
+      visit(visitor, fallback_result);
+    }
+  } else if (auto i = multiplexed_responses_.find(mid);
+             i != multiplexed_responses_.end()) {
+    auto [bhvr, pending_timeout] = std::move(i->second);
+    pending_timeout.dispose();
+    multiplexed_responses_.erase(i);
+    auto res = bhvr(what->payload);
+    if (!res) {
+      log::net::debug("got unexpected_response message: {}", what->payload);
+      auto err_msg = make_message(
+        make_error(sec::unexpected_response, std::move(what->payload)));
+      bhvr(err_msg);
+    }
+  } else {
+    log::net::debug("discard stale/obsolete response message: {}",
+                    what->payload);
+  }
+  CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
+  return consume_result::consumed;
+}
+
 bool abstract_actor_shell::consume_message() {
   auto lg = log::net::trace("");
   if (auto msg = next_message()) {
-    current_element_ = msg.get();
-    CAF_LOG_RECEIVE_EVENT(current_element_);
-    auto mid = msg->mid;
-    if (!mid.is_response()) {
-      detail::default_invoke_result_visitor<abstract_actor_shell> visitor{this};
-      if (auto result = bhvr_(msg->payload)) {
-        visitor(*result);
-      } else {
-        auto fallback_result = (*fallback_)(this, msg->payload);
-        visit(visitor, fallback_result);
-      }
-    } else if (auto i = multiplexed_responses_.find(mid);
-               i != multiplexed_responses_.end()) {
-      auto [bhvr, pending_timeout] = std::move(i->second);
-      pending_timeout.dispose();
-      multiplexed_responses_.erase(i);
-      auto res = bhvr(msg->payload);
-      if (!res) {
-        log::net::debug("got unexpected_response");
-        auto err_msg = make_message(
-          make_error(sec::unexpected_response, std::move(msg->payload)));
-        bhvr(err_msg);
-      }
-    }
-    CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
+    [[maybe_unused]] auto res = consume(msg);
+    CAF_ASSERT(res == consume_result::consumed);
     return true;
   }
   return false;

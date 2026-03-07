@@ -33,7 +33,7 @@ public:
 
   void clear();
 
-  bool empty() const {
+  bool empty() const noexcept {
     return elements_.empty();
   }
 
@@ -51,7 +51,7 @@ public:
     elements_.emplace_back(std::forward<Ts>(xs)...);
   }
 
-  void cleanup() {
+  void cleanup() noexcept {
     erased_elements_.clear();
   }
 

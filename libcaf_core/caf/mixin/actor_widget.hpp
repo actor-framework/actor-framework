@@ -8,13 +8,13 @@
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/make_actor.hpp"
-#include "caf/message_handler.hpp"
 
 CAF_PUSH_WARNINGS
 #include <QApplication>
 #include <QEvent>
 CAF_POP_WARNINGS
+
+#include <tuple>
 
 namespace caf::mixin {
 
@@ -71,10 +71,9 @@ public:
       auto* ptr = static_cast<event_type*>(event);
 #endif
       if (ptr && alive_) {
-        switch (self()->activate(&(sys_->scheduler()), *(ptr->mptr))) {
-          default:
-            break;
-        };
+        auto* actor = self();
+        actor->context(&sys_->scheduler());
+        std::ignore = actor->consume(ptr->mptr);
         return true;
       }
     }
