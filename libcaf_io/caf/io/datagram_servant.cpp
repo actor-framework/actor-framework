@@ -52,9 +52,10 @@ void datagram_servant::datagram_sent(scheduler* ctx, datagram_handle hdl,
   if (detached())
     return;
   using sent_t = datagram_sent_msg;
+  parent()->context(ctx);
   mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
                       make_message(sent_t{hdl, written, std::move(buffer)})};
-  invoke_mailbox_element_impl(ctx, tmp);
+  invoke_mailbox_element_impl(tmp);
 }
 
 } // namespace caf::io

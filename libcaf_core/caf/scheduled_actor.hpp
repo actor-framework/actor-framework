@@ -98,18 +98,6 @@ public:
     skipped,
   };
 
-  /// Result of one-shot activations.
-  enum class activation_result {
-    /// Actor is still alive and handled the activation message.
-    success,
-    /// Actor handled the activation message and terminated.
-    terminated,
-    /// Actor skipped the activation message.
-    skipped,
-    /// Actor dropped the activation message.
-    dropped
-  };
-
   // -- constants --------------------------------------------------------------
 
   static constexpr auto forced_spawn_options = spawn_options::no_flags;
@@ -430,22 +418,7 @@ public:
   message_category categorize(mailbox_element& x);
 
   /// Tries to consume `x`.
-  invoke_message_result consume(mailbox_element& x);
-
-  /// Tries to consume `x`.
-  void consume(mailbox_element_ptr x);
-
-  /// Activates an actor and runs initialization code if necessary.
-  /// @returns `true` if the actor is alive and ready for `reactivate`,
-  ///          `false` otherwise.
-  bool activate(scheduler* ctx);
-
-  /// One-shot interface for activating an actor for a single message.
-  activation_result activate(scheduler* ctx, mailbox_element& x);
-
-  /// Interface for activating an actor any
-  /// number of additional times after `activate`.
-  activation_result reactivate(mailbox_element& x);
+  consume_result consume(mailbox_element& x) override;
 
   // -- behavior management ----------------------------------------------------
 
@@ -784,23 +757,6 @@ private:
 
   /// Places all messages from the `stash_` back into the mailbox.
   void unstash();
-
-  template <class F>
-  activation_result run_with_metrics(mailbox_element& x, F body) {
-    if (metrics_.mailbox_time) {
-      auto t0 = std::chrono::steady_clock::now();
-      auto mbox_time = x.seconds_until(t0);
-      auto res = body();
-      if (res != activation_result::skipped) {
-        telemetry::timer::observe(metrics_.processing_time, t0);
-        metrics_.mailbox_time->observe(mbox_time);
-        metrics_.mailbox_size->dec();
-      }
-      return res;
-    } else {
-      return body();
-    }
-  }
 
   // -- cleanup ----------------------------------------------------------------
 

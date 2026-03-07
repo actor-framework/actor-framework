@@ -11,8 +11,8 @@
 #include "caf/after.hpp"
 #include "caf/behavior.hpp"
 #include "caf/blocking_mail.hpp"
+#include "caf/callback.hpp"
 #include "caf/detail/apply_args.hpp"
-#include "caf/detail/blocking_behavior.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/default_mailbox.hpp"
@@ -174,6 +174,8 @@ public:
   const char* name() const override;
 
   bool initialize(scheduler* sched) override;
+
+  consume_result consume(mailbox_element& x) override;
 
   bool launch_delayed() override;
 
@@ -341,9 +343,8 @@ public:
     filtered tk;
     behavior bhvr{apply_moved_args(make_behavior_impl, get_indices(tk), tup)};
     using tail_indices = il_range_t<tl_size_v<filtered>, sizeof...(Ts)>;
-    make_blocking_behavior_t factory;
-    auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, &bhvr);
-    receive_impl(rcc, mid, fun);
+    receive_dispatcher d{this, &rcc, mid};
+    apply_moved_args_prefixed(d, tail_indices{}, tup, &bhvr);
   }
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
@@ -358,8 +359,8 @@ public:
   }
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
-  void receive_impl(receive_cond& rcc, message_id mid,
-                    detail::blocking_behavior& bhvr);
+  void receive_impl(receive_cond& rcc, message_id mid, behavior& bhvr,
+                    timespan timeout, callback<void()>* on_timeout);
 
   void on_cleanup(const error& reason) override;
 
@@ -376,6 +377,22 @@ public:
   /// @endcond
 
 private:
+  /// Dispatches from varargs_tup_receive to receive_impl(behavior, timeout,
+  /// on_timeout). Used with apply_moved_args_prefixed.
+  struct receive_dispatcher {
+    blocking_actor* self;
+    receive_cond* rcc;
+    message_id mid;
+    void operator()(behavior* b) const {
+      self->receive_impl(*rcc, mid, *b, infinite, nullptr);
+    }
+    template <class F>
+    void operator()(behavior* b, timeout_definition<F> td) const {
+      callback_impl<F, void()> on_timeout_cb{std::move(td.handler)};
+      self->receive_impl(*rcc, mid, *b, td.timeout, &on_timeout_cb);
+    }
+  };
+
   void do_unstash(mailbox_element_ptr ptr) override;
 
   void do_receive(message_id mid, behavior& bhvr, timespan timeout) override;
@@ -406,6 +423,10 @@ private:
   }
 
   // -- member variables -------------------------------------------------------
+
+  behavior* current_behavior_ = nullptr;
+
+  message_id current_message_id_;
 
   /// Stores incoming messages.
   detail::default_mailbox mailbox_;

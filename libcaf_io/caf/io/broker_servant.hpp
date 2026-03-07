@@ -61,28 +61,30 @@ protected:
     ptr->erase(hdl_);
   }
 
-  void invoke_mailbox_element_impl(scheduler* ctx, mailbox_element& x) {
+  void invoke_mailbox_element_impl(mailbox_element& x) {
     auto self = this->parent();
     if (auto pfac = self->proxy_registry_ptr()) {
       proxy_registry::current(pfac);
       auto guard = detail::scope_guard{[]() noexcept { //
         proxy_registry::current(nullptr);
       }};
-      self->activate(ctx, x);
+      self->consume(x);
     } else {
-      self->activate(ctx, x);
+      self->consume(x);
     }
   }
 
   bool invoke_mailbox_element(scheduler* ctx) {
     // hold on to a strong reference while "messing" with the parent actor
-    strong_actor_ptr ptr_guard{this->parent()->ctrl(), add_ref};
+    auto* parent = this->parent();
+    parent->context(ctx);
+    strong_actor_ptr ptr_guard{parent->ctrl(), add_ref};
     auto prev = activity_tokens_;
-    invoke_mailbox_element_impl(ctx, value_);
+    invoke_mailbox_element_impl(value_);
     // only consume an activity token if actor did not produce them now
     if (prev && activity_tokens_ && --(*activity_tokens_) == 0) {
-      if (this->parent()->getf(abstract_actor::is_shutting_down_flag
-                               | abstract_actor::is_terminated_flag))
+      if (parent->getf(abstract_actor::is_shutting_down_flag
+                       | abstract_actor::is_terminated_flag))
         return false;
       // tell broker it entered passive mode, this can result in
       // producing, why we check the condition again afterwards
@@ -94,7 +96,7 @@ protected:
                            datagram_servant_passivated_msg>>;
       mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
                           make_message(passive_t{hdl()})};
-      invoke_mailbox_element_impl(ctx, tmp);
+      invoke_mailbox_element_impl(tmp);
       return activity_tokens_ != size_t{0};
     }
     return true;

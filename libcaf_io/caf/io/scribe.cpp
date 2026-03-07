@@ -51,10 +51,11 @@ void scribe::data_transferred(scheduler* ctx, size_t written,
   auto lg = log::io::trace("written = {}, remaining = {}", written, remaining);
   if (detached())
     return;
+  parent()->context(ctx);
   using transferred_t = data_transferred_msg;
   mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
                       make_message(transferred_t{hdl(), written, remaining})};
-  invoke_mailbox_element_impl(ctx, tmp);
+  invoke_mailbox_element_impl(tmp);
   // data_transferred_msg tmp{hdl(), written, remaining};
   // auto ptr = make_mailbox_element(nullptr, invalid_message_id, {}, tmp);
   // parent()->context(ctx);

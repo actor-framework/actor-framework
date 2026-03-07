@@ -63,6 +63,10 @@ bool abstract_actor_shell::try_block_mailbox() {
 
 // -- message processing -------------------------------------------------------
 
+local_actor::consume_result abstract_actor_shell::consume(mailbox_element& ) {
+  detail::critical("abstract_actor_shell::consume not implemented");
+}
+
 bool abstract_actor_shell::consume_message() {
   auto lg = log::net::trace("");
   if (auto msg = next_message()) {
