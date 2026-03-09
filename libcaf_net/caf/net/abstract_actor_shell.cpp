@@ -182,7 +182,7 @@ void abstract_actor_shell::launch(caf::detail::private_thread*, scheduler*) {
 
 void abstract_actor_shell::on_cleanup(const error& reason) {
   auto lg = log::net::trace("reason = {}", reason);
-  close_mailbox(reason);
+  close_mailbox();
   // Detach from owner.
   {
     std::unique_lock<std::mutex> guard{loop_mtx_};
@@ -199,16 +199,16 @@ void abstract_actor_shell::do_unstash(mailbox_element_ptr ptr) {
   mailbox_.push_front(std::move(ptr));
 }
 
-void abstract_actor_shell::close_mailbox(const error& reason) {
+void abstract_actor_shell::close_mailbox() {
   if (!mailbox_.closed()) {
-    auto dropped = mailbox_.close(reason);
+    auto dropped = mailbox_.close();
     if (dropped > 0 && metrics_.mailbox_size)
       metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
   }
 }
 
 void abstract_actor_shell::force_close_mailbox() {
-  close_mailbox(make_error(exit_reason::unreachable));
+  close_mailbox();
 }
 
 flow::coordinator* abstract_actor_shell::flow_context() {

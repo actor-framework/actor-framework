@@ -41,7 +41,7 @@ public:
 
   bool try_unblock() override;
 
-  size_t close(const error&) override;
+  size_t close() override;
 
   size_t size() override;
 

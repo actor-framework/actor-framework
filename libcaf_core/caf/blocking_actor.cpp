@@ -354,7 +354,7 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
 }
 
 void blocking_actor::on_cleanup(const error& reason) {
-  close_mailbox(reason);
+  close_mailbox();
   on_exit();
   return super::on_cleanup(reason);
 }
@@ -364,17 +364,17 @@ void blocking_actor::unstash() {
     mailbox().push_front(mailbox_element_ptr{stashed});
 }
 
-void blocking_actor::close_mailbox(const error& reason) {
+void blocking_actor::close_mailbox() {
   if (!mailbox_->closed()) {
     unstash();
-    auto dropped = mailbox_->close(reason);
+    auto dropped = mailbox_->close();
     if (dropped > 0 && metrics_.mailbox_size)
       metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
   }
 }
 
 void blocking_actor::force_close_mailbox() {
-  close_mailbox(make_error(exit_reason::unreachable));
+  close_mailbox();
 }
 
 void blocking_actor::do_unstash(mailbox_element_ptr ptr) {
