@@ -8,6 +8,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/actor_from_state.hpp"
+#include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scheduled_actor/flow.hpp"
@@ -97,14 +98,14 @@ TEST("the merge operator allows setting a maximum concurrency") {
   SECTION("merging multiple observables") {
     auto uut = std::move(in).flat_map(to_iota);
     auto sub = uut.subscribe(snk->as_observer());
-    auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+    auto* ptr = static_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
     check_eq(ptr->max_concurrent(), defaults::flow::max_concurrent);
     sub.dispose();
   }
   SECTION("merging multiple observables") {
     auto uut = std::move(in).flat_map(to_iota, 17u);
     auto sub = uut.subscribe(snk->as_observer());
-    auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+    auto* ptr = static_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
     check_eq(ptr->max_concurrent(), 17u);
     sub.dispose();
   }

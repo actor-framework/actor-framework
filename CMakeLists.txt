@@ -69,6 +69,7 @@ option(CAF_ENABLE_EXAMPLES "Build small programs showcasing CAF features" ON)
 option(CAF_ENABLE_EXCEPTIONS "Build CAF with support for exceptions" ON)
 option(CAF_ENABLE_IO_MODULE "Build legacy networking I/O module" ON)
 option(CAF_ENABLE_NET_MODULE "Build networking I/O module" ON)
+option(CAF_ENABLE_RTTI "Build CAF with support for RTTI" ON)
 option(CAF_ENABLE_TESTING "Build unit test suites" ON)
 
 # -- CAF options with non-boolean values ---------------------------------------

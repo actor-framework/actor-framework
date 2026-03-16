@@ -10,6 +10,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/config.hpp"
 #include "caf/flow/multicaster.hpp"
 #include "caf/log/test.hpp"
 
@@ -547,7 +548,7 @@ TEST("the merge operator allows setting a maximum concurrency") {
     SECTION("merging multiple observables") {
       auto uut = make_observable().merge(size_t{17}, in1, in2);
       auto sub = uut.subscribe(snk->as_observer());
-      auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+      auto* ptr = static_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
       check_eq(ptr->max_concurrent(), 17u);
       sub.dispose();
     }
@@ -556,7 +557,7 @@ TEST("the merge operator allows setting a maximum concurrency") {
     SECTION("merging multiple observables") {
       auto uut = in1.merge(size_t{17}, in2);
       auto sub = uut.subscribe(snk->as_observer());
-      auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+      auto* ptr = static_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
       check_eq(ptr->max_concurrent(), 17u);
       sub.dispose();
     }
@@ -564,7 +565,7 @@ TEST("the merge operator allows setting a maximum concurrency") {
       auto in = make_observable().from_container(std::vector{in1, in2});
       auto uut = std::move(in).merge(size_t{17});
       auto sub = uut.subscribe(snk->as_observer());
-      auto* ptr = dynamic_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
+      auto* ptr = static_cast<caf::flow::op::merge_sub<int>*>(sub.ptr());
       check_eq(ptr->max_concurrent(), 17u);
       sub.dispose();
     }

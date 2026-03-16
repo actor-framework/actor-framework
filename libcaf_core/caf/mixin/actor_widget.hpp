@@ -65,7 +65,11 @@ public:
 
   bool event(QEvent* event) override {
     if (event->type() == static_cast<QEvent::Type>(EventId)) {
-      auto ptr = dynamic_cast<event_type*>(event);
+#ifdef CAF_ENABLE_RTTI
+      auto* ptr = dynamic_cast<event_type*>(event);
+#else
+      auto* ptr = static_cast<event_type*>(event);
+#endif
       if (ptr && alive_) {
         switch (self()->activate(&(sys_->scheduler()), *(ptr->mptr))) {
           default:

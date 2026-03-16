@@ -7,6 +7,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/scenario.hpp"
 
+#include "caf/config.hpp"
 #include "caf/event_based_actor.hpp"
 
 using namespace caf;
@@ -114,8 +115,9 @@ SCENARIO("actions can increase and decrease reference count") {
       THEN("reference count is updated") {
         auto fn = [] {};
         using impl_t = detail::default_action_impl<decltype(fn), true>;
-        auto uut = action{make_counted<impl_t>(std::move(fn))};
-        auto impl_ptr = dynamic_cast<impl_t*>(uut.as_intrusive_ptr().get());
+        auto impl = make_counted<impl_t>(std::move(fn));
+        auto* impl_ptr = impl.get();
+        auto uut = action{std::move(impl)};
         check(impl_ptr->unique());
         impl_ptr->ref_resumable();
         check(!impl_ptr->unique());

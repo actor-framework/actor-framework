@@ -171,8 +171,12 @@ TEST("the default exception handler includes the error message") {
     .receive( //
       [this] { fail("unexpected response"); },
       [this](const error& err) {
+#  ifdef CAF_ENABLE_RTTI
         check_eq(err.what(),
                  "unhandled exception of type std.runtime_error: whatever");
+#  else
+        check_eq(err.what(), "unhandled exception: whatever");
+#  endif
       });
 }
 
@@ -194,8 +198,12 @@ TEST("users can override the global default exception handler") {
     .receive( //
       [this] { fail("unexpected response"); },
       [this](const error& err) {
+#  ifdef CAF_ENABLE_RTTI
         check_eq(err.what(),
                  "unhandled exception of type std.runtime_error: whatever");
+#  else
+        check_eq(err.what(), "unhandled exception: whatever");
+#  endif
       });
   check_eq(calls->load(), 1u);
 }

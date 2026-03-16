@@ -4,6 +4,7 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/config.hpp"
 #include "caf/deduce_mpi.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
@@ -54,11 +55,6 @@ TEST("metaprogramming") {
 
 template <class T>
 struct token {};
-
-template <class T>
-std::ostream& operator<<(std::ostream& out, token<T>) {
-  return out << typeid(T).name();
-}
 
 template <class T, class U>
 constexpr bool operator==(token<T>, token<U>) {

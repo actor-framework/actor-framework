@@ -134,6 +134,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `system` to have the console logger use `actor_system::println` instead of
   writing to `stderr`. This avoids mangled output on the console when enabling
   console logging while also printing from actors.
+- Setting the new CMake option `CAF_ENABLE_RTTI` to `OFF` will now disable all
+  uses of `typeid` and `dynamic_cast` in CAF. This enables users to build CAF
+  with compiler options such as `-fno-rtti`.
 
 ### Fixed
 

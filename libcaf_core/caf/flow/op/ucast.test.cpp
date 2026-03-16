@@ -9,6 +9,8 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/config.hpp"
+
 using namespace caf;
 
 namespace {
@@ -124,6 +126,7 @@ SCENARIO("ucast operators deliver pending items before raising errors") {
   }
 }
 
+#ifdef CAF_ENABLE_RTTI
 SCENARIO("requesting from disposed ucast operators is a no-op") {
   GIVEN("a ucast operator with a disposed subscription") {
     WHEN("calling request() on the subscription") {
@@ -147,5 +150,6 @@ SCENARIO("requesting from disposed ucast operators is a no-op") {
     }
   }
 }
+#endif
 
 } // WITH_FIXTURE(fixture)

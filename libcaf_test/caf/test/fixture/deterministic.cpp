@@ -11,6 +11,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/actor_system_module.hpp"
+#include "caf/config.hpp"
 #include "caf/console_printer.hpp"
 #include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/actor_system_impl.hpp"
@@ -135,7 +136,9 @@ public:
     auto event = std::make_unique<event_t>(owner_->as_resumable(),
                                            std::move(ptr));
     events_->push_back(std::move(event));
-    blocked_ = false;
+    // Never return unblocked_reader: the fixture drives execution by
+    // dispatching from the events list. If we reported unblocked_reader, the
+    // actor would call schedule(this), breaking the invariant.
     return intrusive::inbox_result::success;
   }
 
@@ -477,13 +480,6 @@ public:
 
   void schedule(resumable* ptr, uint64_t) override {
     using event_t = deterministic::scheduling_event;
-    if (dynamic_cast<local_actor*>(ptr) != nullptr) {
-      // Actors put their messages into events_ directly and may not touch the
-      // scheduler in deterministic test mode.
-      detail::critical("actors may not be scheduled "
-                       "in deterministic test mode");
-    }
-    // "Regular" resumables still need to be scheduled here.
     events_->push_back(std::make_unique<event_t>(ptr, nullptr));
     // Before calling this function, CAF *always* bumps the reference count.
     // Hence, we need to release one reference count here.
@@ -779,7 +775,7 @@ deterministic::~deterministic() {
   //       messages. Otherwise, the destructor of `sys` will wait for all
   //       actors, potentially waiting forever. The same holds true for pending
   //       timeouts.
-  dynamic_cast<deterministic_actor_clock&>(sys.clock()).drop_actions();
+  static_cast<deterministic_actor_clock&>(sys.clock()).drop_actions();
   drop_events(*events_);
 }
 
@@ -919,40 +915,40 @@ void deterministic::inject_exit(const strong_actor_ptr& hdl, error reason) {
 
 size_t deterministic::set_time(actor_clock::time_point value,
                                const std::source_location& loc) {
-  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.set_time(value, loc);
 }
 
 size_t deterministic::advance_time(actor_clock::duration_type amount,
                                    const std::source_location& loc) {
-  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.advance_time(amount, loc);
 }
 
 bool deterministic::trigger_timeout(const std::source_location& loc) {
-  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.trigger_timeout(loc);
 }
 
 size_t deterministic::trigger_all_timeouts(const std::source_location& loc) {
-  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.trigger_all_timeouts(loc);
 }
 
 size_t deterministic::num_timeouts() noexcept {
-  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.num_timeouts();
 }
 
 actor_clock::time_point
 deterministic::next_timeout(const std::source_location& loc) {
-  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.next_timeout(loc);
 }
 
 actor_clock::time_point
 deterministic::last_timeout(const std::source_location& loc) {
-  auto& clock = dynamic_cast<deterministic_actor_clock&>(sys.clock());
+  auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.last_timeout(loc);
 }
 
