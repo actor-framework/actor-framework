@@ -18,29 +18,35 @@ public:
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   cstring(const char* str) : data_(str) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   cstring(std::string str) : data_(std::move(str)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   cstring(std::optional<const char*> str) : cstring() {
     if (str)
       data_ = *str;
   }
 
+  // cppcheck-suppress noExplicitConstructor
   cstring(std::optional<std::string> str) : cstring() {
     if (str)
       data_ = std::move(*str);
   }
 
+  // cppcheck-suppress noExplicitConstructor
   cstring(caf::expected<const char*> str) : cstring() {
     if (str)
       data_ = *str;
   }
 
+  // cppcheck-suppress noExplicitConstructor
   cstring(caf::expected<std::string> str) : cstring() {
     if (str)
       data_ = std::move(*str);
@@ -90,14 +96,17 @@ class val {
 public:
   val() = default;
 
+  // cppcheck-suppress noExplicitConstructor
   val(T value) : data_(std::move(value)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   val(std::optional<T> value) : data_(std::move(value)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   val(caf::expected<T> value) {
     if (value)
       data_ = std::move(*value);

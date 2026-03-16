@@ -46,7 +46,9 @@ public:
 
   template <class... Ts>
   explicit stateful_actor(actor_config& cfg, Ts&&... xs) : super(cfg) {
-    if constexpr (std::is_constructible_v<State, Ts&&...>)
+    static constexpr bool constructible_without_this
+      = std::is_constructible_v<State, Ts&&...>;
+    if constexpr (constructible_without_this)
       new (&state_) State(std::forward<Ts>(xs)...);
     else
       new (&state_) State(this, std::forward<Ts>(xs)...);

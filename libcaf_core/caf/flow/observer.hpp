@@ -296,7 +296,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  buffer_writer_impl(coordinator* parent) : parent_(parent, add_ref) {
+  explicit buffer_writer_impl(coordinator* parent) : parent_(parent, add_ref) {
     CAF_ASSERT(parent_ != nullptr);
   }
 

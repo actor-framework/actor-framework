@@ -48,7 +48,7 @@ struct handle_set {
   handle_set() = default;
 
   template <class T>
-  handle_set(const T& hdl)
+  explicit handle_set(const T& hdl)
     : wh(hdl.address()),
       dt(actor_cast<actor>(hdl)),
       st(actor_cast<testee_actor>(hdl)) {

@@ -209,7 +209,7 @@ struct response_checker {
   bool has_connection_field = false;
   bool has_ws_accept_field = false;
 
-  response_checker(std::string_view key) : ws_key(key) {
+  explicit response_checker(std::string_view key) : ws_key(key) {
     // nop
   }
 

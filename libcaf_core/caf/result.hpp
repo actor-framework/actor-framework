@@ -49,23 +49,28 @@ public:
   result_base& operator=(const result_base&) = default;
 
   template <error_code_enum Enum>
+  // cppcheck-suppress noExplicitConstructor
   result_base(Enum x) : content_(make_error(x)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result_base(error x) : content_(std::move(x)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result_base(delegated<Ts...> x) : content_(x) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result_base(const typed_response_promise<Ts...>&)
     : content_(delegated<Ts...>{}) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result_base(const response_promise&) : content_(delegated<Ts...>{}) {
     // nop
   }
@@ -118,14 +123,17 @@ public:
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result(unit_t) : super(detail::result_base_message_init{}) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result(delegated<unit_t>) : super(delegated<void>{}) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result(const typed_response_promise<unit_t>&) : super(delegated<void>{}) {
     // nop
   }
@@ -142,14 +150,17 @@ public:
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result(unit_t) : super(detail::result_base_message_init{}) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result(delegated<unit_t>) : super(delegated<void>{}) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result(const typed_response_promise<unit_t>&) : super(delegated<void>{}) {
     // nop
   }
@@ -162,10 +173,12 @@ public:
 
   using super::super;
 
+  // cppcheck-suppress noExplicitConstructor
   result(message x) {
     this->content_ = std::move(x);
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result(expected<message> x) {
     if (x)
       this->content_ = std::move(*x);
@@ -192,11 +205,13 @@ public:
   template <class U>
     requires(std::constructible_from<T, U>
              && !std::constructible_from<super, U>)
+  // cppcheck-suppress noExplicitConstructor
   result(U&& x)
     : super(detail::result_base_message_init{}, T{std::forward<U>(x)}) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   result(expected<T> x) {
     if (x)
       this->content_ = make_message(std::move(*x));
@@ -247,22 +262,27 @@ public:
   skippable_result& operator=(skippable_result&&) = default;
   skippable_result& operator=(const skippable_result&) = default;
 
+  // cppcheck-suppress noExplicitConstructor
   skippable_result(delegated<message> x) : content_(std::move(x)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   skippable_result(message x) : content_(std::move(x)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   skippable_result(error x) : content_(std::move(x)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   skippable_result(skip_t x) : content_(std::move(x)) {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   skippable_result(expected<message> x) {
     if (x)
       this->content_ = std::move(*x);

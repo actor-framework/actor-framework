@@ -13,6 +13,7 @@ namespace caf {
 /// that have a variadic list of arguments and thus cannot use the usual way of
 /// passing in a source location via default argument.
 struct format_string_with_location {
+  // cppcheck-suppress noExplicitConstructor
   constexpr format_string_with_location(std::string_view str,
                                         const std::source_location& loc
                                         = std::source_location::current())
@@ -20,6 +21,7 @@ struct format_string_with_location {
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   constexpr format_string_with_location(const char* str,
                                         const std::source_location& loc
                                         = std::source_location::current())

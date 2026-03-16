@@ -33,6 +33,7 @@ public:
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   constexpr datagram_handle(const invalid_datagram_handle_t&) {
     // nop
   }
@@ -43,7 +44,7 @@ public:
   }
 
 private:
-  datagram_handle(int64_t handle_id) : super{handle_id} {
+  explicit datagram_handle(int64_t handle_id) : super{handle_id} {
     // nop
   }
 };

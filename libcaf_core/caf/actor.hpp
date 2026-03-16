@@ -54,10 +54,12 @@ public:
 
   actor(std::nullptr_t);
 
+  // cppcheck-suppress noExplicitConstructor
   actor(const scoped_actor&);
 
   template <class T>
     requires actor_traits<T>::is_dynamically_typed
+  // cppcheck-suppress noExplicitConstructor
   actor(T* ptr) : ptr_(ptr->ctrl(), add_ref) {
     CAF_ASSERT(ptr != nullptr);
   }
@@ -164,6 +166,7 @@ private:
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
+  // cppcheck-suppress noExplicitConstructor
   actor(actor_control_block*);
 
   strong_actor_ptr ptr_;

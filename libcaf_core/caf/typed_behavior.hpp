@@ -165,6 +165,7 @@ public:
   typed_behavior& operator=(const typed_behavior&) = default;
 
   template <class... Us>
+  // cppcheck-suppress noExplicitConstructor
   typed_behavior(const typed_behavior<Us...>& other) : bhvr_(other.unbox()) {
     using other_signatures = typename typed_behavior<Us...>::signatures;
     using m = interface_mismatch_t<other_signatures, signatures>;

@@ -69,7 +69,7 @@ using native_socket = io::network::native_socket;
 using default_mpx = io::network::default_multiplexer;
 
 struct ssl_policy {
-  ssl_policy(session_ptr session) : session_(std::move(session)) {
+  explicit ssl_policy(session_ptr session) : session_(std::move(session)) {
     // nop
   }
 

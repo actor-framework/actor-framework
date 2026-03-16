@@ -32,6 +32,7 @@ public:
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   constexpr accept_handle(const invalid_accept_handle_t&) {
     // nop
   }
@@ -42,7 +43,7 @@ public:
   }
 
 private:
-  accept_handle(int64_t handle_id) : super(handle_id) {
+  explicit accept_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }
 };

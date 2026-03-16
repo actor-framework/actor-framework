@@ -16,7 +16,7 @@ namespace caf::io::network {
 /// An event handler for the internal event pipe.
 class CAF_IO_EXPORT pipe_reader : public event_handler {
 public:
-  pipe_reader(default_multiplexer& dm);
+  explicit pipe_reader(default_multiplexer& dm);
 
   void removed_from_loop(operation op) override;
 

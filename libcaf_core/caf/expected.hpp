@@ -157,29 +157,35 @@ public:
 
   template <class U>
     requires std::is_constructible_v<T, U>
+  // cppcheck-suppress noExplicitConstructor
   expected(U x) : has_value_{true} {
     new (std::addressof(value_)) T(std::move(x));
   }
 
   template <error_code_enum U>
   CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
+  // cppcheck-suppress noExplicitConstructor
   expected(U x) : has_value_{false} {
     new (std::addressof(error_)) caf::error(x);
   }
 
+  // cppcheck-suppress noExplicitConstructor
   expected(T&& x) noexcept(nothrow_move) : has_value_(true) {
     new (std::addressof(value_)) T(std::move(x));
   }
 
+  // cppcheck-suppress noExplicitConstructor
   expected(const T& x) noexcept(nothrow_copy) : has_value_(true) {
     new (std::addressof(value_)) T(x);
   }
 
   CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
+  // cppcheck-suppress noExplicitConstructor
   expected(caf::error e) noexcept : has_value_(false) {
     new (std::addressof(error_)) caf::error{std::move(e)};
   }
 
+  // cppcheck-suppress noExplicitConstructor
   expected(unexpected_type x) : has_value_(false) {
     new (std::addressof(error_)) caf::error(std::move(x.error()));
   }
@@ -821,17 +827,20 @@ public:
 
   template <error_code_enum Enum>
   CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
+  // cppcheck-suppress noExplicitConstructor
   expected(Enum x) : error_(std::in_place, x) {
     // nop
   }
 
   CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
+  // cppcheck-suppress noExplicitConstructor
   expected(caf::error err) noexcept : error_(std::move(err)) {
     // nop
   }
 
   expected() noexcept = default;
 
+  // cppcheck-suppress noExplicitConstructor
   expected(unexpected_type x) noexcept : error_(std::move(x.error())) {
     // nop
   }

@@ -33,6 +33,7 @@ public:
     // nop
   }
 
+  // cppcheck-suppress noExplicitConstructor
   constexpr connection_handle(const invalid_connection_handle_t&) {
     // nop
   }
@@ -43,7 +44,7 @@ public:
   }
 
 private:
-  connection_handle(int64_t handle_id) : super(handle_id) {
+  explicit connection_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }
 };

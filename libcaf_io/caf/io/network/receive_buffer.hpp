@@ -37,7 +37,7 @@ public:
 
   /// Create an empty container of size `count`. Data in the storage is not
   /// initialized.
-  receive_buffer(size_t count);
+  explicit receive_buffer(size_t count);
 
   /// Move constructor.
   receive_buffer(receive_buffer&& other) noexcept;

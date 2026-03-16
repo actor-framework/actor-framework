@@ -16,7 +16,7 @@ int forty_two() {
 
 class instance_counting_wrapper final : public int_fun::wrapper {
 public:
-  instance_counting_wrapper(size_t* instance_counter)
+  explicit instance_counting_wrapper(size_t* instance_counter)
     : instance_counter_(instance_counter) {
     *instance_counter_ += 1;
   }

@@ -24,7 +24,7 @@ namespace {
 struct ipv6_address_consumer {
   ipv6_address& dest;
 
-  ipv6_address_consumer(ipv6_address& ref) : dest(ref) {
+  explicit ipv6_address_consumer(ipv6_address& ref) : dest(ref) {
     // nop
   }
 

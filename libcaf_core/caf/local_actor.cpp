@@ -83,7 +83,7 @@ void local_actor::do_demonitor(const strong_actor_ptr& whom) {
   if (whom) {
     default_attachable::observe_token tk{address(),
                                          default_attachable::monitor};
-    whom->get()->detach(tk);
+    whom->get()->detach(attachable::token{tk});
   }
 }
 

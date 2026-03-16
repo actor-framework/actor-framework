@@ -23,7 +23,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stringification_inspector(std::string& result);
+  explicit stringification_inspector(std::string& result);
 
   ~stringification_inspector() override;
 

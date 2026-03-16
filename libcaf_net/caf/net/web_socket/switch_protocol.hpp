@@ -145,7 +145,7 @@ namespace caf::net::web_socket {
 template <class OnRequest>
 struct switch_protocol_bind_2 {
 public:
-  switch_protocol_bind_2(OnRequest on_request)
+  explicit switch_protocol_bind_2(OnRequest on_request)
     : on_request_(std::move(on_request)) {
     // nop
   }

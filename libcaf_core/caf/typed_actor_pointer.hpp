@@ -28,12 +28,14 @@ public:
   template <class Supertype>
     requires detail::tl_subset_of<signatures,
                                   typename Supertype::signatures>::value
+  // cppcheck-suppress noExplicitConstructor
   typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
     // nop
   }
 
   template <class... OtherSigs>
     requires detail::tl_subset_of<signatures, type_list<OtherSigs...>>::value
+  // cppcheck-suppress noExplicitConstructor
   typed_actor_pointer(typed_actor_pointer<OtherSigs...> other)
     : view_(other.internal_ptr()) {
     // nop
