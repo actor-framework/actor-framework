@@ -119,6 +119,7 @@ public:
   template <class... Us>
     requires detail::tl_subset_of_v<signatures,
                                     typename typed_actor<Us...>::signatures>
+  // cppcheck-suppress noExplicitConstructor
   typed_actor(const typed_actor<Us...>& other) : ptr_(other.ptr()) {
     // nop
   }
@@ -127,6 +128,7 @@ public:
   template <class T>
     requires(actor_traits<T>::is_statically_typed
              && detail::tl_subset_of_v<signatures, typename T::signatures>)
+  // cppcheck-suppress noExplicitConstructor
   typed_actor(T* ptr) : ptr_(ptr->ctrl(), add_ref) {
     CAF_ASSERT(ptr != nullptr);
   }

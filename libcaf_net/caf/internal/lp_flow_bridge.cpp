@@ -85,7 +85,7 @@ public:
 
   using accept_event_t = net::accept_event<net::lp::frame>;
 
-  server_flow_bridge(internal::lp_producer_ptr producer)
+  explicit server_flow_bridge(internal::lp_producer_ptr producer)
     : producer_(std::move(producer)) {
     // nop
   }

@@ -107,7 +107,7 @@ void abstract_actor::unlink_from(const actor_addr& other) {
     return;
   }
   default_attachable::observe_token tk{other, default_attachable::link};
-  exclusive_critical_section([&] { detach_impl(tk, true); });
+  exclusive_critical_section([&] { detach_impl(attachable::token{tk}, true); });
 }
 
 // -- properties ---------------------------------------------------------------
@@ -208,7 +208,7 @@ void abstract_actor::remove_link(abstract_actor* x) {
   default_attachable::observe_token tk{x->address(), default_attachable::link};
   joined_exclusive_critical_section(this, x, [&] {
     x->remove_backlink(this);
-    detach_impl(tk, true);
+    detach_impl(attachable::token{tk}, true);
   });
 }
 
@@ -224,7 +224,7 @@ bool abstract_actor::add_backlink(abstract_actor* x) {
   if (getf(is_terminated_flag)) {
     fail_state = fail_state_;
     send_exit_immediately = true;
-  } else if (detach_impl(tk, true, true) == 0) {
+  } else if (detach_impl(attachable::token{tk}, true, true) == 0) {
     attach_impl(tmp);
     success = true;
   }
@@ -240,7 +240,7 @@ bool abstract_actor::remove_backlink(abstract_actor* x) {
   // Called in an exclusive critical section.
   auto lg = log::core::trace("x = {}", x);
   default_attachable::observe_token tk{x->address(), default_attachable::link};
-  return detach_impl(tk, true) > 0;
+  return detach_impl(attachable::token{tk}, true) > 0;
 }
 
 } // namespace caf

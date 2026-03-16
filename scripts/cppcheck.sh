@@ -11,6 +11,8 @@
 #
 # The compile database is read from build/compile_commands.json
 # (or $CAF_BUILD_DIR/compile_commands.json if set).
+#
+# File-level suppressions are read from .cppcheck-suppressions at the repo root.
 
 set -e
 
@@ -49,6 +51,7 @@ else
   jobs="$(sysctl -n hw.ncpu 2>/dev/null || echo 1)"
 fi
 
+suppressionsFile="$repoRoot/.cppcheck-suppressions"
 echo "[cppcheck] Running cppcheck (compile database: $compileCommands)"
 set +e
 cppcheck \
@@ -62,6 +65,7 @@ cppcheck \
   --suppress=missingIncludeSystem \
   --suppress=unusedLabel \
   --inline-suppr \
+  --suppressions-list="$suppressionsFile" \
   --error-exitcode=7 \
   --check-level=exhaustive \
   2> "$reportXml"

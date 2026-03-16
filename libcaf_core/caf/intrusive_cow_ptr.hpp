@@ -69,6 +69,7 @@ public:
   }
 
   template <class Y>
+  // cppcheck-suppress noExplicitConstructor
   intrusive_cow_ptr(intrusive_cow_ptr<Y> other) noexcept
     : ptr_(other.detach(), false) {
     // nop

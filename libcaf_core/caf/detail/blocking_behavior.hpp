@@ -16,7 +16,8 @@ class CAF_CORE_EXPORT blocking_behavior {
 public:
   behavior& nested;
 
-  blocking_behavior(behavior& x);
+  explicit blocking_behavior(behavior& x);
+
   blocking_behavior(blocking_behavior&&) = default;
 
   virtual ~blocking_behavior();
@@ -54,16 +55,15 @@ struct make_blocking_behavior_t {
     // nop
   }
 
-  blocking_behavior operator()(behavior* x) const {
+  auto operator()(behavior* x) const {
     CAF_ASSERT(x != nullptr);
-    return {*x};
+    return blocking_behavior{*x};
   }
 
   template <class F>
-  blocking_behavior_v3<F>
-  operator()(behavior* x, timeout_definition<F> y) const {
+  auto operator()(behavior* x, timeout_definition<F> y) const {
     CAF_ASSERT(x != nullptr);
-    return {*x, std::move(y)};
+    return blocking_behavior_v3<F>{*x, std::move(y)};
   }
 };
 

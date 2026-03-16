@@ -20,7 +20,7 @@ using namespace caf;
 // --(rst-foo-begin)--
 class foo {
 public:
-  foo(int a0 = 0, int b0 = 0) : a_(a0), b_(b0) {
+  explicit foo(int a0 = 0, int b0 = 0) : a_(a0), b_(b0) {
     // nop
   }
 

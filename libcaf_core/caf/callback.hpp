@@ -45,7 +45,7 @@ class callback_impl;
 template <class F, class Result, class... Ts>
 class callback_impl<F, Result(Ts...)> final : public callback<Result(Ts...)> {
 public:
-  callback_impl(F&& f) : f_(std::move(f)) {
+  explicit callback_impl(F&& f) : f_(std::move(f)) {
     // nop
   }
 

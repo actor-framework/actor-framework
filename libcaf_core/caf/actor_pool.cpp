@@ -177,7 +177,7 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
     if (i != last) {
       default_attachable::observe_token tk{address(),
                                            default_attachable::monitor};
-      what->detach(tk);
+      what->detach(attachable::token{tk});
       workers_.erase(i);
     }
     return true;
@@ -186,7 +186,7 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
     for (auto& worker : workers_) {
       default_attachable::observe_token tk{address(),
                                            default_attachable::monitor};
-      worker->detach(tk);
+      worker->detach(attachable::token{tk});
     }
     workers_.clear();
     return true;

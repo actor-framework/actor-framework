@@ -29,7 +29,7 @@ std::atomic<size_t> s_dtors;
 
 class worker : public event_based_actor {
 public:
-  worker(actor_config& cfg) : event_based_actor(cfg) {
+  explicit worker(actor_config& cfg) : event_based_actor(cfg) {
     ++s_ctors;
   }
 

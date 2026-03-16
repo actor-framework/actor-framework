@@ -53,7 +53,7 @@ namespace {
 
 class test_console_printer : public console_printer {
 public:
-  test_console_printer(std::shared_ptr<std::string> str) : str_(str) {
+  explicit test_console_printer(std::shared_ptr<std::string> str) : str_(str) {
     // nop
   }
 

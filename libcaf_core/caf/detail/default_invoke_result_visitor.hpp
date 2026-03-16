@@ -15,7 +15,7 @@ class default_invoke_result_visitor : public invoke_result_visitor {
 public:
   using super = invoke_result_visitor;
 
-  default_invoke_result_visitor(Self* ptr) : self_(ptr) {
+  explicit default_invoke_result_visitor(Self* ptr) : self_(ptr) {
     // nop
   }
 

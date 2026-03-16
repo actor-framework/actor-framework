@@ -422,7 +422,7 @@ SCENARIO("state classes may use typed pointers") {
   GIVEN("a state class for a statically typed actor type") {
     using foo_type = typed_actor<result<int32_t>(get_atom)>;
     struct foo_state {
-      foo_state(foo_type::pointer_view selfptr) : self(selfptr) {
+      explicit foo_state(foo_type::pointer_view selfptr) : self(selfptr) {
         foo_type hdl{self};
         test::runnable::current().check_eq(selfptr,
                                            actor_cast<abstract_actor*>(hdl));

@@ -42,7 +42,7 @@ public:
   static wrapper_pointer make_wrapper(F&& f) {
     class impl final : public wrapper {
     public:
-      impl(F&& fun) : fun_(std::move(fun)) {
+      explicit impl(F&& fun) : fun_(std::move(fun)) {
         // nop
       }
 

@@ -18,7 +18,7 @@ class CAF_CORE_EXPORT metric {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  metric(std::vector<label> labels) : labels_(std::move(labels)) {
+  explicit metric(std::vector<label> labels) : labels_(std::move(labels)) {
     // nop
   }
 

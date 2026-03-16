@@ -37,6 +37,7 @@ public:
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
+  // cppcheck-suppress noExplicitConstructor
   weak_intrusive_ptr(pointer raw_ptr, bool increase_ref_count = true) noexcept {
     set_ptr(raw_ptr, increase_ref_count);
   }
@@ -65,6 +66,7 @@ public:
   }
 
   template <class Y>
+  // cppcheck-suppress noExplicitConstructor
   weak_intrusive_ptr(weak_intrusive_ptr<Y> other) noexcept
     : ptr_(other.detach()) {
     static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");

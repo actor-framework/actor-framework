@@ -87,7 +87,7 @@ auto make_metrics(telemetry::metric_registry& reg) {
 template <class T>
 class mm_impl : public middleman {
 public:
-  mm_impl(actor_system& ref) : middleman(ref), backend_(ref) {
+  explicit mm_impl(actor_system& ref) : middleman(ref), backend_(ref) {
     // nop
   }
 
@@ -101,7 +101,7 @@ private:
 
 class prometheus_scraping : public middleman::background_task {
 public:
-  prometheus_scraping(actor_system& sys) : mpx_(sys) {
+  explicit prometheus_scraping(actor_system& sys) : mpx_(sys) {
     // nop
   }
 
@@ -339,7 +339,7 @@ namespace {
 struct config_serv_state {
   static inline const char* name = "caf.io.config-server";
 
-  config_serv_state(caf::event_based_actor* selfptr) : self(selfptr) {
+  explicit config_serv_state(caf::event_based_actor* selfptr) : self(selfptr) {
     // nop
   }
 
@@ -371,7 +371,7 @@ struct config_serv_state {
 struct spawn_serv_state {
   static inline const char* name = "caf.io.spawn-server";
 
-  spawn_serv_state(caf::event_based_actor* selfptr) : self(selfptr) {
+  explicit spawn_serv_state(caf::event_based_actor* selfptr) : self(selfptr) {
     // nop
   }
 

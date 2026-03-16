@@ -20,7 +20,7 @@ namespace caf::detail {
 /// A module that starts and manages background threads.
 class CAF_CORE_EXPORT daemons : public actor_system_module {
 public:
-  daemons(actor_system& sys);
+  explicit daemons(actor_system& sys);
 
   daemons(const daemons&) = delete;
 

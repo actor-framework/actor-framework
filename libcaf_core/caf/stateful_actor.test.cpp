@@ -37,7 +37,7 @@ behavior adder(stateful_actor<counter>* self) {
 
 class adder_class : public stateful_actor<counter> {
 public:
-  adder_class(actor_config& cfg) : stateful_actor<counter>(cfg) {
+  explicit adder_class(actor_config& cfg) : stateful_actor<counter>(cfg) {
     // nop
   }
 
@@ -58,7 +58,7 @@ class typed_adder_class : public typed_adder_actor::stateful_impl<counter> {
 public:
   using super = typed_adder_actor::stateful_impl<counter>;
 
-  typed_adder_class(actor_config& cfg) : super(cfg) {
+  explicit typed_adder_class(actor_config& cfg) : super(cfg) {
     // nop
   }
 

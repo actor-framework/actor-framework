@@ -69,7 +69,7 @@ public:
 
 private:
   /// Private since instantiation is only allowed via `make`.
-  manager(actor_system& sys);
+  explicit manager(actor_system& sys);
 
   /// Reference to the parent.
   actor_system& system_;

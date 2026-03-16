@@ -22,7 +22,7 @@ class broker_servant : public Base {
 public:
   using handle_type = Handle;
 
-  broker_servant(handle_type x)
+  explicit broker_servant(handle_type x)
     : hdl_(x),
       value_(strong_actor_ptr{}, make_message_id(),
              make_message(SysMsgType{x, {}})) {

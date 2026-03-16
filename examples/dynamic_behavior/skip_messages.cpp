@@ -14,7 +14,8 @@ using namespace caf;
 using namespace std::literals;
 
 struct server_state {
-  server_state(event_based_actor* selfptr) : self(selfptr), cache(self, 10) {
+  explicit server_state(event_based_actor* selfptr)
+    : self(selfptr), cache(self, 10) {
     // nop
   }
 

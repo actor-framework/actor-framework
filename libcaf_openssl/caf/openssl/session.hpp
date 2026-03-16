@@ -34,7 +34,8 @@ using rw_state = io::network::rw_state;
 
 class CAF_OPENSSL_EXPORT session {
 public:
-  session(actor_system& sys);
+  explicit session(actor_system& sys);
+
   ~session();
 
   bool init();
