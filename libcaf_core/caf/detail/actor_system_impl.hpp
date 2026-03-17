@@ -98,6 +98,10 @@ public:
 
   virtual void message_rejected(abstract_actor*) = 0;
 
+  /// Called when an actor reaches the max throughput limit and before it yields
+  /// to the scheduler.
+  virtual void max_throughput_reached(abstract_actor*) = 0;
+
   virtual void
   launch(local_actor* ptr, caf::scheduler* ctx, spawn_options options)
     = 0;

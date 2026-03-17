@@ -9,9 +9,14 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/config.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/telemetry/counter.hpp"
+#include "caf/telemetry/metric_family.hpp"
+#include "caf/telemetry/metric_registry.hpp"
+
+#include <latch>
 
 using namespace caf;
 
@@ -395,3 +400,69 @@ TEST("actors can cancel pending delayed actions") {
 }
 
 } // WITH_FIXTURE(caf::test::fixture::deterministic)
+
+namespace {
+
+telemetry::int_counter* fetch_counter(const telemetry::metric_registry& reg,
+                                      std::string_view prefix,
+                                      std::string_view name) {
+  telemetry::int_counter* result = nullptr;
+  auto collector = [prefix, name, &result]<class Wrapped>(
+                     const telemetry::metric_family* family,
+                     const telemetry::metric*, Wrapped* wrapped) {
+    if constexpr (std::is_same_v<Wrapped, telemetry::int_counter>) {
+      if (family->prefix() == prefix && family->name() == name) {
+        result = wrapped;
+      }
+    }
+  };
+  reg.collect(collector);
+  return result;
+}
+
+} // namespace
+
+TEST("GH-2296 regression") {
+  auto processed = std::make_shared<std::atomic<size_t>>(0);
+  auto sync = std::make_shared<std::latch>(2);
+  actor_system_config cfg;
+  cfg.set("caf.scheduler.max-throughput", 1);
+  actor_system sys{cfg};
+  auto* yields = fetch_counter(sys.metrics(), "caf.system",
+                               "max-throughput-reached");
+  require_ne(yields, nullptr);
+  SECTION("detached actor") {
+    {
+      auto hdl = sys.spawn<detached>([processed, sync] {
+        sync->arrive_and_wait(); // Block until all messages are in the mailbox.
+        return behavior{
+          [processed](int) { ++*processed; },
+        };
+      });
+      for (int i = 0; i < 10; ++i) {
+        anon_mail(i).send(hdl);
+      }
+    }
+    sync->count_down();
+    sys.await_all_actors_done();
+    check_eq(processed->load(), 10u);
+    check_eq(yields->value(), 0); // Ignores the limit and never yields.
+  }
+  SECTION("scheduled actor") {
+    {
+      auto hdl = sys.spawn([processed, sync] {
+        sync->arrive_and_wait(); // Block until all messages are in the mailbox.
+        return behavior{
+          [processed](int) { ++*processed; },
+        };
+      });
+      for (int i = 0; i < 10; ++i) {
+        anon_mail(i).send(hdl);
+      }
+    }
+    sync->count_down();
+    sys.await_all_actors_done();
+    check_eq(processed->load(), 10u);
+    check_eq(yields->value(), 9); // Yields after each message except the last.
+  }
+}
