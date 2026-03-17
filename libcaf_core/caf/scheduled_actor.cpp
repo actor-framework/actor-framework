@@ -331,7 +331,8 @@ void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
       set_receive_timeout();
   };
   mailbox_element_ptr ptr;
-  while (consumed < max_throughput_) {
+  // Note: detached actors ignore the max throughput limit.
+  while (private_thread_ != nullptr || consumed < max_throughput_) {
     auto ptr = mailbox().pop_front();
     if (!ptr) {
       if (mailbox().try_block()) {
@@ -359,12 +360,15 @@ void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
     if (res == activation_result::terminated)
       return;
   }
+  // Dropping here means we have reached the max throughput limit. Check if we
+  // have messages left in the mailbox and if so, tell the scheduler to run this
+  // actor again.
+  CAF_ASSERT(private_thread_ == nullptr);
   reset_timeouts_if_needed();
   if (mailbox().try_block()) {
     log::core::debug("mailbox empty: await new messages");
     return;
   }
-  // time's up
   log::core::debug("max throughput reached: resume later");
   intrusive_ptr_add_ref(ctrl());
   sched->delay(this, resumable::default_event_id);
