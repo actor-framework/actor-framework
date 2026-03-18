@@ -23,6 +23,10 @@ public:
 
   static private_thread* launch(actor_system* sys);
 
+  auto id() const {
+    return thread_.get_id();
+  }
+
 private:
   void run(actor_system* sys);
 

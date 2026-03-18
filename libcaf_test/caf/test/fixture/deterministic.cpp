@@ -695,6 +695,10 @@ public:
     // nop for test impl
   }
 
+  void max_throughput_reached(abstract_actor*) override {
+    // nop for test impl
+  }
+
   void launch(local_actor* ptr, caf::scheduler* ctx,
               spawn_options options) override {
     if (!has_hide_flag(options)) {

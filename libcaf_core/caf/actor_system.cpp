@@ -89,6 +89,9 @@ struct base_metrics_t {
   explicit base_metrics_t(telemetry::metric_registry& reg) {
     rejected_messages = reg.counter_singleton("caf.system", "rejected-messages",
                                               "Number of rejected messages.");
+    max_throughput_reached = reg.counter_singleton(
+      "caf.system", "max-throughput-reached",
+      "Number of times the max throughput limit was reached.");
     queued_messages = reg.gauge_singleton(
       "caf.system", "queued-messages", "Number of messages in all mailboxes.");
     running_count = reg.gauge_family("caf.system", "running-actors", {"name"},
@@ -109,6 +112,9 @@ struct base_metrics_t {
   /// Counts the number of messages that were rejected because the target
   /// mailbox was closed or did not exist.
   telemetry::int_counter* rejected_messages;
+
+  /// Counts the number of times the max throughput limit was reached.
+  telemetry::int_counter* max_throughput_reached;
 
   /// Counts the total number of messages that wait in a mailbox.
   telemetry::int_gauge* queued_messages;
@@ -589,6 +595,10 @@ public:
 
   void message_rejected(abstract_actor*) override {
     base_metrics_.rejected_messages->inc();
+  }
+
+  void max_throughput_reached(abstract_actor*) override {
+    base_metrics_.max_throughput_reached->inc();
   }
 
   void launch(local_actor* ptr, caf::scheduler* ctx,

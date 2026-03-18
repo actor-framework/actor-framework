@@ -309,6 +309,8 @@ void scheduled_actor::deref_resumable() const noexcept {
 }
 
 void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
+  CAF_ASSERT(!private_thread_
+             || private_thread_->id() == std::this_thread::get_id());
   detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("event-id = {}", event_id);
   if (event_id == resumable::dispose_event_id) {
@@ -369,7 +371,9 @@ void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
     log::core::debug("mailbox empty: await new messages");
     return;
   }
+  using detail::actor_system_access;
   log::core::debug("max throughput reached: resume later");
+  actor_system_access{home_system()}.impl()->max_throughput_reached(this);
   intrusive_ptr_add_ref(ctrl());
   sched->delay(this, resumable::default_event_id);
 }
