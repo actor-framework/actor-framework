@@ -110,13 +110,11 @@ void runnable_with_examples::run_next_test_branch_init() {
                                       test_location());
     }
   }
-  ctx.parameters = ctx.example_parameters[ctx.example_id];
   auto& ptr = ctx.steps[std::make_pair(0, ctx.example_id)];
-  auto guard = detail::scope_guard{[&ctx, &ptr]() noexcept {
-    if (!ptr->can_run() && ctx.example_id + 1 < ctx.example_parameters.size()) {
-      ++ctx.example_id;
-    }
-  }};
+  if (!ptr->can_run() && ctx.example_id + 1 < ctx.example_parameters.size()) {
+    ++ctx.example_id;
+  }
+  ctx.parameters = ctx.example_parameters[ctx.example_id];
 }
 
 } // namespace caf::test

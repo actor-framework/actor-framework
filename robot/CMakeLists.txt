@@ -74,6 +74,11 @@ add_robot_test(
   type-id
   missing-type-id
   --variable BINARY_PATH:$<TARGET_FILE:caf-robot-type-id-driver>)
+  
+add_robot_test(
+  test
+  outline
+  --variable BINARY_PATH:$<TARGET_FILE:caf-test-test>)
 
 # The logging test requires that the trace logging is enabled.
 if (CAF_ENABLE_TRACE_LOGGING)
