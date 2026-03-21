@@ -101,6 +101,44 @@ public:
   net::actor_shell_ptr self;
 };
 
+/// Sends a message to itself on startup and then calls `quit()` from the
+/// message handler.
+struct quit_from_handler_app final : net::octet_stream::upper_layer {
+  explicit quit_from_handler_app(actor observer) : observer_(observer) {
+    // nop
+  }
+
+  error start(net::octet_stream::lower_layer* down) override {
+    self_ = net::make_actor_shell(down->manager());
+    self_->set_behavior([this](const std::string&) {
+      self_->quit(make_error(exit_reason::user_shutdown));
+    });
+    down->configure_read(net::receive_policy::up_to(2048));
+    self_->mail(actor_cast<actor>(self_->ctrl())).send(observer_);
+    return none;
+  }
+
+  void prepare_send() override {
+  }
+
+  bool done_sending() override {
+    return true;
+  }
+
+  void abort(const error&) override {
+    // nop
+  }
+
+  ptrdiff_t consume(byte_span buf, byte_span) override {
+    return static_cast<ptrdiff_t>(buf.size());
+  }
+
+private:
+  actor observer_;
+
+  net::actor_shell_ptr self_;
+};
+
 actor_system_config& init(actor_system_config& cfg) {
   cfg.set("caf.scheduler.max-threads", 2);
   cfg.load<net::middleman>();
@@ -235,6 +273,28 @@ TEST("actor shells can use flows") {
   auto n = net::read(fd2, buf);
   check_eq(n, static_cast<ptrdiff_t>(msg.size()));
   check_eq(to_str(buf), msg);
+}
+
+TEST("GH-2299 regression") {
+  scoped_actor self{sys};
+  auto& mpx = sys.network_manager().mpx();
+  auto app = std::make_unique<quit_from_handler_app>(actor{self});
+  auto transport = net::octet_stream::transport::make(fd1, std::move(app));
+  auto mgr = net::socket_manager::make(&mpx, std::move(transport));
+  mpx.start(mgr);
+  fd1.id = net::invalid_socket_id;
+  actor uut;
+  self->receive([&uut](actor& x) { uut = x; },
+                after(1s) >> [this] { fail("shell did not send its handle"); });
+  self->monitor(uut);
+  self->send(uut, "bye 1"s);
+  self->send(uut, "bye 2"s);
+  self->receive(
+    [this, uut](const down_msg& msg) {
+      check_eq(msg.source, uut);
+      check_eq(msg.reason, exit_reason::user_shutdown);
+    },
+    after(1s) >> [this] { fail("shell did not exit"); });
 }
 
 } // WITH_FIXTURE(fixture)
