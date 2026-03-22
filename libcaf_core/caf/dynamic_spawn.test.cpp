@@ -49,7 +49,7 @@ void dec_actor_instances() {
 
 class event_testee : public event_based_actor {
 public:
-  event_testee(actor_config& cfg) : event_based_actor(cfg) {
+  explicit event_testee(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
     wait4string.assign([this](const std::string&) { become(wait4int); },
                        [](get_atom) { return "wait4string"; });
@@ -105,7 +105,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
 
 class testee_actor : public blocking_actor {
 public:
-  testee_actor(actor_config& cfg) : blocking_actor(cfg) {
+  explicit testee_actor(actor_config& cfg) : blocking_actor(cfg) {
     inc_actor_instances();
   }
 
@@ -145,7 +145,7 @@ private:
 // self->receives one timeout and quits
 class testee1 : public event_based_actor {
 public:
-  testee1(actor_config& cfg) : event_based_actor(cfg) {
+  explicit testee1(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
   }
 
@@ -162,7 +162,7 @@ public:
 
 class echo_actor : public event_based_actor {
 public:
-  echo_actor(actor_config& cfg) : event_based_actor(cfg) {
+  explicit echo_actor(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
   }
 
@@ -182,7 +182,7 @@ public:
 
 class simple_mirror : public event_based_actor {
 public:
-  simple_mirror(actor_config& cfg) : event_based_actor(cfg) {
+  explicit simple_mirror(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
   }
 
@@ -234,7 +234,7 @@ behavior observer_impl_2(event_based_actor* self, const actor& master) {
 
 class counting_actor : public event_based_actor {
 public:
-  counting_actor(actor_config& cfg) : event_based_actor(cfg) {
+  explicit counting_actor(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
   }
 
@@ -438,7 +438,7 @@ TEST("constructor attach") {
   };
   class spawner : public event_based_actor {
   public:
-    spawner(actor_config& cfg)
+    explicit spawner(actor_config& cfg)
       : event_based_actor(cfg), downs_(0), testee_(spawn<testee>(this)) {
       monitor(testee_, [this](const error& reason) {
         if (reason != exit_reason::user_shutdown)

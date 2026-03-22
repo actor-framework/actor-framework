@@ -20,7 +20,7 @@ public:
     // nop
   }
 
-  handle(const Subtype& other) {
+  explicit handle(const Subtype& other) {
     id_ = other.id();
   }
 
@@ -63,7 +63,7 @@ public:
   }
 
   static Subtype from_int(int64_t id) {
-    return {id};
+    return Subtype(id);
   }
 
   friend std::string to_string(const Subtype& x) {
@@ -71,7 +71,7 @@ public:
   }
 
 protected:
-  handle(int64_t handle_id) : id_{handle_id} {
+  explicit handle(int64_t handle_id) : id_{handle_id} {
     // nop
   }
 

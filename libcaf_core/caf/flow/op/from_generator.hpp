@@ -149,6 +149,7 @@ public:
 
   using super = hot<output_type>;
 
+  // cppcheck-suppress noExplicitConstructor
   from_generator(coordinator* parent, Generator gen, std::tuple<Steps...> steps)
     : super(parent), gen_(std::move(gen)), steps_(std::move(steps)) {
     // nop

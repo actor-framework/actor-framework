@@ -96,7 +96,7 @@ public:
                     "operator() requires at least one argument");
       struct cond : receive_cond {
         fun_type stmt;
-        cond(fun_type x) : stmt(std::move(x)) {
+        explicit cond(fun_type x) : stmt(std::move(x)) {
           // nop
         }
         bool pre() override {
@@ -119,7 +119,7 @@ public:
     void operator()(Ts&&... xs) {
       struct cond : receive_cond {
         receive_for_helper& outer;
-        cond(receive_for_helper& x) : outer(x) {
+        explicit cond(receive_for_helper& x) : outer(x) {
           // nop
         }
         bool pre() override {
@@ -143,7 +143,7 @@ public:
     void until(Statement stmt) {
       struct cond : receive_cond {
         Statement f;
-        cond(Statement x) : f(std::move(x)) {
+        explicit cond(Statement x) : f(std::move(x)) {
           // nop
         }
         bool post() override {

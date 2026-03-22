@@ -50,7 +50,7 @@ public:
     virtual ~server_launcher_base();
 
   protected:
-    server_launcher_base(config_ptr&& cfg) noexcept;
+    explicit server_launcher_base(config_ptr&& cfg) noexcept;
 
     expected<disposable> do_start();
 

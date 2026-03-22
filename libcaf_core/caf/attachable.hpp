@@ -36,7 +36,7 @@ public:
     static constexpr size_t observer = 2;
 
     template <class T>
-    token(const T& tk) : subtype(T::token_type), ptr(&tk) {
+    explicit token(const T& tk) : subtype(T::token_type), ptr(&tk) {
       // nop
     }
 

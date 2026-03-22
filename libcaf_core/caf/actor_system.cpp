@@ -313,7 +313,7 @@ public:
                                "Number of entries in the actor clock queue.");
   }
 
-  default_actor_system_impl(actor_system_config& cfg)
+  explicit default_actor_system_impl(actor_system_config& cfg)
     : ids_(0),
       metrics_(cfg),
       base_metrics_(metrics_),

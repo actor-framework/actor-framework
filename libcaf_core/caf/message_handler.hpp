@@ -43,16 +43,17 @@ public:
   }
 
   /// Creates a message handler from @p ptr.
-  message_handler(impl_ptr ptr);
+  explicit message_handler(impl_ptr ptr);
 
   /// Checks whether the message handler is not empty.
-  operator bool() const {
+  explicit operator bool() const {
     return static_cast<bool>(impl_);
   }
 
   /// Create a message handler a list of match expressions,
   /// functors, or other message handlers.
   template <class T, class... Ts>
+    requires(!std::is_same_v<T, impl_ptr>)
   message_handler(const T& v, Ts&&... xs) {
     assign(v, std::forward<Ts>(xs)...);
   }
@@ -82,18 +83,20 @@ public:
   /// Returns a new handler that concatenates this handler
   /// with a new handler from `xs...`.
   template <class... Ts>
-  std::conditional_t<(may_have_timeout_v<std::decay_t<Ts>> || ...), behavior,
-                     message_handler>
-  or_else(Ts&&... xs) const {
+  auto or_else(Ts&&... xs) const {
+    using result_type
+      = std::conditional_t<(may_have_timeout_v<std::decay_t<Ts>> || ...),
+                           behavior, message_handler>;
     // using a behavior is safe here, because we "cast"
     // it back to a message_handler when appropriate
     behavior tmp{std::forward<Ts>(xs)...};
     if (!tmp) {
-      return *this;
+      return result_type{impl_};
     }
-    if (impl_)
-      return impl_->or_else(tmp.as_behavior_impl());
-    return tmp.as_behavior_impl();
+    if (impl_) {
+      return result_type{impl_->or_else(tmp.as_behavior_impl())};
+    }
+    return result_type{tmp.as_behavior_impl()};
   }
 
   /// @cond

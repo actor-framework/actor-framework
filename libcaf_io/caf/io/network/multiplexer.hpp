@@ -126,7 +126,7 @@ public:
   void post(F fun) {
     struct impl : runnable {
       F f;
-      impl(F&& mf) : f(std::move(mf)) {
+      explicit impl(F&& mf) : f(std::move(mf)) {
       }
       void resume(scheduler*, uint64_t event_id) override {
         if (event_id != resumable::dispose_event_id) {

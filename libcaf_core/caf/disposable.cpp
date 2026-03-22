@@ -28,7 +28,8 @@ class composite_impl : public ref_counted, public disposable::impl {
 public:
   using disposable_list = std::vector<disposable>;
 
-  composite_impl(disposable_list entries) : entries_(std::move(entries)) {
+  explicit composite_impl(disposable_list entries)
+    : entries_(std::move(entries)) {
     // nop
   }
 

@@ -30,7 +30,7 @@ using namespace std::literals;
 namespace {
 
 struct mock_observer {
-  mock_observer(std::vector<int>& items) : items(&items) {
+  explicit mock_observer(std::vector<int>& items) : items(&items) {
     // nop
   }
 
