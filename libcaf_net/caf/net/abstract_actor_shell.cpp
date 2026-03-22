@@ -25,8 +25,13 @@ abstract_actor_shell::abstract_actor_shell(actor_config& cfg,
   mailbox_.try_block();
   resume_ = make_action([this] {
     for (;;) {
-      if (!consume_message() && try_block_mailbox())
+      auto consumed = consume_message();
+      if (terminated()) { // Stop unconditionally if the actor called `quit()`.
         return;
+      }
+      if (!consumed && try_block_mailbox()) {
+        return;
+      }
     }
   });
 }
@@ -50,9 +55,9 @@ void abstract_actor_shell::quit(error reason) {
 // -- mailbox access -----------------------------------------------------------
 
 mailbox_element_ptr abstract_actor_shell::next_message() {
-  if (!mailbox_.blocked())
-    return mailbox_.pop_front();
-  return nullptr;
+  if (mailbox_.closed() || mailbox_.blocked())
+    return nullptr;
+  return mailbox_.pop_front();
 }
 
 bool abstract_actor_shell::try_block_mailbox() {

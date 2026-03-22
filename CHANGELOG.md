@@ -63,6 +63,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   fixture instance exists at any time.
 - Fix an issue during connection cleanup that caused CAF to send a repeated
   close frame on WebSocket connections.
+- Fix a bug in actor shells when calling `quit` (#2299).
 
 ## [1.1.0] - 2025-07-25
 
