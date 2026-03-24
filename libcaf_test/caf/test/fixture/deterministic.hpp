@@ -145,8 +145,8 @@ public:
 
   /// Wraps a resumable pointer and a mailbox element pointer.
   struct scheduling_event {
-    scheduling_event(resumable* target, mailbox_element_ptr payload)
-      : target(target, add_ref), item(std::move(payload)) {
+    scheduling_event(resumable_ptr target, mailbox_element_ptr payload)
+      : target(std::move(target)), item(std::move(payload)) {
       // nop
     }
 

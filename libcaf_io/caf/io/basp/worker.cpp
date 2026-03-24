@@ -7,6 +7,7 @@
 #include "caf/io/basp/message_queue.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/add_ref.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/scheduler.hpp"
@@ -36,8 +37,8 @@ void worker::launch(const node_id& last_hop, const basp::header& hdr,
   last_hop_ = last_hop;
   memcpy(&hdr_, &hdr, sizeof(basp::header));
   payload_.assign(payload.begin(), payload.end());
-  ref();
-  system_->scheduler().schedule(this, resumable::default_event_id);
+  system_->scheduler().schedule(resumable_ptr{this, add_ref},
+                                resumable::default_event_id);
 }
 
 // -- implementation of resumable ----------------------------------------------

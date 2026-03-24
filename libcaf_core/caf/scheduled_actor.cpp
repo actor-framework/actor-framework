@@ -5,8 +5,8 @@
 #include "caf/scheduled_actor.hpp"
 
 #include "caf/action.hpp"
-#include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/add_ref.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
@@ -20,7 +20,6 @@
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
-#include "caf/flow/op/mcast.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
@@ -28,7 +27,6 @@
 #include "caf/scheduler.hpp"
 #include "caf/send.hpp"
 #include "caf/stream.hpp"
-#include "caf/telemetry/metric_family_impl.hpp"
 
 using namespace std::string_literals;
 
@@ -193,13 +191,13 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::unblocked_reader: {
       CAF_LOG_ACCEPT_EVENT(true);
-      intrusive_ptr_add_ref(ctrl());
       if (private_thread_) {
-        private_thread_->resume(this);
+        private_thread_->resume(resumable_ptr{this, add_ref});
       } else if (use_delay) {
-        sched->delay(this, resumable::default_event_id);
+        sched->delay(resumable_ptr{this, add_ref}, resumable::default_event_id);
       } else {
-        sched->schedule(this, resumable::default_event_id);
+        sched->schedule(resumable_ptr{this, add_ref},
+                        resumable::default_event_id);
       }
       return true;
     }
@@ -267,16 +265,14 @@ void scheduled_actor::launch(detail::private_thread* worker, scheduler* ctx) {
   auto lg = log::core::trace("");
   if (worker) {
     private_thread_ = worker;
-    intrusive_ptr_add_ref(ctrl());
-    private_thread_->resume(this);
+    private_thread_->resume(resumable_ptr{this, add_ref});
     return;
   }
   if (auto* pinned = pinned_scheduler()) {
     ctx = pinned;
   }
   CAF_ASSERT(ctx != nullptr);
-  intrusive_ptr_add_ref(ctrl());
-  ctx->delay(this, resumable::initialization_event_id);
+  ctx->delay(resumable_ptr{this, add_ref}, resumable::initialization_event_id);
 }
 
 void scheduled_actor::on_cleanup(const error& reason) {
@@ -374,8 +370,7 @@ void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
   using detail::actor_system_access;
   log::core::debug("max throughput reached: resume later");
   actor_system_access{home_system()}.impl()->max_throughput_reached(this);
-  intrusive_ptr_add_ref(ctrl());
-  sched->delay(this, resumable::default_event_id);
+  sched->delay(resumable_ptr{this, add_ref}, resumable::default_event_id);
 }
 
 // -- scheduler callbacks ------------------------------------------------------

@@ -9,6 +9,6 @@
 
 namespace caf::detail {
 
-CAF_CORE_EXPORT void cleanup_and_release(resumable*);
+CAF_CORE_EXPORT void cleanup_and_release(resumable_ptr job);
 
 } // namespace caf::detail

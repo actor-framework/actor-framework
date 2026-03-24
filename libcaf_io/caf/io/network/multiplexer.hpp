@@ -11,6 +11,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/protocol.hpp"
 
+#include "caf/adopt_ref.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/expected.hpp"
 #include "caf/extend.hpp"
@@ -134,7 +135,8 @@ public:
         }
       }
     };
-    delay(new impl(std::move(fun)), resumable::default_event_id);
+    delay(resumable_ptr{new impl(std::move(fun)), adopt_ref},
+          resumable::default_event_id);
   }
 
   /// Retrieves a pointer to the implementation or `nullptr` if CAF was
