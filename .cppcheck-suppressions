@@ -3,3 +3,8 @@ noExplicitConstructor:libcaf_core/caf/actor.hpp
 noExplicitConstructor:libcaf_core/caf/expected.hpp
 noExplicitConstructor:libcaf_core/caf/result.hpp
 noExplicitConstructor:libcaf_net/caf/net/dsl/arg.hpp
+
+// our parser FSM DSL injects code that may be unreachable in some cases
+unreachableCode:libcaf_core/caf/detail/parser/*
+unreachableCode:libcaf_core/caf/detail/format.cpp
+unreachableCode:libcaf_core/caf/detail/json.cpp
