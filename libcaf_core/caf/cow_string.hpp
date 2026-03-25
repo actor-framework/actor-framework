@@ -75,14 +75,9 @@ public:
     return impl_->str;
   }
 
-  /// Returns whether the reference count of the managed object is 1.
-  [[nodiscard]] bool unique() const noexcept {
-    return impl_->unique();
-  }
-
   /// Queries the current reference count for this object.
-  size_t get_reference_count() const noexcept {
-    return impl_->get_reference_count();
+  size_t strong_reference_count() const noexcept {
+    return impl_->strong_reference_count();
   }
 
   [[nodiscard]] bool empty() const noexcept {

@@ -156,7 +156,7 @@ public:
         // in place, i.e., use the mutable view type and move values from the
         // message to the function arguments.
         if constexpr (view_type::is_const) {
-          if (msg.unique()) {
+          if (msg.empty() || msg.cptr()->strong_reference_count() == 1) {
             typename trait::mutable_message_view_type xs{msg};
             do_invoke(xs);
             return true;

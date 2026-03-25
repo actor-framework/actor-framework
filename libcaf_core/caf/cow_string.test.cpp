@@ -25,7 +25,7 @@ SCENARIO("default constructed COW strings are empty") {
       check_eq(str.rbegin(), str.rend());
     }
     AND_THEN("the reference count is exactly 1") {
-      check(str.unique());
+      check_eq(str.strong_reference_count(), 1u);
     }
   }
 }
@@ -43,7 +43,7 @@ SCENARIO("COW string are constructible from STD strings") {
       check_eq(str, std_str);
     }
     AND_THEN("the reference count is exactly 1") {
-      check(str.unique());
+      check_eq(str.strong_reference_count(), 1u);
     }
   }
   WHEN("move-constructing a COW string from an STD string") {
@@ -57,7 +57,7 @@ SCENARIO("COW string are constructible from STD strings") {
       check_eq(str, "hello world");
     }
     AND_THEN("the reference count is exactly 1") {
-      check(str.unique());
+      check_eq(str.strong_reference_count(), 1u);
     }
   }
 }
@@ -69,9 +69,9 @@ SCENARIO("copying COW strings makes shallow copies") {
     THEN("both COW strings point to the same data") {
       check_eq(str1.data(), str2.data());
     }
-    AND_THEN("the reference count is at least 2") {
-      check(!str1.unique());
-      check(!str2.unique());
+    AND_THEN("the reference count is 2") {
+      check_eq(str1.strong_reference_count(), 2u);
+      check_eq(str2.strong_reference_count(), 2u);
     }
   }
 }
@@ -84,8 +84,8 @@ SCENARIO("COW strings detach their content when becoming unshared") {
       str1.unshared() = "foobar";
       check_eq(str1, "foobar");
       check_eq(str2, "hello world");
-      check(str1.unique());
-      check(str2.unique());
+      check_eq(str1.strong_reference_count(), 1u);
+      check_eq(str2.strong_reference_count(), 1u);
     }
   }
 }

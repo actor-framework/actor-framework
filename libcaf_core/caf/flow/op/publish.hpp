@@ -46,19 +46,19 @@ public:
   }
 
   void ref_coordinated() const noexcept override {
-    this->ref();
+    super::ref_count_.inc();
   }
 
   void deref_coordinated() const noexcept override {
-    this->deref();
+    super::ref_count_.dec(this);
   }
 
   friend void intrusive_ptr_add_ref(const publish* ptr) noexcept {
-    ptr->ref();
+    ptr->ref_coordinated();
   }
 
   friend void intrusive_ptr_release(const publish* ptr) noexcept {
-    ptr->deref();
+    ptr->deref_coordinated();
   }
 
   // -- implementation of base<T> ----------------------------------------------

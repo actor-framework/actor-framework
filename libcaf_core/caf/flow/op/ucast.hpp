@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
@@ -13,25 +14,24 @@
 #include "caf/intrusive_ptr.hpp"
 
 #include <deque>
-#include <memory>
+#include <tuple>
+#include <utility>
 
 namespace caf::flow::op {
 
 /// Shared state between an operator that emits values and the subscribed
 /// observer.
 template <class T>
-class ucast_sub_state : public detail::plain_ref_counted,
-                        public pullable,
-                        public coordinated {
+class ucast_sub_state : public pullable, public coordinated {
 public:
   // -- friends ----------------------------------------------------------------
 
   friend void intrusive_ptr_add_ref(const ucast_sub_state* ptr) noexcept {
-    ptr->ref();
+    ptr->ref_coordinated();
   }
 
   friend void intrusive_ptr_release(const ucast_sub_state* ptr) noexcept {
-    ptr->deref();
+    ptr->deref_coordinated();
   }
 
   // -- member types -----------------------------------------------------------
@@ -204,11 +204,11 @@ public:
   }
 
   void ref_coordinated() const noexcept override {
-    ref();
+    ref_count_.inc();
   }
 
   void deref_coordinated() const noexcept override {
-    deref();
+    ref_count_.dec(this);
   }
 
 private:
@@ -240,12 +240,14 @@ private:
   }
 
   void do_ref() override {
-    this->ref();
+    ref_count_.inc();
   }
 
   void do_deref() override {
-    this->deref();
+    ref_count_.dec(this);
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// The coordinator for scheduling delayed function calls.
   coordinator* parent_;

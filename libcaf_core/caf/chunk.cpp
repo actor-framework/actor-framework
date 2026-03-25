@@ -65,13 +65,6 @@ chunk::data* chunk::data::make(std::span<const std::string_view> texts) {
   return result;
 }
 
-void chunk::data::deref() noexcept {
-  if (unique() || rc_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-    this->~data();
-    free(this);
-  }
-}
-
 bool chunk::equal_to(const chunk& other) const noexcept {
   return std::equal(bytes().begin(), bytes().end(), other.bytes().begin(),
                     other.bytes().end());

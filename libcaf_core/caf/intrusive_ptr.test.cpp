@@ -79,7 +79,7 @@ TEST("make_counted") {
   {
     auto p = make_counted<class0>();
     check_eq(class0_instances, 1);
-    check(p->unique());
+    check_eq(p->strong_reference_count(), 1u);
   }
   check_eq(class0_instances, 0);
 }
@@ -95,13 +95,13 @@ TEST("reset") {
     class0ptr ptr;
     ptr.reset(new class0, adopt_ref);
     check_eq(class0_instances, 1);
-    check(ptr->unique());
+    check_eq(ptr->strong_reference_count(), 1u);
   }
   SECTION("passing pointer and false") {
     class0ptr ptr;
     ptr.reset(new class0, false);
     check_eq(class0_instances, 1);
-    check(ptr->unique());
+    check_eq(ptr->strong_reference_count(), 1u);
   }
   SECTION("passing pointer and add_ref") {
     auto* raw_ptr = new class0;
@@ -109,7 +109,7 @@ TEST("reset") {
     ptr.reset(raw_ptr, add_ref);
     check_eq(class0_instances, 1);
     raw_ptr->deref();
-    check(ptr->unique());
+    check_eq(ptr->strong_reference_count(), 1u);
   }
   SECTION("passing pointer and true") {
     auto* raw_ptr = new class0;
@@ -117,7 +117,7 @@ TEST("reset") {
     ptr.reset(raw_ptr, true);
     check_eq(class0_instances, 1);
     raw_ptr->deref();
-    check(ptr->unique());
+    check_eq(ptr->strong_reference_count(), 1u);
   }
   check_eq(class0_instances, 0);
 }
@@ -128,7 +128,7 @@ TEST("list") {
     pl.push_back(make_counted<class0>());
     pl.push_back(make_counted<class0>());
     pl.push_back(pl.front()->create());
-    check(pl.front()->unique());
+    check_eq(pl.front()->strong_reference_count(), 1u);
     check_eq(class0_instances, 3);
   }
   check_eq(class0_instances, 0);
@@ -138,17 +138,17 @@ TEST("full_test") {
   {
     auto p1 = make_counted<class0>();
     check_eq(p1->is_subtype(), false);
-    check_eq(p1->unique(), true);
+    check_eq(p1->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
     check_eq(class1_instances, 0);
     p1.reset(new class1, adopt_ref);
     check_eq(p1->is_subtype(), true);
-    check_eq(p1->unique(), true);
+    check_eq(p1->strong_reference_count(), 1u);
     check_eq(class0_instances, 0);
     check_eq(class1_instances, 1);
     auto p2 = make_counted<class1>();
     p1 = p2;
-    check_eq(p1->unique(), false);
+    check_eq(p1->strong_reference_count(), 2u);
     check_eq(class0_instances, 0);
     check_eq(class1_instances, 1);
     check_eq(p1, static_cast<class0*>(p2.get()));
@@ -177,7 +177,7 @@ TEST("construction with add_ref") {
   {
     class0ptr ptr{raw, add_ref};
     check_eq(class0_instances, 1);
-    check(!ptr->unique());
+    check_eq(ptr->strong_reference_count(), 2u);
   }
   // ptr released one ref, but raw still holds its initial ref
   raw->deref();
@@ -188,7 +188,7 @@ TEST("construction with adopt_ref") {
   {
     class0ptr ptr{new class0, adopt_ref};
     check_eq(class0_instances, 1);
-    check(ptr->unique());
+    check_eq(ptr->strong_reference_count(), 1u);
   }
   check_eq(class0_instances, 0);
 }
@@ -200,7 +200,7 @@ TEST("move constructor") {
     class0ptr p2{std::move(p1)};
     check_eq(p1.get(), nullptr);
     check_ne(p2.get(), nullptr);
-    check(p2->unique());
+    check_eq(p2->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
@@ -209,11 +209,11 @@ TEST("move constructor") {
 TEST("copy constructor") {
   {
     auto p1 = make_counted<class0>();
-    check(p1->unique());
+    check_eq(p1->strong_reference_count(), 1u);
     class0ptr p2{p1};
     check_eq(p1.get(), p2.get());
-    check(!p1->unique());
-    check(!p2->unique());
+    check_eq(p1->strong_reference_count(), 2u);
+    check_eq(p2->strong_reference_count(), 2u);
     check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
@@ -226,7 +226,7 @@ TEST("converting constructor from derived type") {
     class0ptr base{std::move(derived)};
     check_eq(derived.get(), nullptr);
     check(base->is_subtype());
-    check(base->unique());
+    check_eq(base->strong_reference_count(), 1u);
     check_eq(class1_instances, 1);
   }
   check_eq(class1_instances, 0);
@@ -242,8 +242,8 @@ TEST("swap") {
     p1.swap(p2);
     check_eq(p1.get(), raw2);
     check_eq(p2.get(), raw1);
-    check(p1->unique());
-    check(p2->unique());
+    check_eq(p1->strong_reference_count(), 1u);
+    check_eq(p2->strong_reference_count(), 1u);
   }
   check_eq(class0_instances, 0);
 }
@@ -284,13 +284,13 @@ TEST("emplace") {
     class0ptr ptr;
     ptr.emplace();
     check_ne(ptr.get(), nullptr);
-    check(ptr->unique());
+    check_eq(ptr->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
     // emplace again replaces the object
     auto* old_raw = ptr.get();
     ptr.emplace();
     check_ne(ptr.get(), old_raw);
-    check(ptr->unique());
+    check_eq(ptr->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
@@ -328,7 +328,7 @@ TEST("copy assignment") {
     check_eq(class0_instances, 2);
     p1 = p2;
     check_eq(p1.get(), p2.get());
-    check(!p1->unique());
+    check_eq(p1->strong_reference_count(), 2u);
     check_eq(class0_instances, 1);
   }
   SECTION("self-assignment") {
@@ -337,7 +337,7 @@ TEST("copy assignment") {
     auto& p1_ref = p1;
     p1 = p1_ref;
     check_eq(p1.get(), raw);
-    check(p1->unique());
+    check_eq(p1->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
@@ -400,15 +400,15 @@ TEST("downcast") {
     class0ptr base = make_counted<class1>();
     auto derived = base.downcast<class1>();
     check_ne(derived.get(), nullptr);
-    check(!base->unique());
-    check(!derived->unique());
+    check_eq(base->strong_reference_count(), 2u);
+    check_eq(derived->strong_reference_count(), 2u);
     check_eq(class1_instances, 1);
   }
   SECTION("failed downcast") {
     auto base = make_counted<class0>();
     auto derived = base.downcast<class1>();
     check_eq(derived.get(), nullptr);
-    check(base->unique());
+    check_eq(base->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
   }
   SECTION("downcast from null") {
@@ -426,7 +426,7 @@ TEST("upcast") {
     auto derived = make_counted<class1>();
     class0ptr base = derived.upcast<class0>();
     check_ne(base.get(), nullptr);
-    check(!derived->unique());
+    check_eq(derived->strong_reference_count(), 2u);
     check_eq(base.get(), derived.get());
     check_eq(class1_instances, 1);
   }
@@ -436,7 +436,7 @@ TEST("upcast") {
     class0ptr base = std::move(derived).upcast<class0>();
     check_eq(derived.get(), nullptr);
     check_eq(base.get(), raw);
-    check(base->unique());
+    check_eq(base->strong_reference_count(), 1u);
     check_eq(class1_instances, 1);
   }
   SECTION("upcast from null") {

@@ -6,7 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinator.hpp"
@@ -19,8 +19,7 @@
 namespace caf::net {
 
 /// Manages the lifetime of a single socket and handles any I/O events on it.
-class CAF_NET_EXPORT socket_manager : public detail::atomic_ref_counted,
-                                      public disposable_impl,
+class CAF_NET_EXPORT socket_manager : public disposable_impl,
                                       public flow::coordinator {
 public:
   // -- friends ----------------------------------------------------------------

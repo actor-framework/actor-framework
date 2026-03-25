@@ -168,14 +168,14 @@ TEST("a handler that takes a message argument is a catch-all handler") {
 TEST("mutable references in a message handler forces a message to detach") {
   auto str = cow_string{"hello"s};
   auto msg = make_message(str);
-  require_eq(str.get_reference_count(), 2u);
+  require_eq(str.strong_reference_count(), 2u);
   SECTION("a unique messages simply passes its argument by mutable reference") {
     auto called = false;
     auto f = behavior{
       [this, &str, &called](cow_string& val) {
         called = true;
         check_eq(str.c_str(), val.c_str());
-        require_eq(str.get_reference_count(), 2u);
+        require_eq(str.strong_reference_count(), 2u);
       },
     };
     f(msg);
@@ -188,11 +188,11 @@ TEST("mutable references in a message handler forces a message to detach") {
       [this, &str, &called](cow_string& val) {
         called = true;
         check_eq(str.c_str(), val.c_str());
-        require_eq(str.get_reference_count(), 3u);
+        require_eq(str.strong_reference_count(), 3u);
       },
     };
     f(msg_copy);
-    check(msg_copy.unique());
+    check_eq(msg_copy.cptr()->strong_reference_count(), 1u);
     check(called);
   }
 }
@@ -200,14 +200,14 @@ TEST("mutable references in a message handler forces a message to detach") {
 TEST("unique message auto-move their arguments") {
   auto str = cow_string{"hello"s};
   auto msg = make_message(str);
-  require_eq(str.get_reference_count(), 2u);
+  require_eq(str.strong_reference_count(), 2u);
   SECTION("values are moved if a message is unique") {
     auto called = false;
     auto f = behavior{
       [this, &str, &called](cow_string val) {
         called = true;
         check_eq(str.c_str(), val.c_str());
-        require_eq(str.get_reference_count(), 2u);
+        require_eq(str.strong_reference_count(), 2u);
       },
     };
     f(msg);
@@ -222,7 +222,7 @@ TEST("unique message auto-move their arguments") {
         check_eq(str.c_str(), val.c_str());
         // One reference from `str`, one from the shared message, and one from
         // `val`.
-        require_eq(str.get_reference_count(), 3u);
+        require_eq(str.strong_reference_count(), 3u);
       },
     };
     f(msg_copy);
@@ -234,14 +234,14 @@ TEST("unique message auto-move their arguments") {
 TEST("message handlers with const arguments never force a detach or copy") {
   auto str = cow_string{"hello"s};
   auto msg = make_message(str);
-  require_eq(str.get_reference_count(), 2u);
+  require_eq(str.strong_reference_count(), 2u);
   SECTION("values are passed along if a message is unique") {
     auto called = false;
     auto f = behavior{
       [this, &str, &called](const cow_string& val) {
         called = true;
         check_eq(str.c_str(), val.c_str());
-        require_eq(str.get_reference_count(), 2u);
+        require_eq(str.strong_reference_count(), 2u);
       },
     };
     f(msg);
@@ -254,7 +254,7 @@ TEST("message handlers with const arguments never force a detach or copy") {
       [this, &str, &called](const cow_string& val) {
         called = true;
         check_eq(str.c_str(), val.c_str());
-        require_eq(str.get_reference_count(), 2u);
+        require_eq(str.strong_reference_count(), 2u);
       },
     };
     f(msg_copy);

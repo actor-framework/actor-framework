@@ -7,6 +7,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/error_code.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/sec.hpp"
 
 #include <cassert>
@@ -410,22 +411,22 @@ TEST("expected is movable") {
   SECTION("non-void value type") {
     SECTION("move-constructible") {
       auto iptr = make_counted<counted_int>(42);
-      check_eq(iptr->get_reference_count(), 1u);
+      check_eq(iptr->strong_reference_count(), 1u);
       e_iptr x{std::in_place, iptr};
       e_iptr y{std::move(x)};
-      check_eq(iptr->get_reference_count(), 2u);
+      check_eq(iptr->strong_reference_count(), 2u);
       check_ne(x, iptr);
       check_eq(y, iptr);
     }
     SECTION("move-assignable") {
       auto iptr = make_counted<counted_int>(42);
-      check_eq(iptr->get_reference_count(), 1u);
+      check_eq(iptr->strong_reference_count(), 1u);
       e_iptr x{std::in_place, iptr};
       e_iptr y{std::in_place, nullptr};
       check_eq(x, iptr);
       check_ne(y, iptr);
       y = std::move(x);
-      check_eq(iptr->get_reference_count(), 2u);
+      check_eq(iptr->strong_reference_count(), 2u);
       check_ne(x, iptr);
       check_eq(y, iptr);
     }

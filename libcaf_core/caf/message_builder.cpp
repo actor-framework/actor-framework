@@ -58,7 +58,7 @@ public:
   }
 
   std::byte* move_init(std::byte* storage) override {
-    if (src_.cptr()->unique()) {
+    if (src_.cptr()->strong_reference_count() == 1) {
       auto& meta = global_meta_object(src_.type_at(index_));
       meta.move_construct(storage, src_.data().at(index_));
       return storage + meta.padded_size;

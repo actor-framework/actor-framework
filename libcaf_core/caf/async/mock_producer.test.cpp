@@ -19,11 +19,11 @@ void mock_producer::on_consumer_demand(size_t new_demand) {
 }
 
 void mock_producer::ref_producer() const noexcept {
-  ref();
+  ref_count_.inc();
 }
 
 void mock_producer::deref_producer() const noexcept {
-  deref();
+  ref_count_.dec(this);
 }
 
 } // namespace caf::async

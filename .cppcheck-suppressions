@@ -1,6 +1,8 @@
 // types with intentionally non-explicit constructors
 noExplicitConstructor:libcaf_core/caf/actor.hpp
 noExplicitConstructor:libcaf_core/caf/expected.hpp
+noExplicitConstructor:libcaf_core/caf/intrusive_cow_ptr.hpp
+noExplicitConstructor:libcaf_core/caf/intrusive_ptr.hpp
 noExplicitConstructor:libcaf_core/caf/result.hpp
 noExplicitConstructor:libcaf_net/caf/net/dsl/arg.hpp
 

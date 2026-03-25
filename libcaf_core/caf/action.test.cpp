@@ -118,11 +118,11 @@ SCENARIO("actions can increase and decrease reference count") {
         auto impl = make_counted<impl_t>(std::move(fn));
         auto* impl_ptr = impl.get();
         auto uut = action{std::move(impl)};
-        check(impl_ptr->unique());
+        check_eq(impl_ptr->strong_reference_count(), 1u);
         impl_ptr->ref_resumable();
-        check(!impl_ptr->unique());
+        check_eq(impl_ptr->strong_reference_count(), 2u);
         impl_ptr->deref_resumable();
-        check(impl_ptr->unique());
+        check_eq(impl_ptr->strong_reference_count(), 1u);
       }
     }
   }

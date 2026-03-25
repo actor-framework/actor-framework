@@ -7,7 +7,7 @@
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/make_counted.hpp"
@@ -143,8 +143,7 @@ inline bool operator!=(const action& lhs, const action& rhs) noexcept {
 namespace caf::detail {
 
 template <class F, bool IsSingleShot>
-class default_action_impl : public detail::atomic_ref_counted,
-                            public action::impl {
+class default_action_impl : public action::impl {
 public:
   explicit default_action_impl(F fn)
     : state_(action::state::scheduled), f_(std::move(fn)) {
@@ -226,22 +225,27 @@ public:
   }
 
   void ref_disposable() const noexcept override {
-    ref();
+    ref_count_.inc();
   }
 
   void deref_disposable() const noexcept override {
-    deref();
+    ref_count_.dec(this);
+  }
+
+  size_t strong_reference_count() const noexcept {
+    return ref_count_.value();
   }
 
   friend void intrusive_ptr_add_ref(const default_action_impl* ptr) noexcept {
-    ptr->ref();
+    ptr->ref_disposable();
   }
 
   friend void intrusive_ptr_release(const default_action_impl* ptr) noexcept {
-    ptr->deref();
+    ptr->deref_disposable();
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   std::atomic<action::state> state_;
   union {
     F f_;

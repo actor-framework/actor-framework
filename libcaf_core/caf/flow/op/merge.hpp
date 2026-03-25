@@ -57,6 +57,8 @@ public:
 
   using input_map_iterator = typename input_map::iterator;
 
+  using super = subscription::impl_base;
+
   // -- constants --------------------------------------------------------------
 
   /// Limits how many items the merge operator pulls in per input. This is
@@ -119,19 +121,19 @@ public:
   // -- reference counting -----------------------------------------------------
 
   void ref_coordinated() const noexcept final {
-    ref();
+    super::ref_coordinated();
   }
 
   void deref_coordinated() const noexcept final {
-    deref();
+    super::deref_coordinated();
   }
 
   friend void intrusive_ptr_add_ref(const merge_sub* ptr) noexcept {
-    ptr->ref();
+    ptr->ref_coordinated();
   }
 
   friend void intrusive_ptr_release(const merge_sub* ptr) noexcept {
-    ptr->deref();
+    ptr->deref_coordinated();
   }
 
   // -- callbacks for the forwarders -------------------------------------------
@@ -284,12 +286,12 @@ private:
     }
   }
 
-  void do_ref() override {
-    this->ref();
+  void do_ref() final {
+    super::ref_coordinated();
   }
 
-  void do_deref() override {
-    this->deref();
+  void do_deref() final {
+    super::deref_coordinated();
   }
 
   void stop_inputs() {

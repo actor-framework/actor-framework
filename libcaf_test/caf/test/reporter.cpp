@@ -605,18 +605,17 @@ std::unique_ptr<reporter> reporter::make_default() {
 namespace {
 
 /// A logger implementation that delegates to the test reporter.
-class reporter_logger : public detail::asynchronous_logger,
-                        public detail::atomic_ref_counted {
+class reporter_logger : public detail::asynchronous_logger {
 public:
   /// Increases the reference count of the coordinated.
   void ref_logger() const noexcept final {
-    this->ref();
+    ref_count_.inc();
   }
 
   /// Decreases the reference count of the coordinated and destroys the object
   /// if necessary.
   void deref_logger() const noexcept final {
-    this->deref();
+    ref_count_.dec(this);
   }
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -663,6 +662,7 @@ public:
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   std::vector<std::string> filter_;
 };
 

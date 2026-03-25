@@ -161,7 +161,7 @@ public:
     auto get = [&]() -> const auto& { return x.data_->content; };
     auto reset = [&x] { x.data_.reset(); };
     auto set = [&x](node_id_data::variant_type&& val) {
-      if (x.data_ && x.data_->unique())
+      if (x.data_ && x.data_->strong_reference_count() == 1)
         x.data_->content = std::move(val);
       else
         x.data_.emplace(std::move(val));

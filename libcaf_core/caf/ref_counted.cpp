@@ -6,7 +6,7 @@
 
 namespace caf {
 
-ref_counted::~ref_counted() {
+ref_counted::~ref_counted() noexcept {
   // nop
 }
 

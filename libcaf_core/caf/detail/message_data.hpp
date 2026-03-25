@@ -4,14 +4,15 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/detail/padded_size.hpp"
 #include "caf/fwd.hpp"
 #include "caf/type_id_list.hpp"
 
-#include <atomic>
 #include <cstddef>
 #include <cstdlib>
 #include <new>
@@ -34,6 +35,9 @@ class CAF_CORE_EXPORT message_data {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
+  static constexpr auto memory_interface
+    = detail::memory_interface::malloc_and_free;
+
   message_data() = delete;
 
   message_data(const message_data&) = delete;
@@ -53,28 +57,25 @@ public:
 
   /// Increases reference count by one.
   void ref() const noexcept {
-    rc_.fetch_add(1, std::memory_order_relaxed);
+    ref_count_.inc();
   }
 
   /// Decreases the reference count by one and destroys the object when its
   /// reference count drops to zero.
   void deref() noexcept {
-    if (unique() || rc_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      this->~message_data();
-      free(const_cast<message_data*>(this));
-    }
+    ref_count_.dec(this);
   }
 
   // -- properties -------------------------------------------------------------
 
-  /// Queries whether there is exactly one reference to this data.
-  bool unique() const noexcept {
-    return rc_ == 1;
+  /// Returns the current number of references to this data.
+  size_t strong_reference_count() const noexcept {
+    return ref_count_.value();
   }
 
-  /// Returns the current number of references to this data.
+  CAF_DEPRECATED("use strong_reference_count() instead")
   size_t get_reference_count() const noexcept {
-    return rc_.load();
+    return strong_reference_count();
   }
 
   /// Returns the memory region for storing the message elements.
@@ -181,11 +182,13 @@ private:
                    std::forward<Ts>(xs)...);
   }
 
-  mutable std::atomic<size_t> rc_;
+  mutable atomic_ref_count ref_count_;
   type_id_list types_;
   size_t constructed_elements_;
   alignas(max_align_t) std::byte storage_[];
 };
+
+static_assert(detail::uses_malloc_and_free<message_data>());
 
 // -- related non-members ------------------------------------------------------
 

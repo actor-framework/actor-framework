@@ -91,22 +91,22 @@ TEST("messages allow index-based access") {
   check_eq(msg.get_as<std::string>(0), "abc");
   check_eq(msg.get_as<uint32_t>(1), 10u);
   check_eq(msg.get_as<double>(2), test::approx{20.0});
-  check_eq(msg.cdata().get_reference_count(), 1u);
+  check_eq(msg.cdata().strong_reference_count(), 1u);
 }
 
 TEST("message detach their content on mutating access") {
   log::test::debug("Given to messages pointing to the same content.");
   auto msg1 = make_message("one"s, uint32_t{1});
   auto msg2 = msg1;
-  check_eq(msg1.cdata().get_reference_count(), 2u);
+  check_eq(msg1.cdata().strong_reference_count(), 2u);
   check_eq(msg1.cptr(), msg2.cptr());
   log::test::debug("When calling a non-const member function of message.");
   msg1.ptr();
   log::test::debug(
     "Then the messages point to separate contents but remain equal.");
   check_ne(msg1.cptr(), msg2.cptr());
-  check_eq(msg1.cdata().get_reference_count(), 1u);
-  check_eq(msg2.cdata().get_reference_count(), 1u);
+  check_eq(msg1.cdata().strong_reference_count(), 1u);
+  check_eq(msg2.cdata().strong_reference_count(), 1u);
   check((msg1.match_elements<std::string, uint32_t>()));
   check((msg2.match_elements<std::string, uint32_t>()));
   check_eq(msg1.get_as<std::string>(0), msg2.get_as<std::string>(0));

@@ -6,19 +6,15 @@
 
 #include "caf/detail/assert.hpp"
 #include "caf/detail/meta_object.hpp"
-#include "caf/error.hpp"
-#include "caf/error_code.hpp"
 #include "caf/message.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/sec.hpp"
 
-#include <cstring>
-#include <numeric>
+#include <utility>
 
 namespace caf::detail {
 
 message_data::message_data(type_id_list types) noexcept
-  : rc_(1), types_(std::move(types)), constructed_elements_(0) {
+  : types_(std::move(types)), constructed_elements_(0) {
   // nop
 }
 

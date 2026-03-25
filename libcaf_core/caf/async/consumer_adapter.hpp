@@ -9,7 +9,7 @@
 #include "caf/async/read_result.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
 
@@ -21,7 +21,7 @@ namespace caf::async {
 template <class T>
 class consumer_adapter {
 public:
-  class impl : public detail::atomic_ref_counted, public consumer {
+  class impl : public consumer {
   public:
     impl() = delete;
     impl(const impl&) = delete;
@@ -107,14 +107,15 @@ public:
     }
 
     void ref_consumer() const noexcept override {
-      ref();
+      ref_count_.inc();
     }
 
     void deref_consumer() const noexcept override {
-      deref();
+      ref_count_.dec(this);
     }
 
   private:
+    mutable detail::atomic_ref_count ref_count_;
     spsc_buffer_ptr<T> buf_;
     execution_context_ptr ctx_;
     action do_wakeup_;

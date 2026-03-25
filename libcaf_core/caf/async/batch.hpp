@@ -6,6 +6,7 @@
 
 #include "caf/async/fwd.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -115,6 +116,9 @@ private:
 
   class data {
   public:
+    static constexpr auto memory_interface
+      = detail::memory_interface::malloc_and_free;
+
     friend class batch;
 
     data() = delete;
@@ -125,8 +129,7 @@ private:
 
     data(item_destructor destroy_items, type_id_t item_type, size_t item_size,
          size_t size)
-      : rc_(1),
-        destroy_items_(destroy_items),
+      : destroy_items_(destroy_items),
         item_type_(item_type),
         item_size_(item_size),
         size_(size) {
@@ -140,19 +143,12 @@ private:
 
     // -- reference counting ---------------------------------------------------
 
-    bool unique() const noexcept {
-      return rc_ == 1;
-    }
-
     void ref() const noexcept {
-      rc_.fetch_add(1, std::memory_order_relaxed);
+      ref_count_.inc();
     }
 
     void deref() noexcept {
-      if (unique() || rc_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-        this->~data();
-        free(this);
-      }
+      ref_count_.dec(this);
     }
 
     friend void intrusive_ptr_add_ref(const data* ptr) {
@@ -189,13 +185,15 @@ private:
     bool save(Inspector& sink) const;
 
   private:
-    mutable std::atomic<size_t> rc_;
+    mutable detail::atomic_ref_count ref_count_;
     item_destructor destroy_items_;
     type_id_t item_type_;
     size_t item_size_;
     size_t size_;
     alignas(max_align_t) std::byte storage_[];
   };
+
+  static_assert(detail::uses_malloc_and_free<data>());
 
   explicit batch(intrusive_ptr<data> ptr) : data_(std::move(ptr)) {
     // nop

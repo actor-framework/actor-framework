@@ -7,14 +7,13 @@
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
 #include "caf/caf_deprecated.hpp"
-#include "caf/config.hpp"
 #include "caf/detail/append_hex.hpp"
+#include "caf/detail/build_config.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
 
 #include <algorithm>
 #include <cstddef>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
 
@@ -77,7 +76,6 @@ public:
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
-  // cppcheck-suppress noExplicitConstructor
   intrusive_ptr(pointer raw_ptr, bool increase_ref_count = true) noexcept {
     set_ptr(raw_ptr, increase_ref_count);
   }
@@ -101,7 +99,6 @@ public:
   }
 
   template <class Y>
-  // cppcheck-suppress noExplicitConstructor
   intrusive_ptr(intrusive_ptr<Y> other) noexcept : ptr_(other.detach()) {
     static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");
   }
