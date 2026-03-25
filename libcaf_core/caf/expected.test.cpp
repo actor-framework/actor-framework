@@ -7,6 +7,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/error_code.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/sec.hpp"
 
 #include <cassert>

@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
 
-#include <atomic>
 #include <cstddef>
 
 namespace caf {
@@ -16,21 +15,36 @@ namespace caf {
 /// Serves the requirements of @ref intrusive_ptr.
 /// @note *All* instances of `ref_counted` start with a reference count of 1.
 /// @relates intrusive_ptr
-class CAF_CORE_EXPORT ref_counted : public detail::atomic_ref_counted {
+class CAF_CORE_EXPORT ref_counted {
 public:
-  using super = detail::atomic_ref_counted;
+  virtual ~ref_counted() noexcept;
 
-  using super::super;
-
-  ~ref_counted() override;
-
-  friend void intrusive_ptr_add_ref(const ref_counted* p) noexcept {
-    p->ref();
+  void ref() const noexcept {
+    ref_count_.inc();
   }
 
-  friend void intrusive_ptr_release(const ref_counted* p) noexcept {
-    p->deref();
+  void deref() const noexcept {
+    ref_count_.dec(this);
   }
+
+  bool unique() const noexcept {
+    return ref_count_.unique();
+  }
+
+  size_t get_reference_count() const noexcept {
+    return ref_count_.value();
+  }
+
+  friend void intrusive_ptr_add_ref(const ref_counted* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const ref_counted* ptr) noexcept {
+    ptr->deref();
+  }
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
 };
 
 } // namespace caf

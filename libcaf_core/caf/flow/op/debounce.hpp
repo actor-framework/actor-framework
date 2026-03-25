@@ -22,6 +22,8 @@ public:
 
   using output_type = T;
 
+  using super = subscription::impl_base;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   debounce_sub(coordinator* parent, observer<output_type> out, timespan period)
@@ -104,12 +106,12 @@ public:
     }
   }
 
-  void ref_coordinated() const noexcept override {
-    this->ref();
+  void ref_coordinated() const noexcept final {
+    super::ref_coordinated();
   }
 
-  void deref_coordinated() const noexcept override {
-    this->deref();
+  void deref_coordinated() const noexcept final {
+    super::deref_coordinated();
   }
 
   // -- implementation of subscription -----------------------------------------

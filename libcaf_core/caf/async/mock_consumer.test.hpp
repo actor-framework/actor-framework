@@ -5,13 +5,13 @@
 #pragma once
 
 #include "caf/async/consumer.hpp"
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 
 #include <atomic>
 
 namespace caf::async {
 
-class mock_consumer : public detail::atomic_ref_counted, public consumer {
+class mock_consumer : public consumer {
 public:
   void on_producer_ready() override;
 
@@ -20,6 +20,8 @@ public:
   void ref_consumer() const noexcept override;
 
   void deref_consumer() const noexcept override;
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Incremented whenever `on_producer_wakeup` is called.
   std::atomic<size_t> wakeups = 0;

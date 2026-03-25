@@ -14,7 +14,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/async/execution_context.hpp"
 #include "caf/config.hpp"
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/detail/panic.hpp"
@@ -50,6 +50,10 @@
 namespace caf::net {
 
 namespace {
+
+template <class T>
+concept has_intrusive_ptr_release
+  = requires(T* ptr) { intrusive_ptr_release(ptr); };
 
 template <class T>
 uintptr_t to_uintptr(T* ptr) noexcept {
@@ -134,8 +138,7 @@ private:
 };
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
-class default_multiplexer : public detail::atomic_ref_counted,
-                            public multiplexer {
+class default_multiplexer : public multiplexer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -185,11 +188,11 @@ public:
   // -- implementation of execution_context ------------------------------------
 
   void ref_execution_context() const noexcept override {
-    ref();
+    ref_count_.inc();
   }
 
   void deref_execution_context() const noexcept override {
-    deref();
+    ref_count_.dec(this);
   }
 
   void schedule(action what) override {
@@ -551,12 +554,12 @@ public:
       if (write_handle_ != invalid_socket)
         res = write(write_handle_, buf);
     }
-    if constexpr (std::is_base_of_v<detail::atomic_ref_counted, T>) {
-      if (res <= 0 && ptr)
+    if (res <= 0 && ptr) {
+      if constexpr (has_intrusive_ptr_release<T>) {
         intrusive_ptr_release(ptr);
-    } else {
-      if (res <= 0 && ptr)
+      } else {
         delete ptr;
+      }
     }
     return res > 0;
   }
@@ -590,6 +593,8 @@ public:
 
 private:
   // -- member variables -------------------------------------------------------
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Bookkeeping data for managed sockets.
   pollfd_list pollset_;

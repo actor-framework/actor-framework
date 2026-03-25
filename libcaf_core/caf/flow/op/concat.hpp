@@ -28,6 +28,8 @@ class concat_sub : public subscription::impl_base,
 public:
   // -- member types -----------------------------------------------------------
 
+  using super = subscription::impl_base;
+
   using input_key = size_t;
 
   using input_type = observable<observable<T>>;
@@ -86,19 +88,19 @@ public:
   // -- reference counting -----------------------------------------------------
 
   void ref_coordinated() const noexcept final {
-    ref();
+    super::ref_coordinated();
   }
 
   void deref_coordinated() const noexcept final {
-    deref();
+    super::deref_coordinated();
   }
 
   friend void intrusive_ptr_add_ref(const concat_sub* ptr) noexcept {
-    ptr->ref();
+    ptr->ref_coordinated();
   }
 
   friend void intrusive_ptr_release(const concat_sub* ptr) noexcept {
-    ptr->deref();
+    ptr->deref_coordinated();
   }
 
   // -- callbacks for the forwarders -------------------------------------------

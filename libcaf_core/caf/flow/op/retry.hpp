@@ -18,6 +18,10 @@ namespace caf::flow::op {
 template <class T, class Predicate>
 class retry_sub : public subscription::impl_base, public observer_impl<T> {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using super = subscription::impl_base;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   retry_sub(coordinator* parent, observer<T> out, observable<T> in,
@@ -49,12 +53,12 @@ public:
 
   // -- implementation of observer_impl ----------------------------------------
 
-  void ref_coordinated() const noexcept override {
-    ref();
+  void ref_coordinated() const noexcept final {
+    super::ref_coordinated();
   }
 
-  void deref_coordinated() const noexcept override {
-    deref();
+  void deref_coordinated() const noexcept final {
+    super::deref_coordinated();
   }
 
   void on_subscribe(subscription sub) override {

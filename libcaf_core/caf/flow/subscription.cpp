@@ -13,19 +13,19 @@ subscription::impl::~impl() {
 }
 
 void subscription::impl_base::ref_disposable() const noexcept {
-  this->ref();
+  ref_count_.inc();
 }
 
 void subscription::impl_base::deref_disposable() const noexcept {
-  this->deref();
+  ref_count_.dec(this);
 }
 
 void subscription::impl_base::ref_coordinated() const noexcept {
-  this->ref();
+  ref_count_.inc();
 }
 
 void subscription::impl_base::deref_coordinated() const noexcept {
-  this->deref();
+  ref_count_.dec(this);
 }
 
 void subscription::impl_base::dispose() {

@@ -8,10 +8,10 @@
 #include "caf/async/producer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/callable_trait.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/concepts.hpp"
-#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/flow/coordinated.hpp"
@@ -163,20 +163,21 @@ template <class T>
 using observer_impl = typename observer<T>::impl;
 
 /// Simple base type observer implementations that implements the reference
-/// counting member functions with a plain (i.e., not thread-safe) reference
-/// count.
+/// counting member functions.
 /// @relates observer
 template <class T>
-class observer_impl_base : public detail::plain_ref_counted,
-                           public observer_impl<T> {
+class observer_impl_base : public observer_impl<T> {
 public:
   void ref_coordinated() const noexcept final {
-    this->ref();
+    ref_count_.inc();
   }
 
   void deref_coordinated() const noexcept final {
-    this->deref();
+    ref_count_.dec(this);
   }
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
 };
 
 } // namespace caf::flow
@@ -284,8 +285,7 @@ namespace caf::flow {
 
 /// Writes observed values to a bounded buffer.
 template <class Buffer>
-class buffer_writer_impl : public detail::atomic_ref_counted,
-                           public observer_impl<typename Buffer::value_type>,
+class buffer_writer_impl : public observer_impl<typename Buffer::value_type>,
                            public async::producer {
 public:
   // -- member types -----------------------------------------------------------
@@ -317,27 +317,27 @@ public:
   // -- intrusive_ptr interface ------------------------------------------------
 
   friend void intrusive_ptr_add_ref(const buffer_writer_impl* ptr) noexcept {
-    ptr->ref();
+    ptr->ref_producer();
   }
 
   friend void intrusive_ptr_release(const buffer_writer_impl* ptr) noexcept {
-    ptr->deref();
+    ptr->deref_producer();
   }
 
   void ref_coordinated() const noexcept final {
-    this->ref();
+    ref_count_.inc();
   }
 
   void deref_coordinated() const noexcept final {
-    this->deref();
+    ref_count_.dec(this);
   }
 
   void ref_producer() const noexcept final {
-    this->ref();
+    ref_count_.inc();
   }
 
   void deref_producer() const noexcept final {
-    this->deref();
+    ref_count_.dec(this);
   }
 
   // -- implementation of observer<T>::impl ------------------------------------
@@ -424,6 +424,7 @@ private:
     return {this, add_ref};
   }
 
+  mutable detail::atomic_ref_count ref_count_;
   coordinator_ptr parent_;
   buffer_ptr buf_;
   subscription sub_;

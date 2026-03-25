@@ -20,6 +20,10 @@ template <class T>
 class on_backpressure_buffer_sub : public subscription::impl_base,
                                    public observer_impl<T> {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using super = subscription::impl_base;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   on_backpressure_buffer_sub(coordinator* parent, observer<T> out,
@@ -55,12 +59,12 @@ public:
 
   // -- implementation of observer_impl ----------------------------------------
 
-  void ref_coordinated() const noexcept override {
-    ref();
+  void ref_coordinated() const noexcept final {
+    super::ref_coordinated();
   }
 
-  void deref_coordinated() const noexcept override {
-    deref();
+  void deref_coordinated() const noexcept final {
+    super::deref_coordinated();
   }
 
   void on_subscribe(subscription sub) override {

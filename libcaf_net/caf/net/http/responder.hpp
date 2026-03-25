@@ -10,6 +10,7 @@
 
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/ref_counted.hpp"
 
 #include <string_view>
 

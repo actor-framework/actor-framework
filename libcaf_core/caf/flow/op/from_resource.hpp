@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/async/consumer.hpp"
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/observer.hpp"
@@ -20,8 +20,7 @@ namespace caf::flow::op {
 
 /// Reads from an observable buffer and emits the consumed items.
 template <class Buffer>
-class from_resource_sub : public detail::atomic_ref_counted,
-                          public subscription::impl,
+class from_resource_sub : public subscription::impl,
                           public disposable::impl,
                           public async::consumer {
 public:
@@ -106,35 +105,39 @@ public:
   // -- intrusive_ptr interface ------------------------------------------------
 
   friend void intrusive_ptr_add_ref(const from_resource_sub* ptr) noexcept {
-    ptr->ref();
+    ptr->ref_coordinated();
   }
 
   friend void intrusive_ptr_release(const from_resource_sub* ptr) noexcept {
-    ptr->deref();
+    ptr->deref_coordinated();
   }
 
   void ref_consumer() const noexcept override {
-    this->ref();
+    ref_count_.inc();
   }
 
   void deref_consumer() const noexcept override {
-    this->deref();
+    ref_count_.dec(this);
   }
 
   void ref_disposable() const noexcept override {
-    this->ref();
+    ref_count_.inc();
   }
 
   void deref_disposable() const noexcept override {
-    this->deref();
+    ref_count_.dec(this);
   }
 
   void ref_coordinated() const noexcept override {
-    this->ref();
+    ref_count_.inc();
   }
 
   void deref_coordinated() const noexcept override {
-    this->deref();
+    ref_count_.dec(this);
+  }
+
+  size_t get_reference_count() const noexcept {
+    return ref_count_.value();
   }
 
 private:
@@ -191,6 +194,8 @@ private:
   intrusive_ptr<from_resource_sub> strong_this() {
     return {this, add_ref};
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Stores the @ref coordinator that runs this flow. Unlike other observables,
   /// we need a strong reference to the coordinator because otherwise the buffer

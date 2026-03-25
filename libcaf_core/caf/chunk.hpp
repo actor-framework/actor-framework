@@ -7,7 +7,9 @@
 #include "caf/async/fwd.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/memory_interface.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/raise_error.hpp"
@@ -35,13 +37,16 @@ public:
   // -- member types -----------------------------------------------------------
   class CAF_CORE_EXPORT data {
   public:
+    static constexpr auto memory_interface
+      = detail::memory_interface::malloc_and_free;
+
     data() = delete;
 
     data(const data&) = delete;
 
     data& operator=(const data&) = delete;
 
-    data(bool is_bin, size_t size) : rc_(1), bin_(is_bin), size_(size) {
+    data(bool is_bin, size_t size) : bin_(is_bin), size_(size) {
       static_cast<void>(padding_); // Silence unused-private-field warning.
     }
 
@@ -56,20 +61,22 @@ public:
     // -- reference counting ---------------------------------------------------
 
     bool unique() const noexcept {
-      return rc_ == 1;
+      return ref_count_.unique();
     }
 
-    void ref() const noexcept {
-      rc_.fetch_add(1, std::memory_order_relaxed);
+    void ref() noexcept {
+      ref_count_.inc();
     }
 
-    void deref() noexcept;
+    void deref() noexcept {
+      ref_count_.dec(this);
+    }
 
-    friend void intrusive_ptr_add_ref(const data* ptr) {
+    friend void intrusive_ptr_add_ref(data* ptr) noexcept {
       ptr->ref();
     }
 
-    friend void intrusive_ptr_release(data* ptr) {
+    friend void intrusive_ptr_release(data* ptr) noexcept {
       ptr->deref();
     }
 
@@ -95,8 +102,9 @@ public:
     static data* make(bool is_binary, size_t payload_size);
 
     static constexpr size_t padding_size = CAF_CACHE_LINE_SIZE
-                                           - sizeof(std::atomic<size_t>);
-    mutable std::atomic<size_t> rc_;
+                                           - sizeof(detail::atomic_ref_count);
+
+    mutable detail::atomic_ref_count ref_count_;
     std::byte padding_[padding_size];
     bool bin_;
     size_t size_;

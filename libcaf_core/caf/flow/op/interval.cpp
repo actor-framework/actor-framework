@@ -5,7 +5,6 @@
 #include "caf/flow/op/interval.hpp"
 
 #include "caf/detail/assert.hpp"
-#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/flow/subscription.hpp"
 
 #include <limits>

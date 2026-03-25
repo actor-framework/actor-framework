@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/action.hpp"
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
 
 #include <condition_variable>
@@ -13,7 +13,7 @@
 
 namespace caf::detail {
 
-class CAF_CORE_EXPORT beacon : public atomic_ref_counted, public action::impl {
+class CAF_CORE_EXPORT beacon : public action::impl {
 public:
   enum class state {
     waiting,
@@ -54,6 +54,7 @@ public:
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   mutable std::mutex mtx_;
   std::condition_variable cv_;
   state state_ = state::waiting;

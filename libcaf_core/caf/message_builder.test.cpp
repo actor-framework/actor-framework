@@ -8,6 +8,7 @@
 
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/type_id.hpp"
 
 using namespace caf;

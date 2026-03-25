@@ -4,15 +4,14 @@
 
 #pragma once
 
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/inspector_access.hpp"
-#include "caf/intrusive_cow_ptr.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ip_address.hpp"
-#include "caf/make_counted.hpp"
 #include "caf/unordered_flat_map.hpp"
 
 #include <cstdint>
@@ -75,7 +74,7 @@ public:
   public:
     // -- constructors, destructors, and assignment operators ------------------
 
-    impl_type();
+    impl_type() = default;
 
     impl_type(const impl_type&) = delete;
 
@@ -110,12 +109,12 @@ public:
       return !scheme.empty() && (!authority.empty() || !path.empty());
     }
 
-    bool unique() const noexcept {
-      return rc_.load() == 1;
-    }
-
     std::string_view str_after_path_offset() const noexcept {
       return {str.c_str() + path_offset, str.size() - path_offset};
+    }
+
+    bool unique() const noexcept {
+      return ref_count_.unique();
     }
 
     // -- modifiers ------------------------------------------------------------
@@ -127,21 +126,28 @@ public:
     /// @warning This function does not update the string representation.
     void copy_members_from(const impl_type& other);
 
+    void ref() const noexcept {
+      ref_count_.inc();
+    }
+
+    void deref() const noexcept {
+      ref_count_.dec(this);
+    }
+
     // -- friend functions -----------------------------------------------------
 
-    friend void intrusive_ptr_add_ref(const impl_type* p) {
-      p->rc_.fetch_add(1, std::memory_order_relaxed);
+    friend void intrusive_ptr_add_ref(const impl_type* p) noexcept {
+      p->ref();
     }
 
     friend void intrusive_ptr_release(const impl_type* p) {
-      if (p->rc_ == 1 || p->rc_.fetch_sub(1, std::memory_order_acq_rel) == 1)
-        delete p;
+      p->deref();
     }
 
   private:
     // -- member variables -----------------------------------------------------
 
-    mutable std::atomic<size_t> rc_;
+    mutable detail::atomic_ref_count ref_count_;
   };
 
   /// Pointer to implementation.
