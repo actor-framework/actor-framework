@@ -8,6 +8,7 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/action.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/chrono.hpp"
 #include "caf/event_based_actor.hpp"
@@ -569,6 +570,23 @@ TEST("scoped actors use the default mailbox") {
                 caf::after(1ms) >> [this] { check(true); });
 }
 
+SCENARIO("the deterministic fixture allows manually running scheduled jobs") {
+  GIVEN("a scheduled job") {
+    auto dispatched = std::make_shared<bool>(false);
+    auto job = caf::make_single_shot_action([dispatched] { //
+      *dispatched = true;
+    });
+    WHEN("scheduling the job") {
+      sys.scheduler().schedule(job.as_intrusive_ptr().get(), 0);
+      check_eq(pending_jobs(), 1u);
+      THEN("calling dispatch_job runs the job") {
+        check(dispatch_job());
+        check(*dispatched);
+      }
+    }
+  }
+}
+
 #ifdef CAF_ENABLE_EXCEPTIONS
 TEST("advance_time requires a positive duration") {
   should_fail_with_exception([this] { advance_time(0s); });
@@ -578,6 +596,24 @@ TEST("advance_time requires a positive duration") {
 TEST("calling next_timeout or last_timeout with no pending timeout throws") {
   should_fail_with_exception([this] { std::ignore = next_timeout(); });
   should_fail_with_exception([this] { std::ignore = last_timeout(); });
+}
+
+TEST("GH-2095 regression") {
+  caf::scoped_actor self{sys};
+  auto aut = sys.spawn([hdl = caf::actor{self}](caf::event_based_actor* self) {
+    self->mail(caf::get_atom_v).request(hdl, caf::infinite).await([](int) {});
+    return caf::behavior{
+      [](const std::string&) {
+        // nop
+      },
+    };
+  });
+  should_fail_with_exception([this, aut] {
+    // The actor is waiting for the response. Hence, it will skip this message.
+    // However, the fixture requires the actor to actually consume the message
+    // and will fail the test if it does not.
+    inject().with("hello"s).to(aut);
+  });
 }
 #endif // CAF_ENABLE_EXCEPTIONS
 

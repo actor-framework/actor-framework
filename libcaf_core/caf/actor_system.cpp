@@ -982,6 +982,7 @@ detail::mailbox_factory* actor_system_access::mailbox_factory() {
 
 detail::daemons* actor_system_access::daemons() {
   auto* ptr = impl()->modules()[actor_system_module::daemons].get();
+  CAF_ASSERT(ptr != nullptr);
   return static_cast<detail::daemons*>(ptr);
 }
 

@@ -269,6 +269,11 @@ public:
     return fun();
   }
 
+  /// Checks whether this actor has terminated.
+  bool is_terminated() const noexcept {
+    return getf(is_terminated_flag);
+  }
+
   /// @endcond
 
 protected:
@@ -297,11 +302,6 @@ protected:
 
   void flags(int new_value) {
     flags_.store(new_value, std::memory_order_relaxed);
-  }
-
-  /// Checks whether this actor has terminated.
-  bool is_terminated() const noexcept {
-    return getf(is_terminated_flag);
   }
 
   // -- constructors, destructors, and assignment operators --------------------

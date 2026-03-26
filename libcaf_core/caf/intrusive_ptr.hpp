@@ -11,6 +11,7 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
+#include "caf/intrusive_ptr_access.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -19,23 +20,6 @@
 #include <type_traits>
 
 namespace caf {
-
-/// Policy for adding and releasing references in an @ref intrusive_ptr. The
-/// default implementation dispatches to the free function pair
-/// `intrusive_ptr_add_ref` and `intrusive_ptr_release` that the policy picks up
-/// via ADL.
-/// @relates intrusive_ptr
-template <class T>
-struct intrusive_ptr_access {
-public:
-  static void add_ref(T* ptr) noexcept {
-    intrusive_ptr_add_ref(ptr);
-  }
-
-  static void release(T* ptr) noexcept {
-    intrusive_ptr_release(ptr);
-  }
-};
 
 /// An intrusive, reference counting smart pointer implementation.
 /// @relates ref_counted

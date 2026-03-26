@@ -105,6 +105,8 @@ public:
 
   bool initialize(scheduler* ctx) override;
 
+  consume_result consume(mailbox_element_ptr& x) override;
+
   bool launch_delayed() override;
 
   void launch(caf::detail::private_thread* worker, scheduler* ctx) override;
