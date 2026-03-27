@@ -4,20 +4,24 @@
 
 #include "caf/detail/cleanup_and_release.hpp"
 
+#include "caf/detail/assert.hpp"
 #include "caf/resumable.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler.hpp"
 
+#include <vector>
+
 namespace caf::detail {
 
-void cleanup_and_release(resumable* ptr) {
+void cleanup_and_release(resumable_ptr job) {
+  CAF_ASSERT(job != nullptr);
   class dummy_scheduler : public scheduler {
   public:
-    void delay(resumable* job, uint64_t) override {
-      resumables.push_back(job);
+    void delay(resumable_ptr sub, uint64_t) override {
+      resumables.push_back(std::move(sub));
     }
-    void schedule(resumable* job, uint64_t) override {
-      resumables.push_back(job);
+    void schedule(resumable_ptr sub, uint64_t) override {
+      resumables.push_back(std::move(sub));
     }
     void start() override {
       // nop
@@ -28,17 +32,15 @@ void cleanup_and_release(resumable* ptr) {
     bool is_system_scheduler() const noexcept final {
       return true;
     }
-    std::vector<resumable*> resumables;
+    std::vector<resumable_ptr> resumables;
   };
   dummy_scheduler dummy;
-  ptr->resume(&dummy, resumable::dispose_event_id);
+  job->resume(&dummy, resumable::dispose_event_id);
   while (!dummy.resumables.empty()) {
-    auto sub = dummy.resumables.back();
+    auto sub = std::move(dummy.resumables.back());
     dummy.resumables.pop_back();
     sub->resume(&dummy, resumable::dispose_event_id);
-    intrusive_ptr_release(sub);
   }
-  intrusive_ptr_release(ptr);
 }
 
 } // namespace caf::detail

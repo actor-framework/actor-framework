@@ -167,7 +167,7 @@ void blocking_actor::launch(detail::private_thread* worker, scheduler*) {
   CAF_ASSERT(worker != nullptr);
   detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("");
-  worker->resume(new blocking_actor_runner(this, worker));
+  worker->resume(resumable_ptr::make<blocking_actor_runner>(this, worker));
 }
 
 blocking_actor::receive_while_helper

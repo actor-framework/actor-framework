@@ -133,8 +133,8 @@ public:
     //       `schedule`. Hence, we always return success here to make sure the
     //       actor never touches the scheduler.
     using event_t = deterministic::scheduling_event;
-    auto event = std::make_unique<event_t>(owner_->as_resumable(),
-                                           std::move(ptr));
+    auto event = std::make_unique<event_t>(
+      resumable_ptr{owner_->as_resumable(), add_ref}, std::move(ptr));
     events_->push_back(std::move(event));
     // Never return unblocked_reader: the fixture drives execution by
     // dispatching from the events list. If we reported unblocked_reader, the
@@ -144,8 +144,8 @@ public:
 
   void push_front(mailbox_element_ptr ptr) override {
     using event_t = deterministic::scheduling_event;
-    auto event = std::make_unique<event_t>(owner_->as_resumable(),
-                                           std::move(ptr));
+    auto event = std::make_unique<event_t>(
+      resumable_ptr{owner_->as_resumable(), add_ref}, std::move(ptr));
     events_->emplace_front(std::move(event));
   }
 
@@ -478,16 +478,13 @@ public:
     // nop
   }
 
-  void schedule(resumable* ptr, uint64_t) override {
+  void schedule(resumable_ptr job, uint64_t) override {
     using event_t = deterministic::scheduling_event;
-    events_->push_back(std::make_unique<event_t>(ptr, nullptr));
-    // Before calling this function, CAF *always* bumps the reference count.
-    // Hence, we need to release one reference count here.
-    intrusive_ptr_release(ptr);
+    events_->push_back(std::make_unique<event_t>(std::move(job), nullptr));
   }
 
-  void delay(resumable* what, uint64_t event_id) override {
-    schedule(what, event_id);
+  void delay(resumable_ptr what, uint64_t event_id) override {
+    schedule(std::move(what), event_id);
   }
 
   void start() override {

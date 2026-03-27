@@ -13,6 +13,7 @@
 #include "caf/io/network/scribe_impl.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/adopt_ref.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
@@ -620,7 +621,7 @@ default_multiplexer::~default_multiplexer() {
   nonblocking(pipe_.first, true);
   auto ptr = pipe_reader_.try_read_next();
   while (ptr != nullptr) {
-    detail::cleanup_and_release(ptr);
+    detail::cleanup_and_release(resumable_ptr{ptr, adopt_ref});
     ptr = pipe_reader_.try_read_next();
   }
   // do cleanup for pipe reader manually, since WSACleanup needs to happen last
@@ -632,18 +633,18 @@ default_multiplexer::~default_multiplexer() {
 #endif
 }
 
-void default_multiplexer::schedule(resumable* ptr, uint64_t) {
-  auto lg = log::io::trace("ptr = {}", ptr);
-  CAF_ASSERT(ptr != nullptr);
+void default_multiplexer::schedule(resumable_ptr job, uint64_t) {
+  auto lg = log::io::trace("ptr = {}", job.get());
+  CAF_ASSERT(job != nullptr);
   if (std::this_thread::get_id() != thread_id()) {
-    wr_dispatch_request(ptr);
+    wr_dispatch_request(job.release());
   } else {
-    internally_posted_.emplace_back(ptr, adopt_ref);
+    internally_posted_.emplace_back(std::move(job));
   }
 }
 
-void default_multiplexer::delay(resumable* ptr, uint64_t) {
-  schedule(ptr, resumable::default_event_id);
+void default_multiplexer::delay(resumable_ptr job, uint64_t) {
+  schedule(std::move(job), resumable::default_event_id);
 }
 
 scribe_ptr default_multiplexer::new_scribe(native_socket fd) {

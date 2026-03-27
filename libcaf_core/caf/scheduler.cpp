@@ -6,23 +6,18 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/blocking_actor.hpp"
-#include "caf/config.hpp"
+#include "caf/add_ref.hpp"
+#include "caf/adopt_ref.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/cleanup_and_release.hpp"
 #include "caf/detail/default_thread_count.hpp"
 #include "caf/detail/double_ended_queue.hpp"
 #include "caf/logger.hpp"
-#include "caf/scheduled_actor.hpp"
-#include "caf/scoped_actor.hpp"
-#include "caf/send.hpp"
+#include "caf/resumable.hpp"
 #include "caf/thread_owner.hpp"
 
 #include <condition_variable>
-#include <fstream>
-#include <ios>
-#include <iostream>
 #include <memory>
 #include <random>
 #include <thread>
@@ -98,8 +93,6 @@ struct worker_data {
 /// Implementation of the work stealing worker class.
 class worker : public scheduler {
 public:
-  using job_ptr = resumable*;
-
   template <class SchedulerImpl>
   worker(size_t worker_id, SchedulerImpl*, const worker_data& init)
     : id_(worker_id), data_(init) {
@@ -129,14 +122,14 @@ public:
     return true;
   }
 
-  void schedule(job_ptr job, uint64_t) override {
+  void schedule(resumable_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
-    data_.queue.append(job);
+    data_.queue.append(job.release());
   }
 
-  void delay(job_ptr job, uint64_t) override {
+  void delay(resumable_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
-    data_.queue.prepend(job);
+    data_.queue.prepend(job.release());
   }
 
   size_t id() const {
@@ -168,7 +161,7 @@ private:
   }
 
   template <typename Parent>
-  resumable* policy_dequeue(Parent* parent) {
+  resumable_ptr policy_dequeue(Parent* parent) {
     // We wait for new jobs by polling our external queue: first, we assume an
     // active work load on the machine and perform aggressive/moderate polling
     // by using the parameters for the first two strategies. When not finding
@@ -180,11 +173,11 @@ private:
            attempt += strategy.step_size) {
         // Wait for some work to appear.
         if (auto* job = data_.queue.try_take_head(strategy.sleep_duration))
-          return job;
+          return {job, adopt_ref};
         // Try to steal every X poll attempts.
         if ((attempt % strategy.steal_interval) == 0) {
           if (auto* job = try_steal(parent))
-            return job;
+            return {job, adopt_ref};
         }
       }
     }
@@ -193,9 +186,9 @@ private:
     auto& relaxed = data_.strategies[2];
     for (;;) {
       if (auto* job = data_.queue.try_take_head(relaxed.sleep_duration))
-        return job;
+        return {job, adopt_ref};
       if (auto* job = try_steal(parent))
-        return job;
+        return {job, adopt_ref};
     }
   }
 
@@ -207,7 +200,6 @@ private:
       auto job = policy_dequeue(parent);
       CAF_ASSERT(job->pinned_scheduler() == nullptr);
       job->resume(this, resumable::default_event_id);
-      intrusive_ptr_release(job);
       if (stop_worker)
         return;
     }
@@ -254,13 +246,13 @@ public:
 
   // -- implementation of scheduler interface ----------------------------------
 
-  void schedule(resumable* ptr, uint64_t) override {
+  void schedule(resumable_ptr job, uint64_t) override {
     auto w = this->worker_by_id(next_worker++ % num_workers_);
-    w->schedule(ptr, resumable::default_event_id);
+    w->schedule(std::move(job), resumable::default_event_id);
   }
 
-  void delay(resumable* what, uint64_t) override {
-    schedule(what, resumable::default_event_id);
+  void delay(resumable_ptr what, uint64_t) override {
+    schedule(std::move(what), resumable::default_event_id);
   }
 
   void start() override {
@@ -308,10 +300,8 @@ public:
     for (size_t i = 0; i < num_workers_; ++i)
       alive_workers.insert(worker_by_id(i));
     while (!alive_workers.empty()) {
-      // Add a reference before scheduling. The worker will release this
-      // reference after processing the shutdown_helper.
-      sh.ref();
-      (*alive_workers.begin())->schedule(&sh, resumable::default_event_id);
+      (*alive_workers.begin())
+        ->schedule(resumable_ptr{&sh, add_ref}, resumable::default_event_id);
       // Since jobs can be stolen, we cannot assume that we have actually shut
       // down the worker we've enqueued sh to.
       {
@@ -329,7 +319,7 @@ public:
     for (auto& w : workers_) {
       auto next = [&] { return w->data().queue.try_take_head(); };
       for (auto job = next(); job != nullptr; job = next())
-        detail::cleanup_and_release(job);
+        detail::cleanup_and_release(resumable_ptr{job, adopt_ref});
     }
   }
 
@@ -364,8 +354,6 @@ namespace work_sharing {
 template <class Parent>
 class worker : public scheduler {
 public:
-  using job_ptr = resumable*;
-
   worker(size_t worker_id, Parent* parent) : parent_{parent}, id_(worker_id) {
     // nop
   }
@@ -389,14 +377,14 @@ public:
     return true;
   }
 
-  void schedule(job_ptr job, uint64_t) override {
+  void schedule(resumable_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
-    parent_->schedule(job, resumable::default_event_id);
+    parent_->schedule(std::move(job), resumable::default_event_id);
   }
 
-  void delay(job_ptr job, uint64_t) override {
+  void delay(resumable_ptr job, uint64_t) override {
     CAF_ASSERT(job != nullptr);
-    parent_->schedule(job, resumable::default_event_id);
+    parent_->schedule(std::move(job), resumable::default_event_id);
   }
 
   size_t id() const noexcept {
@@ -416,7 +404,6 @@ private:
       CAF_ASSERT(job != nullptr);
       CAF_ASSERT(job->pinned_scheduler() == nullptr);
       job->resume(this, resumable::default_event_id);
-      intrusive_ptr_release(job);
       if (stop_worker) {
         return;
       }
@@ -439,7 +426,7 @@ public:
 
   using worker_type = worker<scheduler_impl>;
 
-  using queue_type = std::list<resumable*>;
+  using queue_type = std::list<resumable_ptr>;
 
   explicit scheduler_impl(actor_system& sys) : sys_(&sys) {
     auto& cfg = sys.config();
@@ -463,16 +450,16 @@ public:
 
   // -- implementation of scheduler interface ----------------------------------
 
-  void schedule(resumable* ptr, uint64_t) override {
+  void schedule(resumable_ptr job, uint64_t) override {
     queue_type l;
-    l.push_back(ptr);
+    l.emplace_back(std::move(job));
     std::unique_lock<std::mutex> guard(lock);
     queue.splice(queue.end(), l);
     cv.notify_one();
   }
 
-  void delay(resumable* what, uint64_t) override {
-    schedule(what, resumable::default_event_id);
+  void delay(resumable_ptr what, uint64_t) override {
+    schedule(std::move(what), resumable::default_event_id);
   }
 
   void start() override {
@@ -517,10 +504,8 @@ public:
     for (size_t i = 0; i < num_workers_; ++i)
       alive_workers.insert(worker_by_id(i));
     while (!alive_workers.empty()) {
-      // Add a reference before scheduling. The worker will release this
-      // reference after processing the shutdown_helper.
-      sh.ref();
-      (*alive_workers.begin())->schedule(&sh, resumable::default_event_id);
+      (*alive_workers.begin())
+        ->schedule(resumable_ptr{&sh, add_ref}, resumable::default_event_id);
       // Since jobs can be stolen, we cannot assume that we have actually shut
       // down the worker we've enqueued sh to.
       { // lifetime scope of guard
@@ -535,40 +520,38 @@ public:
       w->get_thread().join();
     }
     // Run cleanup code for each resumable.
-    foreach_central_resumable(detail::cleanup_and_release);
+    auto next = [&]() -> resumable_ptr {
+      std::unique_lock<std::mutex> guard(lock);
+      if (queue.empty()) {
+        return nullptr;
+      }
+      auto front = std::move(queue.front());
+      queue.pop_front();
+      return front;
+    };
+    for (auto job = next(); job != nullptr; job = next()) {
+      detail::cleanup_and_release(std::move(job));
+    }
   }
 
   bool is_system_scheduler() const noexcept final {
     return true;
   }
 
-  resumable* dequeue() {
-    std::unique_lock<std::mutex> guard(lock);
-    cv.wait(guard, [&] { return !queue.empty(); });
-    resumable* job = queue.front();
-    queue.pop_front();
-    return job;
+  resumable_ptr dequeue() {
+    resumable_ptr result;
+    {
+      std::unique_lock<std::mutex> guard(lock);
+      cv.wait(guard, [&] { return !queue.empty(); });
+      result = std::move(queue.front());
+      queue.pop_front();
+    }
+    return result;
   }
 
 private:
   worker_type* worker_by_id(size_t x) {
     return workers_[x].get();
-  }
-
-  template <class UnaryFunction>
-  void foreach_central_resumable(UnaryFunction f) {
-    auto next = [&]() -> resumable* {
-      if (queue.empty()) {
-        return nullptr;
-      }
-      auto front = queue.front();
-      queue.pop_front();
-      return front;
-    };
-    std::unique_lock<std::mutex> guard(lock);
-    for (auto job = next(); job != nullptr; job = next()) {
-      f(job);
-    }
   }
 
   /// Set of workers.

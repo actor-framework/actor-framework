@@ -47,10 +47,8 @@ struct single_mock : mock_base {
 };
 
 struct nested_mock : mock_base {
-  using child_ptr = intrusive_ptr<mock_base>;
-
   nested_mock(std::shared_ptr<std::atomic<bool>> disposed_flag,
-              std::vector<child_ptr> children)
+              std::vector<resumable_ptr> children)
     : mock_base(std::move(disposed_flag)), children(std::move(children)) {
   }
 
@@ -58,22 +56,20 @@ struct nested_mock : mock_base {
     if (event_id == resumable::dispose_event_id) {
       disposed_flag->store(true);
       for (auto& child : children) {
-        intrusive_ptr_add_ref(child.get());
-        ctx->delay(child.get(), resumable::dispose_event_id);
+        ctx->delay(child, resumable::dispose_event_id);
       }
       return;
     }
   }
 
-  std::vector<child_ptr> children;
+  std::vector<resumable_ptr> children;
 };
 
 } // namespace
 
 TEST("cleanup_and_release resumes a single resumable with dispose_event_id") {
   auto disposed = std::make_shared<std::atomic<bool>>(false);
-  auto p = make_counted<single_mock>(disposed);
-  cleanup_and_release(p.release());
+  cleanup_and_release(make_counted<single_mock>(disposed));
   check(disposed->load());
 }
 
@@ -83,12 +79,12 @@ TEST("cleanup_and_release recursively disposes nested resumables") {
   auto child1_disposed = std::make_shared<std::atomic<bool>>(false);
   auto child2_disposed = std::make_shared<std::atomic<bool>>(false);
   // Create the resumables.
-  std::vector<nested_mock::child_ptr> children;
+  std::vector<resumable_ptr> children;
   children.emplace_back(make_counted<single_mock>(child1_disposed));
   children.emplace_back(make_counted<single_mock>(child2_disposed));
   auto parent = make_counted<nested_mock>(parent_disposed, std::move(children));
   // Clean up the parent and its children.
-  cleanup_and_release(parent.release());
+  cleanup_and_release(std::move(parent));
   // Check the flags.
   check(parent_disposed->load());
   check(child1_disposed->load());

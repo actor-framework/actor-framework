@@ -122,9 +122,9 @@ public:
   new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
                          bool reuse_addr = false) override;
 
-  void schedule(resumable* ptr, uint64_t) override;
+  void schedule(resumable_ptr ptr, uint64_t) override;
 
-  void delay(resumable* ptr, uint64_t) override;
+  void delay(resumable_ptr ptr, uint64_t) override;
 
   explicit default_multiplexer(actor_system& sys);
 

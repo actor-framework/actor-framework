@@ -6,6 +6,7 @@
 #include "caf/io/network/multiplexer.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/add_ref.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
@@ -29,8 +30,7 @@ void abstract_broker::launch(caf::detail::private_thread* worker,
   backend_ = static_cast<network::multiplexer*>(ctx);
   auto lg = log::io::trace("");
   (void) worker; // Brokers run on the multiplexer.
-  intrusive_ptr_add_ref(ctrl());
-  ctx->delay(this, resumable::initialization_event_id);
+  ctx->delay(resumable_ptr{this, add_ref}, resumable::initialization_event_id);
 }
 
 void abstract_broker::on_cleanup(const error& reason) {

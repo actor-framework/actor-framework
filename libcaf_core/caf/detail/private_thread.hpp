@@ -7,6 +7,8 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/private_thread_pool.hpp"
 #include "caf/fwd.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/resumable.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -17,7 +19,7 @@ namespace caf::detail {
 
 class CAF_CORE_EXPORT private_thread : public private_thread_pool::node {
 public:
-  void resume(resumable* ptr);
+  void resume(resumable_ptr job);
 
   bool stop() override;
 
@@ -30,12 +32,12 @@ public:
 private:
   void run(actor_system* sys);
 
-  std::pair<resumable*, bool> await();
+  std::pair<resumable_ptr, bool> await();
 
   std::thread thread_;
   std::mutex mtx_;
   std::condition_variable cv_;
-  resumable* job_ = nullptr;
+  resumable_ptr job_;
   bool shutdown_ = false;
 };
 

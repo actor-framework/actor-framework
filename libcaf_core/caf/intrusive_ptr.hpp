@@ -165,6 +165,16 @@ public:
     reset(new T(std::forward<Ts>(xs)...), adopt_ref);
   }
 
+  /// Constructs an object of type `U` in an `intrusive_ptr`. This factory
+  /// function is similar to `make_counted`, but it allows passing a derived
+  /// type of `T` as the template parameter. This allows constructing an object
+  /// on a derived type while using the base type for the pointer.
+  template <class U = T, class... Ts>
+  static intrusive_ptr make(Ts&&... xs) {
+    static_assert(std::is_convertible_v<U*, T*>);
+    return {new U(std::forward<Ts>(xs)...), adopt_ref};
+  }
+
   intrusive_ptr& operator=(std::nullptr_t) noexcept {
     reset();
     return *this;
