@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
 #include "caf/detail/comparable.hpp"
@@ -20,27 +21,15 @@ public:
   // -- member types -----------------------------------------------------------
 
   /// Internal implementation class of a `disposable`.
-  class CAF_CORE_EXPORT impl {
+  class CAF_CORE_EXPORT impl : public abstract_ref_counted {
   public:
-    friend void intrusive_ptr_add_ref(const impl* ptr) noexcept {
-      ptr->ref_disposable();
-    }
-
-    friend void intrusive_ptr_release(const impl* ptr) noexcept {
-      ptr->deref_disposable();
-    }
-
-    virtual ~impl();
+    ~impl() noexcept override;
 
     virtual void dispose() = 0;
 
     virtual bool disposed() const noexcept = 0;
 
     disposable as_disposable() noexcept;
-
-    virtual void ref_disposable() const noexcept = 0;
-
-    virtual void deref_disposable() const noexcept = 0;
   };
 
   // -- constructors, destructors, and assignment operators --------------------

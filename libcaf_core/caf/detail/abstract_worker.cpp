@@ -18,12 +18,12 @@ abstract_worker::~abstract_worker() {
 
 // -- implementation of resumable ----------------------------------------------
 
-void abstract_worker::ref_resumable() const noexcept {
-  ref();
+void abstract_worker::ref() const noexcept {
+  ref_count_.inc();
 }
 
-void abstract_worker::deref_resumable() const noexcept {
-  deref();
+void abstract_worker::deref() const noexcept {
+  ref_count_.dec(this);
 }
 
 } // namespace caf::detail

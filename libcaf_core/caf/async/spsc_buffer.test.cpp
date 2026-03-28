@@ -12,6 +12,7 @@
 #include "caf/async/mock_producer.test.hpp"
 
 #include "caf/actor_from_state.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/exit_reason.hpp"
@@ -59,28 +60,27 @@ public:
   dummy_producer(const dummy_producer&) = delete;
   dummy_producer& operator=(const dummy_producer&) = delete;
 
-  void on_consumer_ready() {
+  void on_consumer_ready() override {
     consumer_ready = true;
   }
 
-  void on_consumer_cancel() {
+  void on_consumer_cancel() override {
     consumer_cancel = true;
   }
 
-  void on_consumer_demand(size_t new_demand) {
+  void on_consumer_demand(size_t new_demand) override {
     demand += new_demand;
   }
 
-  void ref_producer() const noexcept {
-    ++rc;
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_producer() const noexcept {
-    if (--rc == 0)
-      delete this;
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
-  mutable size_t rc = 1;
+  mutable detail::atomic_ref_count ref_count_;
   bool consumer_ready = false;
   bool consumer_cancel = false;
   size_t demand = 0;
@@ -92,24 +92,23 @@ public:
   dummy_consumer(const dummy_consumer&) = delete;
   dummy_consumer& operator=(const dummy_consumer&) = delete;
 
-  void on_producer_ready() {
+  void on_producer_ready() override {
     producer_ready = true;
   }
 
-  void on_producer_wakeup() {
+  void on_producer_wakeup() override {
     ++producer_wakeups;
   }
 
-  void ref_consumer() const noexcept {
-    ++rc;
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_consumer() const noexcept {
-    if (--rc == 0)
-      delete this;
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
-  mutable size_t rc = 1;
+  mutable detail::atomic_ref_count ref_count_;
   bool producer_ready = false;
   size_t producer_wakeups = 0;
 };

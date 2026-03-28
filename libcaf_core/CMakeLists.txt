@@ -72,6 +72,7 @@ caf_add_component(
     caf/abstract_actor.test.cpp
     caf/abstract_blocking_actor.cpp
     caf/abstract_mailbox.cpp
+    caf/abstract_ref_counted.cpp
     caf/abstract_scheduled_actor.cpp
     caf/action.cpp
     caf/action.test.cpp
@@ -140,6 +141,7 @@ caf_add_component(
     caf/config_value.test.cpp
     caf/config_value_reader.cpp
     caf/config_value_writer.cpp
+    caf/console_printer.cpp
     caf/const_typed_message_view.test.cpp
     caf/constructor_attach.test.cpp
     caf/cow_string.test.cpp
@@ -345,7 +347,6 @@ caf_add_component(
     caf/parser_state.cpp
     caf/pec.test.cpp
     caf/proxy_registry.cpp
-    caf/console_printer.cpp
     caf/raise_error.cpp
     caf/ref_counted.cpp
     caf/request_timeout.test.cpp

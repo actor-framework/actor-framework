@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/flow/fwd.hpp"
 
 namespace caf::flow {
 
 /// An object that lives on a @ref coordinator.
-class CAF_CORE_EXPORT coordinated {
+class CAF_CORE_EXPORT coordinated : public abstract_ref_counted {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -20,23 +21,6 @@ public:
 
   /// Returns the @ref coordinator this object lives on.
   virtual coordinator* parent() const noexcept = 0;
-
-  // -- reference counting -----------------------------------------------------
-
-  /// Increases the reference count of the coordinated.
-  virtual void ref_coordinated() const noexcept = 0;
-
-  /// Decreases the reference count of the coordinated and destroys the object
-  /// if necessary.
-  virtual void deref_coordinated() const noexcept = 0;
-
-  friend void intrusive_ptr_add_ref(const coordinated* ptr) noexcept {
-    ptr->ref_coordinated();
-  }
-
-  friend void intrusive_ptr_release(const coordinated* ptr) noexcept {
-    ptr->deref_coordinated();
-  }
 };
 
 /// @relates coordinated

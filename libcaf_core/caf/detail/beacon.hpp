@@ -21,9 +21,9 @@ public:
     disposed,
   };
 
-  void ref_disposable() const noexcept override;
+  void ref() const noexcept final;
 
-  void deref_disposable() const noexcept override;
+  void deref() const noexcept final;
 
   void dispose() override;
 

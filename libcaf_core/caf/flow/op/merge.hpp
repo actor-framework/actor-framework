@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/gen/from_container.hpp"
 #include "caf/flow/gen/just.hpp"
 #include "caf/flow/observer.hpp"
@@ -56,8 +57,6 @@ public:
   using input_map = std::map<input_key, merge_input<T>>;
 
   using input_map_iterator = typename input_map::iterator;
-
-  using super = subscription::impl_base;
 
   // -- constants --------------------------------------------------------------
 
@@ -120,20 +119,12 @@ public:
 
   // -- reference counting -----------------------------------------------------
 
-  void ref_coordinated() const noexcept final {
-    super::ref_coordinated();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept final {
-    super::deref_coordinated();
-  }
-
-  friend void intrusive_ptr_add_ref(const merge_sub* ptr) noexcept {
-    ptr->ref_coordinated();
-  }
-
-  friend void intrusive_ptr_release(const merge_sub* ptr) noexcept {
-    ptr->deref_coordinated();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   // -- callbacks for the forwarders -------------------------------------------
@@ -286,14 +277,6 @@ private:
     }
   }
 
-  void do_ref() final {
-    super::ref_coordinated();
-  }
-
-  void do_deref() final {
-    super::deref_coordinated();
-  }
-
   void stop_inputs() {
     auto i = inputs_.begin();
     while (i != inputs_.end()) {
@@ -340,6 +323,8 @@ private:
       pos_ = result->first;
     return result;
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;

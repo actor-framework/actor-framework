@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 namespace caf::async {
 
 /// Base type for asynchronous consumers of an event source.
-class CAF_CORE_EXPORT consumer {
+class CAF_CORE_EXPORT consumer : public abstract_ref_counted {
 public:
   virtual ~consumer();
 
@@ -20,24 +21,7 @@ public:
   /// Called to signal to the consumer that the producer added an item to a
   /// previously empty source or completed the flow of events.
   virtual void on_producer_wakeup() = 0;
-
-  /// Increases the reference count of the consumer.
-  virtual void ref_consumer() const noexcept = 0;
-
-  /// Decreases the reference count of the consumer and destroys the object if
-  /// necessary.
-  virtual void deref_consumer() const noexcept = 0;
 };
-
-/// @relates consumer
-inline void intrusive_ptr_add_ref(const consumer* p) noexcept {
-  p->ref_consumer();
-}
-
-/// @relates consumer
-inline void intrusive_ptr_release(const consumer* p) noexcept {
-  p->deref_consumer();
-}
 
 /// @relates consumer
 using consumer_ptr = intrusive_ptr<consumer>;

@@ -17,14 +17,15 @@ public:
 
   void on_producer_wakeup() override;
 
-  void ref_consumer() const noexcept override;
+  void ref() const noexcept final;
 
-  void deref_consumer() const noexcept override;
-
-  mutable detail::atomic_ref_count ref_count_;
+  void deref() const noexcept final;
 
   /// Incremented whenever `on_producer_wakeup` is called.
   std::atomic<size_t> wakeups = 0;
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
 };
 
 } // namespace caf::async

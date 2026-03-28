@@ -61,12 +61,12 @@ size_t scoped_coordinator::run_some(steady_time_point timeout) {
 
 // -- reference counting -------------------------------------------------------
 
-void scoped_coordinator::ref_execution_context() const noexcept {
-  ref();
+void scoped_coordinator::ref() const noexcept {
+  ref_count_.inc();
 }
 
-void scoped_coordinator::deref_execution_context() const noexcept {
-  deref();
+void scoped_coordinator::deref() const noexcept {
+  ref_count_.dec(this);
 }
 
 // -- properties ---------------------------------------------------------------

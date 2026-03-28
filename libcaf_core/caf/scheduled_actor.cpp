@@ -12,6 +12,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
@@ -158,7 +159,7 @@ scheduled_actor::~scheduled_actor() {
   if (mailbox_ == &default_mailbox_)
     default_mailbox_.~default_mailbox();
   else
-    mailbox_->deref_mailbox();
+    mailbox_->deref();
 }
 
 // -- overridden functions of abstract_actor -----------------------------------
@@ -295,14 +296,6 @@ resumable* scheduled_actor::as_resumable() noexcept {
 }
 
 // -- overridden functions of resumable ----------------------------------------
-
-void scheduled_actor::ref_resumable() const noexcept {
-  intrusive_ptr_add_ref(ctrl());
-}
-
-void scheduled_actor::deref_resumable() const noexcept {
-  intrusive_ptr_release(ctrl());
-}
 
 void scheduled_actor::resume(scheduler* sched, uint64_t event_id) {
   CAF_ASSERT(!private_thread_
@@ -505,6 +498,14 @@ public:
     // nop
   }
 
+  void ref() const noexcept override {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept override {
+    ref_count_.dec(this);
+  }
+
   bool had_error() const noexcept {
     return had_error_;
   }
@@ -527,14 +528,6 @@ public:
   void request(size_t num_items) override {
     if (sub_)
       sub_.request(num_items);
-  }
-
-  void ref_coordinated() const noexcept final {
-    ref();
-  }
-
-  void deref_coordinated() const noexcept final {
-    deref();
   }
 
   bool subscribed() const noexcept {
@@ -567,15 +560,8 @@ public:
       sub.cancel();
   }
 
-  friend void intrusive_ptr_add_ref(const batch_forwarder_impl* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const batch_forwarder_impl* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
+  mutable detail::atomic_ref_count ref_count_;
   scheduled_actor* self_;
   actor sink_hdl_;
   uint64_t sink_flow_id_;
@@ -590,11 +576,11 @@ flow::coordinator::steady_time_point scheduled_actor::steady_time() {
   return clock().now();
 }
 
-void scheduled_actor::ref_execution_context() const noexcept {
+void scheduled_actor::ref() const noexcept {
   intrusive_ptr_add_ref(ctrl());
 }
 
-void scheduled_actor::deref_execution_context() const noexcept {
+void scheduled_actor::deref() const noexcept {
   intrusive_ptr_release(ctrl());
 }
 

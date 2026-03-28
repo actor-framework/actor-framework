@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
@@ -12,7 +13,7 @@
 namespace caf {
 
 /// A cooperatively scheduled entity.
-class CAF_CORE_EXPORT resumable {
+class CAF_CORE_EXPORT resumable : public abstract_ref_counted {
 public:
   /// The event ID for the default event.
   static constexpr uint64_t default_event_id = 0;
@@ -25,7 +26,7 @@ public:
 
   resumable() = default;
 
-  virtual ~resumable();
+  virtual ~resumable() noexcept;
 
   /// Runs a pending event on the resumable.
   /// @param context The current scheduler that is running the resumable.
@@ -40,24 +41,6 @@ public:
   /// Returns the scheduler that this resumable is pinned to or `nullptr` if
   /// it can be scheduled on any scheduler.
   virtual scheduler* pinned_scheduler() const noexcept;
-
-  /// Add a strong reference count to this object.
-  virtual void ref_resumable() const noexcept = 0;
-
-  /// Remove a strong reference count from this object.
-  virtual void deref_resumable() const noexcept = 0;
 };
-
-// enables intrusive_ptr<resumable> without introducing ambiguity
-template <std::same_as<resumable> T>
-void intrusive_ptr_add_ref(const T* ptr) noexcept {
-  ptr->ref_resumable();
-}
-
-// enables intrusive_ptr<resumable> without introducing ambiguity
-template <std::same_as<resumable> T>
-void intrusive_ptr_release(const T* ptr) noexcept {
-  ptr->deref_resumable();
-}
 
 } // namespace caf

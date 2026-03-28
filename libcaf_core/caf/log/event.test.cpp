@@ -6,9 +6,9 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/log/level.hpp"
 #include "caf/logger.hpp"
-#include "caf/ref_counted.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -28,16 +28,16 @@ get_at(size_t index, const log::event::field_list& fields) {
 }
 
 // A trivial logger implementation that stores the last event.
-class mock_logger : public logger, public ref_counted {
+class mock_logger : public logger {
 public:
   log::event_ptr event;
 
-  void ref_logger() const noexcept override {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_logger() const noexcept override {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   bool accepts(unsigned, std::string_view) override {
@@ -48,6 +48,8 @@ private:
   void do_log(log::event_ptr&& ptr) override {
     event = std::move(ptr);
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 };
 
 std::pair<std::string_view, std::string>

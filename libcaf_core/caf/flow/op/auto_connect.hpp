@@ -226,30 +226,12 @@ public:
 
   // -- reference counting -----------------------------------------------------
 
-  void ref_coordinated() const noexcept final {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept final {
+  void deref() const noexcept final {
     ref_count_.dec(this);
-  }
-
-  void ref_disposable() const noexcept final {
-    ref_count_.inc();
-  }
-
-  void deref_disposable() const noexcept final {
-    ref_count_.dec(this);
-  }
-
-  friend void
-  intrusive_ptr_add_ref(const auto_connect_subscription* ptr) noexcept {
-    ptr->ref_disposable();
-  }
-
-  friend void
-  intrusive_ptr_release(const auto_connect_subscription* ptr) noexcept {
-    ptr->deref_disposable();
   }
 
 private:
@@ -341,11 +323,11 @@ public:
     return ptr->as_disposable();
   }
 
-  void ref_coordinated() const noexcept final {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept final {
+  void deref() const noexcept final {
     ref_count_.dec(this);
   }
 

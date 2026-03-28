@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/subscription.hpp"
@@ -18,10 +19,6 @@ namespace caf::flow::op {
 template <class T, class Predicate>
 class retry_sub : public subscription::impl_base, public observer_impl<T> {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = subscription::impl_base;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   retry_sub(coordinator* parent, observer<T> out, observable<T> in,
@@ -52,14 +49,6 @@ public:
   }
 
   // -- implementation of observer_impl ----------------------------------------
-
-  void ref_coordinated() const noexcept final {
-    super::ref_coordinated();
-  }
-
-  void deref_coordinated() const noexcept final {
-    super::deref_coordinated();
-  }
 
   void on_subscribe(subscription sub) override {
     if (sub_) {
@@ -97,6 +86,16 @@ public:
     }
   }
 
+  // -- reference counting -----------------------------------------------------
+
+  void ref() const noexcept final {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept final {
+    ref_count_.dec(this);
+  }
+
 private:
   void do_dispose(bool from_external) override {
     if (!out_)
@@ -114,6 +113,8 @@ private:
       return;
     in_.subscribe(this->as_observer());
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   // Stores the pending demand. When re-subscribing, we transfer the demand to
   // the new subscription.

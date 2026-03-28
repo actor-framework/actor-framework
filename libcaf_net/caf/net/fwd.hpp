@@ -50,10 +50,6 @@ struct udp_datagram_socket;
 
 // -- smart pointer aliases ----------------------------------------------------
 
-CAF_NET_EXPORT void intrusive_ptr_add_ref(socket_manager* ptr) noexcept;
-
-CAF_NET_EXPORT void intrusive_ptr_release(socket_manager* ptr) noexcept;
-
 using multiplexer_ptr = intrusive_ptr<multiplexer>;
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 

@@ -134,16 +134,6 @@ public:
       return ref_count_.value();
     }
 
-    // -- friend functions -----------------------------------------------------
-
-    friend void intrusive_ptr_add_ref(const impl_type* p) noexcept {
-      p->ref();
-    }
-
-    friend void intrusive_ptr_release(const impl_type* p) {
-      p->deref();
-    }
-
   private:
     // -- member variables -----------------------------------------------------
 

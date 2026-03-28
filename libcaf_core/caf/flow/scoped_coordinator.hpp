@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/timespan.hpp"
 
 #include <condition_variable>
@@ -18,8 +18,7 @@
 
 namespace caf::flow {
 
-class CAF_CORE_EXPORT scoped_coordinator final : public ref_counted,
-                                                 public coordinator {
+class CAF_CORE_EXPORT scoped_coordinator final : public coordinator {
 public:
   // -- factories --------------------------------------------------------------
 
@@ -40,17 +39,9 @@ public:
 
   // -- reference counting -----------------------------------------------------
 
-  void ref_execution_context() const noexcept override;
+  void ref() const noexcept final;
 
-  void deref_execution_context() const noexcept override;
-
-  friend void intrusive_ptr_add_ref(const scoped_coordinator* ptr) {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const scoped_coordinator* ptr) {
-    ptr->deref();
-  }
+  void deref() const noexcept final;
 
   // -- properties -------------------------------------------------------------
 
@@ -87,6 +78,8 @@ private:
   action next(steady_time_point timeout);
 
   void drop_disposed_flows();
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Stores objects that need to be disposed before returning from `run`.
   std::vector<disposable> watched_disposables_;

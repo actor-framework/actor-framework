@@ -39,8 +39,8 @@ public:
   /// Tries to connect to `host` on given `port` and returns a `scribe` instance
   /// on success.
   /// @threadsafe
-  virtual expected<scribe_ptr>
-  new_tcp_scribe(const std::string& host, uint16_t port) = 0;
+  virtual expected<scribe_ptr> new_tcp_scribe(const std::string& host,
+                                              uint16_t port) = 0;
 
   /// Creates a new doorman from a native socket handle.
   /// @threadsafe
@@ -51,8 +51,7 @@ public:
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<doorman_ptr> new_tcp_doorman(uint16_t port,
                                                 const char* in = nullptr,
-                                                bool reuse_addr = false)
-    = 0;
+                                                bool reuse_addr = false) = 0;
 
   /// Creates a new `datagram_servant` from a native socket handle.
   /// @threadsafe
@@ -73,15 +72,7 @@ public:
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<datagram_servant_ptr>
   new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
-                         bool reuse_addr = false)
-    = 0;
-
-  /// Simple wrapper for runnables
-  class CAF_IO_EXPORT runnable : public resumable, public ref_counted {
-  public:
-    void ref_resumable() const noexcept final;
-    void deref_resumable() const noexcept final;
-  };
+                         bool reuse_addr = false) = 0;
 
   /// Makes sure the multiplier does not exit its event loop until
   /// the destructor of `supervisor` has been called.
@@ -125,14 +116,22 @@ public:
   /// @threadsafe
   template <class F>
   void post(F fun) {
-    struct impl : runnable {
+    struct impl : resumable {
+      mutable detail::atomic_ref_count ref_count;
       F f;
       explicit impl(F&& mf) : f(std::move(mf)) {
+        // nop
       }
       void resume(scheduler*, uint64_t event_id) override {
         if (event_id != resumable::dispose_event_id) {
           f();
         }
+      }
+      void ref() const noexcept final {
+        ref_count.inc();
+      }
+      void deref() const noexcept final {
+        ref_count.dec(this);
       }
     };
     delay(resumable_ptr{new impl(std::move(fun)), adopt_ref},

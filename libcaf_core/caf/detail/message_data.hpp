@@ -190,18 +190,6 @@ private:
 
 static_assert(detail::uses_malloc_and_free<message_data>());
 
-// -- related non-members ------------------------------------------------------
-
-/// @relates message_data
-inline void intrusive_ptr_add_ref(const message_data* ptr) {
-  ptr->ref();
-}
-
-/// @relates message_data
-inline void intrusive_ptr_release(message_data* ptr) {
-  ptr->deref();
-}
-
 } // namespace caf::detail
 
 #ifdef CAF_CLANG

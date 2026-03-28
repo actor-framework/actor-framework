@@ -45,9 +45,9 @@ public:
 
   size_t size() override;
 
-  void ref_mailbox() const noexcept override;
+  void ref() const noexcept final;
 
-  void deref_mailbox() const noexcept override;
+  void deref() const noexcept final;
 
   size_t ref_count() const noexcept {
     return ref_count_.load();

@@ -14,11 +14,11 @@ void mock_consumer::on_producer_wakeup() {
   ++wakeups;
 }
 
-void mock_consumer::ref_consumer() const noexcept {
+void mock_consumer::ref() const noexcept {
   ref_count_.inc();
 }
 
-void mock_consumer::deref_consumer() const noexcept {
+void mock_consumer::deref() const noexcept {
   ref_count_.dec(this);
 }
 

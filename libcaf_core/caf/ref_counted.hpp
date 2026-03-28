@@ -37,14 +37,6 @@ public:
     return ref_count_.value();
   }
 
-  friend void intrusive_ptr_add_ref(const ref_counted* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const ref_counted* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
   mutable detail::atomic_ref_count ref_count_;
 };

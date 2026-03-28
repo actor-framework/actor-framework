@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/subscription.hpp"
@@ -20,25 +22,13 @@ namespace caf::flow::op {
 
 /// Interface for listening on a cell.
 template <class T>
-class cell_listener {
+class cell_listener : public abstract_ref_counted {
 public:
-  friend void intrusive_ptr_add_ref(const cell_listener* ptr) noexcept {
-    ptr->ref_listener();
-  }
-
-  friend void intrusive_ptr_release(const cell_listener* ptr) noexcept {
-    ptr->deref_listener();
-  }
-
   virtual void on_next(const T& item) = 0;
 
   virtual void on_complete() = 0;
 
   virtual void on_error(const error& what) = 0;
-
-  virtual void ref_listener() const noexcept = 0;
-
-  virtual void deref_listener() const noexcept = 0;
 };
 
 /// Convenience alias for a reference-counting smart pointer.
@@ -128,16 +118,6 @@ public:
     // nop
   }
 
-  // -- disambiguation ---------------------------------------------------------
-
-  friend void intrusive_ptr_add_ref(const cell_sub* ptr) noexcept {
-    ptr->ref_disposable();
-  }
-
-  friend void intrusive_ptr_release(const cell_sub* ptr) noexcept {
-    ptr->deref_disposable();
-  }
-
   // -- implementation of subscription -----------------------------------------
 
   coordinator* parent() const noexcept override {
@@ -177,12 +157,14 @@ public:
       out_.on_error(what);
   }
 
-  void ref_listener() const noexcept override {
-    ref_disposable();
+  // -- reference counting -----------------------------------------------------
+
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_listener() const noexcept override {
-    deref_disposable();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
 private:
@@ -199,6 +181,7 @@ private:
     }
   }
 
+  mutable detail::atomic_ref_count ref_count_;
   coordinator* parent_;
   bool listening_ = false;
   cell_sub_state_ptr<T> state_;

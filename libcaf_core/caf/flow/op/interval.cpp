@@ -5,6 +5,7 @@
 #include "caf/flow/op/interval.hpp"
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/subscription.hpp"
 
 #include <limits>
@@ -80,6 +81,16 @@ public:
     }
   }
 
+  // -- reference counting -----------------------------------------------------
+
+  void ref() const noexcept final {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept final {
+    ref_count_.dec(this);
+  }
+
 private:
   void do_dispose(bool from_external) override {
     if (!out_) {
@@ -93,6 +104,7 @@ private:
       out_.release_later();
   }
 
+  mutable detail::atomic_ref_count ref_count_;
   coordinator* parent_;
   disposable pending_;
   timespan initial_delay_;

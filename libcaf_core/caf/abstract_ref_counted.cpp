@@ -2,16 +2,12 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#include "caf/resumable.hpp"
+#include "caf/abstract_ref_counted.hpp"
 
 namespace caf {
 
-resumable::~resumable() noexcept {
+abstract_ref_counted::~abstract_ref_counted() noexcept {
   // nop
-}
-
-scheduler* resumable::pinned_scheduler() const noexcept {
-  return nullptr;
 }
 
 } // namespace caf

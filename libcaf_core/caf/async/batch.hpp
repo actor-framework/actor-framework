@@ -151,14 +151,6 @@ private:
       ref_count_.dec(this);
     }
 
-    friend void intrusive_ptr_add_ref(const data* ptr) {
-      ptr->ref();
-    }
-
-    friend void intrusive_ptr_release(data* ptr) {
-      ptr->deref();
-    }
-
     // -- properties -----------------------------------------------------------
 
     type_id_t item_type() const noexcept {

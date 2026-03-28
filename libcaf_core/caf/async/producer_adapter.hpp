@@ -77,11 +77,11 @@ public:
       ctx_->schedule(do_resume_);
     }
 
-    void ref_producer() const noexcept final {
+    void ref() const noexcept final {
       ref_count_.inc();
     }
 
-    void deref_producer() const noexcept final {
+    void deref() const noexcept final {
       ref_count_.dec(this);
     }
 

@@ -106,11 +106,11 @@ public:
       ctx_->schedule(do_wakeup_);
     }
 
-    void ref_consumer() const noexcept override {
+    void ref() const noexcept final {
       ref_count_.inc();
     }
 
-    void deref_consumer() const noexcept override {
+    void deref() const noexcept final {
       ref_count_.dec(this);
     }
 

@@ -19,11 +19,9 @@ public:
 
   void on_consumer_demand(size_t new_demand) override;
 
-  void ref_producer() const noexcept override;
+  void ref() const noexcept final;
 
-  void deref_producer() const noexcept override;
-
-  mutable detail::atomic_ref_count ref_count_;
+  void deref() const noexcept final;
 
   /// Incremented whenever `on_consumer_ready` is called.
   std::atomic<size_t> wakeups = 0;
@@ -33,6 +31,9 @@ public:
 
   /// Set to true if `on_consumer_cancel` is called.
   std::atomic<bool> canceled = false;
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
 };
 
 } // namespace caf::async

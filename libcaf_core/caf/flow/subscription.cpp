@@ -12,22 +12,6 @@ subscription::impl::~impl() {
   // nop
 }
 
-void subscription::impl_base::ref_disposable() const noexcept {
-  ref_count_.inc();
-}
-
-void subscription::impl_base::deref_disposable() const noexcept {
-  ref_count_.dec(this);
-}
-
-void subscription::impl_base::ref_coordinated() const noexcept {
-  ref_count_.inc();
-}
-
-void subscription::impl_base::deref_coordinated() const noexcept {
-  ref_count_.dec(this);
-}
-
 void subscription::impl_base::dispose() {
   if (!disposed()) {
     parent()->delay_fn([sptr = intrusive_ptr<impl_base>{this, add_ref}] { //
@@ -64,6 +48,14 @@ void subscription::fwd_impl::request(size_t n) {
     parent()->delay_fn([src = src_, snk = snk_, n] { //
       src->on_request(snk.get(), n);
     });
+}
+
+void subscription::trivial_impl::ref() const noexcept {
+  ref_count_.inc();
+}
+
+void subscription::trivial_impl::deref() const noexcept {
+  ref_count_.dec(this);
 }
 
 coordinator* subscription::trivial_impl::parent() const noexcept {

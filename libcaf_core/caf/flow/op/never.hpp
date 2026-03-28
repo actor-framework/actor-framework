@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
 #include "caf/flow/subscription.hpp"
@@ -17,14 +18,10 @@ namespace caf::flow::op {
 template <class T>
 class never_sub : public subscription::impl_base {
 public:
-  // -- constructors, destructors, and assignment operators --------------------
-
   never_sub(coordinator* parent, observer<T> out)
     : parent_(parent), out_(std::move(out)) {
     // nop
   }
-
-  // -- implementation of subscription -----------------------------------------
 
   coordinator* parent() const noexcept override {
     return parent_;
@@ -38,6 +35,14 @@ public:
     // nop
   }
 
+  void ref() const noexcept final {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept final {
+    ref_count_.dec(this);
+  }
+
 private:
   void do_dispose(bool from_external) override {
     if (!out_)
@@ -47,6 +52,8 @@ private:
     else
       out_.release_later();
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;

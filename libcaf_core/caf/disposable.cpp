@@ -12,7 +12,7 @@ namespace caf {
 
 // -- member types -------------------------------------------------------------
 
-disposable::impl::~impl() {
+disposable::impl::~impl() noexcept {
   // nop
 }
 
@@ -24,7 +24,7 @@ disposable disposable::impl::as_disposable() noexcept {
 
 namespace {
 
-class composite_impl : public ref_counted, public disposable::impl {
+class composite_impl : public disposable::impl {
 public:
   using disposable_list = std::vector<disposable>;
 
@@ -43,15 +43,16 @@ public:
     return std::ranges::all_of(entries_, is_disposed);
   }
 
-  void ref_disposable() const noexcept override {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_disposable() const noexcept override {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   std::vector<disposable> entries_;
 };
 
@@ -65,7 +66,7 @@ disposable disposable::make_composite(std::vector<disposable> entries) {
 
 namespace {
 
-class flag_impl : public ref_counted, public disposable::impl {
+class flag_impl : public disposable::impl {
 public:
   flag_impl() : flag_(false) {
     // nop
@@ -79,15 +80,16 @@ public:
     return flag_.load();
   }
 
-  void ref_disposable() const noexcept override {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_disposable() const noexcept override {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   std::atomic<bool> flag_;
 };
 

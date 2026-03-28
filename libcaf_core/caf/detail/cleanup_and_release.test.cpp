@@ -6,6 +6,7 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/resumable.hpp"
@@ -21,19 +22,20 @@ using namespace caf::detail;
 
 namespace {
 
-struct mock_base : resumable, ref_counted {
+struct mock_base : resumable {
   explicit mock_base(std::shared_ptr<std::atomic<bool>> disposed_flag)
     : disposed_flag(std::move(disposed_flag)) {
   }
 
-  void ref_resumable() const noexcept final {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_resumable() const noexcept final {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
+  mutable detail::atomic_ref_count ref_count_;
   std::shared_ptr<std::atomic<bool>> disposed_flag;
 };
 

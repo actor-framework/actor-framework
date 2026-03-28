@@ -93,11 +93,11 @@ public:
       }
     }
 
-    void ref_producer() const noexcept override {
+    void ref() const noexcept final {
       ref_count_.inc();
     }
 
-    void deref_producer() const noexcept override {
+    void deref() const noexcept final {
       ref_count_.dec(this);
     }
 

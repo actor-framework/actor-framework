@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/action.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -14,20 +15,11 @@ namespace caf::async {
 
 /// Represents a single execution context with an internal event-loop to
 /// schedule @ref action objects.
-class CAF_CORE_EXPORT execution_context {
+class CAF_CORE_EXPORT execution_context : public abstract_ref_counted {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
   virtual ~execution_context();
-
-  // -- reference counting -----------------------------------------------------
-
-  /// Increases the reference count of the execution_context.
-  virtual void ref_execution_context() const noexcept = 0;
-
-  /// Decreases the reference count of the execution context and destroys the
-  /// object if necessary.
-  virtual void deref_execution_context() const noexcept = 0;
 
   // -- scheduling of actions --------------------------------------------------
 
@@ -51,16 +43,6 @@ public:
   /// the execution context.
   virtual void watch(disposable what) = 0;
 };
-
-/// @relates execution_context
-inline void intrusive_ptr_add_ref(const execution_context* ptr) noexcept {
-  ptr->ref_execution_context();
-}
-
-/// @relates execution_context
-inline void intrusive_ptr_release(const execution_context* ptr) noexcept {
-  ptr->deref_execution_context();
-}
 
 /// @relates execution_context
 using execution_context_ptr = intrusive_ptr<execution_context>;

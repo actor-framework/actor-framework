@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/actor_control_block.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/subscription.hpp"
@@ -28,6 +29,10 @@ public:
       request_threshold_(request_threshold) {
     // nop
   }
+
+  void ref() const noexcept final;
+
+  void deref() const noexcept final;
 
   // -- callbacks for the actor ------------------------------------------------
 
@@ -59,6 +64,8 @@ private:
   void do_abort(const error& reason);
 
   void do_check_credit();
+
+  mutable detail::atomic_ref_count ref_count_;
 
   scheduled_actor* self_;
   strong_actor_ptr src_;
