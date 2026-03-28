@@ -6,6 +6,7 @@
 
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/flow/observer.hpp"
@@ -27,8 +28,6 @@ public:
   // -- member types -----------------------------------------------------------
 
   using output_type = from_steps_output_t<Steps...>;
-
-  using super = subscription::impl_base;
 
   struct term_step;
 
@@ -64,20 +63,12 @@ public:
 
   // -- ref counting -----------------------------------------------------------
 
-  void ref_coordinated() const noexcept final {
-    super::ref_coordinated();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept final {
-    super::deref_coordinated();
-  }
-
-  friend void intrusive_ptr_add_ref(const from_steps_sub* ptr) noexcept {
-    ptr->ref_coordinated();
-  }
-
-  friend void intrusive_ptr_release(const from_steps_sub* ptr) noexcept {
-    ptr->deref_coordinated();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   // -- properties -------------------------------------------------------------
@@ -224,6 +215,7 @@ private:
     return {this, add_ref};
   }
 
+  mutable detail::atomic_ref_count ref_count_;
   coordinator* parent_;
   subscription in_;
   observer<output_type> out_;

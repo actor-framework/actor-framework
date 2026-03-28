@@ -7,9 +7,9 @@
 #include "caf/async/consumer.hpp"
 #include "caf/async/read_result.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/ref_counted.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -21,7 +21,7 @@ namespace caf::async {
 template <class T>
 class blocking_consumer {
 public:
-  class impl : public ref_counted, public consumer {
+  class impl : public consumer {
   public:
     impl() = delete;
     impl(const impl&) = delete;
@@ -92,21 +92,20 @@ public:
       cv_.notify_all();
     }
 
-    void ref_consumer() const noexcept override {
-      ref();
+    void ref() const noexcept final {
+      ref_count_.inc();
     }
 
-    void deref_consumer() const noexcept override {
-      deref();
+    void deref() const noexcept final {
+      ref_count_.dec(this);
     }
 
     const error& abort_reason() const {
       return abort_reason_;
     }
 
-    CAF_INTRUSIVE_PTR_FRIENDS(impl)
-
   private:
+    mutable detail::atomic_ref_count ref_count_;
     spsc_buffer_ptr<T> buf_;
     std::condition_variable cv_;
     T* val_ = nullptr;

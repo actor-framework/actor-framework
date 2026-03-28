@@ -8,6 +8,7 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/add_ref.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/resumable.hpp"
 
 #include <latch>
@@ -18,7 +19,8 @@ using namespace std::literals;
 
 namespace {
 
-struct testee : resumable, ref_counted {
+class testee : public resumable {
+public:
   explicit testee(std::shared_ptr<std::latch> latch_handle)
     : rendezvous(std::move(latch_handle)) {
   }
@@ -35,16 +37,23 @@ struct testee : resumable, ref_counted {
     ctx->delay(resumable_ptr{this, add_ref}, resumable::default_event_id);
   }
 
-  void ref_resumable() const noexcept final {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_resumable() const noexcept final {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
+  }
+
+  size_t strong_reference_count() const noexcept {
+    return ref_count_.value();
   }
 
   std::atomic<size_t> runs = 0;
   std::shared_ptr<std::latch> rendezvous;
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
 };
 
 } // namespace
@@ -104,7 +113,8 @@ OUTLINE("scheduling resumables") {
   )";
 }
 
-struct awaiting_testee : resumable, ref_counted {
+class awaiting_testee : public resumable {
+public:
   explicit awaiting_testee(std::shared_ptr<std::latch> latch_handle)
     : rendezvous(std::move(latch_handle)) {
   }
@@ -118,16 +128,23 @@ struct awaiting_testee : resumable, ref_counted {
     rendezvous->count_down();
   }
 
-  void ref_resumable() const noexcept final {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_resumable() const noexcept final {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
+  }
+
+  size_t strong_reference_count() const noexcept {
+    return ref_count_.value();
   }
 
   std::atomic<size_t> runs = 0;
   std::shared_ptr<std::latch> rendezvous;
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
 };
 
 OUTLINE("scheduling units that are awaiting") {

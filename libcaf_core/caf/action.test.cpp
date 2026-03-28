@@ -119,9 +119,9 @@ SCENARIO("actions can increase and decrease reference count") {
         auto* impl_ptr = impl.get();
         auto uut = action{std::move(impl)};
         check_eq(impl_ptr->strong_reference_count(), 1u);
-        impl_ptr->ref_resumable();
+        impl_ptr->ref();
         check_eq(impl_ptr->strong_reference_count(), 2u);
-        impl_ptr->deref_resumable();
+        impl_ptr->deref();
         check_eq(impl_ptr->strong_reference_count(), 1u);
       }
     }

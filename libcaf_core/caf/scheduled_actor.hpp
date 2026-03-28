@@ -157,7 +157,7 @@ public:
 
   using batch_publisher = flow::multicaster<async::batch>;
 
-  class batch_forwarder : public ref_counted {
+  class batch_forwarder : public abstract_ref_counted {
   public:
     ~batch_forwarder() override;
 
@@ -218,10 +218,6 @@ public:
   resumable* as_resumable() noexcept override;
 
   // -- overridden functions of resumable --------------------------------------
-
-  void ref_resumable() const noexcept final;
-
-  void deref_resumable() const noexcept final;
 
   void resume(scheduler*, uint64_t) override;
 
@@ -474,9 +470,9 @@ public:
 
   steady_time_point steady_time() override;
 
-  void ref_execution_context() const noexcept override;
+  void ref() const noexcept final;
 
-  void deref_execution_context() const noexcept override;
+  void deref() const noexcept final;
 
   void schedule(action what) override;
 

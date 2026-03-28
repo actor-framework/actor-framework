@@ -17,24 +17,23 @@
 #include <string>
 #include <type_traits>
 
-namespace caf {
+namespace caf::detail {
 
-/// Policy for adding and releasing references in an @ref intrusive_ptr. The
-/// default implementation dispatches to the free function pair
-/// `intrusive_ptr_add_ref` and `intrusive_ptr_release` that the policy picks up
-/// via ADL.
-/// @relates intrusive_ptr
 template <class T>
-struct intrusive_ptr_access {
-public:
-  static void add_ref(T* ptr) noexcept {
-    intrusive_ptr_add_ref(ptr);
-  }
-
-  static void release(T* ptr) noexcept {
-    intrusive_ptr_release(ptr);
-  }
+concept has_intrusive_ptr_free_functions = requires(T*& ptr) {
+  { intrusive_ptr_add_ref(ptr) } -> std::same_as<void>;
+  { intrusive_ptr_release(ptr) } -> std::same_as<void>;
 };
+
+template <class T>
+concept has_intrusive_ptr_member_functions = requires(T* ptr) {
+  { ptr->ref() } -> std::same_as<void>;
+  { ptr->deref() } -> std::same_as<void>;
+};
+
+} // namespace caf::detail
+
+namespace caf {
 
 /// An intrusive, reference counting smart pointer implementation.
 /// @relates ref_counted
@@ -82,7 +81,7 @@ public:
 
   intrusive_ptr(pointer raw_ptr, add_ref_t) noexcept : ptr_(raw_ptr) {
     if (raw_ptr)
-      intrusive_ptr_access<T>::add_ref(ptr_);
+      do_add_ref(ptr_);
   }
 
   constexpr intrusive_ptr(pointer raw_ptr, adopt_ref_t) noexcept
@@ -104,8 +103,9 @@ public:
   }
 
   ~intrusive_ptr() {
-    if (ptr_)
-      intrusive_ptr_access<T>::release(ptr_);
+    if (ptr_) {
+      do_release(ptr_);
+    }
   }
 
   void swap(intrusive_ptr& other) noexcept {
@@ -137,7 +137,7 @@ public:
       // again, causing a double-free.
       auto tmp = ptr_;
       ptr_ = nullptr;
-      intrusive_ptr_access<T>::release(tmp);
+      do_release(tmp);
     }
   }
 
@@ -246,10 +246,28 @@ public:
   }
 
 private:
+  void do_add_ref(pointer ptr) noexcept {
+    if constexpr (detail::has_intrusive_ptr_free_functions<T>) {
+      intrusive_ptr_add_ref(ptr);
+    } else {
+      static_assert(detail::has_intrusive_ptr_member_functions<T>);
+      ptr->ref();
+    }
+  }
+
+  void do_release(pointer ptr) noexcept {
+    if constexpr (detail::has_intrusive_ptr_free_functions<T>) {
+      intrusive_ptr_release(ptr);
+    } else {
+      static_assert(detail::has_intrusive_ptr_member_functions<T>);
+      ptr->deref();
+    }
+  }
+
   void set_ptr(pointer raw_ptr, bool increase_ref_count) noexcept {
     ptr_ = raw_ptr;
     if (raw_ptr && increase_ref_count) {
-      intrusive_ptr_access<T>::add_ref(raw_ptr);
+      do_add_ref(raw_ptr);
     }
   }
 
@@ -353,23 +371,3 @@ std::string to_string(const intrusive_ptr<T>& x) {
 }
 
 } // namespace caf
-
-/// Convenience macro for adding `intrusive_ptr_add_ref` and
-/// `intrusive_ptr_release` as free friend functions.
-#define CAF_INTRUSIVE_PTR_FRIENDS(class_name)                                  \
-  friend void intrusive_ptr_add_ref(const class_name* ptr) noexcept {          \
-    ptr->ref();                                                                \
-  }                                                                            \
-  friend void intrusive_ptr_release(const class_name* ptr) noexcept {          \
-    ptr->deref();                                                              \
-  }
-
-/// Convenience macro for adding `intrusive_ptr_add_ref` and
-/// `intrusive_ptr_release` as free friend functions with a custom suffix.
-#define CAF_INTRUSIVE_PTR_FRIENDS_SFX(class_name, suffix)                      \
-  friend void intrusive_ptr_add_ref(const class_name* ptr) noexcept {          \
-    ptr->ref##suffix();                                                        \
-  }                                                                            \
-  friend void intrusive_ptr_release(const class_name* ptr) noexcept {          \
-    ptr->deref##suffix();                                                      \
-  }

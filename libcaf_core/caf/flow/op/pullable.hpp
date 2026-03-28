@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/action.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/flow/fwd.hpp"
@@ -12,7 +13,7 @@ namespace caf::flow::op {
 
 /// Base class for operators that allow observers to pull items via
 /// `request(n)`.
-class CAF_CORE_EXPORT pullable {
+class CAF_CORE_EXPORT pullable : public abstract_ref_counted {
 public:
   pullable();
 
@@ -33,12 +34,6 @@ protected:
 
 private:
   virtual void do_pull(size_t in_flight_demand) = 0;
-
-  /// Increments the reference count of this object.
-  virtual void do_ref() = 0;
-
-  /// Decrements the reference count of this object.
-  virtual void do_deref() = 0;
 
   /// Stores how much demand is currently in flight. When this counter becomes
   /// non-zero, we schedule a call to do_pull via pull_cb_.

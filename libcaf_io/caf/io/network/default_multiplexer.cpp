@@ -517,7 +517,7 @@ void default_multiplexer::wr_dispatch_request(resumable* ptr) {
 #endif
   if (res <= 0) {
     // pipe closed, discard resumable
-    intrusive_ptr_release(ptr);
+    ptr->deref();
   } else if (static_cast<size_t>(res) < sizeof(ptrval)) {
     // must not happen: wrote invalid pointer to pipe
     fprintf(stderr, "[CAF] Fatal error: wrote invalid data to pipe\n");

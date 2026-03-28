@@ -10,6 +10,7 @@
 #include "caf/adopt_ref.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/cleanup_and_release.hpp"
 #include "caf/detail/default_thread_count.hpp"
 #include "caf/detail/double_ended_queue.hpp"
@@ -270,7 +271,7 @@ public:
 
   void stop() override {
     // Shutdown workers.
-    class shutdown_helper : public resumable, public ref_counted {
+    class shutdown_helper : public resumable {
     public:
       void resume(scheduler* ptr, uint64_t) override {
         CAF_ASSERT(ptr != nullptr);
@@ -280,16 +281,17 @@ public:
         cv.notify_all();
       }
 
-      void ref_resumable() const noexcept final {
-        ref();
+      void ref() const noexcept final {
+        ref_count_.inc();
       }
 
-      void deref_resumable() const noexcept final {
-        deref();
+      void deref() const noexcept final {
+        ref_count_.dec(this);
       }
       shutdown_helper() : last_worker(nullptr) {
         // nop
       }
+      mutable detail::atomic_ref_count ref_count_;
       std::mutex mtx;
       std::condition_variable cv;
       scheduler* last_worker;
@@ -476,7 +478,7 @@ public:
 
   void stop() override {
     // Shutdown workers.
-    class shutdown_helper : public resumable, public ref_counted {
+    class shutdown_helper : public resumable {
     public:
       void resume(scheduler* ptr, uint64_t) override {
         CAF_ASSERT(ptr != nullptr);
@@ -485,15 +487,16 @@ public:
         last_worker = ptr;
         cv.notify_all();
       }
-      void ref_resumable() const noexcept final {
-        ref();
+      void ref() const noexcept final {
+        ref_count_.inc();
       }
-      void deref_resumable() const noexcept final {
-        deref();
+      void deref() const noexcept final {
+        ref_count_.dec(this);
       }
       shutdown_helper() : last_worker(nullptr) {
         // nop
       }
+      mutable detail::atomic_ref_count ref_count_;
       std::mutex mtx;
       std::condition_variable cv;
       scheduler* last_worker;

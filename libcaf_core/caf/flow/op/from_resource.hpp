@@ -35,11 +35,11 @@ public:
   from_resource_sub(coordinator* parent, buffer_ptr buf,
                     observer<value_type> out)
     : parent_(parent, add_ref), buf_(buf), out_(std::move(out)) {
-    parent_->ref_execution_context();
+    parent_->ref();
   }
 
   ~from_resource_sub() override {
-    parent_->deref_execution_context();
+    parent_->deref();
   }
 
   // -- implementation of subscription_impl ------------------------------------
@@ -104,35 +104,11 @@ public:
 
   // -- intrusive_ptr interface ------------------------------------------------
 
-  friend void intrusive_ptr_add_ref(const from_resource_sub* ptr) noexcept {
-    ptr->ref_coordinated();
-  }
-
-  friend void intrusive_ptr_release(const from_resource_sub* ptr) noexcept {
-    ptr->deref_coordinated();
-  }
-
-  void ref_consumer() const noexcept override {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
-  void deref_consumer() const noexcept override {
-    ref_count_.dec(this);
-  }
-
-  void ref_disposable() const noexcept override {
-    ref_count_.inc();
-  }
-
-  void deref_disposable() const noexcept override {
-    ref_count_.dec(this);
-  }
-
-  void ref_coordinated() const noexcept override {
-    ref_count_.inc();
-  }
-
-  void deref_coordinated() const noexcept override {
+  void deref() const noexcept final {
     ref_count_.dec(this);
   }
 

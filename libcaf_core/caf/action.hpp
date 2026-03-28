@@ -35,11 +35,13 @@ public:
   /// Internal interface of `action`.
   class CAF_CORE_EXPORT impl : public disposable::impl, public resumable {
   public:
+    virtual ~impl() noexcept override;
+
+    void ref() const noexcept override = 0; // disambiguation
+
+    void deref() const noexcept override = 0; // disambiguation
+
     virtual state current_state() const noexcept = 0;
-
-    void ref_resumable() const noexcept final;
-
-    void deref_resumable() const noexcept final;
   };
 
   using impl_ptr = intrusive_ptr<impl>;
@@ -224,24 +226,16 @@ public:
     }
   }
 
-  void ref_disposable() const noexcept override {
+  void ref() const noexcept override {
     ref_count_.inc();
   }
 
-  void deref_disposable() const noexcept override {
+  void deref() const noexcept override {
     ref_count_.dec(this);
   }
 
   size_t strong_reference_count() const noexcept {
     return ref_count_.value();
-  }
-
-  friend void intrusive_ptr_add_ref(const default_action_impl* ptr) noexcept {
-    ptr->ref_disposable();
-  }
-
-  friend void intrusive_ptr_release(const default_action_impl* ptr) noexcept {
-    ptr->deref_disposable();
   }
 
 private:

@@ -9,8 +9,7 @@
 
 namespace caf::detail {
 
-class counted_disposable::nested_disposable : public ref_counted,
-                                              public disposable::impl {
+class counted_disposable::nested_disposable : public disposable::impl {
 public:
   explicit nested_disposable(intrusive_ptr<counted_disposable> parent)
     : parent_(std::move(parent)) {
@@ -32,23 +31,16 @@ public:
     return parent_ == nullptr;
   }
 
-  void ref_disposable() const noexcept override {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_disposable() const noexcept override {
-    deref();
-  }
-
-  friend void intrusive_ptr_add_ref(const nested_disposable* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const nested_disposable* ptr) noexcept {
-    ptr->deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   intrusive_ptr<counted_disposable> parent_;
 };
 
@@ -66,12 +58,12 @@ bool counted_disposable::disposed() const noexcept {
   return decorated_.disposed();
 }
 
-void counted_disposable::ref_disposable() const noexcept {
-  ref();
+void counted_disposable::ref() const noexcept {
+  ref_count_.inc();
 }
 
-void counted_disposable::deref_disposable() const noexcept {
-  deref();
+void counted_disposable::deref() const noexcept {
+  ref_count_.dec(this);
 }
 
 void counted_disposable::release() {

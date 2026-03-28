@@ -5,19 +5,20 @@
 #include "caf/flow/op/pullable.hpp"
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/flow/coordinator.hpp"
 
 namespace caf::flow::op {
 
 pullable::pullable() {
   pull_cb_ = make_action([this] {
-    do_ref();
+    ref();
+    auto guard = detail::scope_guard{[this]() noexcept { deref(); }};
     do {
       auto val = in_flight_demand_;
       do_pull(val);
       in_flight_demand_ -= val;
     } while (in_flight_demand_ > 0);
-    do_deref();
   });
 }
 

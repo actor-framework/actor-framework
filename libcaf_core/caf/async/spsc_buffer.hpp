@@ -12,6 +12,7 @@
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -367,9 +368,7 @@ struct resource_ctrl : ref_counted {
 
 /// Consumes data from an `spsc_buffer`.
 template <class T>
-class spsc_buffer_consumer : public ref_counted,
-                             public action::impl,
-                             public consumer {
+class spsc_buffer_consumer : public action::impl, public consumer {
 public:
   using on_wakeup_signature = void(spsc_buffer_consumer<T>&);
 
@@ -435,12 +434,12 @@ public:
     }
   }
 
-  void ref_consumer() const noexcept override {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_consumer() const noexcept override {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   action::state current_state() const noexcept override {
@@ -459,26 +458,12 @@ public:
     }
   }
 
-  void ref_disposable() const noexcept override {
-    ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    deref();
-  }
-
-  friend void intrusive_ptr_add_ref(const spsc_buffer_consumer* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const spsc_buffer_consumer* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
   using buffer_ptr_t = spsc_buffer_ptr<T>;
 
   using on_wakeup_t = shared_callback_ptr<on_wakeup_signature>;
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Guards access to the state of the consumer.
   mutable std::mutex mtx_;
@@ -606,9 +591,7 @@ private:
 
 /// Produces data to an `spsc_buffer`.
 template <class T>
-class spsc_buffer_producer : public ref_counted,
-                             public action::impl,
-                             public producer {
+class spsc_buffer_producer : public action::impl, public producer {
 public:
   using on_demand_signature = void(spsc_buffer_producer<T>&, size_t);
 
@@ -708,12 +691,12 @@ public:
     }
   }
 
-  void ref_producer() const noexcept override {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_producer() const noexcept override {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   action::state current_state() const noexcept override {
@@ -749,28 +732,14 @@ public:
     }
   }
 
-  void ref_disposable() const noexcept override {
-    ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    deref();
-  }
-
-  friend void intrusive_ptr_add_ref(const spsc_buffer_producer* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const spsc_buffer_producer* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
   using buffer_ptr_t = spsc_buffer_ptr<T>;
 
   using on_demand_t = shared_callback_ptr<on_demand_signature>;
 
   using on_cancel_t = shared_callback_ptr<on_cancel_signature>;
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Guards access to the state of the consumer.
   mutable std::mutex mtx_;

@@ -24,16 +24,6 @@ namespace caf::flow::op {
 template <class T>
 class ucast_sub_state : public pullable, public coordinated {
 public:
-  // -- friends ----------------------------------------------------------------
-
-  friend void intrusive_ptr_add_ref(const ucast_sub_state* ptr) noexcept {
-    ptr->ref_coordinated();
-  }
-
-  friend void intrusive_ptr_release(const ucast_sub_state* ptr) noexcept {
-    ptr->deref_coordinated();
-  }
-
   // -- member types -----------------------------------------------------------
 
   /// Interface for listeners that want to be notified when a `ucast_sub_state`
@@ -203,11 +193,11 @@ public:
     return parent_;
   }
 
-  void ref_coordinated() const noexcept override {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept override {
+  void deref() const noexcept final {
     ref_count_.dec(this);
   }
 
@@ -237,14 +227,6 @@ private:
         listener->on_consumed_some(this, old_buf_size, buf.size());
       }
     }
-  }
-
-  void do_ref() override {
-    ref_count_.inc();
-  }
-
-  void do_deref() override {
-    ref_count_.dec(this);
   }
 
   mutable detail::atomic_ref_count ref_count_;
@@ -284,6 +266,16 @@ public:
       state_->request(n);
   }
 
+  // -- reference counting -----------------------------------------------------
+
+  void ref() const noexcept final {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept final {
+    ref_count_.dec(this);
+  }
+
 private:
   void do_dispose(bool from_external) override {
     if (state_) {
@@ -294,6 +286,8 @@ private:
         state->cancel();
     }
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;

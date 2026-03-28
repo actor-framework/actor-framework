@@ -6,7 +6,6 @@
 
 #include "caf/net/fwd.hpp"
 
-#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinator.hpp"
@@ -14,7 +13,6 @@
 #include "caf/sec.hpp"
 
 #include <memory>
-#include <type_traits>
 
 namespace caf::net {
 
@@ -53,6 +51,12 @@ public:
 
   /// Queries whether the manager is registered for writing.
   virtual bool is_writing() const noexcept = 0;
+
+  // -- reference counting -----------------------------------------------------
+
+  void ref() const noexcept override = 0; // disambiguation
+
+  void deref() const noexcept override = 0; // disambiguation
 
   // -- event loop management --------------------------------------------------
 
@@ -104,14 +108,6 @@ public:
 private:
   virtual void run_delayed_actions() = 0;
 };
-
-// -- related free functions ---------------------------------------------------
-
-/// @relates socket_manager
-CAF_NET_EXPORT void intrusive_ptr_add_ref(socket_manager* ptr) noexcept;
-
-/// @relates socket_manager
-CAF_NET_EXPORT void intrusive_ptr_release(socket_manager* ptr) noexcept;
 
 // -- related types ------------------------------------------------------------
 

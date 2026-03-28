@@ -26,14 +26,6 @@ multiplexer::supervisor::~supervisor() {
   // nop
 }
 
-void multiplexer::runnable::ref_resumable() const noexcept {
-  ref();
-}
-
-void multiplexer::runnable::deref_resumable() const noexcept {
-  deref();
-}
-
 void multiplexer::start() {
   // nop
 }

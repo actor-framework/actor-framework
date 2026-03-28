@@ -140,11 +140,11 @@ public:
     intrusive_ptr_release(self_->ctrl());
   }
 
-  void ref_resumable() const noexcept final {
+  void ref() const noexcept final {
     // nop
   }
 
-  void deref_resumable() const noexcept final {
+  void deref() const noexcept final {
     delete this;
   }
 

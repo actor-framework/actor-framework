@@ -483,13 +483,13 @@ public:
   // -- reference counting -----------------------------------------------------
 
   /// Increases the reference count of the coordinated.
-  void ref_logger() const noexcept final {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
   /// Decreases the reference count of the coordinated and destroys the object
   /// if necessary.
-  void deref_logger() const noexcept final {
+  void deref() const noexcept final {
     ref_count_.dec(this);
   }
 
