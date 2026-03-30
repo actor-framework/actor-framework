@@ -19,6 +19,7 @@
 #include "caf/invoke_message_result.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
 
@@ -110,7 +111,7 @@ public:
   explicit blocking_actor_runner(blocking_actor* self,
                                  detail::private_thread* thread)
     : self_(self), thread_(thread) {
-    intrusive_ptr_add_ref(self->ctrl());
+    self_->ctrl()->ref();
   }
 
   void resume(scheduler* ctx, uint64_t event_id) override {
@@ -137,7 +138,7 @@ public:
     auto& sys = self_->system();
     sys.release_private_thread(thread_);
     self_->cleanup(std::move(rsn), ctx);
-    intrusive_ptr_release(self_->ctrl());
+    self_->ctrl()->deref();
   }
 
   void ref() const noexcept final {
@@ -167,7 +168,7 @@ void blocking_actor::launch(detail::private_thread* worker, scheduler*) {
   CAF_ASSERT(worker != nullptr);
   detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("");
-  worker->resume(resumable_ptr::make<blocking_actor_runner>(this, worker));
+  worker->resume(make_counted<blocking_actor_runner>(this, worker));
 }
 
 blocking_actor::receive_while_helper

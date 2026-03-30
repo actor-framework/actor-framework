@@ -374,7 +374,7 @@ public:
 
   void on_consumer_cancel() override {
     auto lg = log::core::trace("");
-    parent_->schedule_fn([ptr{strong_ptr()}] {
+    parent_->schedule_fn([ptr{strong_this()}] {
       auto lg = log::core::trace("");
       ptr->on_cancel();
     });
@@ -382,7 +382,7 @@ public:
 
   void on_consumer_demand(size_t demand) override {
     auto lg = log::core::trace("demand = {}", demand);
-    parent_->schedule_fn([ptr{strong_ptr()}, demand] { //
+    parent_->schedule_fn([ptr{strong_this()}, demand] { //
       auto lg = log::core::trace("demand = {}", demand);
       ptr->on_demand(demand);
     });
@@ -404,7 +404,7 @@ private:
     buf_ = nullptr;
   }
 
-  intrusive_ptr<buffer_writer_impl> strong_ptr() {
+  intrusive_ptr<buffer_writer_impl> strong_this() noexcept {
     return {this, add_ref};
   }
 

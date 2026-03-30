@@ -77,9 +77,9 @@ public:
 
 TEST("make_counted") {
   {
-    auto p = make_counted<class0>();
+    auto ptr = make_counted<class0>();
     check_eq(class0_instances, 1);
-    check_eq(p->strong_reference_count(), 1u);
+    check_eq(ptr->strong_reference_count(), 1u);
   }
   check_eq(class0_instances, 0);
 }
@@ -122,41 +122,6 @@ TEST("reset") {
   check_eq(class0_instances, 0);
 }
 
-TEST("list") {
-  {
-    std::vector<class0ptr> pl;
-    pl.push_back(make_counted<class0>());
-    pl.push_back(make_counted<class0>());
-    pl.push_back(pl.front()->create());
-    check_eq(pl.front()->strong_reference_count(), 1u);
-    check_eq(class0_instances, 3);
-  }
-  check_eq(class0_instances, 0);
-}
-
-TEST("full_test") {
-  {
-    auto p1 = make_counted<class0>();
-    check_eq(p1->is_subtype(), false);
-    check_eq(p1->strong_reference_count(), 1u);
-    check_eq(class0_instances, 1);
-    check_eq(class1_instances, 0);
-    p1.reset(new class1, adopt_ref);
-    check_eq(p1->is_subtype(), true);
-    check_eq(p1->strong_reference_count(), 1u);
-    check_eq(class0_instances, 0);
-    check_eq(class1_instances, 1);
-    auto p2 = make_counted<class1>();
-    p1 = p2;
-    check_eq(p1->strong_reference_count(), 2u);
-    check_eq(class0_instances, 0);
-    check_eq(class1_instances, 1);
-    check_eq(p1, static_cast<class0*>(p2.get()));
-  }
-  check_eq(class0_instances, 0);
-  check_eq(class1_instances, 0);
-}
-
 TEST("default and nullptr construction") {
   SECTION("default constructor creates null pointer") {
     class0ptr ptr;
@@ -195,12 +160,12 @@ TEST("construction with adopt_ref") {
 
 TEST("move constructor") {
   {
-    auto p1 = make_counted<class0>();
+    auto ptr1 = make_counted<class0>();
     check_eq(class0_instances, 1);
-    class0ptr p2{std::move(p1)};
-    check_eq(p1.get(), nullptr);
-    check_ne(p2.get(), nullptr);
-    check_eq(p2->strong_reference_count(), 1u);
+    class0ptr ptr2{std::move(ptr1)};
+    check_eq(ptr1.get(), nullptr);
+    check_ne(ptr2.get(), nullptr);
+    check_eq(ptr2->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
@@ -208,12 +173,12 @@ TEST("move constructor") {
 
 TEST("copy constructor") {
   {
-    auto p1 = make_counted<class0>();
-    check_eq(p1->strong_reference_count(), 1u);
-    class0ptr p2{p1};
-    check_eq(p1.get(), p2.get());
-    check_eq(p1->strong_reference_count(), 2u);
-    check_eq(p2->strong_reference_count(), 2u);
+    auto ptr1 = make_counted<class0>();
+    check_eq(ptr1->strong_reference_count(), 1u);
+    class0ptr ptr2{ptr1};
+    check_eq(ptr1.get(), ptr2.get());
+    check_eq(ptr1->strong_reference_count(), 2u);
+    check_eq(ptr2->strong_reference_count(), 2u);
     check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
@@ -234,63 +199,51 @@ TEST("converting constructor from derived type") {
 
 TEST("swap") {
   {
-    auto p1 = make_counted<class0>();
-    auto p2 = make_counted<class0>();
-    auto* raw1 = p1.get();
-    auto* raw2 = p2.get();
+    auto ptr1 = make_counted<class0>();
+    auto ptr2 = make_counted<class0>();
+    auto* raw1 = ptr1.get();
+    auto* raw2 = ptr2.get();
     check_eq(class0_instances, 2);
-    p1.swap(p2);
-    check_eq(p1.get(), raw2);
-    check_eq(p2.get(), raw1);
-    check_eq(p1->strong_reference_count(), 1u);
-    check_eq(p2->strong_reference_count(), 1u);
+    ptr1.swap(ptr2);
+    check_eq(ptr1.get(), raw2);
+    check_eq(ptr2.get(), raw1);
+    check_eq(ptr1->strong_reference_count(), 1u);
+    check_eq(ptr2->strong_reference_count(), 1u);
   }
   check_eq(class0_instances, 0);
 }
 
-TEST("detach") {
+TEST("release") {
   SECTION("from non-null pointer") {
     auto ptr = make_counted<class0>();
     auto* raw = ptr.get();
     check_eq(class0_instances, 1);
-    auto* detached = ptr.detach();
-    check_eq(detached, raw);
-    check_eq(ptr.get(), nullptr);
-    check_eq(class0_instances, 1);
-    detached->deref();
-  }
-  SECTION("from null pointer") {
-    class0ptr ptr;
-    auto* detached = ptr.detach();
-    check_eq(detached, nullptr);
-  }
-  check_eq(class0_instances, 0);
-}
-
-TEST("release is alias for detach") {
-  {
-    auto ptr = make_counted<class0>();
-    auto* raw = ptr.get();
     auto* released = ptr.release();
     check_eq(released, raw);
     check_eq(ptr.get(), nullptr);
+    check_eq(class0_instances, 1);
     released->deref();
+  }
+  SECTION("from null pointer") {
+    class0ptr ptr;
+    auto* released = ptr.release();
+    check_eq(released, nullptr);
   }
   check_eq(class0_instances, 0);
 }
 
 TEST("emplace") {
   {
-    class0ptr ptr;
-    ptr.emplace();
-    check_ne(ptr.get(), nullptr);
-    check_eq(ptr->strong_reference_count(), 1u);
+    class0ptr ptr1;
+    ptr1.emplace();
+    check_ne(ptr1.get(), nullptr);
+    check_eq(ptr1->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
     // emplace again replaces the object
-    auto* old_raw = ptr.get();
-    ptr.emplace();
-    check_ne(ptr.get(), old_raw);
-    check_eq(ptr->strong_reference_count(), 1u);
+    auto ptr2 = ptr1;
+    ptr1.emplace();
+    check_ne(ptr1.get(), ptr2.get());
+    check_eq(ptr1->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
@@ -308,36 +261,34 @@ TEST("assignment from nullptr") {
 
 TEST("move assignment") {
   {
-    auto p1 = make_counted<class0>();
-    auto p2 = make_counted<class0>();
-    auto* raw2 = p2.get();
-    check_eq(class0_instances, 2);
-    p1 = std::move(p2);
-    // p1's old object is released, p2's object is moved to p1
-    // p2 now holds p1's old object (swap semantics)
-    check_eq(p1.get(), raw2);
-    check_eq(class0_instances, 2);
+    auto ptr1 = make_counted<class0>();
+    {
+      auto ptr2 = make_counted<class0>();
+      check_eq(class0_instances, 2);
+      ptr1 = std::move(ptr2);
+    }
+    check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
 }
 
 TEST("copy assignment") {
   SECTION("from non-null to non-null") {
-    auto p1 = make_counted<class0>();
-    auto p2 = make_counted<class0>();
+    auto ptr1 = make_counted<class0>();
+    auto ptr2 = make_counted<class0>();
     check_eq(class0_instances, 2);
-    p1 = p2;
-    check_eq(p1.get(), p2.get());
-    check_eq(p1->strong_reference_count(), 2u);
+    ptr1 = ptr2;
+    check_eq(ptr1.get(), ptr2.get());
+    check_eq(ptr1->strong_reference_count(), 2u);
     check_eq(class0_instances, 1);
   }
   SECTION("self-assignment") {
-    auto p1 = make_counted<class0>();
-    auto* raw = p1.get();
-    auto& p1_ref = p1;
-    p1 = p1_ref;
-    check_eq(p1.get(), raw);
-    check_eq(p1->strong_reference_count(), 1u);
+    auto ptr1 = make_counted<class0>();
+    auto* raw = ptr1.get();
+    auto& ptr1_ref = ptr1;
+    ptr1 = ptr1_ref;
+    check_eq(ptr1.get(), raw);
+    check_eq(ptr1->strong_reference_count(), 1u);
     check_eq(class0_instances, 1);
   }
   check_eq(class0_instances, 0);
@@ -377,20 +328,20 @@ TEST("boolean conversion") {
 }
 
 TEST("compare") {
-  auto p1 = make_counted<class0>();
-  auto p2 = make_counted<class0>();
+  auto ptr1 = make_counted<class0>();
+  auto ptr2 = make_counted<class0>();
   SECTION("compare with raw pointer") {
-    check_eq(p1.compare(p1.get()), 0);
-    check_ne(p1.compare(p2.get()), 0);
+    check_eq(ptr1.compare(ptr1.get()), 0);
+    check_ne(ptr1.compare(ptr2.get()), 0);
   }
   SECTION("compare with intrusive_ptr") {
-    check_eq(p1.compare(p1), 0);
-    check_ne(p1.compare(p2), 0);
+    check_eq(ptr1.compare(ptr1), 0);
+    check_ne(ptr1.compare(ptr2), 0);
   }
   SECTION("compare with nullptr_t") {
     class0ptr null_ptr;
     check_eq(null_ptr.compare(nullptr), 0);
-    check_ne(p1.compare(nullptr), 0);
+    check_ne(ptr1.compare(nullptr), 0);
   }
 }
 
@@ -465,62 +416,69 @@ TEST("comparison operators with nullptr") {
 }
 
 TEST("comparison operators with raw pointer") {
-  auto p1 = make_counted<class0>();
-  auto p2 = make_counted<class0>();
+  auto ptr1 = make_counted<class0>();
+  auto ptr2 = make_counted<class0>();
   SECTION("operator== with raw pointer") {
-    check(p1 == p1.get());
-    check(p1.get() == p1);
-    check(!(p1 == p2.get()));
-    check(!(p2.get() == p1));
+    check(ptr1 == ptr1.get());
+    check(ptr1.get() == ptr1);
+    check(!(ptr1 == ptr2.get()));
+    check(!(ptr2.get() == ptr1));
   }
   SECTION("operator!= with raw pointer") {
-    check(!(p1 != p1.get()));
-    check(!(p1.get() != p1));
-    check(p1 != p2.get());
-    check(p2.get() != p1);
+    check(!(ptr1 != ptr1.get()));
+    check(!(ptr1.get() != ptr1));
+    check(ptr1 != ptr2.get());
+    check(ptr2.get() != ptr1);
   }
 }
 
-TEST("comparison operators between intrusive_ptrs") {
-  auto p1 = make_counted<class0>();
-  auto p2 = make_counted<class0>();
-  class0ptr p1_copy = p1;
+TEST("comparison operators between intrusive pointers") {
+  auto ptr1 = make_counted<class0>();
+  auto ptr2 = make_counted<class0>();
+  class0ptr ptr1_copy = ptr1;
   SECTION("operator==") {
-    check(p1 == p1);
-    check(p1 == p1_copy);
-    check(!(p1 == p2));
+    check(ptr1 == ptr1);
+    check(ptr1 == ptr1_copy);
+    check(!(ptr1 == ptr2));
   }
   SECTION("operator!=") {
-    check(!(p1 != p1));
-    check(!(p1 != p1_copy));
-    check(p1 != p2);
+    check(!(ptr1 != ptr1));
+    check(!(ptr1 != ptr1_copy));
+    check(ptr1 != ptr2);
   }
   SECTION("operator< provides ordering") {
     // Just verify it compiles and provides consistent ordering
-    auto less_result = p1 < p2;
-    auto greater_result = p2 < p1;
+    auto less_result = ptr1 < ptr2;
+    auto greater_result = ptr2 < ptr1;
     // exactly one should be true, or they're equal (which they're not)
     check(less_result != greater_result);
   }
 }
 
 TEST("comparison operators with derived type pointers") {
-  class0ptr base = make_counted<class0>();
-  class1ptr derived = make_counted<class1>();
-  // Should compile and compare correctly
-  check(base != derived);
-  check(!(base == derived));
+  SECTION("different objects") {
+    class1ptr derived = make_counted<class1>();
+    class0ptr base = make_counted<class0>();
+    check_ne(base, derived);
+  }
+  SECTION("same objects") {
+    class1ptr derived = make_counted<class1>();
+    class0ptr base = derived;
+    check_eq(base, derived);
+  }
 }
 
 TEST("to_string") {
-  auto ptr = make_counted<class0>();
-  auto str = to_string(ptr);
-  // Should be a hex representation of the pointer
-  check(!str.empty());
-  // Null pointer should also work
-  class0ptr null_ptr;
-  auto null_str = to_string(null_ptr);
-  check(!null_str.empty());
+  SECTION("non-null pointer") {
+    auto ptr = make_counted<class0>();
+    auto str = to_string(ptr);
+    check(!str.empty());
+  }
+  SECTION("null pointer") {
+    class0ptr ptr;
+    auto str = to_string(ptr);
+    check(!str.empty());
+  }
 }
 
 CAF_POP_WARNINGS

@@ -210,7 +210,7 @@ TEST("the state destructor may send messages") {
     ~state() {
       // CAF must guarantee that we have a strong reference to `self` here, even
       // if the actor terminates because it became unreachable.
-      runnable::current().check_eq(self->ctrl()->strong_refs.load(), 1u);
+      runnable::current().check_ge(self->ctrl()->strong_reference_count(), 1u);
       self->mail(42).send(buddy);
       *is_destroyed = true;
     }

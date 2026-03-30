@@ -107,7 +107,7 @@ public:
 
   /// Returns the hosting actor system.
   actor_system& home_system() const noexcept {
-    return *ptr_->home_system;
+    return ptr_->system();
   }
 
   /// Exchange content of `*this` and `other`.

@@ -19,12 +19,14 @@
 
 namespace caf::detail {
 
+/// Checks whether `T` provides free functions for `intrusive_ptr`.
 template <class T>
 concept has_intrusive_ptr_free_functions = requires(T*& ptr) {
   { intrusive_ptr_add_ref(ptr) } -> std::same_as<void>;
   { intrusive_ptr_release(ptr) } -> std::same_as<void>;
 };
 
+/// Checks whether `T` provides member functions for `intrusive_ptr`.
 template <class T>
 concept has_intrusive_ptr_member_functions = requires(T* ptr) {
   { ptr->ref() } -> std::same_as<void>;
@@ -35,8 +37,8 @@ concept has_intrusive_ptr_member_functions = requires(T* ptr) {
 
 namespace caf {
 
-/// An intrusive, reference counting smart pointer implementation.
-/// @relates ref_counted
+/// An intrusive, reference counting smart pointer implementation that retains
+/// shared ownership of the managed object.
 template <class T>
 class intrusive_ptr {
 public:
@@ -75,21 +77,20 @@ public:
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
-  intrusive_ptr(pointer raw_ptr, bool increase_ref_count = true) noexcept {
-    set_ptr(raw_ptr, increase_ref_count);
+  intrusive_ptr(pointer ptr, bool increase_ref_count = true) noexcept {
+    set_ptr(ptr, increase_ref_count);
   }
 
-  intrusive_ptr(pointer raw_ptr, add_ref_t) noexcept : ptr_(raw_ptr) {
-    if (raw_ptr)
-      do_add_ref(ptr_);
+  intrusive_ptr(pointer ptr, add_ref_t) noexcept : ptr_(ptr) {
+    if (ptr)
+      do_ref(ptr_);
   }
 
-  constexpr intrusive_ptr(pointer raw_ptr, adopt_ref_t) noexcept
-    : ptr_(raw_ptr) {
+  constexpr intrusive_ptr(pointer ptr, adopt_ref_t) noexcept : ptr_(ptr) {
     // nop
   }
 
-  intrusive_ptr(intrusive_ptr&& other) noexcept : ptr_(other.detach()) {
+  intrusive_ptr(intrusive_ptr&& other) noexcept : ptr_(other.release()) {
     // nop
   }
 
@@ -98,13 +99,13 @@ public:
   }
 
   template <class Y>
-  intrusive_ptr(intrusive_ptr<Y> other) noexcept : ptr_(other.detach()) {
+  intrusive_ptr(intrusive_ptr<Y> other) noexcept : ptr_(other.release()) {
     static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");
   }
 
   ~intrusive_ptr() {
     if (ptr_) {
-      do_release(ptr_);
+      do_deref(ptr_);
     }
   }
 
@@ -114,7 +115,7 @@ public:
 
   /// Returns the raw pointer without modifying reference
   /// count and sets this to `nullptr`.
-  pointer detach() noexcept {
+  [[nodiscard]] pointer release() noexcept {
     if (ptr_ != nullptr) {
       auto result = ptr_;
       ptr_ = nullptr;
@@ -123,10 +124,9 @@ public:
     return nullptr;
   }
 
-  /// Returns the raw pointer without modifying reference
-  /// count and sets this to `nullptr`.
-  pointer release() noexcept {
-    return detach();
+  CAF_DEPRECATED("use release() instead")
+  pointer detach() noexcept {
+    return release();
   }
 
   void reset() noexcept {
@@ -137,7 +137,7 @@ public:
       // again, causing a double-free.
       auto tmp = ptr_;
       ptr_ = nullptr;
-      do_release(tmp);
+      do_deref(tmp);
     }
   }
 
@@ -160,16 +160,6 @@ public:
   template <class... Ts>
   void emplace(Ts&&... xs) {
     reset(new T(std::forward<Ts>(xs)...), adopt_ref);
-  }
-
-  /// Constructs an object of type `U` in an `intrusive_ptr`. This factory
-  /// function is similar to `make_counted`, but it allows passing a derived
-  /// type of `T` as the template parameter. This allows constructing an object
-  /// on a derived type while using the base type for the pointer.
-  template <class U = T, class... Ts>
-  static intrusive_ptr make(Ts&&... xs) {
-    static_assert(std::is_convertible_v<U*, T*>);
-    return {new U(std::forward<Ts>(xs)...), adopt_ref};
   }
 
   intrusive_ptr& operator=(std::nullptr_t) noexcept {
@@ -246,7 +236,7 @@ public:
   }
 
 private:
-  void do_add_ref(pointer ptr) noexcept {
+  static void do_ref(pointer ptr) noexcept {
     if constexpr (detail::has_intrusive_ptr_free_functions<T>) {
       intrusive_ptr_add_ref(ptr);
     } else {
@@ -255,7 +245,7 @@ private:
     }
   }
 
-  void do_release(pointer ptr) noexcept {
+  static void do_deref(pointer ptr) noexcept {
     if constexpr (detail::has_intrusive_ptr_free_functions<T>) {
       intrusive_ptr_release(ptr);
     } else {
@@ -264,10 +254,10 @@ private:
     }
   }
 
-  void set_ptr(pointer raw_ptr, bool increase_ref_count) noexcept {
-    ptr_ = raw_ptr;
-    if (raw_ptr && increase_ref_count) {
-      do_add_ref(raw_ptr);
+  void set_ptr(pointer ptr, bool increase_ref_count) noexcept {
+    ptr_ = ptr;
+    if (ptr && increase_ref_count) {
+      do_ref(ptr);
     }
   }
 

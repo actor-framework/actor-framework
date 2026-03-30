@@ -577,11 +577,11 @@ flow::coordinator::steady_time_point scheduled_actor::steady_time() {
 }
 
 void scheduled_actor::ref() const noexcept {
-  intrusive_ptr_add_ref(ctrl());
+  ctrl()->ref();
 }
 
 void scheduled_actor::deref() const noexcept {
-  intrusive_ptr_release(ctrl());
+  ctrl()->deref();
 }
 
 void scheduled_actor::schedule(action what) {

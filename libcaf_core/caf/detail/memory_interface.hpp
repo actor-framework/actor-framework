@@ -14,6 +14,8 @@ enum class memory_interface {
   new_and_delete,
   /// Indicates that the class uses `malloc` and `free`.
   malloc_and_free,
+  /// Indicates that the class uses `malloc` and `free`.
+  aligned_alloc_and_free,
 };
 
 /// Checks whether a class has a static `memory_interface` member constant.
@@ -37,6 +39,16 @@ template <class T>
 constexpr bool uses_malloc_and_free() noexcept {
   if constexpr (has_memory_interface<T>) {
     return T::memory_interface == memory_interface::malloc_and_free;
+  } else {
+    return false;
+  }
+}
+
+/// Checks whether `T` uses the memory interface `aligned_alloc_and_free`.
+template <class T>
+constexpr bool uses_aligned_alloc_and_free() noexcept {
+  if constexpr (has_memory_interface<T>) {
+    return T::memory_interface == memory_interface::aligned_alloc_and_free;
   } else {
     return false;
   }

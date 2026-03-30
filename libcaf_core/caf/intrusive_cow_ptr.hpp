@@ -147,15 +147,14 @@ public:
     ptr_.reset(ptr, adopt_ref);
   }
 
-  /// Returns the raw pointer without modifying reference
-  /// count and sets this to `nullptr`.
+  CAF_DEPRECATED("use release() instead")
   pointer detach() noexcept {
-    return ptr_.detach();
+    return ptr_.release();
   }
 
   /// Returns the raw pointer without modifying reference
   /// count and sets this to `nullptr`.
-  pointer release() noexcept {
+  [[nodiscard]] pointer release() noexcept {
     return ptr_.release();
   }
 
