@@ -375,6 +375,7 @@ caf_add_component(
     caf/stream.test.cpp
     caf/string_algorithms.cpp
     caf/string_algorithms.test.cpp
+    caf/strong_ptr.test.cpp
     caf/system_messages.test.cpp
     caf/telemetry/collector/prometheus.cpp
     caf/telemetry/collector/prometheus.test.cpp
