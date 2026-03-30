@@ -135,7 +135,7 @@ template <class To, class From>
 class actor_cast_access<To, From, weak_ptr_upgrade_cast> {
 public:
   To operator()(const From& x) const {
-    return {x.get_locked(), adopt_ref};
+    return {x.lock().release(), adopt_ref};
   }
 };
 

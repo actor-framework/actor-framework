@@ -183,9 +183,9 @@ SCENARIO("weak idle timeouts do not prevent actors from becoming unreachable") {
         });
         auto addr = aut.address();
         check(has_pending_timeout());
-        check_eq(addr.get()->strong_refs, 1u);
+        check_eq(addr.get()->strong_reference_count(), 1u);
         aut = nullptr;
-        check_eq(addr.get()->strong_refs, 0u);
+        check_eq(addr.get()->strong_reference_count(), 0u);
         check(!has_pending_timeout());
       }
     }
@@ -201,9 +201,9 @@ SCENARIO("weak idle timeouts do not prevent actors from becoming unreachable") {
         });
         auto addr = aut.address();
         check(has_pending_timeout());
-        check_eq(addr.get()->strong_refs, 1u);
+        check_eq(addr.get()->strong_reference_count(), 1u);
         aut = nullptr;
-        check_eq(addr.get()->strong_refs, 0u);
+        check_eq(addr.get()->strong_reference_count(), 0u);
         check(!has_pending_timeout());
       }
     }

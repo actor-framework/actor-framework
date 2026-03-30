@@ -106,6 +106,11 @@ public:
     return stack_.compare_exchange_strong(e, stack_empty_tag());
   }
 
+  bool close_if_blocked() noexcept {
+    auto e = reader_blocked_tag();
+    return stack_.compare_exchange_strong(e, stack_closed_tag());
+  }
+
   /// Sets the head to `new_head` and returns the previous head if the queue
   /// was not empty.
   pointer take_head(pointer new_head) noexcept {

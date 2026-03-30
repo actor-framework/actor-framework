@@ -577,11 +577,11 @@ flow::coordinator::steady_time_point scheduled_actor::steady_time() {
 }
 
 void scheduled_actor::ref() const noexcept {
-  intrusive_ptr_add_ref(ctrl());
+  ctrl()->ref();
 }
 
 void scheduled_actor::deref() const noexcept {
-  intrusive_ptr_release(ctrl());
+  ctrl()->deref();
 }
 
 void scheduled_actor::schedule(action what) {
@@ -1235,8 +1235,22 @@ void scheduled_actor::close_mailbox() {
     metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
 }
 
-void scheduled_actor::force_close_mailbox() {
-  close_mailbox();
+bool scheduled_actor::try_force_close_mailbox() {
+  if (mailbox().close_if_blocked()) {
+    // Discard everything in the stash.
+    auto dropped = 0;
+    detail::sync_request_bouncer bounce;
+    while (auto stashed = stash_.pop()) {
+      mailbox_element_ptr ptr{stashed};
+      bounce(*ptr);
+      ++dropped;
+    }
+    if (dropped > 0 && metrics_.mailbox_size) {
+      metrics_.mailbox_size->dec(dropped);
+    }
+    return true;
+  }
+  return false;
 }
 
 // -- monitoring ---------------------------------------------------------------

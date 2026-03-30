@@ -561,7 +561,7 @@ SCENARIO("actors can consume items from SPSC buffers directly") {
         buf->close();
         expect<action>().to(snk);
         check_eq(*wakeups, 2);
-        check_eq(snk->ctrl()->strong_refs.load(), 1u);
+        check_eq(snk->ctrl()->strong_reference_count(), 1u);
       }
     }
   }
@@ -619,7 +619,7 @@ SCENARIO("actors can dispose buffer consumers") {
           check_eq(items->at(1), 2);
         }
         check_eq(mail_count(snk), 0u);
-        check_eq(snk->ctrl()->strong_refs.load(), 1u);
+        check_eq(snk->ctrl()->strong_reference_count(), 1u);
       }
     }
   }
@@ -670,7 +670,7 @@ SCENARIO("actors can produce items to SPSC buffers directly") {
         buf->cancel();
         expect<action>().to(src);
         check(*canceled);
-        check_eq(src->ctrl()->strong_refs.load(), 1u);
+        check_eq(src->ctrl()->strong_reference_count(), 1u);
       }
     }
   }

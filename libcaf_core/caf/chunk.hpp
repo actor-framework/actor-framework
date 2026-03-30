@@ -99,7 +99,7 @@ public:
     std::byte storage_[];
   };
 
-  static_assert(detail::uses_malloc_and_free<data>());
+  static_assert(detail::uses_malloc_and_free<data>);
 
   // -- constructors, destructors, and assignment operators --------------------
 

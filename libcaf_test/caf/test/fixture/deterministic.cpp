@@ -173,6 +173,11 @@ public:
     return true;
   }
 
+  bool close_if_blocked() override {
+    closed_ = true;
+    return true;
+  }
+
   size_t close() override {
     closed_ = true;
     auto result = size_t{0};

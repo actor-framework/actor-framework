@@ -53,6 +53,10 @@ public:
   /// @note Only the owning actor is allowed to call this function.
   virtual bool try_unblock() = 0;
 
+  /// Tries to transition the mailbox from a blocked state to a closed state.
+  /// @note Only the owning actor is allowed to call this function.
+  virtual bool close_if_blocked() = 0;
+
   /// Closes the mailbox and discards all pending messages.
   /// @returns The number of dropped messages.
   /// @note Only the owning actor is allowed to call this function.

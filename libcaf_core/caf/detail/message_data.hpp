@@ -188,7 +188,7 @@ private:
   alignas(max_align_t) std::byte storage_[];
 };
 
-static_assert(detail::uses_malloc_and_free<message_data>());
+static_assert(detail::uses_malloc_and_free<message_data>);
 
 } // namespace caf::detail
 

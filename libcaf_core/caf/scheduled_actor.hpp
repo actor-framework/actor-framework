@@ -802,7 +802,7 @@ private:
 
   void close_mailbox();
 
-  void force_close_mailbox() final;
+  bool try_force_close_mailbox() final;
 
   // -- timeout management -----------------------------------------------------
 

@@ -10,8 +10,25 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <stdexcept>
 #include <type_traits>
+
+namespace caf::detail {
+
+template <class T>
+concept has_weak_intrusive_ptr_free_functions = requires(T*& ptr) {
+  { intrusive_ptr_add_weak_ref(ptr) } -> std::same_as<void>;
+  { intrusive_ptr_release_weak(ptr) } -> std::same_as<void>;
+  { intrusive_ptr_upgrade_weak(ptr) } -> std::same_as<bool>;
+};
+
+template <class T>
+concept has_weak_intrusive_ptr_member_functions = requires(T* ptr) {
+  { ptr->ref_weak() } -> std::same_as<void>;
+  { ptr->deref_weak() } -> std::same_as<void>;
+  { ptr->upgrade_weak() } -> std::same_as<bool>;
+};
+
+} // namespace caf::detail
 
 namespace caf {
 
@@ -45,7 +62,7 @@ public:
   weak_intrusive_ptr(pointer raw_ptr, add_ref_t) noexcept {
     if (raw_ptr) {
       ptr_ = raw_ptr;
-      intrusive_ptr_add_weak_ref(ptr_);
+      do_ref_weak(ptr_);
     } else {
       ptr_ = nullptr;
     }
@@ -57,7 +74,7 @@ public:
   }
 
   weak_intrusive_ptr(weak_intrusive_ptr&& other) noexcept
-    : ptr_(other.detach()) {
+    : ptr_(other.release()) {
     // nop
   }
 
@@ -68,13 +85,14 @@ public:
   template <class Y>
   // cppcheck-suppress noExplicitConstructor
   weak_intrusive_ptr(weak_intrusive_ptr<Y> other) noexcept
-    : ptr_(other.detach()) {
+    : ptr_(other.release()) {
     static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");
   }
 
   ~weak_intrusive_ptr() {
-    if (ptr_)
-      intrusive_ptr_release_weak(ptr_);
+    if (ptr_) {
+      do_deref_weak(ptr_);
+    }
   }
 
   void swap(weak_intrusive_ptr& other) noexcept {
@@ -83,17 +101,17 @@ public:
 
   /// Returns the raw pointer without modifying reference
   /// count and sets this to `nullptr`.
-  pointer detach() noexcept {
+  [[nodiscard]] pointer release() noexcept {
     auto result = ptr_;
-    if (result)
+    if (result) {
       ptr_ = nullptr;
+    }
     return result;
   }
 
-  /// Returns the raw pointer without modifying reference
-  /// count and sets this to `nullptr`.
-  pointer release() noexcept {
-    return detach();
+  CAF_DEPRECATED("use release() instead")
+  pointer detach() noexcept {
+    return release();
   }
 
   void reset() noexcept {
@@ -104,16 +122,17 @@ public:
       // release again, causing a double-free.
       auto tmp = ptr_;
       ptr_ = nullptr;
-      intrusive_ptr_release_weak(tmp);
+      do_deref_weak(tmp);
     }
   }
 
   CAF_DEPRECATED("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")
-  void reset(pointer new_value, bool increase_ref_count = true) {
+  void reset(pointer new_value, bool increase_ref_count = true) noexcept {
     auto old = ptr_;
     set_ptr(new_value, increase_ref_count);
-    if (old)
-      intrusive_ptr_release_weak(old);
+    if (old) {
+      do_deref_weak(old);
+    }
   }
 
   void reset(pointer new_value, add_ref_t) noexcept {
@@ -151,10 +170,12 @@ public:
     return ptr_;
   }
 
+  CAF_DEPRECATED("lock before accessing the object")
   pointer operator->() const noexcept {
     return ptr_;
   }
 
+  CAF_DEPRECATED("lock before accessing the object")
   reference operator*() const noexcept {
     return *ptr_;
   }
@@ -181,26 +202,53 @@ public:
 
   /// Tries to upgrade this weak reference to a strong reference.
   intrusive_ptr<T> lock() const noexcept {
-    if (!ptr_ || !intrusive_ptr_upgrade_weak(ptr_))
+    if (!ptr_ || !do_upgrade_weak(ptr_)) {
       return nullptr;
-    // reference count already increased by intrusive_ptr_upgrade_weak
+    }
+    // Note: reference count already increased by do_upgrade_weak.
     return {ptr_, adopt_ref};
   }
 
-  /// Tries to upgrade this weak reference to a strong reference.
-  /// Returns a pointer with increased strong reference count
-  /// on success, `nullptr` otherwise.
+  CAF_DEPRECATED("use lock() instead")
   pointer get_locked() const noexcept {
-    if (!ptr_ || !intrusive_ptr_upgrade_weak(ptr_))
+    if (!ptr_ || !do_upgrade_weak(ptr_))
       return nullptr;
     return ptr_;
   }
 
 private:
+  static void do_ref_weak(pointer ptr) noexcept {
+    if constexpr (detail::has_weak_intrusive_ptr_free_functions<T>) {
+      intrusive_ptr_add_weak_ref(ptr);
+    } else {
+      static_assert(detail::has_weak_intrusive_ptr_member_functions<T>);
+      ptr->ref_weak();
+    }
+  }
+
+  static void do_deref_weak(pointer ptr) noexcept {
+    if constexpr (detail::has_weak_intrusive_ptr_free_functions<T>) {
+      intrusive_ptr_release_weak(ptr);
+    } else {
+      static_assert(detail::has_weak_intrusive_ptr_member_functions<T>);
+      ptr->deref_weak();
+    }
+  }
+
+  static bool do_upgrade_weak(pointer ptr) noexcept {
+    if constexpr (detail::has_weak_intrusive_ptr_free_functions<T>) {
+      return intrusive_ptr_upgrade_weak(ptr);
+    } else {
+      static_assert(detail::has_weak_intrusive_ptr_member_functions<T>);
+      return ptr->upgrade_weak();
+    }
+  }
+
   void set_ptr(pointer raw_ptr, bool increase_ref_count) noexcept {
     ptr_ = raw_ptr;
-    if (raw_ptr && increase_ref_count)
-      intrusive_ptr_add_weak_ref(raw_ptr);
+    if (raw_ptr && increase_ref_count) {
+      do_ref_weak(raw_ptr);
+    }
   }
 
   pointer ptr_;

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/critical.hpp"
 #include "caf/detail/memory_interface.hpp"
 
 #include <atomic>
@@ -13,8 +14,8 @@
 
 namespace caf::detail {
 
-/// An atomic reference count for reference counted objects. The reference count
-/// is initialized to 1 at construction.
+/// An atomic reference count for reference counted objects. Only supports
+/// strong references. The reference count is initialized to 1 at construction.
 class atomic_ref_count {
 public:
   constexpr atomic_ref_count() noexcept : value_(1) {
@@ -46,7 +47,14 @@ public:
 
   /// Increments the reference count by one.
   void inc() noexcept {
+#ifdef NDEBUG
     value_.fetch_add(1, std::memory_order_relaxed);
+#else
+    if (value_.fetch_add(1, std::memory_order_relaxed) == 0) {
+      detail::critical("tried to increase the reference count "
+                       "of an expired object");
+    }
+#endif
   }
 
   /// Decrements the reference count by one and destroys the object when its
@@ -55,14 +63,19 @@ public:
   void dec(Owner* owner) noexcept {
     if (value_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
       using owner_type = std::remove_const_t<Owner>;
-      if constexpr (uses_new_and_delete<owner_type>()) {
+      if constexpr (uses_new_and_delete<owner_type>) {
         delete owner;
-      } else {
-        static_assert(uses_malloc_and_free<owner_type>());
+      } else if constexpr (uses_malloc_and_free<owner_type>) {
         static_assert(!std::is_const_v<Owner>,
                       "free() does not accept const pointers");
         owner->~owner_type();
         free(owner);
+      } else {
+        static_assert(uses_aligned_alloc_and_free<owner_type>);
+        static_assert(!std::is_const_v<Owner>,
+                      "aligned_free() does not accept const pointers");
+        owner->~owner_type();
+        aligned_free(owner);
       }
     }
   }

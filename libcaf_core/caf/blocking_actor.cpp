@@ -16,9 +16,11 @@
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/fwd.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
 
@@ -110,7 +112,7 @@ public:
   explicit blocking_actor_runner(blocking_actor* self,
                                  detail::private_thread* thread)
     : self_(self), thread_(thread) {
-    intrusive_ptr_add_ref(self->ctrl());
+    self_->ctrl()->ref();
   }
 
   void resume(scheduler* ctx, uint64_t event_id) override {
@@ -137,7 +139,7 @@ public:
     auto& sys = self_->system();
     sys.release_private_thread(thread_);
     self_->cleanup(std::move(rsn), ctx);
-    intrusive_ptr_release(self_->ctrl());
+    self_->ctrl()->deref();
   }
 
   void ref() const noexcept final {
@@ -167,7 +169,7 @@ void blocking_actor::launch(detail::private_thread* worker, scheduler*) {
   CAF_ASSERT(worker != nullptr);
   detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("");
-  worker->resume(resumable_ptr::make<blocking_actor_runner>(this, worker));
+  worker->resume(make_counted<blocking_actor_runner>(this, worker));
 }
 
 blocking_actor::receive_while_helper
@@ -373,8 +375,22 @@ void blocking_actor::close_mailbox() {
   }
 }
 
-void blocking_actor::force_close_mailbox() {
-  close_mailbox();
+bool blocking_actor::try_force_close_mailbox() {
+  if (mailbox_->close_if_blocked()) {
+    // Discard everything in the stash.
+    auto dropped = 0;
+    detail::sync_request_bouncer bounce;
+    while (auto stashed = stash_.pop()) {
+      mailbox_element_ptr ptr{stashed};
+      bounce(*ptr);
+      ++dropped;
+    }
+    if (dropped > 0 && metrics_.mailbox_size) {
+      metrics_.mailbox_size->dec(dropped);
+    }
+    return true;
+  }
+  return false;
 }
 
 void blocking_actor::do_unstash(mailbox_element_ptr ptr) {

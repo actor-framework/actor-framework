@@ -41,6 +41,8 @@ public:
 
   bool try_unblock() override;
 
+  bool close_if_blocked() override;
+
   size_t close() override;
 
   size_t size() override;

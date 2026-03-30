@@ -123,7 +123,7 @@ private:
 
   void close_mailbox();
 
-  void force_close_mailbox() final;
+  bool try_force_close_mailbox() final;
 
   flow::coordinator* flow_context() final;
 

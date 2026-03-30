@@ -81,8 +81,8 @@ void forwarding_actor_proxy::kill_proxy(scheduler* sched, error rsn) {
   cleanup(std::move(rsn), sched);
 }
 
-void forwarding_actor_proxy::force_close_mailbox() {
-  // nop
+bool forwarding_actor_proxy::try_force_close_mailbox() {
+  return true;
 }
 
 } // namespace caf

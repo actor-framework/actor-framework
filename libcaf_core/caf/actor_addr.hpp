@@ -51,17 +51,17 @@ public:
 
   /// Returns the ID of this actor.
   actor_id id() const noexcept {
-    return ptr_->id();
+    return ptr_.get()->id();
   }
 
   /// Returns the origin node of this actor.
   node_id node() const noexcept {
-    return ptr_->node();
+    return ptr_.get()->node();
   }
 
   /// Returns the hosting actor system.
   actor_system& home_system() const noexcept {
-    return *ptr_->home_system;
+    return ptr_.get()->system();
   }
 
   /// Exchange content of `*this` and `other`.
@@ -127,8 +127,8 @@ private:
     return ptr_.release();
   }
 
-  actor_control_block* get_locked() const noexcept {
-    return ptr_.get_locked();
+  strong_actor_ptr lock() const noexcept {
+    return ptr_.lock();
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")

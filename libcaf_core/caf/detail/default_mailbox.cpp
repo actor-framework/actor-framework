@@ -48,6 +48,10 @@ bool default_mailbox::try_unblock() {
   return inbox_.try_unblock();
 }
 
+bool default_mailbox::close_if_blocked() {
+  return inbox_.close_if_blocked();
+}
+
 size_t default_mailbox::close() {
   size_t result = 0;
   detail::sync_request_bouncer bounce;

@@ -36,8 +36,6 @@ class remote_message_handler;
 
 namespace caf {
 
-CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block*);
-
 /// A unique actor ID.
 /// @relates abstract_actor
 using actor_id = uint64_t;
@@ -50,10 +48,10 @@ class CAF_CORE_EXPORT abstract_actor {
 public:
   // -- friends ----------------------------------------------------------------
 
+  friend class actor_control_block;
+
   template <class>
   friend class caf::io::basp::remote_message_handler;
-
-  friend CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block*);
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -357,11 +355,10 @@ protected:
   attachable_ptr attachables_head_;
 
 private:
-  /// Forces the actor to close its mailbox and drop all messages. The only
-  /// place calling this member function is
-  /// `intrusive_ptr_release(actor_control_block*)` before calling
-  /// `on_unreachable`.
-  virtual void force_close_mailbox() = 0;
+  /// Tries to transition the mailbox from a blocked state to a closed state.
+  /// Called from the actor control block before attempting to call the
+  /// destructor for the actor.
+  virtual bool try_force_close_mailbox() = 0;
 };
 
 } // namespace caf

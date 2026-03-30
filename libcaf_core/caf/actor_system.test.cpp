@@ -36,7 +36,7 @@ TEST("spawn_inactive creates an actor without launching it") {
     {
       auto [self, launch] = sys.spawn_inactive();
       self->become([](int) {});
-      check_eq(self->ctrl()->strong_refs, 1u); // 1 ref by launch
+      check_eq(self->ctrl()->strong_reference_count(), 1u); // 1 ref by launch
       strong_self = actor{self};
     }
     check_eq(sys.running_actors_count(), 1u);

@@ -8,8 +8,9 @@
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/add_ref.hpp"
-#include "caf/detail/aligned_alloc.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/critical.hpp"
+#include "caf/detail/panic.hpp"
 #include "caf/error_code.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
@@ -28,72 +29,89 @@ bool actor_control_block::enqueue(mailbox_element_ptr what, scheduler* sched) {
   return get()->enqueue(std::move(what), sched);
 }
 
-bool intrusive_ptr_upgrade_weak(actor_control_block* x) {
-  auto count = x->strong_refs.load();
-  while (count != 0)
-    if (x->strong_refs.compare_exchange_weak(count, count + 1,
-                                             std::memory_order_relaxed))
-      return true;
-  return false;
-}
-
-void intrusive_ptr_release_weak(actor_control_block* x) {
-  // Destroy object if last weak pointer expires.
-  if (x->weak_refs == 1
-      || x->weak_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-    x->~actor_control_block();
-    detail::aligned_free(x);
-  }
-}
-
-void intrusive_ptr_release(actor_control_block* x) {
-  if (x->strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-    // When hitting 0, we need to allow the actor to clean up its state in case
-    // it is not terminated yet. For this, we need to bump the ref count to 1
-    // again, because the cleanup code might send messages to other actors that
-    // in turn reference this actor.
-    auto* ptr = x->get();
+void actor_control_block::deref() noexcept {
+  // Before hitting 0, we need to close the mailbox and to allow the actor to
+  // clean up its state in case it is not terminated yet. For this, we need to
+  // run the cleanup code while the strong reference count is still at 1,
+  // because the cleanup code might send messages to other actors that in turn
+  // will create new strong references to this actor. Hence, we can't simply
+  // call `ref_count_.dec_strong(this)` here and instead fall back to a
+  // compare-and-swap loop to ensure an actor is always terminated before its
+  // strong reference count drops to 0.
+  auto& strong = ref_count_.strong_reference_count_ref();
+  auto count = strong.load(std::memory_order_acquire);
+  for (;;) {
+    if (count == 0) {
+      detail::critical("tried to decrease the strong reference count "
+                       "of an already expired object");
+    }
+    if (count > 1) {
+      if (strong.compare_exchange_weak(count, count - 1,
+                                       std::memory_order_release,
+                                       std::memory_order_relaxed)) {
+        return;
+      }
+      continue;
+    }
+    // The strong reference count would drop to 0 -> terminate the actor.
+    auto* ptr = get();
     if (!ptr->is_terminated()) {
-      // First, make sure that other actors can no longer send messages to this
-      // actor. Then bump the reference count and do the regular cleanup.
-      ptr->force_close_mailbox();
-      x->strong_refs.fetch_add(1, std::memory_order_relaxed);
-      ptr->on_unreachable();
+#ifdef CAF_ENABLE_EXCEPTIONS
+      try {
+#endif
+        // Try to close the mailbox, i.e., transition from blocked to closed.
+        if (!ptr->try_force_close_mailbox()) {
+          // If closing the mailbox failed, another thread must have formed a
+          // new strong reference to the actor and has put a new message into
+          // the mailbox. Any actor with a non-empty mailbox must have at least
+          // one strong reference from the scheduler. Retry.
+          count = strong.load(std::memory_order_acquire);
+          continue;
+        }
+        // Mailbox has been closed. Tell the actor to run any cleanup code and
+        // to set its state to terminated.
+        ptr->on_unreachable();
+#ifdef CAF_ENABLE_EXCEPTIONS
+      } catch (const std::exception& ex) {
+        detail::panic("failed to cleanup an unreachable actor: {}", ex.what());
+      } catch (...) {
+        detail::critical("failed to cleanup an unreachable actor: "
+                         "unknown exception");
+      }
+#endif
+      // The actor must have been terminated after calling `on_unreachable`.
       CAF_ASSERT(ptr->is_terminated());
-      if (x->strong_refs.fetch_sub(1, std::memory_order_acq_rel) != 1) {
-        // Another strong reference was added while we were cleaning up.
+    }
+    // Reaching here means the actor is terminated and we can safely call its
+    // destructor. Run a new loop to decrement the reference count without
+    // checking for `is_terminated` again.
+    for (;;) {
+      if (strong.compare_exchange_weak(count, count - 1,
+                                       std::memory_order_release,
+                                       std::memory_order_relaxed)) {
+        if (count == 1) {
+          ptr->~abstract_actor();
+          deref_weak();
+        }
         return;
       }
     }
-    // Destroy the managed actor.
-    x->get()->~abstract_actor();
-    // Release the implicit weak reference to the control block. May delete the
-    // control block if this was the last reference to it.
-    intrusive_ptr_release_weak(x);
   }
 }
 
-bool operator==(const strong_actor_ptr& x, const abstract_actor* y) noexcept {
-  return x.get() == actor_control_block::from(y);
-}
-
-bool operator==(const abstract_actor* x, const strong_actor_ptr& y) noexcept {
-  return actor_control_block::from(x) == y.get();
-}
-
-error_code<sec> load_actor(strong_actor_ptr& storage, actor_system* sys,
+error_code<sec> load_actor(strong_actor_ptr& ptr, actor_system* sys,
                            actor_id aid, const node_id& nid) {
   if (sys == nullptr)
     return error_code{sec::no_context};
   if (sys->node() == nid) {
-    storage = sys->registry().get(aid);
+    ptr = sys->registry().get(aid);
     log::core::debug("fetch actor handle from local actor registry: {}",
-                     (storage ? "found" : "not found"));
+                     (ptr ? "found" : "not found"));
     return {};
   }
   // Get or create a proxy for the remote actor.
   if (auto* registry = proxy_registry::current()) {
-    storage = registry->get_or_put(nid, aid);
+    ptr = registry->get_or_put(nid, aid);
     return {};
   }
   return error_code{sec::no_proxy_registry};
@@ -103,53 +121,54 @@ error_code<sec> save_actor(const strong_actor_ptr& storage, actor_id aid,
                            const node_id& nid) {
   // Register locally running actors to be able to deserialize them later.
   if (storage) {
-    auto* sys = storage->home_system;
-    if (nid == sys->node())
-      sys->registry().put(aid, storage);
+    auto& sys = storage->system();
+    if (nid == sys.node())
+      sys.registry().put(aid, storage);
   }
   return {};
 }
 
 namespace {
 
-void append_to_string_impl(std::string& x, const actor_control_block* y) {
-  if (y != nullptr) {
-    if (wraps_uri(y->nid)) {
-      append_to_string(x, y->nid);
-      x += "/id/";
-      x += std::to_string(y->aid);
+void append_to_string_impl(std::string& str, const actor_control_block* ptr) {
+  if (ptr != nullptr) {
+    auto& nid = ptr->node();
+    if (wraps_uri(nid)) {
+      append_to_string(str, nid);
+      str += "/id/";
+      str += std::to_string(ptr->id());
     } else {
-      x += std::to_string(y->aid);
-      x += '@';
-      append_to_string(x, y->nid);
+      str += std::to_string(ptr->id());
+      str += '@';
+      append_to_string(str, nid);
     }
   } else {
-    x += "null";
+    str += "null";
   }
 }
 
-std::string to_string_impl(const actor_control_block* x) {
+std::string to_string_impl(const actor_control_block* ptr) {
   std::string result;
-  append_to_string_impl(result, x);
+  append_to_string_impl(result, ptr);
   return result;
 }
 
 } // namespace
 
-std::string to_string(const strong_actor_ptr& x) {
-  return to_string_impl(x.get());
+std::string to_string(const strong_actor_ptr& ptr) {
+  return to_string_impl(ptr.get());
 }
 
-void append_to_string(std::string& x, const strong_actor_ptr& y) {
-  return append_to_string_impl(x, y.get());
+void append_to_string(std::string& str, const strong_actor_ptr& ptr) {
+  return append_to_string_impl(str, ptr.get());
 }
 
-std::string to_string(const weak_actor_ptr& x) {
-  return to_string_impl(x.get());
+std::string to_string(const weak_actor_ptr& ptr) {
+  return to_string_impl(ptr.get());
 }
 
-void append_to_string(std::string& x, const weak_actor_ptr& y) {
-  return append_to_string_impl(x, y.get());
+void append_to_string(std::string& str, const weak_actor_ptr& ptr) {
+  return append_to_string_impl(str, ptr.get());
 }
 
 } // namespace caf
