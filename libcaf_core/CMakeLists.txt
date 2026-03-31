@@ -416,7 +416,8 @@ caf_add_component(
     caf/uuid.cpp
     caf/uuid.test.cpp
     caf/version.cpp
-    caf/version.test.cpp)
+    caf/version.test.cpp
+    caf/weak_intrusive_ptr.test.cpp)
 
 # Additional log component for (potentially critical) system-wide events.
 caf_add_log_component(system)

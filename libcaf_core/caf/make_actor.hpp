@@ -23,25 +23,17 @@ namespace caf::detail {
 
 // Has access to the required constructors (via friend declarations).
 struct make_actor_util {
-  template <class... Args>
-  static actor_control_block* create_control_block(void* mem, Args&&... args) {
-    return new (mem) actor_control_block(std::forward<Args>(args)...);
-  }
-
   template <class T, class... Args>
   static T* create_actor(void* mem, Args&&... args) {
+    using traits = detail::control_block_traits<actor_control_block>;
     // Note: the constructor of abstract_actor sets the current actor to itself.
     //       Hence, we store the pointer to the current actor here and restore
     //       it after creating the new actor at scope exit.
     detail::scope_guard guard([prev = detail::current_actor()]() noexcept {
       detail::current_actor(prev);
     });
-    auto* ptr = new (mem) T(std::forward<Args>(args)...);
+    auto* ptr = traits::construct_managed<T>(mem, std::forward<Args>(args)...);
     ptr->setup_metrics();
-    // Make sure that the pointer to the actor object is correct. Virtual
-    // inheritance may mess with the memory layout, so we need to check that the
-    // actor object actually starts at the right address.
-    CAF_ASSERT(static_cast<abstract_actor*>(ptr) == mem);
     return ptr;
   }
 };
@@ -64,18 +56,14 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
   }
   using detail::make_actor_util;
   // Allocate enough memory for the control block and the actor object.
-  static constexpr size_t alloc_size = actor_control_block::allocation_size
-                                       + sizeof(T);
-  auto* mem = detail::aligned_alloc(actor_control_block::alignment, alloc_size);
-  auto* ctrl = make_actor_util::create_control_block(mem, aid, nid, sys, iface);
-  auto* obj_mem = reinterpret_cast<std::byte*>(mem)
-                  + actor_control_block::allocation_size;
+  using traits = detail::control_block_traits<actor_control_block>;
+  auto* mem = traits::allocate<T>();
+  auto* ctrl = traits::construct_ctrl(mem, aid, nid, sys, iface);
 #ifdef CAF_ENABLE_TRACE_LOGGING
   if (auto* lptr = logger::current_logger();
       lptr && lptr->accepts(log::level::debug, CAF_LOG_FLOW_COMPONENT)) {
     auto args = deep_to_string(std::forward_as_tuple(xs...));
-    auto* obj = make_actor_util::create_actor<T>(obj_mem,
-                                                 std::forward<Ts>(xs)...);
+    auto* obj = make_actor_util::create_actor<T>(mem, std::forward<Ts>(xs)...);
 #  ifdef CAF_ENABLE_RTTI
     lptr->log(log::level::debug, CAF_LOG_FLOW_COMPONENT,
               "SPAWN ; ID = {}; NAME = {}; TYPE = {}; ARGS = {}; NODE = {}",
@@ -89,7 +77,7 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
     return {ctrl, adopt_ref};
   }
 #endif
-  detail::make_actor_util::create_actor<T>(obj_mem, std::forward<Ts>(xs)...);
+  detail::make_actor_util::create_actor<T>(mem, std::forward<Ts>(xs)...);
   return {ctrl, adopt_ref};
 }
 

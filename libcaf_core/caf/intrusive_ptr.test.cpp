@@ -35,11 +35,11 @@ class class1;
 
 class class2;
 
-using class0ptr = intrusive_ptr<class0>;
+using class0_ptr = intrusive_ptr<class0>;
 
-using class1ptr = intrusive_ptr<class1>;
+using class1_ptr = intrusive_ptr<class1>;
 
-using class2ptr = intrusive_ptr<class2>;
+using class2_ptr = intrusive_ptr<class2>;
 
 class class0 : public ref_counted {
 public:
@@ -59,7 +59,7 @@ public:
     return subtype_;
   }
 
-  virtual class0ptr create() const {
+  virtual class0_ptr create() const {
     return make_counted<class0>();
   }
 
@@ -77,7 +77,7 @@ public:
     --class1_instances;
   }
 
-  class0ptr create() const override {
+  class0_ptr create() const override {
     return make_counted<class1>();
   }
 };
@@ -143,20 +143,20 @@ TEST("reset") {
     check_eq(ptr.get(), nullptr);
   }
   SECTION("passing pointer and adopt_ref") {
-    class0ptr ptr;
+    class0_ptr ptr;
     ptr.reset(new class0, adopt_ref);
     check_eq(class0_instances, 1u);
     check_eq(ptr->strong_reference_count(), 1u);
   }
   SECTION("passing pointer and false") {
-    class0ptr ptr;
+    class0_ptr ptr;
     ptr.reset(new class0, false);
     check_eq(class0_instances, 1u);
     check_eq(ptr->strong_reference_count(), 1u);
   }
   SECTION("passing pointer and add_ref") {
     auto* raw_ptr = new class0;
-    class0ptr ptr;
+    class0_ptr ptr;
     ptr.reset(raw_ptr, add_ref);
     check_eq(class0_instances, 1u);
     raw_ptr->deref();
@@ -164,7 +164,7 @@ TEST("reset") {
   }
   SECTION("passing pointer and true") {
     auto* raw_ptr = new class0;
-    class0ptr ptr;
+    class0_ptr ptr;
     ptr.reset(raw_ptr, true);
     check_eq(class0_instances, 1u);
     raw_ptr->deref();
@@ -175,13 +175,13 @@ TEST("reset") {
 
 TEST("default and nullptr construction") {
   SECTION("default constructor creates null pointer") {
-    class0ptr ptr;
+    class0_ptr ptr;
     check_eq(ptr.get(), nullptr);
     check(!ptr);
     check_eq(static_cast<bool>(ptr), false);
   }
   SECTION("nullptr_t constructor creates null pointer") {
-    class0ptr ptr{nullptr};
+    class0_ptr ptr{nullptr};
     check_eq(ptr.get(), nullptr);
     check(!ptr);
   }
@@ -191,7 +191,7 @@ TEST("default and nullptr construction") {
 TEST("construction with add_ref") {
   auto* raw = new class0;
   {
-    class0ptr ptr{raw, add_ref};
+    class0_ptr ptr{raw, add_ref};
     check_eq(class0_instances, 1u);
     check_eq(ptr->strong_reference_count(), 2u);
   }
@@ -202,7 +202,7 @@ TEST("construction with add_ref") {
 
 TEST("construction with adopt_ref") {
   {
-    class0ptr ptr{new class0, adopt_ref};
+    class0_ptr ptr{new class0, adopt_ref};
     check_eq(class0_instances, 1u);
     check_eq(ptr->strong_reference_count(), 1u);
   }
@@ -213,7 +213,7 @@ TEST("move constructor") {
   {
     auto ptr1 = make_counted<class0>();
     check_eq(class0_instances, 1u);
-    class0ptr ptr2{std::move(ptr1)};
+    class0_ptr ptr2{std::move(ptr1)};
     check_eq(ptr1.get(), nullptr);
     check_ne(ptr2.get(), nullptr);
     check_eq(ptr2->strong_reference_count(), 1u);
@@ -226,7 +226,7 @@ TEST("copy constructor") {
   {
     auto ptr1 = make_counted<class0>();
     check_eq(ptr1->strong_reference_count(), 1u);
-    class0ptr ptr2{ptr1};
+    class0_ptr ptr2{ptr1};
     check_eq(ptr1.get(), ptr2.get());
     check_eq(ptr1->strong_reference_count(), 2u);
     check_eq(ptr2->strong_reference_count(), 2u);
@@ -239,7 +239,7 @@ TEST("converting constructor from derived type") {
   {
     auto derived = make_counted<class1>();
     check_eq(class1_instances, 1u);
-    class0ptr base{std::move(derived)};
+    class0_ptr base{std::move(derived)};
     check_eq(derived.get(), nullptr);
     check(base->is_subtype());
     check_eq(base->strong_reference_count(), 1u);
@@ -276,7 +276,7 @@ TEST("release") {
     released->deref();
   }
   SECTION("from null pointer") {
-    class0ptr ptr;
+    class0_ptr ptr;
     auto* released = ptr.release();
     check_eq(released, nullptr);
   }
@@ -285,7 +285,7 @@ TEST("release") {
 
 TEST("emplace") {
   {
-    class0ptr ptr1;
+    class0_ptr ptr1;
     ptr1.emplace();
     check_ne(ptr1.get(), nullptr);
     check_eq(ptr1->strong_reference_count(), 1u);
@@ -361,7 +361,7 @@ TEST("pointer access operators") {
 
 TEST("boolean conversion") {
   SECTION("null pointer is false") {
-    class0ptr ptr;
+    class0_ptr ptr;
     check(!ptr);
     check_eq(static_cast<bool>(ptr), false);
     if (ptr) {
@@ -390,7 +390,7 @@ TEST("compare") {
     check_ne(ptr1.compare(ptr2), 0);
   }
   SECTION("compare with nullptr_t") {
-    class0ptr null_ptr;
+    class0_ptr null_ptr;
     check_eq(null_ptr.compare(nullptr), 0);
     check_ne(ptr1.compare(nullptr), 0);
   }
@@ -399,7 +399,7 @@ TEST("compare") {
 #ifdef CAF_ENABLE_RTTI
 TEST("downcast") {
   SECTION("successful downcast") {
-    class0ptr base = make_counted<class1>();
+    class0_ptr base = make_counted<class1>();
     auto derived = base.downcast<class1>();
     check_ne(derived.get(), nullptr);
     check_eq(base->strong_reference_count(), 2u);
@@ -414,7 +414,7 @@ TEST("downcast") {
     check_eq(class0_instances, 1u);
   }
   SECTION("downcast from null") {
-    class0ptr base;
+    class0_ptr base;
     auto derived = base.downcast<class1>();
     check_eq(derived.get(), nullptr);
   }
@@ -426,7 +426,7 @@ TEST("downcast") {
 TEST("upcast") {
   SECTION("lvalue upcast adds reference") {
     auto derived = make_counted<class1>();
-    class0ptr base = derived.upcast<class0>();
+    class0_ptr base = derived.upcast<class0>();
     check_ne(base.get(), nullptr);
     check_eq(derived->strong_reference_count(), 2u);
     check_eq(base.get(), derived.get());
@@ -435,22 +435,22 @@ TEST("upcast") {
   SECTION("rvalue upcast moves ownership") {
     auto derived = make_counted<class1>();
     auto* raw = derived.get();
-    class0ptr base = std::move(derived).upcast<class0>();
+    class0_ptr base = std::move(derived).upcast<class0>();
     check_eq(derived.get(), nullptr);
     check_eq(base.get(), raw);
     check_eq(base->strong_reference_count(), 1u);
     check_eq(class1_instances, 1u);
   }
   SECTION("upcast from null") {
-    class1ptr derived;
-    class0ptr base = derived.upcast<class0>();
+    class1_ptr derived;
+    class0_ptr base = derived.upcast<class0>();
     check_eq(base.get(), nullptr);
   }
   check_eq(class1_instances, 0u);
 }
 
 TEST("comparison operators with nullptr") {
-  class0ptr null_ptr;
+  class0_ptr null_ptr;
   auto valid_ptr = make_counted<class0>();
   SECTION("operator== with nullptr") {
     check(null_ptr == nullptr);
@@ -486,7 +486,7 @@ TEST("comparison operators with raw pointer") {
 TEST("comparison operators between intrusive pointers") {
   auto ptr1 = make_counted<class0>();
   auto ptr2 = make_counted<class0>();
-  class0ptr ptr1_copy = ptr1;
+  class0_ptr ptr1_copy = ptr1;
   SECTION("operator==") {
     check(ptr1 == ptr1);
     check(ptr1 == ptr1_copy);
@@ -508,13 +508,13 @@ TEST("comparison operators between intrusive pointers") {
 
 TEST("comparison operators with derived type pointers") {
   SECTION("different objects") {
-    class1ptr derived = make_counted<class1>();
-    class0ptr base = make_counted<class0>();
+    class1_ptr derived = make_counted<class1>();
+    class0_ptr base = make_counted<class0>();
     check_ne(base, derived);
   }
   SECTION("same objects") {
-    class1ptr derived = make_counted<class1>();
-    class0ptr base = derived;
+    class1_ptr derived = make_counted<class1>();
+    class0_ptr base = derived;
     check_eq(base, derived);
   }
 }
@@ -526,7 +526,7 @@ TEST("to_string") {
     check(!str.empty());
   }
   SECTION("null pointer") {
-    class0ptr ptr;
+    class0_ptr ptr;
     auto str = to_string(ptr);
     check(!str.empty());
   }

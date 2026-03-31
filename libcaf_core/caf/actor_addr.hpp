@@ -51,17 +51,17 @@ public:
 
   /// Returns the ID of this actor.
   actor_id id() const noexcept {
-    return ptr_.get()->id();
+    return ptr_.ctrl()->id();
   }
 
   /// Returns the origin node of this actor.
   node_id node() const noexcept {
-    return ptr_.get()->node();
+    return ptr_.ctrl()->node();
   }
 
   /// Returns the hosting actor system.
   actor_system& home_system() const noexcept {
-    return ptr_.get()->system();
+    return ptr_.ctrl()->system();
   }
 
   /// Exchange content of `*this` and `other`.
@@ -83,7 +83,7 @@ public:
   intptr_t compare(const actor_control_block* other) const noexcept;
 
   intptr_t compare(const weak_actor_ptr& other) const noexcept {
-    return compare(other.get());
+    return compare(other.ctrl());
   }
 
   intptr_t compare(const strong_actor_ptr& other) const noexcept {
@@ -117,16 +117,12 @@ public:
   actor_addr(actor_control_block*, adopt_ref_t);
 
   actor_control_block* get() const noexcept {
-    return ptr_.get();
+    return ptr_.ctrl();
   }
 
   /// @endcond
 
 private:
-  actor_control_block* release() noexcept {
-    return ptr_.release();
-  }
-
   strong_actor_ptr lock() const noexcept {
     return ptr_.lock();
   }

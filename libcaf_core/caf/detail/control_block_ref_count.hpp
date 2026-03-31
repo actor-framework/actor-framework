@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/aligned_alloc.hpp"
+#include "caf/detail/control_block_traits.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/memory_interface.hpp"
 
@@ -83,7 +84,8 @@ public:
   template <class ControlBlock>
   void dec_strong(ControlBlock* control_block) noexcept {
     if (strong_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      std::destroy_at(ControlBlock::managed(control_block));
+      using traits = control_block_traits<ControlBlock>;
+      std::destroy_at(traits::managed_ptr(control_block));
       dec_weak(control_block);
     }
   }

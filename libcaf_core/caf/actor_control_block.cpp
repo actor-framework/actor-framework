@@ -164,11 +164,11 @@ void append_to_string(std::string& str, const strong_actor_ptr& ptr) {
 }
 
 std::string to_string(const weak_actor_ptr& ptr) {
-  return to_string_impl(ptr.get());
+  return to_string_impl(ptr.ctrl());
 }
 
 void append_to_string(std::string& str, const weak_actor_ptr& ptr) {
-  return append_to_string_impl(str, ptr.get());
+  return append_to_string_impl(str, ptr.ctrl());
 }
 
 } // namespace caf

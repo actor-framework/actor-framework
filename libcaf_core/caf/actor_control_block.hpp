@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/control_block_ref_count.hpp"
+#include "caf/detail/control_block_traits.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/memory_interface.hpp"
 #include "caf/error_code.hpp"
@@ -45,7 +46,8 @@ namespace caf {
 /// full memory block is destroyed when the last weak reference expires.
 class CAF_CORE_EXPORT actor_control_block {
 public:
-  friend struct detail::make_actor_util; // calls the constructor
+  template <class>
+  friend class detail::control_block_traits;
 
   /// Specifies the memory interface used to allocate the actor control block.
   static constexpr auto memory_interface
@@ -65,28 +67,22 @@ public:
 
   using managed_type = abstract_actor;
 
+  using control_block_type = actor_control_block;
+
   actor_control_block(const actor_control_block&) = delete;
 
   actor_control_block& operator=(const actor_control_block&) = delete;
 
   /// Returns a pointer to the actor instance.
   abstract_actor* get() noexcept {
-    return managed(this);
+    using traits = detail::control_block_traits<actor_control_block>;
+    return traits::managed_ptr(this);
   }
 
-  /// Returns a pointer to the actor that is managed by this control block.
-  static abstract_actor* managed(actor_control_block* ptr) noexcept {
-    // The memory layout is enforced by `make_actor`.
-    return reinterpret_cast<abstract_actor*>(reinterpret_cast<intptr_t>(ptr)
-                                             + allocation_size);
-  }
-
-  /// Returns a pointer to the control block that stores identity and reference
-  /// counts for this actor.
+  /// Returns a pointer to the control block from a managed object pointer.
   static actor_control_block* from(const abstract_actor* ptr) noexcept {
-    // The memory layout is enforced by `make_actor`.
-    return reinterpret_cast<actor_control_block*>(
-      reinterpret_cast<intptr_t>(ptr) - allocation_size);
+    using traits = detail::control_block_traits<actor_control_block>;
+    return traits::ctrl_ptr(ptr);
   }
 
   /// Returns a reference to the actor system that owns this actor.
@@ -244,7 +240,7 @@ struct hash<caf::strong_actor_ptr> {
 template <>
 struct hash<caf::weak_actor_ptr> {
   size_t operator()(const caf::weak_actor_ptr& ptr) const noexcept {
-    return ptr ? ptr.get()->hash() : 0;
+    return ptr.hash();
   }
 };
 

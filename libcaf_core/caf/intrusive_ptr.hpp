@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -95,7 +96,7 @@ public:
   }
 
   intrusive_ptr(const intrusive_ptr& other) noexcept {
-    set_ptr(other.get(), true);
+    set_ptr(other.ptr_, true);
   }
 
   template <class Y>
@@ -204,22 +205,27 @@ public:
   }
 
   ptrdiff_t compare(const_pointer ptr) const noexcept {
-    return static_cast<ptrdiff_t>(get() - ptr);
+    return static_cast<ptrdiff_t>(ptr_ - ptr);
   }
 
   ptrdiff_t compare(const intrusive_ptr& other) const noexcept {
-    return compare(other.get());
+    return compare(other.ptr_);
   }
 
   ptrdiff_t compare(std::nullptr_t) const noexcept {
-    return reinterpret_cast<ptrdiff_t>(get());
+    return reinterpret_cast<ptrdiff_t>(ptr_);
+  }
+
+  size_t hash() const noexcept {
+    std::hash<pointer> hasher;
+    return hasher(ptr_);
   }
 
 #ifdef CAF_ENABLE_RTTI
   template <class C>
   intrusive_ptr<C> downcast() const noexcept {
     static_assert(std::is_base_of_v<T, C>);
-    return {ptr_ ? dynamic_cast<C*>(get()) : nullptr, add_ref};
+    return {ptr_ ? dynamic_cast<C*>(ptr_) : nullptr, add_ref};
   }
 #endif
 
@@ -361,3 +367,14 @@ std::string to_string(const intrusive_ptr<T>& x) {
 }
 
 } // namespace caf
+
+namespace std {
+
+template <class T>
+struct hash<caf::intrusive_ptr<T>> {
+  size_t operator()(const caf::intrusive_ptr<T>& ptr) const noexcept {
+    return ptr.hash();
+  }
+};
+
+} // namespace std

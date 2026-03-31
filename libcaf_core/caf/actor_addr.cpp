@@ -63,15 +63,15 @@ intptr_t actor_addr::compare(const actor_control_block* lhs,
 }
 
 intptr_t actor_addr::compare(const actor_addr& other) const noexcept {
-  return compare(ptr_.get(), other.ptr_.get());
+  return compare(ptr_.ctrl(), other.ptr_.ctrl());
 }
 
 intptr_t actor_addr::compare(const abstract_actor* other) const noexcept {
-  return compare(ptr_.get(), actor_control_block::from(other));
+  return compare(ptr_.ctrl(), actor_control_block::from(other));
 }
 
 intptr_t actor_addr::compare(const actor_control_block* other) const noexcept {
-  return compare(ptr_.get(), other);
+  return compare(ptr_.ctrl(), other);
 }
 
 void actor_addr::swap(actor_addr& other) noexcept {

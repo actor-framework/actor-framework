@@ -5,46 +5,81 @@
 #pragma once
 
 #include "caf/caf_deprecated.hpp"
-#include "caf/detail/comparable.hpp"
+#include "caf/detail/append_hex.hpp"
+#include "caf/detail/control_block_traits.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include <algorithm>
 #include <cstddef>
+#include <memory>
 #include <type_traits>
 
 namespace caf::detail {
 
-template <class T>
-concept has_weak_intrusive_ptr_free_functions = requires(T*& ptr) {
-  { intrusive_ptr_add_weak_ref(ptr) } -> std::same_as<void>;
-  { intrusive_ptr_release_weak(ptr) } -> std::same_as<void>;
-  { intrusive_ptr_upgrade_weak(ptr) } -> std::same_as<bool>;
+template <class T, class Managed, class ControlBlock, class Element>
+struct weak_assignable_from_oracle {
+  // an intrusive_ptr<Element> cannot assign from a base type of Element; hence,
+  // we also cannot allow assignment from a ControlBlock since that might point
+  // to a base type of Element
+  static constexpr bool value = std::is_base_of_v<Element, T>;
 };
 
-template <class T>
-concept has_weak_intrusive_ptr_member_functions = requires(T* ptr) {
-  { ptr->ref_weak() } -> std::same_as<void>;
-  { ptr->deref_weak() } -> std::same_as<void>;
-  { ptr->upgrade_weak() } -> std::same_as<bool>;
+template <class T, class Managed, class ControlBlock>
+struct weak_assignable_from_oracle<T, Managed, ControlBlock, Managed> {
+  // an intrusive_ptr<Managed> allows assignment from ControlBlock, since the
+  // control block must, by definition, point to a managed object that is either
+  // Managed or a derived type of Managed
+  static constexpr bool value = std::is_same_v<T, ControlBlock>
+                                || std::is_base_of_v<Managed, T>;
 };
+
+template <class T, class Managed, class ControlBlock>
+struct weak_assignable_from_oracle<T, Managed, ControlBlock, ControlBlock> {
+  // an intrusive_ptr<ControlBlock> behaves like a weak_intrusive_ptr<Managed>
+  static constexpr bool value = std::is_same_v<T, ControlBlock>
+                                || std::is_base_of_v<Managed, T>;
+};
+
+template <class T, class Managed, class ControlBlock, class Element>
+concept weak_assignable_from
+  = weak_assignable_from_oracle<T, Managed, ControlBlock, Element>::value;
+
+template <class T, class Managed, class ControlBlock>
+concept weak_comparable_with = std::is_same_v<T, ControlBlock>
+                               || std::is_base_of_v<Managed, T>;
 
 } // namespace caf::detail
 
 namespace caf {
 
-/// An intrusive, reference counting smart pointer implementation.
-/// @relates ref_counted
+/// A smart pointer that holds a non-owning reference to an object. A weak
+/// pointer always points to the control block of an object, never to the object
+/// itself. The template parameter `T` may be either a managed type or a control
+/// block type.
+/// @note `weak_intrusive_ptr_traits<T>` *must* be specialized.
 template <class T>
-class weak_intrusive_ptr
-  : detail::comparable<weak_intrusive_ptr<T>>,
-    detail::comparable<weak_intrusive_ptr<T>, const T*>,
-    detail::comparable<weak_intrusive_ptr<T>, std::nullptr_t> {
+class weak_intrusive_ptr {
 public:
-  using pointer = T*;
-  using const_pointer = const T*;
+  template <class>
+  friend class weak_intrusive_ptr;
+
+  using traits = weak_intrusive_ptr_traits<T>;
+
   using element_type = T;
-  using reference = T&;
-  using const_reference = const T&;
+
+  using pointer = element_type*;
+
+  using const_pointer = const element_type*;
+
+  using reference = element_type&;
+
+  using const_reference = const element_type&;
+
+  using managed_type = typename traits::managed_type;
+
+  using control_block_type = typename traits::control_block_type;
+
+  using control_block_pointer = control_block_type*;
 
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = true;
@@ -53,65 +88,53 @@ public:
     // nop
   }
 
-  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
-  // cppcheck-suppress noExplicitConstructor
-  weak_intrusive_ptr(pointer raw_ptr, bool increase_ref_count = true) noexcept {
-    set_ptr(raw_ptr, increase_ref_count);
-  }
-
-  weak_intrusive_ptr(pointer raw_ptr, add_ref_t) noexcept {
-    if (raw_ptr) {
-      ptr_ = raw_ptr;
-      do_ref_weak(ptr_);
-    } else {
-      ptr_ = nullptr;
+  template <detail::weak_assignable_from<managed_type, control_block_type, T> U>
+  explicit weak_intrusive_ptr(const intrusive_ptr<U>& src) noexcept
+    : ptr_(ctrl_ptr(src.get())) {
+    if (ptr_) {
+      ptr_->ref_weak();
     }
   }
 
-  constexpr weak_intrusive_ptr(pointer raw_ptr, adopt_ref_t) noexcept
-    : ptr_(raw_ptr) {
+  weak_intrusive_ptr(control_block_pointer ptr, add_ref_t) noexcept
+    : ptr_(ptr) {
+    if (ptr_) {
+      ptr_->ref_weak();
+    }
+  }
+
+  constexpr weak_intrusive_ptr(control_block_pointer ptr, adopt_ref_t) noexcept
+    : ptr_(ptr) {
     // nop
   }
 
   weak_intrusive_ptr(weak_intrusive_ptr&& other) noexcept
-    : ptr_(other.release()) {
+    : ptr_(std::exchange(other.ptr_, nullptr)) {
     // nop
   }
 
-  weak_intrusive_ptr(const weak_intrusive_ptr& other) noexcept {
-    set_ptr(other.get(), true);
+  weak_intrusive_ptr(const weak_intrusive_ptr& other) noexcept
+    : ptr_(other.ptr_) {
+    if (ptr_) {
+      ptr_->ref_weak();
+    }
   }
 
-  template <class Y>
+  template <detail::weak_assignable_from<managed_type, control_block_type, T> U>
   // cppcheck-suppress noExplicitConstructor
-  weak_intrusive_ptr(weak_intrusive_ptr<Y> other) noexcept
-    : ptr_(other.release()) {
-    static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");
+  weak_intrusive_ptr(weak_intrusive_ptr<U> other) noexcept
+    : ptr_(std::exchange(other.ptr_, nullptr)) {
+    // nop
   }
 
   ~weak_intrusive_ptr() {
     if (ptr_) {
-      do_deref_weak(ptr_);
+      ptr_->deref_weak();
     }
   }
 
   void swap(weak_intrusive_ptr& other) noexcept {
     std::swap(ptr_, other.ptr_);
-  }
-
-  /// Returns the raw pointer without modifying reference
-  /// count and sets this to `nullptr`.
-  [[nodiscard]] pointer release() noexcept {
-    auto result = ptr_;
-    if (result) {
-      ptr_ = nullptr;
-    }
-    return result;
-  }
-
-  CAF_DEPRECATED("use release() instead")
-  pointer detach() noexcept {
-    return release();
   }
 
   void reset() noexcept {
@@ -122,37 +145,12 @@ public:
       // release again, causing a double-free.
       auto tmp = ptr_;
       ptr_ = nullptr;
-      do_deref_weak(tmp);
+      tmp->deref_weak();
     }
-  }
-
-  CAF_DEPRECATED("use 'reset(ptr, add_ref)' or 'reset(ptr, adopt_ref)' instead")
-  void reset(pointer new_value, bool increase_ref_count = true) noexcept {
-    auto old = ptr_;
-    set_ptr(new_value, increase_ref_count);
-    if (old) {
-      do_deref_weak(old);
-    }
-  }
-
-  void reset(pointer new_value, add_ref_t) noexcept {
-    weak_intrusive_ptr tmp{new_value, add_ref};
-    swap(tmp);
-  }
-
-  void reset(pointer new_value, adopt_ref_t) noexcept {
-    weak_intrusive_ptr tmp{new_value, adopt_ref};
-    swap(tmp);
   }
 
   weak_intrusive_ptr& operator=(std::nullptr_t) noexcept {
     reset();
-    return *this;
-  }
-
-  CAF_DEPRECATED("use reset instead")
-  weak_intrusive_ptr& operator=(pointer ptr) noexcept {
-    reset(ptr, add_ref);
     return *this;
   }
 
@@ -162,22 +160,27 @@ public:
   }
 
   weak_intrusive_ptr& operator=(const weak_intrusive_ptr& other) noexcept {
-    reset(other.ptr_, add_ref);
+    weak_intrusive_ptr tmp{other};
+    swap(tmp);
     return *this;
   }
 
-  pointer get() const noexcept {
-    return ptr_;
+  template <detail::weak_assignable_from<managed_type, control_block_type, T> U>
+  weak_intrusive_ptr& operator=(const intrusive_ptr<U>& src) noexcept {
+    weak_intrusive_ptr tmp{src};
+    swap(tmp);
+    return *this;
   }
 
-  CAF_DEPRECATED("lock before accessing the object")
-  pointer operator->() const noexcept {
-    return ptr_;
+  template <detail::weak_assignable_from<managed_type, control_block_type, T> U>
+  weak_intrusive_ptr& operator=(weak_intrusive_ptr<U> src) noexcept {
+    swap(src);
+    return *this;
   }
 
-  CAF_DEPRECATED("lock before accessing the object")
-  reference operator*() const noexcept {
-    return *ptr_;
+  /// Returns a pointer to the control block.
+  control_block_pointer ctrl() const noexcept {
+    return ptr_;
   }
 
   bool operator!() const noexcept {
@@ -188,84 +191,264 @@ public:
     return static_cast<bool>(ptr_);
   }
 
-  ptrdiff_t compare(const_pointer ptr) const noexcept {
-    return static_cast<ptrdiff_t>(get() - ptr);
+  constexpr ptrdiff_t compare(control_block_pointer ptr) const noexcept {
+    return static_cast<ptrdiff_t>(ptr_ - ptr);
   }
 
-  ptrdiff_t compare(const weak_intrusive_ptr& other) const noexcept {
-    return compare(other.get());
+  template <detail::weak_comparable_with<managed_type, control_block_type> U>
+  ptrdiff_t compare(const intrusive_ptr<U>& other) const noexcept {
+    if (other) {
+      return static_cast<ptrdiff_t>(ptr_ - ctrl_ptr(other.get()));
+    }
+    return compare(nullptr);
+  }
+
+  template <detail::weak_comparable_with<managed_type, control_block_type> U>
+  ptrdiff_t compare(const weak_intrusive_ptr<U>& other) const noexcept {
+    return compare(other.ctrl());
   }
 
   ptrdiff_t compare(std::nullptr_t) const noexcept {
-    return reinterpret_cast<ptrdiff_t>(get());
+    return reinterpret_cast<ptrdiff_t>(ptr_);
+  }
+
+  size_t hash() const noexcept {
+    std::hash<control_block_pointer> hasher;
+    return hasher(ptr_);
   }
 
   /// Tries to upgrade this weak reference to a strong reference.
   intrusive_ptr<T> lock() const noexcept {
-    if (!ptr_ || !do_upgrade_weak(ptr_)) {
+    if (!ptr_ || !ptr_->upgrade_weak()) {
       return nullptr;
     }
     // Note: reference count already increased by do_upgrade_weak.
-    return {ptr_, adopt_ref};
+    if constexpr (std::is_same_v<control_block_type, T>) {
+      return {ptr_, adopt_ref};
+    } else {
+      return {get_ptr(ptr_), adopt_ref};
+    }
+  }
+
+  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
+  // cppcheck-suppress noExplicitConstructor
+  weak_intrusive_ptr(control_block_pointer ptr,
+                     bool increase_ref_count = true) noexcept
+    : ptr_(ptr) {
+    if (ptr_ && increase_ref_count) {
+      ptr_->ref_weak();
+    }
+  }
+
+  CAF_DEPRECATED("no longer supported")
+  pointer release() noexcept {
+    if (auto* result = ptr_; result) {
+      ptr_ = nullptr;
+      return get_ptr(result);
+    }
+    return nullptr;
+  }
+
+  CAF_DEPRECATED("no longer supported")
+  pointer detach() noexcept {
+    return release();
   }
 
   CAF_DEPRECATED("use lock() instead")
   pointer get_locked() const noexcept {
-    if (!ptr_ || !do_upgrade_weak(ptr_))
+    if (!ptr_ || !ptr_->upgrade_weak())
       return nullptr;
+    return get_ptr(ptr_);
+  }
+
+  CAF_DEPRECATED("no longer supported")
+  auto* get() const noexcept
+    requires std::is_same_v<control_block_type, element_type>
+  {
     return ptr_;
   }
 
+  CAF_DEPRECATED("no longer supported")
+  auto* operator->() const noexcept
+    requires std::is_same_v<control_block_type, element_type>
+  {
+    return ptr_;
+  }
+
+  CAF_DEPRECATED("no longer supported")
+  auto& operator*() const noexcept
+    requires std::is_same_v<control_block_type, element_type>
+  {
+    return *ptr_;
+  }
+
 private:
-  static void do_ref_weak(pointer ptr) noexcept {
-    if constexpr (detail::has_weak_intrusive_ptr_free_functions<T>) {
-      intrusive_ptr_add_weak_ref(ptr);
+  using control_block_traits = detail::control_block_traits<control_block_type>;
+
+  template <class U>
+  static control_block_pointer ctrl_ptr(U* ptr) noexcept {
+    if constexpr (std::is_same_v<control_block_type, U>) {
+      return ptr;
     } else {
-      static_assert(detail::has_weak_intrusive_ptr_member_functions<T>);
+      return control_block_traits::ctrl_ptr(ptr);
+    }
+  }
+
+  static pointer get_ptr(control_block_pointer ptr) noexcept {
+    if constexpr (std::is_same_v<control_block_type, element_type>) {
+      return ptr;
+    } else {
+      using managed_type = typename control_block_type::managed_type;
+      auto* mptr = control_block_traits::managed_ptr(ptr);
+      if constexpr (std::is_same_v<managed_type, element_type>) {
+        return mptr;
+      } else {
+        static_assert(std::is_base_of_v<managed_type, element_type>);
+        return static_cast<T*>(mptr);
+      }
+    }
+  }
+
+  void set_ptr(control_block_pointer ptr, bool increase_ref_count) noexcept {
+    ptr_ = ptr;
+    if (ptr && increase_ref_count) {
       ptr->ref_weak();
     }
   }
 
-  static void do_deref_weak(pointer ptr) noexcept {
-    if constexpr (detail::has_weak_intrusive_ptr_free_functions<T>) {
-      intrusive_ptr_release_weak(ptr);
-    } else {
-      static_assert(detail::has_weak_intrusive_ptr_member_functions<T>);
-      ptr->deref_weak();
-    }
-  }
-
-  static bool do_upgrade_weak(pointer ptr) noexcept {
-    if constexpr (detail::has_weak_intrusive_ptr_free_functions<T>) {
-      return intrusive_ptr_upgrade_weak(ptr);
-    } else {
-      static_assert(detail::has_weak_intrusive_ptr_member_functions<T>);
-      return ptr->upgrade_weak();
-    }
-  }
-
-  void set_ptr(pointer raw_ptr, bool increase_ref_count) noexcept {
-    ptr_ = raw_ptr;
-    if (raw_ptr && increase_ref_count) {
-      do_ref_weak(raw_ptr);
-    }
-  }
-
-  pointer ptr_;
+  control_block_pointer ptr_;
 };
 
 /// @relates weak_intrusive_ptr
-template <class X, typename Y>
-bool operator==(const weak_intrusive_ptr<X>& lhs,
-                const weak_intrusive_ptr<Y>& rhs) {
-  return lhs.get() == rhs.get();
+template <class Lhs, class Rhs>
+bool operator==(const weak_intrusive_ptr<Lhs>& lhs,
+                const weak_intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Lhs>,
+                                        weak_intrusive_ptr<Rhs>>
+{
+  return lhs.compare(rhs) == 0;
 }
 
 /// @relates weak_intrusive_ptr
-template <class X, typename Y>
-bool operator!=(const weak_intrusive_ptr<X>& lhs,
-                const weak_intrusive_ptr<Y>& rhs) {
-  return !(lhs == rhs);
+template <class Lhs, class Rhs>
+bool operator<(const weak_intrusive_ptr<Lhs>& lhs,
+               const weak_intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Lhs>,
+                                        weak_intrusive_ptr<Rhs>>
+{
+  return lhs.compare(rhs) < 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class Lhs, class Rhs>
+bool operator!=(const weak_intrusive_ptr<Lhs>& lhs,
+                const weak_intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Lhs>,
+                                        weak_intrusive_ptr<Rhs>>
+{
+  return lhs.compare(rhs) != 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class Lhs, class Rhs>
+bool operator==(const weak_intrusive_ptr<Lhs>& lhs,
+                const intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Lhs>,
+                                        intrusive_ptr<Rhs>>
+{
+  return lhs.compare(rhs) == 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class Lhs, class Rhs>
+bool operator<(const weak_intrusive_ptr<Lhs>& lhs,
+               const intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Lhs>,
+                                        intrusive_ptr<Rhs>>
+{
+  return lhs.compare(rhs) < 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class Lhs, class Rhs>
+bool operator!=(const weak_intrusive_ptr<Lhs>& lhs,
+                const intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Lhs>,
+                                        intrusive_ptr<Rhs>>
+{
+  return lhs.compare(rhs) != 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class Lhs, class Rhs>
+bool operator==(const intrusive_ptr<Lhs>& lhs,
+                const weak_intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Rhs>,
+                                        intrusive_ptr<Lhs>>
+{
+  return rhs.compare(lhs) == 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class Lhs, class Rhs>
+bool operator<(const intrusive_ptr<Lhs>& lhs,
+               const weak_intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Rhs>,
+                                        intrusive_ptr<Lhs>>
+{
+  return rhs.compare(lhs) >= 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class Lhs, class Rhs>
+bool operator!=(const intrusive_ptr<Lhs>& lhs,
+                const weak_intrusive_ptr<Rhs>& rhs)
+  requires detail::has_compare_overload<weak_intrusive_ptr<Rhs>,
+                                        intrusive_ptr<Lhs>>
+{
+  return rhs.compare(lhs) != 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
+bool operator==(const weak_intrusive_ptr<T>& lhs, std::nullptr_t) {
+  return lhs.compare(nullptr) == 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
+bool operator==(std::nullptr_t, const weak_intrusive_ptr<T>& rhs) {
+  return rhs.compare(nullptr) == 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
+bool operator!=(const weak_intrusive_ptr<T>& lhs, std::nullptr_t) {
+  return lhs.compare(nullptr) != 0;
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
+bool operator!=(std::nullptr_t, const weak_intrusive_ptr<T>& rhs) {
+  return rhs.compare(nullptr) != 0;
+}
+
+template <class T>
+std::string to_string(const weak_intrusive_ptr<T>& x) {
+  std::string result;
+  detail::append_hex(result, reinterpret_cast<uintptr_t>(x.ctrl()));
+  return result;
 }
 
 } // namespace caf
+
+namespace std {
+
+template <class T>
+struct hash<caf::weak_intrusive_ptr<T>> {
+  size_t operator()(const caf::weak_intrusive_ptr<T>& ptr) const noexcept {
+    return ptr.hash();
+  }
+};
+
+} // namespace std
