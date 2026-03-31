@@ -13,14 +13,18 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/add_ref.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/connection_guard.hpp"
+#include "caf/detail/format.hpp"
+#include "caf/detail/overload.hpp"
 #include "caf/internal/accept_handler.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/internal/net_config.hpp"
 #include "caf/make_counted.hpp"
 
 #include <atomic>
+#include <variant>
 
 namespace caf::net::http {
 
@@ -430,6 +434,43 @@ void with_t::client::do_add_header_field(std::string name, std::string value) {
   config_->fields.insert(std::pair{std::move(name), std::move(value)});
 }
 
+namespace {
+
+/// Hostname or bracketed IP literal for the RFC 7230 Host field (matches the
+/// authority host serialization in `caf::to_string(uri::authority_type)`).
+std::string host_field_hostpart(const uri::authority_type& auth) {
+  return std::visit(caf::detail::make_overload(
+                      [](const ip_address& addr) -> std::string {
+                        if (addr.embeds_v4())
+                          return to_string(addr);
+                        return detail::format("[{}]", to_string(addr));
+                      },
+                      [](const std::string& host) -> std::string {
+                        return host;
+                      }),
+                    auth.host);
+}
+
+} // namespace
+
+std::string host_header_value(const uri& endpoint) {
+  const auto& auth = endpoint.authority();
+  const auto& scheme = endpoint.scheme();
+  if (scheme == "http") {
+    auto host_part = host_field_hostpart(auth);
+    if (auth.port != 0 && auth.port != defaults::net::http_default_port)
+      return detail::format("{}:{}", host_part, auth.port);
+    return host_part;
+  }
+  if (scheme == "https") {
+    auto host_part = host_field_hostpart(auth);
+    if (auth.port != 0 && auth.port != defaults::net::https_default_port)
+      return detail::format("{}:{}", host_part, auth.port);
+    return host_part;
+  }
+  return auth.host_str();
+}
+
 expected<std::pair<async::future<response>, disposable>>
 with_t::client::request(http::method method, const_byte_span payload) {
   // Handle an error that could've been created by the DSL during client setup.
@@ -448,7 +489,7 @@ with_t::client::request(http::method method, const_byte_span payload) {
   config_->path = endpoint.path_query_fragment();
   config_->method = method;
   config_->payload = payload;
-  do_add_header_field("Host", endpoint.authority().host_str());
+  do_add_header_field("Host", host_header_value(endpoint));
   auto lift = [this](disposable&& disp) {
     return std::pair(std::move(config_->resp), std::move(disp));
   };
