@@ -5,14 +5,13 @@
 #pragma once
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
 
 #include <cstddef>
 #include <type_traits>
@@ -47,9 +46,7 @@ public:
 
   /// Simple base type for all subscription implementations that implements the
   /// reference counting member functions.
-  class CAF_CORE_EXPORT impl_base : public detail::plain_ref_counted,
-                                    public impl,
-                                    public disposable_impl {
+  class CAF_CORE_EXPORT impl_base : public impl, public disposable_impl {
   public:
     void ref_disposable() const noexcept override;
 
@@ -64,11 +61,11 @@ public:
     void cancel() final;
 
     friend void intrusive_ptr_add_ref(const impl_base* ptr) noexcept {
-      ptr->ref();
+      ptr->ref_disposable();
     }
 
     friend void intrusive_ptr_release(const impl_base* ptr) noexcept {
-      ptr->deref();
+      ptr->deref_disposable();
     }
 
   private:
@@ -82,6 +79,9 @@ public:
     ///                      this call and thus the implementation can simply
     ///                      drop its reference to the observer.
     virtual void do_dispose(bool from_external) = 0;
+
+  private:
+    mutable detail::atomic_ref_count ref_count_;
   };
 
   /// Describes a listener to the subscription that will receive an event

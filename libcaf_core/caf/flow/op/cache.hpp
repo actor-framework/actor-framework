@@ -188,19 +188,19 @@ public:
   }
 
   void ref_coordinated() const noexcept final {
-    super::ref();
+    super::ref_count_.inc();
   }
 
   void deref_coordinated() const noexcept final {
-    super::deref();
+    super::ref_count_.dec(this);
   }
 
   friend void intrusive_ptr_add_ref(const cache* ptr) noexcept {
-    ptr->ref();
+    ptr->ref_coordinated();
   }
 
   friend void intrusive_ptr_release(const cache* ptr) noexcept {
-    ptr->deref();
+    ptr->deref_coordinated();
   }
 
 private:

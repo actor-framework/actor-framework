@@ -47,14 +47,14 @@ T roundtrip(const T& x) {
 
 TEST("default_construction") {
   cow_tuple<string, string> x;
-  check_eq(x.unique(), true);
+  check_eq(x.ptr()->strong_reference_count(), 1u);
   check_eq(get<0>(x), "");
   check_eq(get<1>(x), "");
 }
 
 TEST("value_construction") {
   cow_tuple<int, int> x{1, 2};
-  check_eq(x.unique(), true);
+  check_eq(x.ptr()->strong_reference_count(), 1u);
   check_eq(get<0>(x), 1);
   check_eq(get<1>(x), 2);
   check_eq(x, make_cow_tuple(1, 2));
@@ -65,8 +65,8 @@ TEST("copy_construction") {
   cow_tuple<int, int> y{x};
   check_eq(x, y);
   check_eq(x.ptr(), y.ptr());
-  check_eq(x.unique(), false);
-  check_eq(y.unique(), false);
+  check_eq(x.ptr()->strong_reference_count(), 2u);
+  check_eq(y.ptr()->strong_reference_count(), 2u);
 }
 
 TEST("move_construction") {
@@ -74,7 +74,7 @@ TEST("move_construction") {
   cow_tuple<int, int> y{std::move(x)};
   check_eq(x.ptr(), nullptr); // NOLINT(bugprone-use-after-move)
   check_eq(y, make_tuple(1, 2));
-  check_eq(y.unique(), true);
+  check_eq(y.ptr()->strong_reference_count(), 1u);
 }
 
 TEST("copy_assignment") {
@@ -84,8 +84,8 @@ TEST("copy_assignment") {
   x = y;
   check_eq(x, y);
   check_eq(x.ptr(), y.ptr());
-  check_eq(x.unique(), false);
-  check_eq(y.unique(), false);
+  check_eq(x.ptr()->strong_reference_count(), 2u);
+  check_eq(y.ptr()->strong_reference_count(), 2u);
 }
 
 TEST("move_assignment") {
@@ -94,25 +94,25 @@ TEST("move_assignment") {
   check_ne(x, y);
   x = std::move(y);
   check_eq(x, make_tuple(3, 4));
-  check_eq(x.unique(), true);
+  check_eq(x.ptr()->strong_reference_count(), 1u);
 }
 
 TEST("make_cow_tuple") {
   cow_tuple<int, int> x{1, 2};
   auto y = make_cow_tuple(1, 2);
   check_eq(x, y);
-  check_eq(x.unique(), true);
-  check_eq(y.unique(), true);
+  check_eq(x.ptr()->strong_reference_count(), 1u);
+  check_eq(y.ptr()->strong_reference_count(), 1u);
 }
 
 TEST("unsharing") {
   auto x = make_cow_tuple(string{"old"}, string{"school"});
   auto y = x;
-  check_eq(x.unique(), false);
-  check_eq(y.unique(), false);
+  check_eq(x.ptr()->strong_reference_count(), 2u);
+  check_eq(y.ptr()->strong_reference_count(), 2u);
   get<0>(y.unshared()) = "new";
-  check_eq(x.unique(), true);
-  check_eq(y.unique(), true);
+  check_eq(x.ptr()->strong_reference_count(), 1u);
+  check_eq(y.ptr()->strong_reference_count(), 1u);
   check_eq(x.data(), make_tuple("old", "school"));
   check_eq(y.data(), make_tuple("new", "school"));
 }
@@ -126,7 +126,7 @@ TEST("serialization") {
   auto x = make_cow_tuple(1, 2, 3);
   auto y = roundtrip(x);
   check_eq(x, y);
-  check_eq(x.unique(), true);
-  check_eq(y.unique(), true);
+  check_eq(x.ptr()->strong_reference_count(), 1u);
+  check_eq(y.ptr()->strong_reference_count(), 1u);
   check_ne(x.ptr(), y.ptr());
 }

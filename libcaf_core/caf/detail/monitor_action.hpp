@@ -12,25 +12,21 @@
 
 namespace caf::detail {
 
-class CAF_CORE_EXPORT abstract_monitor_action
-  : public detail::atomic_ref_counted,
-    public action::impl {
+class CAF_CORE_EXPORT abstract_monitor_action : public action::impl {
 public:
+  ~abstract_monitor_action() noexcept override;
+
   virtual bool set_reason(error value) = 0;
-
-  void ref_disposable() const noexcept override;
-
-  void deref_disposable() const noexcept override;
 };
 
 using abstract_monitor_action_ptr = intrusive_ptr<abstract_monitor_action>;
 
 inline void intrusive_ptr_add_ref(const abstract_monitor_action* ptr) noexcept {
-  ptr->ref();
+  ptr->ref_disposable();
 }
 
 inline void intrusive_ptr_release(const abstract_monitor_action* ptr) noexcept {
-  ptr->deref();
+  ptr->deref_disposable();
 }
 
 /// A thread safe single shot action encapsulating a function and a function
@@ -44,10 +40,18 @@ public:
     // nop
   }
 
-  ~monitor_action() override {
+  ~monitor_action() noexcept override {
     std::lock_guard guard{mtx_};
     if (state_ == action::state::scheduled)
       f_.~function_wrapper();
+  }
+
+  void ref_disposable() const noexcept override {
+    ref_count_.inc();
+  }
+
+  void deref_disposable() const noexcept override {
+    ref_count_.dec(this);
   }
 
   void dispose() override {
@@ -100,6 +104,7 @@ private:
       return std::move(f)(std::move(arg));
     }
   };
+  mutable detail::atomic_ref_count ref_count_;
   mutable std::mutex mtx_;
   action::state state_;
   union {

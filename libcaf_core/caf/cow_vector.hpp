@@ -67,11 +67,6 @@ public:
     return impl_->std;
   }
 
-  /// Returns whether the reference count of the managed object is 1.
-  [[nodiscard]] bool unique() const noexcept {
-    return impl_->unique();
-  }
-
   [[nodiscard]] bool empty() const noexcept {
     return impl_->std.empty();
   }

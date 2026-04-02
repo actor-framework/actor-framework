@@ -299,19 +299,19 @@ SCENARIO("asynchronous buffers can generate flow items") {
         auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
         auto ptr = make_counted<impl_t>(coordinator(), nullptr,
                                         snk->as_observer());
-        check_eq(ptr->get_reference_count(), 1u);
+        check_eq(ptr->strong_reference_count(), 1u);
         {
           auto sub = caf::flow::subscription{ptr.get()};
-          check_eq(ptr->get_reference_count(), 2u);
+          check_eq(ptr->strong_reference_count(), 2u);
         }
         run_flows(); // clean up the subscription
-        check_eq(ptr->get_reference_count(), 1u);
+        check_eq(ptr->strong_reference_count(), 1u);
         {
           auto cptr = async::consumer_ptr{ptr.get()};
-          check_eq(ptr->get_reference_count(), 2u);
+          check_eq(ptr->strong_reference_count(), 2u);
         }
         run_flows(); // clean up the subscription
-        check_eq(ptr->get_reference_count(), 1u);
+        check_eq(ptr->strong_reference_count(), 1u);
       }
     }
   }

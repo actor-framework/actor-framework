@@ -70,7 +70,7 @@ OUTLINE("scheduling resumables") {
         // Note: destroying the actor system here will cause CAF to shut down.
         //       Ultimately stopping the scheduler and releasing the references.
         sys = nullptr;
-        check(uut->unique());
+        check_eq(uut->strong_reference_count(), 1u);
       }
     }
     WHEN("scheduling multiple resumables") {
@@ -93,7 +93,7 @@ OUTLINE("scheduling resumables") {
         //       Ultimately stopping the scheduler and releasing the references.
         sys = nullptr;
         for (const auto& ptr : testees)
-          check(ptr->unique());
+          check_eq(ptr->strong_reference_count(), 1u);
       }
     }
   }
@@ -157,7 +157,7 @@ OUTLINE("scheduling units that are awaiting") {
         //       Ultimately stopping the scheduler and releasing the references.
         sys = nullptr;
         for (const auto& uut : testees)
-          check(uut->unique());
+          check_eq(uut->strong_reference_count(), 1u);
       }
     }
   }

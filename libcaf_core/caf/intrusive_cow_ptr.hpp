@@ -4,34 +4,29 @@
 
 #pragma once
 
+#include "caf/add_ref.hpp"
+#include "caf/adopt_ref.hpp"
 #include "caf/caf_deprecated.hpp"
+#include "caf/detail/append_hex.hpp"
+#include "caf/detail/assert.hpp"
+#include "caf/detail/build_config.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
+
+namespace caf::detail {
+
+template <class T>
+concept has_intrusive_cow_ptr_unshare = requires(T*& ptr) {
+  { intrusive_cow_ptr_unshare(ptr) } -> std::same_as<T*>;
+};
+
+} // namespace caf::detail
 
 namespace caf {
-
-/// Default implementation for unsharing values.
-/// @relates intrusive_cow_ptr
-template <class T>
-T* default_intrusive_cow_ptr_unshare(T*& ptr) {
-  if (!ptr->unique()) {
-    auto new_ptr = ptr->copy();
-    intrusive_ptr_release(ptr);
-    ptr = new_ptr;
-  }
-  return ptr;
-}
-
-/// Customization point for allowing intrusive_cow_ptr<T> with a forward
-/// declared T.
-/// @relates intrusive_cow_ptr
-template <class T>
-T* intrusive_cow_ptr_unshare(T*& ptr) {
-  return default_intrusive_cow_ptr_unshare(ptr);
-}
 
 /// An intrusive, reference counting smart pointer implementation with
 /// copy-on-write optimization.
@@ -69,9 +64,8 @@ public:
   }
 
   template <class Y>
-  // cppcheck-suppress noExplicitConstructor
   intrusive_cow_ptr(intrusive_cow_ptr<Y> other) noexcept
-    : ptr_(other.detach(), false) {
+    : ptr_(other.release(), adopt_ref) {
     // nop
   }
 
@@ -105,7 +99,7 @@ public:
 
   template <class U = T, class... Ts>
   void emplace(Ts&&... xs) {
-    reset(new U(std::forward<Ts>(xs)...), false);
+    reset(new U(std::forward<Ts>(xs)...), adopt_ref);
   }
 
   // -- comparison -------------------------------------------------------------
@@ -168,17 +162,27 @@ public:
   /// Forces a copy of the managed object unless it already has a reference
   /// count of exactly 1.
   void unshare() {
-    if (ptr_ != nullptr)
-      static_cast<void>(unshared());
+    std::ignore = unshared_ptr();
   }
 
   /// Returns a mutable pointer to the managed object.
   pointer unshared_ptr() {
-    return intrusive_cow_ptr_unshare(ptr_.ptr_);
+    if (ptr_ != nullptr) {
+      if (ptr_->strong_reference_count() != 1) {
+        if constexpr (detail::has_intrusive_cow_ptr_unshare<T>) {
+          return intrusive_cow_ptr_unshare(ptr_.ptr_);
+        } else {
+          ptr_.reset(ptr_->copy(), adopt_ref);
+        }
+      }
+      return ptr_.get();
+    }
+    return nullptr;
   }
 
   /// Returns a mutable reference to the managed object.
   reference unshared() {
+    CAF_ASSERT(ptr_ != nullptr);
     return *unshared_ptr();
   }
 
@@ -189,7 +193,7 @@ public:
     return ptr_.get();
   }
 
-  /// Returns the intrusive pointer managing the object.
+  CAF_DEPRECATED("accessing the internal intrusive_ptr is no longer supported")
   const counting_pointer& counting_ptr() const noexcept {
     return ptr_;
   }
@@ -208,11 +212,13 @@ public:
     return get() != nullptr;
   }
 
+#ifdef CAF_ENABLE_RTTI
   template <class C>
   intrusive_cow_ptr<C> downcast() const noexcept {
     using res_t = intrusive_cow_ptr<C>;
     return (ptr_) ? res_t{ptr_.template downcast<C>()} : res_t{};
   }
+#endif
 
   template <class C>
   intrusive_cow_ptr<C> upcast() const noexcept {
@@ -225,7 +231,7 @@ public:
   /// Constructs an object of type `T` in an `intrusive_cow_ptr`.
   template <class... Ts>
   static intrusive_cow_ptr make(Ts&&... xs) {
-    return intrusive_cow_ptr{new T(std::forward<Ts>(xs)...), false};
+    return intrusive_cow_ptr{new T(std::forward<Ts>(xs)...), adopt_ref};
   }
 
 private:
@@ -237,7 +243,9 @@ private:
 /// @relates intrusive_cow_ptr
 template <class T>
 std::string to_string(const intrusive_cow_ptr<T>& x) {
-  return to_string(x.counting_ptr());
+  std::string result;
+  detail::append_hex(result, reinterpret_cast<uintptr_t>(x.get()));
+  return result;
 }
 
 } // namespace caf

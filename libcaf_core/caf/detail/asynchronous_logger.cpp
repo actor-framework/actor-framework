@@ -10,7 +10,7 @@
 #include "caf/console_printer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/actor_system_access.hpp"
-#include "caf/detail/atomic_ref_counted.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/log_level_map.hpp"
@@ -229,8 +229,7 @@ struct console_printer_storage {
 using file_ptr = std::unique_ptr<FILE, file_deleter>;
 
 // Default logger implementation.
-class default_logger : public detail::asynchronous_logger,
-                       public detail::atomic_ref_counted {
+class default_logger : public detail::asynchronous_logger {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -485,13 +484,13 @@ public:
 
   /// Increases the reference count of the coordinated.
   void ref_logger() const noexcept final {
-    ref();
+    ref_count_.inc();
   }
 
   /// Decreases the reference count of the coordinated and destroys the object
   /// if necessary.
   void deref_logger() const noexcept final {
-    deref();
+    ref_count_.dec(this);
   }
 
   bool open_file() {
@@ -668,6 +667,8 @@ public:
   }
 
   // -- member variables -------------------------------------------------------
+
+  mutable detail::atomic_ref_count ref_count_;
 
   // Configures verbosity and output generation.
   config cfg_;

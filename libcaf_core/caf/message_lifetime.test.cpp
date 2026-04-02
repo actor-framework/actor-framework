@@ -88,9 +88,9 @@ TEST("nocopy_in_scoped_actor") {
   self->mail(msg).send(self);
   self->receive([&](const fail_on_copy& x) {
     check_eq(x.value, 1);
-    check_eq(msg.cdata().get_reference_count(), 2u);
+    check_eq(msg.cdata().strong_reference_count(), 2u);
   });
-  check_eq(msg.cdata().get_reference_count(), 1u);
+  check_eq(msg.cdata().strong_reference_count(), 1u);
 }
 
 TEST("message_lifetime_in_scoped_actor") {
@@ -100,12 +100,12 @@ TEST("message_lifetime_in_scoped_actor") {
     check_eq(a, 1);
     check_eq(b, 2);
     check_eq(c, 3);
-    check_eq(msg.cdata().get_reference_count(), 2u);
+    check_eq(msg.cdata().strong_reference_count(), 2u);
   });
-  check_eq(msg.cdata().get_reference_count(), 1u);
+  check_eq(msg.cdata().strong_reference_count(), 1u);
   msg = make_message(42);
   self->mail(msg).send(self);
-  check_eq(msg.cdata().get_reference_count(), 2u);
+  check_eq(msg.cdata().strong_reference_count(), 2u);
   self->receive([&](int& value) {
     auto addr = static_cast<void*>(&value);
     check_ne(addr, msg.cdata().at(0));

@@ -157,7 +157,6 @@ caf_add_component(
     caf/detail/asynchronous_actor_clock.cpp
     caf/detail/asynchronous_actor_clock.test.cpp
     caf/detail/asynchronous_logger.cpp
-    caf/detail/atomic_ref_counted.cpp
     caf/detail/base64.cpp
     caf/detail/base64.test.cpp
     caf/detail/beacon.cpp
@@ -206,7 +205,6 @@ caf_add_component(
     caf/detail/parser/read_string.test.cpp
     caf/detail/parser/read_timespan.test.cpp
     caf/detail/parser/read_unsigned_integer.test.cpp
-    caf/detail/plain_ref_counted.cpp
     caf/detail/pretty_type_name.cpp
     caf/detail/print.cpp
     caf/detail/private_thread.cpp
@@ -290,6 +288,7 @@ caf_add_component(
     caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
+    caf/intrusive_cow_ptr.test.cpp
     caf/intrusive_ptr.test.cpp
     caf/ipv4_address.cpp
     caf/ipv4_address.test.cpp

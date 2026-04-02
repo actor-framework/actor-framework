@@ -15,9 +15,9 @@
 #include "caf/raise_error.hpp"
 #include "caf/type_id.hpp"
 
-#include <sstream>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 namespace caf::detail {
 
@@ -74,10 +74,6 @@ public:
 
   size_t empty() const noexcept {
     return size() == 0;
-  }
-
-  bool unique() const noexcept {
-    return data_ && data_->unique();
   }
 
   template <class... Ts>

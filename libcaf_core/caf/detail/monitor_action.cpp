@@ -6,12 +6,8 @@
 
 namespace caf::detail {
 
-void abstract_monitor_action::ref_disposable() const noexcept {
-  ref();
-}
-
-void abstract_monitor_action::deref_disposable() const noexcept {
-  deref();
+abstract_monitor_action::~abstract_monitor_action() noexcept {
+  // nop
 }
 
 } // namespace caf::detail

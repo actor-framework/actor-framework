@@ -15,11 +15,11 @@ void mock_consumer::on_producer_wakeup() {
 }
 
 void mock_consumer::ref_consumer() const noexcept {
-  ref();
+  ref_count_.inc();
 }
 
 void mock_consumer::deref_consumer() const noexcept {
-  deref();
+  ref_count_.dec(this);
 }
 
 } // namespace caf::async

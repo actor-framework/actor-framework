@@ -8,6 +8,7 @@
 
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/type_id.hpp"
 
 using namespace caf;
@@ -138,7 +139,7 @@ TEST("message_builder can build messages incrementally") {
       check_eq(msg.get_as<std::string>(0), "foo");
       const auto& ci = msg.get_as<counted_int_ptr>(1);
       check_eq(ci->value(), 42);
-      check_eq(ci->get_reference_count(), 2u);
+      check_eq(ci->strong_reference_count(), 2u);
     }
   }
   SECTION("clear() removes all messages from the builder") {
@@ -172,7 +173,7 @@ TEST("move_to_message move-constructs message elements") {
       check_eq(msg.get_as<std::string>(0), "foo");
       const auto& ci = msg.get_as<counted_int_ptr>(1);
       check_eq(ci->value(), 42);
-      check_eq(ci->get_reference_count(), 1u);
+      check_eq(ci->strong_reference_count(), 1u);
     }
   }
   SECTION("move_to_message moves value from message with no other reference") {
@@ -181,7 +182,7 @@ TEST("move_to_message move-constructs message elements") {
     if (check_eq(msg.types(), make_type_id_list<counted_int_ptr>())) {
       const auto& ci = msg.get_as<counted_int_ptr>(0);
       check_eq(ci->value(), 42);
-      check_eq(ci->get_reference_count(), 1u);
+      check_eq(ci->strong_reference_count(), 1u);
     }
   }
   SECTION("move_to_message copies value from message with multiple reference") {
@@ -194,7 +195,7 @@ TEST("move_to_message move-constructs message elements") {
           make_type_id_list<counted_int_ptr, counted_int_ptr, int32_t>())) {
       const auto& ci = msg.get_as<counted_int_ptr>(0);
       check_eq(ci->value(), 1);
-      check_eq(ci->get_reference_count(), 2u);
+      check_eq(ci->strong_reference_count(), 2u);
       check_eq(msg.get_as<int32_t>(2), 3);
     }
   }

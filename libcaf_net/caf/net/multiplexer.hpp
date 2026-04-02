@@ -8,7 +8,6 @@
 #include "caf/net/socket.hpp"
 
 #include "caf/async/execution_context.hpp"
-#include "caf/detail/atomic_ref_counted.hpp"
 
 #include <deque>
 #include <memory>

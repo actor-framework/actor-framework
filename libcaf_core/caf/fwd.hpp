@@ -361,19 +361,12 @@ class actor_system_access;
 class actor_system_config_access;
 class asynchronous_logger;
 class disposer;
-class dynamic_message_data;
 class mailbox_factory;
 class message_data;
 class private_thread;
 class response_promise_state;
 class stream_bridge;
 class stream_bridge_sub;
-
-// enable intrusive_cow_ptr<dynamic_message_data> with forward declaration only
-CAF_CORE_EXPORT void intrusive_ptr_add_ref(const dynamic_message_data*);
-CAF_CORE_EXPORT void intrusive_ptr_release(const dynamic_message_data*);
-CAF_CORE_EXPORT dynamic_message_data*
-intrusive_cow_ptr_unshare(dynamic_message_data*&);
 
 using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
 

@@ -21,6 +21,8 @@ class on_error_resume_next_sub : public subscription::impl_base,
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
+  using super = subscription::impl_base;
+
   on_error_resume_next_sub(coordinator* parent, observer<T> out,
                            Predicate predicate, observable<T> fallback)
     : parent_(parent),
@@ -50,12 +52,12 @@ public:
 
   // -- implementation of observer_impl ----------------------------------------
 
-  void ref_coordinated() const noexcept override {
-    ref();
+  void ref_coordinated() const noexcept final {
+    super::ref_coordinated();
   }
 
-  void deref_coordinated() const noexcept override {
-    deref();
+  void deref_coordinated() const noexcept final {
+    super::deref_coordinated();
   }
 
   void on_subscribe(subscription sub) override {

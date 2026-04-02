@@ -35,8 +35,7 @@ public:
 
 using http_request_producer_ptr = intrusive_ptr<http_request_producer>;
 
-class http_request_producer_impl : public detail::atomic_ref_counted,
-                                   public http_request_producer {
+class http_request_producer_impl : public http_request_producer {
 public:
   using buffer_ptr = async::spsc_buffer_ptr<net::http::request>;
 
@@ -58,11 +57,11 @@ public:
   }
 
   void ref_producer() const noexcept override {
-    ref();
+    ref_count_.inc();
   }
 
   void deref_producer() const noexcept override {
-    deref();
+    ref_count_.dec(this);
   }
 
   bool push(const net::http::request& item) override {
@@ -70,6 +69,7 @@ public:
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   async::execution_context_ptr ecp_;
   buffer_ptr buf_;
 };

@@ -31,6 +31,8 @@ public:
 
   using state_type = ucast_sub_state<T>;
 
+  using super = subscription::impl_base;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   prefix_and_tail_sub(coordinator* parent, observer<tuple_t> out,
@@ -52,12 +54,12 @@ public:
     return parent_;
   }
 
-  void ref_coordinated() const noexcept override {
-    ref();
+  void ref_coordinated() const noexcept final {
+    super::ref_coordinated();
   }
 
-  void deref_coordinated() const noexcept override {
-    deref();
+  void deref_coordinated() const noexcept final {
+    super::deref_coordinated();
   }
 
   void on_next(const T& item) override {
@@ -202,13 +204,13 @@ private:
 /// @relates prefix_and_tail_sub
 template <class T>
 void intrusive_ptr_add_ref(prefix_and_tail_sub<T>* ptr) {
-  ptr->ref();
+  ptr->ref_coordinated();
 }
 
 /// @relates prefix_and_tail_sub
 template <class T>
 void intrusive_ptr_release(prefix_and_tail_sub<T>* ptr) {
-  ptr->deref();
+  ptr->deref_coordinated();
 }
 
 /// Decorates an observable to split its output into a prefix of fixed size plus

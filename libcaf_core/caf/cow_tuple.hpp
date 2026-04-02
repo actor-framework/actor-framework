@@ -73,11 +73,6 @@ public:
     return ptr_.unshared().data;
   }
 
-  /// Returns whether the reference count of the managed object is 1.
-  bool unique() const noexcept {
-    return ptr_->unique();
-  }
-
   /// @private
   const intrusive_cow_ptr<impl>& ptr() const noexcept {
     return ptr_;

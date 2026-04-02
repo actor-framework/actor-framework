@@ -34,10 +34,6 @@ std::string uri::authority_type::host_str() const {
   return to_string(std::get<ip_address>(host));
 }
 
-uri::impl_type::impl_type() : rc_(1) {
-  // nop
-}
-
 void uri::impl_type::assemble_str() {
   str.clear();
   uri::encode(str, scheme);
