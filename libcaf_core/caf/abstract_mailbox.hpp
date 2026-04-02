@@ -4,12 +4,12 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/caf_deprecated.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/inbox_result.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/abstract_ref_counted.hpp"
 
 namespace caf {
 

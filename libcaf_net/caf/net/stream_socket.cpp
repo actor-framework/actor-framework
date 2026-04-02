@@ -8,6 +8,7 @@
 #include "caf/net/socket_guard.hpp"
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/expected.hpp"
 #include "caf/internal/net_syscall.hpp"

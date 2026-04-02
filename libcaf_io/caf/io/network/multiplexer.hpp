@@ -39,8 +39,8 @@ public:
   /// Tries to connect to `host` on given `port` and returns a `scribe` instance
   /// on success.
   /// @threadsafe
-  virtual expected<scribe_ptr> new_tcp_scribe(const std::string& host,
-                                              uint16_t port) = 0;
+  virtual expected<scribe_ptr>
+  new_tcp_scribe(const std::string& host, uint16_t port) = 0;
 
   /// Creates a new doorman from a native socket handle.
   /// @threadsafe
@@ -51,7 +51,8 @@ public:
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<doorman_ptr> new_tcp_doorman(uint16_t port,
                                                 const char* in = nullptr,
-                                                bool reuse_addr = false) = 0;
+                                                bool reuse_addr = false)
+    = 0;
 
   /// Creates a new `datagram_servant` from a native socket handle.
   /// @threadsafe
@@ -72,7 +73,8 @@ public:
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<datagram_servant_ptr>
   new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
-                         bool reuse_addr = false) = 0;
+                         bool reuse_addr = false)
+    = 0;
 
   /// Makes sure the multiplier does not exit its event loop until
   /// the destructor of `supervisor` has been called.

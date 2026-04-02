@@ -290,7 +290,7 @@ TEST("actors can delay actions") {
           return behavior{[](int) {}};
         });
       }
-      check_eq(actor_cast<actor_control_block*>(aut)->strong_reference_count(), 2u);
+      check_eq(aut->ctrl()->strong_reference_count(), 2u);
     }
     SECTION("weak ref") {
       SECTION("std::chrono::system_clock") {
@@ -307,7 +307,7 @@ TEST("actors can delay actions") {
           return behavior{[](int) {}};
         });
       }
-      check_eq(actor_cast<actor_control_block*>(aut)->strong_reference_count(), 1u);
+      check_eq(aut->ctrl()->strong_reference_count(), 1u);
     }
   }
   SECTION("relative timeout") {
@@ -316,14 +316,14 @@ TEST("actors can delay actions") {
         self->run_delayed(1s, non_copyable_callback{fn});
         return behavior{[](int) {}};
       });
-      check_eq(actor_cast<actor_control_block*>(aut)->strong_reference_count(), 2u);
+      check_eq(aut->ctrl()->strong_reference_count(), 2u);
     }
     SECTION("weak ref") {
       aut = sys.spawn([fn](event_based_actor* self) {
         self->run_delayed_weak(1s, non_copyable_callback{fn});
         return behavior{[](int) {}};
       });
-      check_eq(actor_cast<actor_control_block*>(aut)->strong_reference_count(), 1u);
+      check_eq(aut->ctrl()->strong_reference_count(), 1u);
     }
   }
   check_eq(mail_count(), 0u);
@@ -356,7 +356,7 @@ TEST("actors can cancel pending delayed actions") {
           return behavior{[](int) {}};
         });
       }
-      check_eq(actor_cast<actor_control_block*>(aut)->strong_reference_count(), 2u);
+      check_eq(aut->ctrl()->strong_reference_count(), 2u);
     }
     SECTION("weak ref") {
       SECTION("std::chrono::system_clock") {
@@ -373,7 +373,7 @@ TEST("actors can cancel pending delayed actions") {
           return behavior{[](int) {}};
         });
       }
-      check_eq(actor_cast<actor_control_block*>(aut)->strong_reference_count(), 1u);
+      check_eq(aut->ctrl()->strong_reference_count(), 1u);
     }
   }
   SECTION("relative timeout") {
@@ -382,14 +382,14 @@ TEST("actors can cancel pending delayed actions") {
         *pending = self->run_delayed(1s, non_copyable_callback{fn});
         return behavior{[](int) {}};
       });
-      check_eq(actor_cast<actor_control_block*>(aut)->strong_reference_count(), 2u);
+      check_eq(aut->ctrl()->strong_reference_count(), 2u);
     }
     SECTION("weak ref") {
       aut = sys.spawn([fn, pending](event_based_actor* self) {
         *pending = self->run_delayed_weak(1s, non_copyable_callback{fn});
         return behavior{[](int) {}};
       });
-      check_eq(actor_cast<actor_control_block*>(aut)->strong_reference_count(), 1u);
+      check_eq(aut->ctrl()->strong_reference_count(), 1u);
     }
   }
   check_eq(mail_count(), 0u);

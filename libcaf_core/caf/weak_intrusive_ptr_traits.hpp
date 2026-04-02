@@ -10,7 +10,6 @@ namespace caf {
 /// provide the following member types:
 /// - `control_block_type` the type of the control block
 /// - `managed_type` the type of objects managed by the control block
-/// - `element_type`
 template <class T>
 struct weak_intrusive_ptr_traits;
 

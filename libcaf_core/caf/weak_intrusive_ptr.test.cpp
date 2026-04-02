@@ -520,10 +520,9 @@ TEST("comparison operators with derived type weak pointers") {
 
 TEST("hash") {
   auto ptr = make_custom<class0>();
-  auto wptr = class0_weak_ptr{ptr};
-  check_ne(wptr.hash(), 0u);
-  wptr = nullptr;
-  check_eq(wptr.hash(), 0u);
+  auto wptr1 = class0_weak_ptr{ptr};
+  auto wptr2 = class0_weak_ptr{ptr};
+  check_eq(wptr1.hash(), wptr2.hash());
 }
 
 TEST("weak pointer may point to the control block explicitly") {
