@@ -338,12 +338,4 @@ private:
   config_ptr config_;
 };
 
-/// Builds the RFC 7230 `Host` header value from @p endpoint. For `http` and
-/// `https`, the host part matches `caf::to_string(uri::authority_type)` (IPv6
-/// literals are bracketed unless IPv4-embedded); the port is omitted when it is
-/// unset, or equal to the default (80 or 443). For other schemes, returns
-/// `authority_type::host_str()`.
-/// @param endpoint URI whose authority is used (typically `http` or `https`).
-CAF_NET_EXPORT std::string host_header_value(const uri& endpoint);
-
 } // namespace caf::net::http

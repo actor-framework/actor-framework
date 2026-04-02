@@ -16,8 +16,6 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/connection_guard.hpp"
-#include "caf/detail/format.hpp"
-#include "caf/detail/overload.hpp"
 #include "caf/internal/accept_handler.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/internal/net_config.hpp"
@@ -436,40 +434,24 @@ void with_t::client::do_add_header_field(std::string name, std::string value) {
 
 namespace {
 
-/// Hostname or bracketed IP literal for the RFC 7230 Host field (matches the
-/// authority host serialization in `caf::to_string(uri::authority_type)`).
-std::string host_field_hostpart(const uri::authority_type& auth) {
-  return std::visit(caf::detail::make_overload(
-                      [](const ip_address& addr) -> std::string {
-                        if (addr.embeds_v4())
-                          return to_string(addr);
-                        return detail::format("[{}]", to_string(addr));
-                      },
-                      [](const std::string& host) -> std::string {
-                        return host;
-                      }),
-                    auth.host);
+// Builds the RFC 7230 `Host` header value from @p endpoint.
+// The port is omitted when it is unset, or equal to the default (80 or 443).
+std::string host_header_value(const uri& endpoint) {
+  const auto& scheme = endpoint.scheme();
+  auto auth = endpoint.authority();
+  if (auth.userinfo) {
+    auth.userinfo = std::nullopt; // suppress userinfo in 'Host' header field
+  }
+  if (scheme == "http" && auth.port == defaults::net::http_default_port) {
+    auth.port = 0; // suppress default HTTP port in 'Host' Header field
+  }
+  if (scheme == "https" && auth.port == defaults::net::https_default_port) {
+    auth.port = 0; // suppress default HTTPS port in 'Host' Header field
+  }
+  return to_string(auth);
 }
 
 } // namespace
-
-std::string host_header_value(const uri& endpoint) {
-  const auto& auth = endpoint.authority();
-  const auto& scheme = endpoint.scheme();
-  if (scheme == "http") {
-    auto host_part = host_field_hostpart(auth);
-    if (auth.port != 0 && auth.port != defaults::net::http_default_port)
-      return detail::format("{}:{}", host_part, auth.port);
-    return host_part;
-  }
-  if (scheme == "https") {
-    auto host_part = host_field_hostpart(auth);
-    if (auth.port != 0 && auth.port != defaults::net::https_default_port)
-      return detail::format("{}:{}", host_part, auth.port);
-    return host_part;
-  }
-  return auth.host_str();
-}
 
 expected<std::pair<async::future<response>, disposable>>
 with_t::client::request(http::method method, const_byte_span payload) {

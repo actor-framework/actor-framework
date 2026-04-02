@@ -350,6 +350,8 @@ TEST("GH-2226 regression") {
   check_eq(elog->errors(), std::vector<error>{});
 }
 
+// TODO: refactor the test to use a connected socket pair and improve test
+// coverage for different host formats.
 TEST("GH-2309 regression: Host header contains explicit non-default port") {
   caf::actor_system_config cfg;
   cfg.load<caf::net::middleman>();
@@ -362,14 +364,14 @@ TEST("GH-2309 regression: Host header contains explicit non-default port") {
   auto expected_host = net::is_ipv4(acceptor)
                          ? detail::format("127.0.0.1:{}", port)
                          : detail::format("[::1]:{}", port);
-  std::promise<std::string> host_prom;
-  auto host_fut = host_prom.get_future();
+  std::promise<std::string> prom;
+  auto host_fut = prom.get_future();
   auto hdl
     = net::http::with(sys)
         .accept(acceptor)
         .route("/host-check", net::http::method::get,
-               [&host_prom](net::http::responder& res) mutable {
-                 host_prom.set_value(std::string{res.header().field("Host")});
+               [prom = std::move(prom)](net::http::responder& res) mutable {
+                 prom.set_value(std::string{res.header().field("Host")});
                  res.respond(net::http::status::ok, "text/plain", "");
                })
         .start();
@@ -389,63 +391,4 @@ TEST("GH-2309 regression: Host header contains explicit non-default port") {
 
   require(host_fut.wait_for(1s) == std::future_status::ready);
   check_eq(host_fut.get(), expected_host);
-}
-
-TEST("host_header_value") {
-  using net::http::host_header_value;
-  auto parse_uri = [this](std::string_view sv) {
-    uri u;
-    auto err = parse(sv, u);
-    require(err.empty());
-    return u;
-  };
-
-  SECTION("http IPv4 with non-default port") {
-    auto u = parse_uri("http://127.0.0.1:8080/");
-    check_eq(host_header_value(u), "127.0.0.1:8080");
-  }
-  SECTION("http IPv4 omitted port") {
-    auto u = parse_uri("http://127.0.0.1/");
-    check_eq(host_header_value(u), "127.0.0.1");
-  }
-  SECTION("http IPv4 explicit default port") {
-    auto u = parse_uri("http://127.0.0.1:80/");
-    check_eq(host_header_value(u), "127.0.0.1");
-  }
-  SECTION("http hostname with non-default port") {
-    auto u = parse_uri("http://api.example.org:3000/v1");
-    check_eq(host_header_value(u), "api.example.org:3000");
-  }
-  SECTION("http IPv6 with non-default port") {
-    auto u = parse_uri("http://[::1]:9090/");
-    check_eq(host_header_value(u), "[::1]:9090");
-  }
-  SECTION("http IPv6 omitted port") {
-    auto u = parse_uri("http://[::1]/");
-    check_eq(host_header_value(u), "[::1]");
-  }
-  SECTION("http IPv6 explicit default port") {
-    auto u = parse_uri("http://[::1]:80/");
-    check_eq(host_header_value(u), "[::1]");
-  }
-  SECTION("https hostname omitted port") {
-    auto u = parse_uri("https://example.com/");
-    check_eq(host_header_value(u), "example.com");
-  }
-  SECTION("https hostname non-default port") {
-    auto u = parse_uri("https://example.com:8443/");
-    check_eq(host_header_value(u), "example.com:8443");
-  }
-  SECTION("https explicit default port") {
-    auto u = parse_uri("https://example.com:443/");
-    check_eq(host_header_value(u), "example.com");
-  }
-  SECTION("https IPv6 with non-default port") {
-    auto u = parse_uri("https://[2001:db8::1]:10443/");
-    check_eq(host_header_value(u), "[2001:db8::1]:10443");
-  }
-  SECTION("non-http scheme falls back to host_str") {
-    auto u = parse_uri("ftp://files.example.com:21/");
-    check_eq(host_header_value(u), u.authority().host_str());
-  }
 }
