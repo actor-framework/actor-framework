@@ -15,6 +15,27 @@
 
 namespace caf::net::http {
 
+namespace {
+
+// Builds the RFC 7230 `Host` header value from @p endpoint.
+// The port is omitted when it is unset, or equal to the default (80 or 443).
+std::string host_header_value(const uri& endpoint) {
+  const auto& scheme = endpoint.scheme();
+  auto auth = endpoint.authority();
+  if (auth.userinfo) {
+    auth.userinfo = std::nullopt; // suppress userinfo in 'Host' header field
+  }
+  if (scheme == "http" && auth.port == defaults::net::http_default_port) {
+    auth.port = 0; // suppress default HTTP port in 'Host' Header field
+  }
+  if (scheme == "https" && auth.port == defaults::net::https_default_port) {
+    auth.port = 0; // suppress default HTTPS port in 'Host' Header field
+  }
+  return to_string(auth);
+}
+
+} // namespace
+
 class client_factory::config_impl : public dsl::client_config_value {
 public:
   using super = dsl::client_config_value;
@@ -110,7 +131,7 @@ client_factory::request(http::method method, const_byte_span payload) {
   CAF_ASSERT(std::holds_alternative<uri>(data.server));
   const auto& resource = std::get<uri>(data.server);
   config_->path = resource.path_query_fragment();
-  config_->fields.emplace("Host"s, resource.authority().host_str());
+  config_->fields.emplace("Host"s, host_header_value(resource));
   return do_start(data, method, payload);
 }
 
