@@ -357,10 +357,6 @@ public:
     varargs_tup_receive(rcc, mid, tup);
   }
 
-  /// Receives messages until either a pre- or postcheck of `rcc` fails.
-  void receive_impl(receive_cond& rcc, message_id mid,
-                    detail::blocking_behavior& bhvr);
-
   void on_cleanup(const error& reason) override;
 
   // -- backwards compatibility ------------------------------------------------
@@ -374,6 +370,11 @@ public:
   }
 
   /// @endcond
+
+protected:
+  /// Receives messages until either a pre- or postcheck of `rcc` fails.
+  virtual void receive_impl(receive_cond& rcc, message_id mid,
+                            detail::blocking_behavior& bhvr);
 
 private:
   void do_unstash(mailbox_element_ptr ptr) override;

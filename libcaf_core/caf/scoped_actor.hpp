@@ -26,13 +26,15 @@ public:
 
   explicit scoped_actor(actor_system& sys, bool hide = false);
 
+  scoped_actor(scoped_actor&&) noexcept = default;
+
+  scoped_actor& operator=(scoped_actor&&) noexcept;
+
   scoped_actor(const scoped_actor&) = delete;
+
   scoped_actor& operator=(const scoped_actor&) = delete;
 
-  scoped_actor(scoped_actor&&) = delete;
-  scoped_actor& operator=(scoped_actor&&) = delete;
-
-  ~scoped_actor();
+  ~scoped_actor() noexcept;
 
   explicit operator bool() const {
     return static_cast<bool>(self_);
@@ -61,7 +63,8 @@ private:
     return self_.get();
   }
 
-  abstract_actor* prev_; // previous current actor, restored in destructor
+  void cleanup() noexcept;
+
   strong_actor_ptr self_;
 };
 

@@ -364,9 +364,9 @@ protected:
 
   // -- functions for sub-types ------------------------------------------------
 
-  void do_monitor(abstract_actor* ptr, message_priority prio);
+  virtual void do_monitor(abstract_actor* ptr, message_priority prio);
 
-  void do_demonitor(const strong_actor_ptr& whom);
+  virtual void do_demonitor(const strong_actor_ptr& whom);
 
   // -- member variables -------------------------------------------------------
 
