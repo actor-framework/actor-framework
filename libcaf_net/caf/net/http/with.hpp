@@ -16,6 +16,7 @@
 #include "caf/fwd.hpp"
 
 #include <cstdint>
+#include <string>
 
 namespace caf::net::http {
 

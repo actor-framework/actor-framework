@@ -13,6 +13,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/add_ref.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/connection_guard.hpp"
 #include "caf/internal/accept_handler.hpp"
@@ -21,6 +22,7 @@
 #include "caf/make_counted.hpp"
 
 #include <atomic>
+#include <variant>
 
 namespace caf::net::http {
 
@@ -430,6 +432,27 @@ void with_t::client::do_add_header_field(std::string name, std::string value) {
   config_->fields.insert(std::pair{std::move(name), std::move(value)});
 }
 
+namespace {
+
+// Builds the RFC 7230 `Host` header value from @p endpoint.
+// The port is omitted when it is unset, or equal to the default (80 or 443).
+std::string host_header_value(const uri& endpoint) {
+  const auto& scheme = endpoint.scheme();
+  auto auth = endpoint.authority();
+  if (auth.userinfo) {
+    auth.userinfo = std::nullopt; // suppress userinfo in 'Host' header field
+  }
+  if (scheme == "http" && auth.port == defaults::net::http_default_port) {
+    auth.port = 0; // suppress default HTTP port in 'Host' Header field
+  }
+  if (scheme == "https" && auth.port == defaults::net::https_default_port) {
+    auth.port = 0; // suppress default HTTPS port in 'Host' Header field
+  }
+  return to_string(auth);
+}
+
+} // namespace
+
 expected<std::pair<async::future<response>, disposable>>
 with_t::client::request(http::method method, const_byte_span payload) {
   // Handle an error that could've been created by the DSL during client setup.
@@ -448,7 +471,7 @@ with_t::client::request(http::method method, const_byte_span payload) {
   config_->path = endpoint.path_query_fragment();
   config_->method = method;
   config_->payload = payload;
-  do_add_header_field("Host", endpoint.authority().host_str());
+  do_add_header_field("Host", host_header_value(endpoint));
   auto lift = [this](disposable&& disp) {
     return std::pair(std::move(config_->resp), std::move(disp));
   };

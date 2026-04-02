@@ -16,6 +16,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
+#include "caf/uri.hpp"
 
 #include <chrono>
 #include <future>
@@ -347,4 +348,47 @@ TEST("GH-2226 regression") {
   // Wrap up and print client errors, if any.
   hdl->dispose();
   check_eq(elog->errors(), std::vector<error>{});
+}
+
+// TODO: refactor the test to use a connected socket pair and improve test
+// coverage for different host formats.
+TEST("GH-2309 regression: Host header contains explicit non-default port") {
+  caf::actor_system_config cfg;
+  cfg.load<caf::net::middleman>();
+  caf::actor_system sys{cfg};
+  auto acceptor = unbox(net::make_tcp_accept_socket(0));
+  auto port = unbox(net::local_port(acceptor));
+  auto uri_str = net::is_ipv4(acceptor)
+                   ? detail::format("http://127.0.0.1:{}/host-check", port)
+                   : detail::format("http://[::1]:{}/host-check", port);
+  auto expected_host = net::is_ipv4(acceptor)
+                         ? detail::format("127.0.0.1:{}", port)
+                         : detail::format("[::1]:{}", port);
+  std::promise<std::string> prom;
+  auto host_fut = prom.get_future();
+  auto hdl
+    = net::http::with(sys)
+        .accept(acceptor)
+        .route("/host-check", net::http::method::get,
+               [prom = std::move(prom)](net::http::responder& res) mutable {
+                 prom.set_value(std::string{res.header().field("Host")});
+                 res.respond(net::http::status::ok, "text/plain", "");
+               })
+        .start();
+  require_has_value(hdl);
+  detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
+  uri endpoint;
+  require(parse(uri_str, endpoint).empty());
+  auto client_res = net::http::with(sys)
+                      .connect(endpoint)
+                      .connection_timeout(2s)
+                      .max_retry_count(1)
+                      .get();
+  require_has_value(client_res);
+  auto maybe_resp = client_res->first.get(5s);
+  require_has_value(maybe_resp);
+  check_eq(maybe_resp->code(), net::http::status::ok);
+
+  require(host_fut.wait_for(1s) == std::future_status::ready);
+  check_eq(host_fut.get(), expected_host);
 }
