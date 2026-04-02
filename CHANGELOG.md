@@ -64,6 +64,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix an issue during connection cleanup that caused CAF to send a repeated
   close frame on WebSocket connections.
 - Fix a bug in actor shells when calling `quit` (#2299).
+- Include the port number in the `Host` header field when making HTTP requests
+  to non-standard ports (#2309).
 
 ## [1.1.0] - 2025-07-25
 
