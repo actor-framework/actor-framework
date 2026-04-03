@@ -323,10 +323,10 @@ protected:
   // -- linking ----------------------------------------------------------------
 
   /// Causes the actor to establish a link to `other`.
-  void add_link(abstract_actor* other);
+  virtual void add_link(abstract_actor* other);
 
   /// Causes the actor to remove any established link to `other`.
-  void remove_link(abstract_actor* other);
+  virtual void remove_link(abstract_actor* other);
 
   /// Adds an entry to `other` to the link table of this actor.
   /// @warning Must be called inside a critical section, i.e.,

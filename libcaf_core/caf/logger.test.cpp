@@ -9,11 +9,14 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/detail/asynchronous_logger.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/log/level.hpp"
 #include "caf/scoped_actor.hpp"
 
 #include <filesystem>
+#include <future>
 
 using namespace caf;
 using namespace std::literals;
@@ -130,13 +133,28 @@ TEST("current_logger get and set") {
 }
 
 TEST("thread_local_aid returns the current actor ID") {
-  SECTION("returns zero when no current actor") {
+  SECTION("returns zero when no actor is active") {
     check_eq(logger::thread_local_aid(), 0u);
   }
-  SECTION("returns scoped_actor ID when scoped_actor is active") {
+  SECTION("returns the ID of a scoped actor while it receives a message") {
     actor_system sys{cfg};
     scoped_actor self{sys};
-    check_eq(logger::thread_local_aid(), self->id());
+    anon_mail(7).send(self);
+    auto received = std::make_shared<bool>(false);
+    self->receive([this, received, aid = self->id()](int value) {
+      check_eq(value, 7);
+      check_eq(logger::thread_local_aid(), aid);
+      *received = true;
+    });
+    check(*received);
+  }
+  SECTION("returns the ID of a scheduled actor while it is running") {
+    actor_system sys{cfg};
+    auto observed_id = std::make_shared<std::promise<actor_id>>();
+    auto hdl = sys.spawn([observed_id](event_based_actor*) {
+      observed_id->set_value(logger::thread_local_aid());
+    });
+    check_eq(observed_id->get_future().get(), hdl.id());
   }
 }
 

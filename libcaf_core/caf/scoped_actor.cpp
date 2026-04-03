@@ -7,6 +7,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/log/system.hpp"
 #include "caf/spawn_options.hpp"
@@ -17,15 +18,17 @@ namespace {
 
 class impl : public blocking_actor {
 public:
+  using super = blocking_actor;
+
   static constexpr auto forced_spawn_options = spawn_options::blocking_flag;
 
   explicit impl(actor_config& cfg)
-    : blocking_actor(cfg.add_flag(abstract_actor::is_scoped_actor_impl_flag)) {
+    : super(cfg.add_flag(abstract_actor::is_scoped_actor_impl_flag)) {
     // nop
   }
 
   void act() override {
-    log::system::error("act() of scoped_actor impl called");
+    detail::critical("act() of scoped_actor impl called");
   }
 
   const char* name() const override {
@@ -35,10 +38,36 @@ public:
   void launch([[maybe_unused]] detail::private_thread* worker,
               scheduler* ctx) override {
     CAF_ASSERT(worker == nullptr);
-    detail::current_actor_guard ctx_guard{this};
+    detail::current_actor_guard guard{this};
     auto lg = log::system::trace("");
     CAF_ASSERT(getf(is_blocking_flag));
     initialize(ctx);
+  }
+
+  void do_monitor(abstract_actor* ptr, message_priority prio) override {
+    detail::current_actor_guard guard{this};
+    super::do_monitor(ptr, prio);
+  }
+
+  void do_demonitor(const strong_actor_ptr& whom) override {
+    detail::current_actor_guard guard{this};
+    super::do_demonitor(whom);
+  }
+
+  void add_link(abstract_actor* other) override {
+    detail::current_actor_guard guard{this};
+    super::add_link(other);
+  }
+
+  void remove_link(abstract_actor* other) override {
+    detail::current_actor_guard guard{this};
+    super::remove_link(other);
+  }
+
+  void receive_impl(receive_cond& rcc, message_id mid,
+                    detail::blocking_behavior& bhvr) override {
+    detail::current_actor_guard guard{this};
+    super::receive_impl(rcc, mid, bhvr);
   }
 };
 
@@ -53,21 +82,32 @@ scoped_actor::scoped_actor(actor_system& sys, bool hide) {
     return sys.spawn<impl>();
   };
   self_ = actor_cast<strong_actor_ptr>(do_spawn());
-  prev_ = detail::current_actor();
-  detail::current_actor(self_->get());
 }
 
-scoped_actor::~scoped_actor() {
-  if (!self_)
-    return;
-  auto x = ptr();
-  if (!x->getf(abstract_actor::is_terminated_flag))
-    x->cleanup(exit_reason::normal, nullptr);
-  detail::current_actor(prev_);
+scoped_actor& scoped_actor::operator=(scoped_actor&& other) noexcept {
+  if (this != &other) {
+    cleanup();
+    self_ = std::move(other.self_);
+  }
+  return *this;
+}
+
+scoped_actor::~scoped_actor() noexcept {
+  cleanup();
 }
 
 blocking_actor* scoped_actor::ptr() const {
   return actor_cast<blocking_actor*>(self_);
+}
+
+void scoped_actor::cleanup() noexcept {
+  if (!self_)
+    return;
+  auto* self = ptr();
+  if (!self->getf(abstract_actor::is_terminated_flag)) {
+    detail::current_actor_guard guard{self};
+    self->cleanup(exit_reason::normal, nullptr);
+  }
 }
 
 std::string to_string(const scoped_actor& x) {
