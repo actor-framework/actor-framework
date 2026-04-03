@@ -71,6 +71,10 @@ public:
                      const_byte_span content);
 
   /// @copydoc send_response
+  bool send_response(status code, std::unordered_map<std::string, std::string> headers,
+                     const_byte_span content);
+
+  /// @copydoc send_response
   bool send_response(status code, std::string_view content_type,
                      std::string_view content);
 
