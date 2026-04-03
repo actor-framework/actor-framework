@@ -8,12 +8,14 @@
 #include "caf/net/http/route.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/ssl/context.hpp"
+#include "caf/net/stream_socket.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
 #include "caf/actor_cast.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/forward_like.hpp"
 #include "caf/fwd.hpp"
+#include "caf/uri.hpp"
 
 #include <cstdint>
 #include <string>
@@ -313,6 +315,12 @@ public:
   /// @returns an `server` object that will start a server on `fd`.
   [[nodiscard]] server accept(tcp_accept_socket fd) &&;
 
+  /// Creates a new server factory for an already-connected TCP stream, for
+  /// example one end of a socket pair from @ref net::make_stream_socket_pair.
+  /// @param fd The stream socket that speaks HTTP to exactly one peer.
+  /// @returns a `server` object that will run the protocol on `fd`.
+  [[nodiscard]] server serve(stream_socket fd) &&;
+
   /// Creates a new server factory object for the given acceptor.
   /// @param acc The SSL acceptor for incoming TCP connections.
   /// @returns an `server` object that will start a server on `acc`.
@@ -327,6 +335,14 @@ public:
   /// @param endpoint The endpoint of the TCP server to connect to.
   /// @returns a `client` object initialized with the given parameters.
   [[nodiscard]] client connect(expected<uri> endpoint) &&;
+
+  /// Creates a client that sends requests on @p fd while using @p endpoint for
+  /// the request path and the `Host` header (e.g. the other end of a connected
+  /// socket pair whose server side was started with @ref serve).
+  [[nodiscard]] client connect(uri endpoint, stream_socket fd) &&;
+
+  /// @copydoc connect
+  [[nodiscard]] client connect(expected<uri> endpoint, stream_socket fd) &&;
 
 private:
   using on_error_callback = unique_callback_ptr<void(const error&)>;

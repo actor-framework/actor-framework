@@ -200,6 +200,23 @@ make_http_conn_acceptor(net::ssl::tcp_acceptor acceptor,
                                   max_consecutive_reads, max_request_size);
 }
 
+// Builds the RFC 7230 `Host` header value from endpoint. The port is
+// omitted when it is unset, or equal to the default.
+std::string host_header_value(const uri& endpoint) {
+  const auto& scheme = endpoint.scheme();
+  auto auth = endpoint.authority();
+  if (auth.userinfo) {
+    auth.userinfo = std::nullopt; // suppress userinfo in 'Host' header field
+  }
+  if (scheme == "http" && auth.port == defaults::net::http_default_port) {
+    auth.port = 0; // suppress default HTTP port in 'Host' Header field
+  }
+  if (scheme == "https" && auth.port == defaults::net::https_default_port) {
+    auth.port = 0; // suppress default HTTPS port in 'Host' Header field
+  }
+  return to_string(auth);
+}
+
 } // namespace
 
 class with_t::config_impl : public internal::net_config {
@@ -212,8 +229,7 @@ public:
 
   using super::super;
 
-  template <class Acceptor>
-  expected<disposable> do_start_server(Acceptor& acc) {
+  expected<void> prepare_http_routes() {
     if (push) {
       auto producer = make_http_request_producer({mpx, add_ref},
                                                  push.try_open());
@@ -224,16 +240,23 @@ public:
         }
       });
       if (!new_route) {
-        return expected<disposable>{unexpect, std::move(new_route.error())};
+        return expected<void>{unexpect, std::move(new_route.error())};
       }
       routes.push_back(std::move(*new_route));
     } else if (routes.empty()) {
-      return expected<disposable>{
-        unexpect, sec::logic_error,
-        "cannot start an HTTP server without any routes"};
+      return expected<void>{unexpect, sec::logic_error,
+                            "cannot start an HTTP server without any routes"};
     }
     for (auto& ptr : routes)
       ptr->init();
+    return {};
+  }
+
+  template <class Acceptor>
+  expected<disposable> do_start_server(Acceptor& acc) {
+    auto prep = prepare_http_routes();
+    if (!prep)
+      return expected<disposable>{unexpect, std::move(prep.error())};
     auto factory = make_http_conn_acceptor(std::move(acc), routes,
                                            max_consecutive_reads,
                                            max_request_size);
@@ -254,6 +277,26 @@ public:
 
   expected<disposable> start_server_impl(net::tcp_accept_socket acc) override {
     return do_start_server(acc);
+  }
+
+  expected<disposable> start_server_impl(net::stream_socket conn) override {
+    auto prep = prepare_http_routes();
+    if (!prep)
+      return expected<disposable>{unexpect, std::move(prep.error())};
+    auto guard = make_counted<http_connection_guard>(mpx, action{});
+    auto app = net::http::router::make(routes, std::move(guard));
+    auto serv = net::http::server::make(std::move(app));
+    serv->max_request_size(max_request_size);
+    auto transport = net::octet_stream::transport::make(std::move(conn),
+                                                        std::move(serv));
+    transport->max_consecutive_reads(max_consecutive_reads);
+    transport->active_policy().accept();
+    auto ptr = net::socket_manager::make(mpx, std::move(transport));
+    if (mpx->start(ptr))
+      return disposable{std::move(ptr)};
+    return expected<disposable>{
+      unexpect, sec::logic_error,
+      "failed to register socket manager to net::multiplexer"};
   }
 
   template <typename Connection>
@@ -432,27 +475,6 @@ void with_t::client::do_add_header_field(std::string name, std::string value) {
   config_->fields.insert(std::pair{std::move(name), std::move(value)});
 }
 
-namespace {
-
-// Builds the RFC 7230 `Host` header value from @p endpoint.
-// The port is omitted when it is unset, or equal to the default (80 or 443).
-std::string host_header_value(const uri& endpoint) {
-  const auto& scheme = endpoint.scheme();
-  auto auth = endpoint.authority();
-  if (auth.userinfo) {
-    auth.userinfo = std::nullopt; // suppress userinfo in 'Host' header field
-  }
-  if (scheme == "http" && auth.port == defaults::net::http_default_port) {
-    auth.port = 0; // suppress default HTTP port in 'Host' Header field
-  }
-  if (scheme == "https" && auth.port == defaults::net::https_default_port) {
-    auth.port = 0; // suppress default HTTPS port in 'Host' Header field
-  }
-  return to_string(auth);
-}
-
-} // namespace
-
 expected<std::pair<async::future<response>, disposable>>
 with_t::client::request(http::method method, const_byte_span payload) {
   // Handle an error that could've been created by the DSL during client setup.
@@ -462,12 +484,22 @@ with_t::client::request(http::method method, const_byte_span payload) {
     return expected<std::pair<async::future<response>, disposable>>{
       unexpect, config_->err};
   }
-  // Only connecting to an URI is enabled in the 'with' DSL.
-  using lazy_t = internal::net_config::client_config::lazy;
-  CAF_ASSERT(std::holds_alternative<lazy_t>(config_->client.value));
-  auto& lazy = std::get<lazy_t>(config_->client.value);
-  CAF_ASSERT(std::holds_alternative<uri>(lazy.server));
-  auto& endpoint = std::get<uri>(lazy.server);
+  using client_cfg = internal::net_config::client_config;
+  const uri* endpoint_ptr = nullptr;
+  if (auto* us
+      = std::get_if<client_cfg::uri_and_socket>(&config_->client.value))
+    endpoint_ptr = &us->endpoint;
+  else if (auto* lazy = std::get_if<client_cfg::lazy>(&config_->client.value)) {
+    if (!std::holds_alternative<uri>(lazy->server)) {
+      return expected<std::pair<async::future<response>, disposable>>{
+        unexpect, sec::logic_error, "HTTP with client requires a URI endpoint"};
+    }
+    endpoint_ptr = &std::get<uri>(lazy->server);
+  } else {
+    return expected<std::pair<async::future<response>, disposable>>{
+      unexpect, sec::logic_error, "invalid HTTP with client configuration"};
+  }
+  const uri& endpoint = *endpoint_ptr;
   config_->path = endpoint.path_query_fragment();
   config_->method = method;
   config_->payload = payload;
@@ -535,6 +567,11 @@ with_t::server with_t::accept(ssl::tcp_acceptor acc) && {
   return server{std::move(config_)};
 }
 
+with_t::server with_t::serve(net::stream_socket fd) && {
+  config_->server.assign(std::move(fd));
+  return server{std::move(config_)};
+}
+
 with_t::client with_t::connect(uri endpoint) && {
   config_->client.assign(std::move(endpoint));
   return client{std::move(config_)};
@@ -543,6 +580,21 @@ with_t::client with_t::connect(uri endpoint) && {
 with_t::client with_t::connect(expected<uri> endpoint) && {
   if (endpoint) {
     config_->client.assign(std::move(*endpoint));
+  } else if (endpoint.error().valid()) {
+    config_->err = std::move(endpoint.error());
+  }
+  return client{std::move(config_)};
+}
+
+with_t::client with_t::connect(uri endpoint, net::stream_socket fd) && {
+  config_->client.assign(std::move(endpoint), std::move(fd));
+  return client{std::move(config_)};
+}
+
+with_t::client with_t::connect(expected<uri> endpoint,
+                               net::stream_socket fd) && {
+  if (endpoint) {
+    config_->client.assign(std::move(*endpoint), std::move(fd));
   } else if (endpoint.error().valid()) {
     config_->err = std::move(endpoint.error());
   }
