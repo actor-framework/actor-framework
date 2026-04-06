@@ -76,24 +76,6 @@ bool hashed_node_id::valid(const host_id_type& x) noexcept {
   return !std::ranges::all_of(x, is_zero);
 }
 
-bool hashed_node_id::can_parse(std::string_view str) noexcept {
-  // Our format is "<20-byte-hex>#<pid>". With 2 characters per byte, this means
-  // a valid node ID has at least 42 characters.
-  if (str.size() < 42)
-    return false;
-  string_parser_state ps{str.begin(), str.end()};
-  for (size_t i = 0; i < 40; ++i)
-    if (!ps.consume_strict_if(isxdigit))
-      return false;
-  if (!ps.consume_strict('#'))
-    return false;
-  // We don't care for the value, but we invoke the actual number parser to make
-  // sure the value is in bounds.
-  uint32_t dummy;
-  detail::parse(ps, dummy);
-  return ps.code == pec::success;
-}
-
 node_id hashed_node_id::local(const actor_system_config&) {
   auto lg = log::core::trace("");
   // We add an global incrementing counter to make sure two actor systems in the
@@ -149,10 +131,6 @@ void node_id::swap(node_id& x) noexcept {
   data_.swap(x.data_);
 }
 
-bool node_id::can_parse(std::string_view str) noexcept {
-  return default_data::can_parse(str) || uri::can_parse(str);
-}
-
 void append_to_string(std::string& str, const node_id& x) {
   auto f = [&str](auto& x) {
     if constexpr (std::is_same_v<std::decay_t<decltype(x)>, uri>)
@@ -200,29 +178,6 @@ std::optional<node_id> make_node_id(uint32_t process_id,
   if (!hashed_node_id::valid(host_id))
     return std::nullopt;
   return make_node_id(process_id, host_id);
-}
-
-error parse(std::string_view str, node_id& dest) {
-  if (node_id::default_data::can_parse(str)) {
-    CAF_ASSERT(str.size() >= 42);
-    auto host_hash = str.substr(0, 40);
-    auto pid_str = str.substr(41);
-    uint32_t pid_val = 0;
-    if (auto err = detail::parse(pid_str, pid_val); err.valid())
-      return err;
-    if (auto nid = make_node_id(pid_val, host_hash)) {
-      dest = std::move(*nid);
-      return none;
-    }
-    log::core::error("make_node_id failed after can_parse returned true");
-    return sec::invalid_argument;
-  }
-  if (auto nid_uri = make_uri(str)) {
-    dest = make_node_id(std::move(*nid_uri));
-    return none;
-  } else {
-    return std::move(nid_uri.error());
-  }
 }
 
 } // namespace caf

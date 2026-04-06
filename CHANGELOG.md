@@ -167,6 +167,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   replacement. Users could always provide `intrusive_ptr_add_ref` and
   `intrusive_ptr_release` as customization point. Providing two customization
   points for the same functionality only adds redundancy.
+- Removed the `node_id::can_parse` method and the `parse` function for node IDs.
+  Both are leftovers from older versions of CAF and no longer serve any purpose.
 
 ## [1.1.0] - 2025-07-25
 
