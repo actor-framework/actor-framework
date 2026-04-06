@@ -18,7 +18,7 @@ enum class hex_format {
   lowercase,
 };
 
-template <hex_format format = hex_format::uppercase, class Buf = std::string>
+template <hex_format format = hex_format::uppercase, class Buf>
 void append_hex(Buf& result, const void* vptr, size_t n) {
   using value_type = typename Buf::value_type;
   if (n == 0)
@@ -36,7 +36,7 @@ void append_hex(Buf& result, const void* vptr, size_t n) {
   }
 }
 
-template <hex_format format = hex_format::uppercase, class T = int>
+template <hex_format format = hex_format::uppercase, class T>
 void append_hex(std::string& result, const T& x) {
   append_hex<format>(result, &x, sizeof(T));
 }

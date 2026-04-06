@@ -6,11 +6,11 @@
 
 #include "caf/test/test.hpp"
 
-#include <vector>
-
-#if !defined(CAF_USE_STD_FORMAT) && !defined(CAF_USE_SYSTEM_LIBFMT)
-#  define CAF_MINIMAL_FORMATTING
-#endif
+#include "caf/actor_cast.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/behavior.hpp"
+#include "caf/event_based_actor.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -110,7 +110,46 @@ TEST("format_to can incrementally build a string") {
   check_eq(str, "foobarbaz");
 }
 
-#if defined(CAF_ENABLE_EXCEPTIONS) && defined(CAF_MINIMAL_FORMATTING)
+TEST("formatting a node_id yields the same output as to_string") {
+  SECTION("default-constructed node ID") {
+    auto nid = node_id{};
+    auto str = to_string(nid);
+    check_eq(detail::format("{}", detail::formatted{nid}), str);
+    check_eq(str, "caf:local");
+  }
+  SECTION("URI-based node ID") {
+    auto nid = make_node_id(unbox(make_uri("foo:bar")));
+    auto str = to_string(nid);
+    check_eq(detail::format("{}", detail::formatted{nid}), to_string(nid));
+    check_eq(str, "foo:bar");
+  }
+  SECTION("hash-based node ID") {
+    auto nid_opt = make_node_id(42, "0102030405060708090a0b0c0d0e0f1011121314");
+    auto nid = unbox(nid_opt);
+    auto str = to_string(nid);
+    check_eq(detail::format("{}", detail::formatted{nid}), str);
+    check_eq(str, "caf:io:0102030405060708090a0b0c0d0e0f1011121314:42");
+  }
+}
+
+TEST("valid actor references are formatted as '<node>/actor/id/<id>'") {
+  caf::actor_system_config cfg;
+  caf::actor_system sys{cfg};
+  const auto hdl = sys.spawn([] { return behavior{[](int) {}}; });
+  const auto* ctrl = actor_cast<actor_control_block*>(hdl);
+  check_eq(detail::format("{}", detail::formatted{ctrl}),
+           detail::format("caf:local/actor/id/{}", ctrl->id()));
+  check_eq(to_string(hdl), detail::format("{}", detail::formatted{ctrl}));
+}
+
+TEST("invalid actor references are formatted as 'null'") {
+  const auto hdl = actor{};
+  const auto* ctrl = actor_cast<actor_control_block*>(hdl);
+  check_eq(detail::format("{}", detail::formatted{ctrl}), "null");
+  check_eq(to_string(hdl), "null");
+}
+
+#if defined(CAF_ENABLE_EXCEPTIONS) && !defined(CAF_USE_STD_FORMAT)
 
 // Note: the standard version as well as libfmt (should) raise a compile-time
 //       error for these test cases. Only our minimal implementation throws.

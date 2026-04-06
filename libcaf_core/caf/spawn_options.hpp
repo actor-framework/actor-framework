@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/caf_deprecated.hpp"
+#include "caf/detail/formatted.hpp"
 
 namespace caf {
 
@@ -103,3 +104,43 @@ constexpr spawn_options make_unbound(spawn_options opts) noexcept {
 /// @endcond
 
 } // namespace caf
+
+namespace caf::detail {
+
+template <>
+struct simple_formatter<spawn_options> {
+  template <class OutputIterator>
+  OutputIterator format(spawn_options opts, OutputIterator out) const {
+    *out++ = '[';
+    auto add = [&out, first = true](const char* name) mutable {
+      if (first) {
+        first = false;
+      } else {
+        *out++ = ',';
+        *out++ = ' ';
+      }
+      for (auto c = *name; c != '\0'; c = *++name) {
+        *out++ = c;
+      }
+    };
+    if (has_spawn_option(opts, spawn_options::link_flag)) {
+      add("link");
+    }
+    if (has_spawn_option(opts, spawn_options::detach_flag)) {
+      add("detach");
+    }
+    if (has_spawn_option(opts, spawn_options::hide_flag)) {
+      add("hide");
+    }
+    if (has_spawn_option(opts, spawn_options::lazy_init_flag)) {
+      add("lazy_init");
+    }
+    if (has_spawn_option(opts, spawn_options::blocking_flag)) {
+      add("blocking");
+    }
+    *out++ = ']';
+    return out;
+  }
+};
+
+} // namespace caf::detail
