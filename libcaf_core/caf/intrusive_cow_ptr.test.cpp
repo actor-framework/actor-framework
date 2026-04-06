@@ -33,9 +33,9 @@ class class0;
 
 class class1;
 
-using class0ptr = intrusive_cow_ptr<class0>;
+using class0_ptr = intrusive_cow_ptr<class0>;
 
-using class1ptr = intrusive_cow_ptr<class1>;
+using class1_ptr = intrusive_cow_ptr<class1>;
 
 struct subtype_tag {};
 
@@ -142,13 +142,13 @@ using custom_unshare_ptr = intrusive_cow_ptr<custom_unshare>;
 
 TEST("make") {
   SECTION("class0") {
-    auto uut = class0ptr::make("hello"s);
+    auto uut = class0_ptr::make("hello"s);
     check_eq(class0_instances, 1u);
     check_eq(uut->strong_reference_count(), 1u);
     check_eq(uut->value, "hello");
   }
   SECTION("class1") {
-    auto uut = class1ptr::make("hello"s);
+    auto uut = class1_ptr::make("hello"s);
     check_eq(class1_instances, 1u);
     check_eq(uut->strong_reference_count(), 1u);
     check_eq(uut->value, "hello");
@@ -165,14 +165,14 @@ TEST("make") {
 TEST("unshare") {
   SECTION("class0") {
     SECTION("calling unshare on uniquely referenced object does nothing") {
-      auto uut1 = class0ptr::make("hello"s);
+      auto uut1 = class0_ptr::make("hello"s);
       check_eq(class0_instances, 1u);
       uut1.unshare();
       check_eq(class0_copy_calls, 0u);
       check_eq(class0_instances, 1u);
     }
     SECTION("calling unshare on a shared object copies the object") {
-      auto uut1 = class0ptr::make("hello"s);
+      auto uut1 = class0_ptr::make("hello"s);
       check_eq(class0_instances, 1u);
       auto uut2 = uut1;
       check_eq(class0_instances, 1u);
@@ -205,9 +205,9 @@ TEST("unshare") {
     }
   }
   SECTION("unsharing a pointer to the base class copies the derived object") {
-    auto uut1 = class1ptr::make("hello"s);
+    auto uut1 = class1_ptr::make("hello"s);
     check_eq(class1_instances, 1u);
-    auto uut2 = class0ptr{uut1};
+    auto uut2 = class0_ptr{uut1};
     check_eq(class1_instances, 1u);
     uut2.unshared().value = "world";
     check_eq(class1_instances, 2u);
@@ -218,14 +218,14 @@ TEST("unshare") {
 
 TEST("emplace") {
   SECTION("same type") {
-    class0ptr uut;
+    class0_ptr uut;
     uut.emplace("hello"s);
     check_eq(uut->value, "hello");
     check_eq(uut->strong_reference_count(), 1u);
     check_eq(class0_instances, 1u);
   }
   SECTION("derived type") {
-    class0ptr uut;
+    class0_ptr uut;
     uut.emplace<class1>("hello"s);
     check_eq(uut->value, "hello");
     check_eq(uut->strong_reference_count(), 1u);
@@ -234,7 +234,7 @@ TEST("emplace") {
 }
 
 TEST("upcast") {
-  auto uut1 = class1ptr::make("hello"s);
+  auto uut1 = class1_ptr::make("hello"s);
   auto uut2 = uut1.upcast<class0>();
   check_eq(uut1.get(), uut2.get());
 }
@@ -242,12 +242,12 @@ TEST("upcast") {
 #ifdef CAF_ENABLE_RTTI
 TEST("downcast") {
   SECTION("valid downcast") {
-    auto uut1 = class0ptr{new class1("hello"s), adopt_ref};
+    auto uut1 = class0_ptr{new class1("hello"s), adopt_ref};
     auto uut2 = uut1.downcast<class1>();
     check_eq(uut1.get(), uut2.get());
   }
   SECTION("invalid downcast") {
-    auto uut1 = class0ptr::make("hello"s);
+    auto uut1 = class0_ptr::make("hello"s);
     auto uut2 = uut1.downcast<class1>();
     check_eq(uut2.get(), nullptr);
   }
@@ -255,8 +255,8 @@ TEST("downcast") {
 #endif
 
 TEST("swap") {
-  auto uut1 = class0ptr::make("hello"s);
-  auto uut2 = class0ptr::make("world"s);
+  auto uut1 = class0_ptr::make("hello"s);
+  auto uut2 = class0_ptr::make("world"s);
   uut1.swap(uut2);
   check_eq(uut1->value, "world");
   check_eq(uut2->value, "hello");
@@ -265,13 +265,13 @@ TEST("swap") {
 TEST("compare") {
   SECTION("compare with nullptr") {
     SECTION("null COW pointer") {
-      class0ptr uut;
+      class0_ptr uut;
       check_eq(uut, nullptr);
       check_ge(uut, nullptr);
       check_le(nullptr, uut);
     }
     SECTION("non-null COW pointer") {
-      auto uut = class0ptr::make("hello"s);
+      auto uut = class0_ptr::make("hello"s);
       check_ne(uut, nullptr);
       check_ge(uut, nullptr);
       check_gt(uut, nullptr);
@@ -281,15 +281,15 @@ TEST("compare") {
   }
   SECTION("compare with other COW pointer") {
     SECTION("both pointing to the same object") {
-      auto uut1 = class0ptr::make("hello"s);
+      auto uut1 = class0_ptr::make("hello"s);
       auto uut2 = uut1;
       check_eq(uut1, uut2);
       check_ge(uut1, uut2);
       check_le(uut2, uut1);
     }
     SECTION("pointing to different objects") {
-      auto uut1 = class0ptr::make("hello"s);
-      auto uut2 = class0ptr::make("world"s);
+      auto uut1 = class0_ptr::make("hello"s);
+      auto uut2 = class0_ptr::make("world"s);
       if (uut1.get() > uut2.get()) {
         uut1.swap(uut2);
       }

@@ -163,6 +163,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   called by users.
 - Removed the implicit conversions from `caf::error_code` to `caf::error` and
   from error code enums to `caf::error_code`.
+- The template class `intrusive_ptr_access` has been removed without
+  replacement. Users could always provide `intrusive_ptr_add_ref` and
+  `intrusive_ptr_release` as customization point. Providing two customization
+  points for the same functionality only adds redundancy.
 
 ## [1.1.0] - 2025-07-25
 

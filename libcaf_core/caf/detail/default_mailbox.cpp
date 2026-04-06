@@ -48,6 +48,10 @@ bool default_mailbox::try_unblock() {
   return inbox_.try_unblock();
 }
 
+bool default_mailbox::close_if_blocked() {
+  return inbox_.close_if_blocked();
+}
+
 size_t default_mailbox::close() {
   size_t result = 0;
   detail::sync_request_bouncer bounce;
@@ -89,11 +93,11 @@ bool default_mailbox::fetch_more() {
   return true;
 }
 
-void default_mailbox::ref_mailbox() const noexcept {
+void default_mailbox::ref() const noexcept {
   ++ref_count_;
 }
 
-void default_mailbox::deref_mailbox() const noexcept {
+void default_mailbox::deref() const noexcept {
   if (--ref_count_ == 0)
     delete this;
 }

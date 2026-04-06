@@ -187,11 +187,11 @@ public:
 
   // -- implementation of execution_context ------------------------------------
 
-  void ref_execution_context() const noexcept override {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
-  void deref_execution_context() const noexcept override {
+  void deref() const noexcept final {
     ref_count_.dec(this);
   }
 

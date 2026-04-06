@@ -16,6 +16,7 @@
 #include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/actor_system_impl.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/daemons.hpp"
 #include "caf/detail/default_mailbox.hpp"
@@ -112,8 +113,7 @@ void drop_events(deterministic::events_list& events) {
   }
 }
 
-class deterministic_mailbox final : public ref_counted,
-                                    public abstract_mailbox {
+class deterministic_mailbox final : public abstract_mailbox {
 public:
   deterministic_mailbox(events_list_ptr events, local_actor* owner)
     : events_(std::move(events)), owner_(owner) {
@@ -173,6 +173,11 @@ public:
     return true;
   }
 
+  bool close_if_blocked() override {
+    closed_ = true;
+    return true;
+  }
+
   size_t close() override {
     closed_ = true;
     auto result = size_t{0};
@@ -190,15 +195,16 @@ public:
     return mail_count(*events_, owner_);
   }
 
-  void ref_mailbox() const noexcept override {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_mailbox() const noexcept override {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   bool blocked_ = false;
   bool closed_ = false;
   deterministic::events_list_ptr events_;

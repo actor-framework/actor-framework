@@ -21,14 +21,6 @@ public:
 
 using abstract_monitor_action_ptr = intrusive_ptr<abstract_monitor_action>;
 
-inline void intrusive_ptr_add_ref(const abstract_monitor_action* ptr) noexcept {
-  ptr->ref_disposable();
-}
-
-inline void intrusive_ptr_release(const abstract_monitor_action* ptr) noexcept {
-  ptr->deref_disposable();
-}
-
 /// A thread safe single shot action encapsulating a function and a function
 /// argument @ref error.
 template <class F>
@@ -46,11 +38,11 @@ public:
       f_.~function_wrapper();
   }
 
-  void ref_disposable() const noexcept override {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
-  void deref_disposable() const noexcept override {
+  void deref() const noexcept final {
     ref_count_.dec(this);
   }
 

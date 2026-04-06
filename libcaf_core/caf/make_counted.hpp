@@ -16,7 +16,7 @@ namespace caf {
 /// @relates ref_counted
 template <class T, class... Args>
 intrusive_ptr<T> make_counted(Args&&... args) {
-  return intrusive_ptr<T>{new T(std::forward<Args>(args)...), adopt_ref};
+  return {new T(std::forward<Args>(args)...), adopt_ref};
 }
 
 } // namespace caf

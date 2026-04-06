@@ -168,11 +168,11 @@ using observer_impl = typename observer<T>::impl;
 template <class T>
 class observer_impl_base : public observer_impl<T> {
 public:
-  void ref_coordinated() const noexcept final {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept final {
+  void deref() const noexcept final {
     ref_count_.dec(this);
   }
 
@@ -316,27 +316,11 @@ public:
 
   // -- intrusive_ptr interface ------------------------------------------------
 
-  friend void intrusive_ptr_add_ref(const buffer_writer_impl* ptr) noexcept {
-    ptr->ref_producer();
-  }
-
-  friend void intrusive_ptr_release(const buffer_writer_impl* ptr) noexcept {
-    ptr->deref_producer();
-  }
-
-  void ref_coordinated() const noexcept final {
+  void ref() const noexcept final {
     ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept final {
-    ref_count_.dec(this);
-  }
-
-  void ref_producer() const noexcept final {
-    ref_count_.inc();
-  }
-
-  void deref_producer() const noexcept final {
+  void deref() const noexcept final {
     ref_count_.dec(this);
   }
 
@@ -390,7 +374,7 @@ public:
 
   void on_consumer_cancel() override {
     auto lg = log::core::trace("");
-    parent_->schedule_fn([ptr{strong_ptr()}] {
+    parent_->schedule_fn([ptr{strong_this()}] {
       auto lg = log::core::trace("");
       ptr->on_cancel();
     });
@@ -398,7 +382,7 @@ public:
 
   void on_consumer_demand(size_t demand) override {
     auto lg = log::core::trace("demand = {}", demand);
-    parent_->schedule_fn([ptr{strong_ptr()}, demand] { //
+    parent_->schedule_fn([ptr{strong_this()}, demand] { //
       auto lg = log::core::trace("demand = {}", demand);
       ptr->on_demand(demand);
     });
@@ -420,7 +404,7 @@ private:
     buf_ = nullptr;
   }
 
-  intrusive_ptr<buffer_writer_impl> strong_ptr() {
+  intrusive_ptr<buffer_writer_impl> strong_this() noexcept {
     return {this, add_ref};
   }
 

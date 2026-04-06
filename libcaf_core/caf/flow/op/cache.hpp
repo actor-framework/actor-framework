@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/event.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
@@ -29,6 +30,14 @@ public:
             std::shared_ptr<cache_type> cache)
     : parent_(parent), out_(std::move(out)), cache_(std::move(cache)) {
     // nop
+  }
+
+  void ref() const noexcept final {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   coordinator* parent() const noexcept override {
@@ -86,6 +95,7 @@ private:
     std::visit(fn, cache_->at(index_));
   }
 
+  mutable detail::atomic_ref_count ref_count_;
   coordinator* parent_;
   observer<T> out_;
   size_t index_ = 0;
@@ -187,23 +197,16 @@ public:
     return cache_->size();
   }
 
-  void ref_coordinated() const noexcept final {
-    super::ref_count_.inc();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept final {
-    super::ref_count_.dec(this);
-  }
-
-  friend void intrusive_ptr_add_ref(const cache* ptr) noexcept {
-    ptr->ref_coordinated();
-  }
-
-  friend void intrusive_ptr_release(const cache* ptr) noexcept {
-    ptr->deref_coordinated();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
 private:
+  mutable detail::atomic_ref_count ref_count_;
   std::shared_ptr<cache_type> cache_;
   subscription sub_;
   std::vector<intrusive_ptr<cache_sub<T>>> subs_;

@@ -5,15 +5,15 @@
 #pragma once
 
 #include "caf/config.hpp"
+#include "caf/detail/control_block_ref_count.hpp"
+#include "caf/detail/control_block_traits.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/critical.hpp"
+#include "caf/detail/memory_interface.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/node_id.hpp"
 #include "caf/weak_intrusive_ptr.hpp"
-
-#include <atomic>
 
 namespace caf {
 
@@ -46,113 +46,157 @@ namespace caf {
 /// full memory block is destroyed when the last weak reference expires.
 class CAF_CORE_EXPORT actor_control_block {
 public:
-  actor_control_block(actor_id x, node_id& y, actor_system* sys,
-                      const meta::handler_list* iface)
-    : strong_refs(1),
-      weak_refs(1),
-      aid(x),
-      nid(std::move(y)),
-      home_system(sys),
-      iface(iface) {
-    // nop
-  }
+  template <class>
+  friend class detail::control_block_traits;
+
+  /// Specifies the memory interface used to allocate the actor control block.
+  static constexpr auto memory_interface
+    = detail::memory_interface::aligned_alloc_and_free;
+
+  /// Defines the allocation size of the actor control block. The intrusive
+  /// control block design in CAF will allocate the control block and the
+  /// managed object in a single memory block. The managed object will start
+  /// immediately after the allocation size. This allows us to calculate the
+  /// address of the managed object from the address of the control block and
+  /// vice versa.
+  static constexpr size_t allocation_size = CAF_CACHE_LINE_SIZE;
+
+  /// Defines the alignment of the memory region allocated for the actor control
+  /// block and its managed object.
+  static constexpr size_t alignment = CAF_CACHE_LINE_SIZE;
+
+  using managed_type = abstract_actor;
+
+  using control_block_type = actor_control_block;
 
   actor_control_block(const actor_control_block&) = delete;
 
   actor_control_block& operator=(const actor_control_block&) = delete;
 
-  /// Stores the number of strong references to this actor.
-  std::atomic<size_t> strong_refs;
+  /// Returns a pointer to the actor instance.
+  abstract_actor* get() noexcept {
+    using traits = detail::control_block_traits<actor_control_block>;
+    return traits::managed_ptr(this);
+  }
 
-  /// Stores the number of weak references to this actor.
-  std::atomic<size_t> weak_refs;
+  /// Returns a pointer to the control block from a managed object pointer.
+  static actor_control_block* from(const abstract_actor* ptr) noexcept {
+    using traits = detail::control_block_traits<actor_control_block>;
+    return traits::ctrl_ptr(ptr);
+  }
+
+  /// Returns a reference to the actor system that owns this actor.
+  actor_system& system() const noexcept {
+    return *system_;
+  }
+
+  /// Returns an actor address for this actor.
+  actor_addr address() noexcept;
+
+  /// Returns the local ID of this actor.
+  actor_id id() const noexcept {
+    return aid_;
+  }
+
+  /// Returns the node ID of this actor.
+  const node_id& node() const noexcept {
+    return nid_;
+  }
+
+  /// Returns the messaging interface of this actor.
+  const meta::handler_list* iface() const noexcept {
+    return iface_;
+  }
+
+  /// Enqueues a message to the mailbox of this actor.
+  bool enqueue(mailbox_element_ptr what, scheduler* sched);
+
+  /// Increments the strong reference count of this actor.
+  void ref() noexcept {
+    ref_count_.inc_strong();
+  }
+
+  /// Decrements the strong reference count of this actor.
+  void deref() noexcept;
+
+  /// Increments the weak reference count of this actor.
+  void ref_weak() noexcept {
+    ref_count_.inc_weak();
+  }
+
+  /// Decrements the weak reference count of this actor.
+  void deref_weak() noexcept {
+    ref_count_.dec_weak(this);
+  }
+
+  /// Tries to upgrade a weak reference to a strong reference.
+  bool upgrade_weak() noexcept {
+    return ref_count_.upgrade_weak();
+  }
+
+  /// Returns the current number of strong references to this actor.
+  size_t strong_reference_count() const noexcept {
+    return ref_count_.strong_reference_count();
+  }
+
+  /// Returns the current number of weak references to this actor.
+  size_t weak_reference_count() const noexcept {
+    return ref_count_.weak_reference_count();
+  }
+
+  /// Returns a hash value for this actor.
+  size_t hash() const noexcept {
+    if constexpr (sizeof(size_t) == sizeof(caf::actor_id)) {
+      return static_cast<size_t>(aid_);
+    } else {
+      std::hash<caf::actor_id> hasher;
+      return hasher(aid_);
+    }
+  }
+
+private:
+  actor_control_block(actor_id aid, caf::node_id& nid, actor_system* sys,
+                      const meta::handler_list* iface)
+    : aid_(aid), nid_(std::move(nid)), system_(sys), iface_(iface) {
+    CAF_ASSERT(system_ != nullptr);
+  }
+
+  /// The intrusive reference count for this control block.
+  detail::control_block_ref_count ref_count_;
 
   /// Stores the actor ID.
-  const actor_id aid;
+  actor_id aid_;
 
   /// Stores the node ID, i.e., the identifier of the actor's host.
-  const node_id nid;
+  node_id nid_;
 
   /// Stores a pointer to the actor system that created this actor.
-  actor_system* const home_system;
+  actor_system* system_;
 
   /// Stores a pointer to the interface of the actor or `nullptr` if the actor
   /// is dynamically typed.
-  const meta::handler_list* const iface;
-
-  /// Returns a pointer to the actor instance.
-  abstract_actor* get() noexcept {
-    // The memory layout is enforced by `make_actor`.
-    return reinterpret_cast<abstract_actor*>(reinterpret_cast<intptr_t>(this)
-                                             + CAF_CACHE_LINE_SIZE);
-  }
-
-  /// Returns a pointer to the control block that stores identity and reference
-  /// counts for this actor.
-  static actor_control_block* from(const abstract_actor* ptr) noexcept {
-    // The memory layout is enforced by `make_actor`.
-    return reinterpret_cast<actor_control_block*>(
-      reinterpret_cast<intptr_t>(ptr) - CAF_CACHE_LINE_SIZE);
-  }
-
-  /// @cond
-
-  actor_addr address() noexcept;
-
-  actor_id id() const noexcept {
-    return aid;
-  }
-
-  const node_id& node() const noexcept {
-    return nid;
-  }
-
-  bool enqueue(mailbox_element_ptr what, scheduler* sched);
-
-  /// @endcond
+  const meta::handler_list* iface_;
 };
 
-static_assert(sizeof(actor_control_block) <= CAF_CACHE_LINE_SIZE,
-              "actor_control_block may not exceed a cache line");
-
-/// @relates actor_control_block
-CAF_CORE_EXPORT bool intrusive_ptr_upgrade_weak(actor_control_block* x);
-
-/// @relates actor_control_block
-inline void intrusive_ptr_add_weak_ref(actor_control_block* x) {
-#ifdef NDEBUG
-  x->weak_refs.fetch_add(1, std::memory_order_relaxed);
-#else
-  if (x->weak_refs.fetch_add(1, std::memory_order_relaxed) == 0)
-    detail::critical("increased the weak reference count of an expired actor");
-#endif
-}
-
-/// @relates actor_control_block
-CAF_CORE_EXPORT void intrusive_ptr_release_weak(actor_control_block* x);
-
-/// @relates actor_control_block
-inline void intrusive_ptr_add_ref(actor_control_block* x) {
-#ifdef NDEBUG
-  x->strong_refs.fetch_add(1, std::memory_order_relaxed);
-#else
-  if (x->strong_refs.fetch_add(1, std::memory_order_relaxed) == 0)
-    detail::critical("increased the strong reference count "
-                     "of an expired actor");
-#endif
-}
-
-/// @relates actor_control_block
-CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block* x);
+static_assert(sizeof(actor_control_block)
+                <= actor_control_block::allocation_size,
+              "actor_control_block may not exceed the allocation size");
 
 /// @relates actor_control_block
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
-CAF_CORE_EXPORT bool operator==(const strong_actor_ptr&,
-                                const abstract_actor*) noexcept;
+/// @relates actor_control_block
+using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
-CAF_CORE_EXPORT bool operator==(const abstract_actor*,
-                                const strong_actor_ptr&) noexcept;
+inline bool operator==(const strong_actor_ptr& lhs,
+                       const abstract_actor* rhs) noexcept {
+  return lhs.get() == actor_control_block::from(rhs);
+}
+
+inline bool operator==(const abstract_actor* lhs,
+                       const strong_actor_ptr& rhs) noexcept {
+  return actor_control_block::from(lhs) == rhs.get();
+}
 
 inline bool operator!=(const strong_actor_ptr& x,
                        const abstract_actor* y) noexcept {
@@ -164,24 +208,22 @@ inline bool operator!=(const abstract_actor* x,
   return !(x == y);
 }
 
-/// @relates actor_control_block
-using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
-
-CAF_CORE_EXPORT error_code<sec> load_actor(strong_actor_ptr& storage,
-                                           actor_system*, actor_id aid,
+CAF_CORE_EXPORT error_code<sec> load_actor(strong_actor_ptr& ptr,
+                                           actor_system* sys, actor_id aid,
                                            const node_id& nid);
 
 CAF_CORE_EXPORT error_code<sec> save_actor(const strong_actor_ptr& ptr,
                                            actor_id aid, const node_id& nid);
 
-CAF_CORE_EXPORT std::string to_string(const strong_actor_ptr& x);
+CAF_CORE_EXPORT std::string to_string(const strong_actor_ptr& ptr);
 
-CAF_CORE_EXPORT void append_to_string(std::string& x,
-                                      const strong_actor_ptr& y);
+CAF_CORE_EXPORT void append_to_string(std::string& str,
+                                      const strong_actor_ptr& ptr);
 
-CAF_CORE_EXPORT std::string to_string(const weak_actor_ptr& x);
+CAF_CORE_EXPORT std::string to_string(const weak_actor_ptr& ptr);
 
-CAF_CORE_EXPORT void append_to_string(std::string& x, const weak_actor_ptr& y);
+CAF_CORE_EXPORT void append_to_string(std::string& str,
+                                      const weak_actor_ptr& ptr);
 
 } // namespace caf
 
@@ -191,14 +233,14 @@ namespace std {
 template <>
 struct hash<caf::strong_actor_ptr> {
   size_t operator()(const caf::strong_actor_ptr& ptr) const noexcept {
-    return ptr ? static_cast<size_t>(ptr->id()) : 0;
+    return ptr ? ptr->hash() : 0;
   }
 };
 
 template <>
 struct hash<caf::weak_actor_ptr> {
   size_t operator()(const caf::weak_actor_ptr& ptr) const noexcept {
-    return ptr ? static_cast<size_t>(ptr->id()) : 0;
+    return ptr.hash();
   }
 };
 

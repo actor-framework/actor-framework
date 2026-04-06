@@ -65,6 +65,8 @@ class CAF_IO_EXPORT abstract_broker : public scheduled_actor,
 public:
   static constexpr auto forced_spawn_options = spawn_options::no_flags;
 
+  explicit abstract_broker(actor_config& cfg);
+
   abstract_broker(abstract_broker&&) = delete;
 
   abstract_broker(const abstract_broker&&) = delete;
@@ -76,7 +78,6 @@ public:
   ~abstract_broker() override;
 
   // even brokers need friends
-  friend struct detail::make_actor_util;
   friend class scribe;
   friend class doorman;
   friend class datagram_servant;
@@ -353,8 +354,6 @@ public:
 
 protected:
   void init_broker();
-
-  explicit abstract_broker(actor_config& cfg);
 
   using doorman_map = std::unordered_map<accept_handle, intrusive_ptr<doorman>>;
 

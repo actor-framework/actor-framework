@@ -18,11 +18,11 @@ void mock_producer::on_consumer_demand(size_t new_demand) {
   demand += new_demand;
 }
 
-void mock_producer::ref_producer() const noexcept {
+void mock_producer::ref() const noexcept {
   ref_count_.inc();
 }
 
-void mock_producer::deref_producer() const noexcept {
+void mock_producer::deref() const noexcept {
   ref_count_.dec(this);
 }
 

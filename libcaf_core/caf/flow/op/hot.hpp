@@ -21,16 +21,6 @@ public:
     // nop
   }
 
-  // -- implementation of disposable_impl --------------------------------------
-
-  void ref_coordinated() const noexcept override {
-    ref_count_.inc();
-  }
-
-  void deref_coordinated() const noexcept override {
-    ref_count_.dec(this);
-  }
-
   // -- implementation of observable_impl<T> -----------------------------------
 
   coordinator* parent() const noexcept override {
@@ -39,8 +29,6 @@ public:
 
 protected:
   // -- member variables -------------------------------------------------------
-
-  mutable detail::atomic_ref_count ref_count_;
 
   coordinator* parent_;
 };

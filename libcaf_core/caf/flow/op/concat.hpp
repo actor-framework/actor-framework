@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/gen/from_container.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
@@ -27,8 +28,6 @@ class concat_sub : public subscription::impl_base,
                    public observer_impl<observable<T>> {
 public:
   // -- member types -----------------------------------------------------------
-
-  using super = subscription::impl_base;
 
   using input_key = size_t;
 
@@ -87,20 +86,12 @@ public:
 
   // -- reference counting -----------------------------------------------------
 
-  void ref_coordinated() const noexcept final {
-    super::ref_coordinated();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept final {
-    super::deref_coordinated();
-  }
-
-  friend void intrusive_ptr_add_ref(const concat_sub* ptr) noexcept {
-    ptr->ref_coordinated();
-  }
-
-  friend void intrusive_ptr_release(const concat_sub* ptr) noexcept {
-    ptr->deref_coordinated();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   // -- callbacks for the forwarders -------------------------------------------
@@ -174,6 +165,8 @@ private:
     else
       out_.release_later();
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;

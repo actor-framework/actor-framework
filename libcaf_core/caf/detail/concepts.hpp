@@ -300,4 +300,9 @@ template <class Enum>
   return static_cast<std::underlying_type_t<Enum>>(e);
 }
 
+template <class Lhs, class Rhs>
+concept has_compare_overload = requires(const Lhs& lhs, const Rhs& rhs) {
+  { lhs.compare(rhs) } noexcept -> std::same_as<ptrdiff_t>;
+};
+
 } // namespace caf::detail

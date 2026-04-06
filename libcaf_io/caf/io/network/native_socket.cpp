@@ -9,6 +9,7 @@
 #include "caf/detail/call_cfun.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/panic.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/format_to_unexpected.hpp"
 #include "caf/log/io.hpp"
 #include "caf/sec.hpp"

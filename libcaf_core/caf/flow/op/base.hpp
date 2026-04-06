@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/coordinated.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/observer.hpp"
@@ -20,6 +21,14 @@ public:
 
   /// The derived type.
   using super = coordinated;
+
+  void ref() const noexcept override {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept override {
+    ref_count_.dec(this);
+  }
 
   /// The type of observed values.
   using output_type = T;
@@ -53,6 +62,9 @@ public:
       out.on_complete();
     return sub->as_disposable();
   }
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
 };
 
 } // namespace caf::flow::op

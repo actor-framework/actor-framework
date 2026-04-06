@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/counted_disposable.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/connectable.hpp"
@@ -45,20 +46,12 @@ public:
     return super::parent_;
   }
 
-  void ref_coordinated() const noexcept override {
-    super::ref_count_.inc();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_coordinated() const noexcept override {
-    super::ref_count_.dec(this);
-  }
-
-  friend void intrusive_ptr_add_ref(const publish* ptr) noexcept {
-    ptr->ref_coordinated();
-  }
-
-  friend void intrusive_ptr_release(const publish* ptr) noexcept {
-    ptr->deref_coordinated();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   // -- implementation of base<T> ----------------------------------------------
@@ -163,6 +156,8 @@ private:
   void do_dispose(const state_ptr_type&, bool) override {
     try_request_more();
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Keeps track of the number of items that have been requested but that have
   /// not yet been delivered.

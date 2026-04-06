@@ -8,6 +8,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code_enum.hpp"
 #include "caf/typed_actor_pack.hpp"
+#include "caf/weak_intrusive_ptr_traits.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -352,7 +353,6 @@ class manager;
 
 namespace detail {
 
-struct make_actor_util;
 struct meta_object;
 
 class abstract_worker;
@@ -373,6 +373,12 @@ using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
 } // namespace detail
 
 // -- weak pointer aliases -----------------------------------------------------
+
+template <>
+struct weak_intrusive_ptr_traits<actor_control_block> {
+  using managed_type = abstract_actor;
+  using control_block_type = actor_control_block;
+};
 
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 

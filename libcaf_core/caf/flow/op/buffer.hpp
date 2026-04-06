@@ -6,6 +6,7 @@
 
 #include "caf/cow_vector.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/observer.hpp"
@@ -190,6 +191,16 @@ public:
     }
   }
 
+  // -- reference counting -----------------------------------------------------
+
+  void ref() const noexcept final {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept final {
+    ref_count_.dec(this);
+  }
+
 private:
   void do_dispose(bool from_external) override {
     if (!out_)
@@ -256,6 +267,8 @@ private:
     if (value_sub_ && buffered > 0)
       value_sub_.request(buffered);
   }
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Stores the context (coordinator) that runs this flow.
   coordinator* parent_;

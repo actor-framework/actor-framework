@@ -8,6 +8,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/disposable.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/sec.hpp"
@@ -20,7 +21,7 @@ namespace {
 
 /// Decorates an action by adding a worker to it that will run the action.
 template <class WorkerPtr>
-class action_decorator : public ref_counted, public action::impl {
+class action_decorator : public action::impl {
 public:
   using state = action::state;
 
@@ -40,12 +41,12 @@ public:
     return decorated_->disposed();
   }
 
-  void ref_disposable() const noexcept override {
-    ref();
+  void ref() const noexcept final {
+    ref_count_.inc();
   }
 
-  void deref_disposable() const noexcept override {
-    deref();
+  void deref() const noexcept final {
+    ref_count_.dec(this);
   }
 
   void resume(scheduler*, uint64_t event_id) override {
@@ -75,14 +76,6 @@ public:
     return decorated_->current_state();
   }
 
-  friend void intrusive_ptr_add_ref(const action_decorator* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const action_decorator* ptr) noexcept {
-    ptr->deref();
-  }
-
 private:
   void do_run(strong_actor_ptr& ptr) {
     if (!decorated_->disposed()) {
@@ -92,6 +85,7 @@ private:
     }
   }
 
+  mutable detail::atomic_ref_count ref_count_;
   std::mutex mtx_;
   action::impl_ptr decorated_;
   WorkerPtr worker_;

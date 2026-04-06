@@ -106,7 +106,7 @@ private:
   // call without workers_mtx_ held
   void quit(scheduler* sched);
 
-  void force_close_mailbox() override;
+  bool try_force_close_mailbox() override;
 
   std::mutex workers_mtx_;
   std::vector<actor> workers_;

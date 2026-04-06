@@ -4,31 +4,28 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/caf_deprecated.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/format.hpp"
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/pp.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/format_string_with_location.hpp"
 #include "caf/fwd.hpp"
 #include "caf/log/event.hpp"
 #include "caf/log/level.hpp"
 
 #include <cstring>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <typeinfo>
 
 namespace caf {
 
 /// Centrally logs events from all actors in an actor system.
-class CAF_CORE_EXPORT logger {
+class CAF_CORE_EXPORT logger : public abstract_ref_counted {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -241,23 +238,6 @@ public:
 
   /// Sets the logger for the current thread.
   static void current_logger(std::nullptr_t);
-
-  // -- reference counting -----------------------------------------------------
-
-  /// Increases the reference count of the logger.
-  virtual void ref_logger() const noexcept = 0;
-
-  /// Decreases the reference count of the logger and destroys the object
-  /// if necessary.
-  virtual void deref_logger() const noexcept = 0;
-
-  friend void intrusive_ptr_add_ref(const logger* ptr) noexcept {
-    ptr->ref_logger();
-  }
-
-  friend void intrusive_ptr_release(const logger* ptr) noexcept {
-    ptr->deref_logger();
-  }
 
 private:
   // -- internal logging API ---------------------------------------------------

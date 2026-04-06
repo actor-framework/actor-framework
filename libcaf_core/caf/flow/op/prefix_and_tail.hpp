@@ -7,6 +7,7 @@
 #include "caf/cow_tuple.hpp"
 #include "caf/cow_vector.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"
@@ -31,8 +32,6 @@ public:
 
   using state_type = ucast_sub_state<T>;
 
-  using super = subscription::impl_base;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   prefix_and_tail_sub(coordinator* parent, observer<tuple_t> out,
@@ -52,14 +51,6 @@ public:
 
   coordinator* parent() const noexcept override {
     return parent_;
-  }
-
-  void ref_coordinated() const noexcept final {
-    super::ref_coordinated();
-  }
-
-  void deref_coordinated() const noexcept final {
-    super::deref_coordinated();
   }
 
   void on_next(const T& item) override {
@@ -152,6 +143,16 @@ public:
     }
   }
 
+  // -- reference counting -----------------------------------------------------
+
+  void ref() const noexcept final {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept final {
+    ref_count_.dec(this);
+  }
+
 private:
   // -- implementation of subscription::impl_base ------------------------------
 
@@ -172,6 +173,8 @@ private:
   }
 
   // -- member variables -------------------------------------------------------
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Our scheduling context.
   coordinator* parent_;
@@ -200,18 +203,6 @@ private:
   /// Stores how many items we need to buffer for the prefix.
   size_t prefix_size_;
 };
-
-/// @relates prefix_and_tail_sub
-template <class T>
-void intrusive_ptr_add_ref(prefix_and_tail_sub<T>* ptr) {
-  ptr->ref_coordinated();
-}
-
-/// @relates prefix_and_tail_sub
-template <class T>
-void intrusive_ptr_release(prefix_and_tail_sub<T>* ptr) {
-  ptr->deref_coordinated();
-}
 
 /// Decorates an observable to split its output into a prefix of fixed size plus
 /// an observable remainder.

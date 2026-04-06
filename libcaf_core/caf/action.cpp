@@ -8,12 +8,8 @@
 
 namespace caf {
 
-void action::impl::ref_resumable() const noexcept {
-  ref_disposable();
-}
-
-void action::impl::deref_resumable() const noexcept {
-  deref_disposable();
+action::impl::~impl() noexcept {
+  // nop
 }
 
 action::action(impl_ptr ptr) noexcept : pimpl_(std::move(ptr)) {

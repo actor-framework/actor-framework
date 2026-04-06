@@ -212,8 +212,8 @@ void abstract_actor_shell::close_mailbox() {
   }
 }
 
-void abstract_actor_shell::force_close_mailbox() {
-  close_mailbox();
+bool abstract_actor_shell::try_force_close_mailbox() {
+  return mailbox_.close_if_blocked();
 }
 
 flow::coordinator* abstract_actor_shell::flow_context() {

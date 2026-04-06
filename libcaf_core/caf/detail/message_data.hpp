@@ -188,19 +188,7 @@ private:
   alignas(max_align_t) std::byte storage_[];
 };
 
-static_assert(detail::uses_malloc_and_free<message_data>());
-
-// -- related non-members ------------------------------------------------------
-
-/// @relates message_data
-inline void intrusive_ptr_add_ref(const message_data* ptr) {
-  ptr->ref();
-}
-
-/// @relates message_data
-inline void intrusive_ptr_release(message_data* ptr) {
-  ptr->deref();
-}
+static_assert(detail::uses_malloc_and_free<message_data>);
 
 } // namespace caf::detail
 

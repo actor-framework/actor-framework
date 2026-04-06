@@ -68,14 +68,6 @@ public:
       ref_count_.dec(this);
     }
 
-    friend void intrusive_ptr_add_ref(data* ptr) noexcept {
-      ptr->ref();
-    }
-
-    friend void intrusive_ptr_release(data* ptr) noexcept {
-      ptr->deref();
-    }
-
     // -- properties -----------------------------------------------------------
 
     size_t size() noexcept {
@@ -107,7 +99,7 @@ public:
     std::byte storage_[];
   };
 
-  static_assert(detail::uses_malloc_and_free<data>());
+  static_assert(detail::uses_malloc_and_free<data>);
 
   // -- constructors, destructors, and assignment operators --------------------
 

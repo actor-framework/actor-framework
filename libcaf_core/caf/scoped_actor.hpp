@@ -41,7 +41,7 @@ public:
   }
 
   actor_system& home_system() const {
-    return *self_->home_system;
+    return self_->system();
   }
 
   blocking_actor* operator->() const {

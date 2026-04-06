@@ -4,14 +4,14 @@
 
 #pragma once
 
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/resumable.hpp"
 
 namespace caf::detail {
 
-class CAF_CORE_EXPORT abstract_worker : public ref_counted, public resumable {
+class CAF_CORE_EXPORT abstract_worker : public resumable {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -25,12 +25,14 @@ public:
 
   // -- implementation of resumable --------------------------------------------
 
-  void ref_resumable() const noexcept final;
+  void ref() const noexcept final;
 
-  void deref_resumable() const noexcept final;
+  void deref() const noexcept final;
 
 private:
   // -- member variables -------------------------------------------------------
+
+  mutable detail::atomic_ref_count ref_count_;
 
   /// Points to the next worker in the hub.
   std::atomic<abstract_worker*> next_;

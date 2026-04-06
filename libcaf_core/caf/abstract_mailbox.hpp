@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/caf_deprecated.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -13,7 +14,7 @@
 namespace caf {
 
 /// The base class for all mailbox implementations.
-class CAF_CORE_EXPORT abstract_mailbox {
+class CAF_CORE_EXPORT abstract_mailbox : public abstract_ref_counted {
 public:
   virtual ~abstract_mailbox();
 
@@ -52,6 +53,10 @@ public:
   /// @note Only the owning actor is allowed to call this function.
   virtual bool try_unblock() = 0;
 
+  /// Tries to transition the mailbox from a blocked state to a closed state.
+  /// @note Only the owning actor is allowed to call this function.
+  virtual bool close_if_blocked() = 0;
+
   /// Closes the mailbox and discards all pending messages.
   /// @returns The number of dropped messages.
   /// @note Only the owning actor is allowed to call this function.
@@ -66,26 +71,11 @@ public:
   /// @note Only the owning actor is allowed to call this function.
   virtual size_t size() = 0;
 
-  /// Increases the reference count by one.
-  virtual void ref_mailbox() const noexcept = 0;
-
-  /// Decreases the reference count by one and deletes this instance if the
-  /// reference count drops to zero.
-  virtual void deref_mailbox() const noexcept = 0;
-
   /// Checks whether the mailbox is empty.
   bool empty() {
     return size() == 0;
   }
 };
-
-inline void intrusive_ptr_add_ref(const abstract_mailbox* ptr) noexcept {
-  ptr->ref_mailbox();
-}
-
-inline void intrusive_ptr_release(const abstract_mailbox* ptr) noexcept {
-  ptr->deref_mailbox();
-}
 
 using abstract_mailbox_ptr = intrusive_ptr<abstract_mailbox>;
 

@@ -391,7 +391,7 @@ private:
 
   void close_mailbox();
 
-  void force_close_mailbox() final;
+  bool try_force_close_mailbox() final;
 
   template <class... Ts>
   size_t attach_functor(const typed_actor<Ts...>& x) {

@@ -217,8 +217,8 @@ void actor_pool::quit(scheduler* sched) {
   cleanup(planned_reason_, sched);
 }
 
-void actor_pool::force_close_mailbox() {
-  // nop
+bool actor_pool::try_force_close_mailbox() {
+  return true;
 }
 
 } // namespace caf
