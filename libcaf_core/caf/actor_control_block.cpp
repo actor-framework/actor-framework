@@ -40,7 +40,7 @@ void actor_control_block::deref() noexcept {
   // strong reference count drops to 0.
   auto& strong = ref_count_.strong_reference_count_ref();
   auto count = strong.load(std::memory_order_acquire);
-  for (;;) {
+  for (size_t i = 0; i < 100; ++i) {
     if (count == 0) {
       detail::critical("tried to decrease the strong reference count "
                        "of an already expired object");
@@ -97,6 +97,9 @@ void actor_control_block::deref() noexcept {
       }
     }
   }
+  detail::panic("failed to transition an expiring actor to terminated state "
+                "after 100 attempts, id: {}",
+                get()->id());
 }
 
 error_code<sec> load_actor(strong_actor_ptr& ptr, actor_system* sys,
