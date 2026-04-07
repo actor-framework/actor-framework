@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/async_mail.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/dynamically_typed.hpp"
 #include "caf/extend.hpp"
@@ -57,15 +56,13 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
-  /// Removes the handler for incoming messages and terminates
-  /// the companion for exit reason `rsn`.
-  void disconnect(exit_reason rsn = exit_reason::normal);
-
   /// Sets the handler for incoming messages.
   /// @warning `handler` needs to be thread-safe
+  /// @note If the mailbox is already closed, the call has no effect.
   void on_enqueue(enqueue_handler handler);
 
-  /// Sets the handler for incoming messages.
+  /// Sets the callback invoked when the actor terminates (see @ref on_cleanup).
+  /// @note If the mailbox is already closed, the call has no effect.
   void on_exit(on_exit_handler handler);
 
   // -- messaging --------------------------------------------------------------
@@ -73,7 +70,8 @@ public:
   /// Starts a new message.
   template <class... Args>
   [[nodiscard]] auto mail(Args&&... args) {
-    return make_mailer<policy::sender>(this, std::forward<Args>(args)...);
+    using mailer_policy = policy::sender;
+    return make_mailer<mailer_policy>(this, std::forward<Args>(args)...);
   }
 
   // -- miscellaneous ----------------------------------------------------------
@@ -88,8 +86,8 @@ protected:
 private:
   bool try_force_close_mailbox() override;
 
-  /// Guards access to other member variables.
-  mutable std::shared_mutex mtx_;
+  /// Guards access to other member variables of the actor companion.
+  mutable std::shared_mutex companion_mtx_;
 
   /// Tracks whether the mailbox has been closed.
   bool closed_ = false;

@@ -23,6 +23,12 @@ struct sender {
 
   /// Whether to enable the `delegate` method.
   static constexpr bool enable_delegate = false;
+
+  /// Whether to enable the `request` method.
+  static constexpr bool enable_request = false;
+
+  /// Whether to enable the `fan_out_request` method.
+  static constexpr bool enable_fan_out_request = false;
 };
 
 } // namespace caf::policy

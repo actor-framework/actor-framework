@@ -2,37 +2,967 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#include "caf/event_based_mail.hpp"
+#include "caf/mailer.hpp"
 
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
-#include "caf/disposable.hpp"
-#include "caf/dynamically_typed.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/blocking_actor.hpp"
+#include "caf/error_code.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/init_global_meta_objects.hpp"
-#include "caf/log/test.hpp"
-#include "caf/policy/select_all.hpp"
-#include "caf/result.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/timespan.hpp"
-#include "caf/type_id_list.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
-// Note: functions inherited from async_mail are tested in async_mail.test.cpp.
-
 using namespace caf;
 using namespace std::literals;
+
+namespace {
 
 using dummy_actor = typed_actor<result<int>(int)>;
 
 using dummy_behavior = dummy_actor::behavior_type;
 
+} // namespace
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
-TEST("send request message") {
+TEST("send asynchronous message") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto dummy = sys.spawn([](event_based_actor*) -> behavior {
+    return {
+      [=](const std::string&) {},
+    };
+  });
+  SECTION("regular message") {
+    self->mail("hello world").send(dummy);
+    expect<std::string>()
+      .with("hello world")
+      .priority(message_priority::normal)
+      .from(self)
+      .to(dummy);
+  }
+  SECTION("urgent message") {
+    self->mail("hello world").urgent().send(dummy);
+    expect<std::string>()
+      .with("hello world")
+      .priority(message_priority::high)
+      .from(self)
+      .to(dummy);
+  }
+}
+
+TEST("send delayed message") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto dummy = sys.spawn([](event_based_actor*) -> behavior {
+    return {
+      [=](const std::string&) {},
+    };
+  });
+  SECTION("regular message") {
+    SECTION("strong reference to the sender") {
+      SECTION("strong reference to the receiver") {
+        self->mail("hello world")
+          .delay(1s)
+          .send(dummy, strong_ref, strong_self_ref);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(dummy);
+      }
+      SECTION("weak reference to the receiver") {
+        self->mail("hello world")
+          .delay(1s)
+          .send(dummy, weak_ref, strong_self_ref);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(dummy);
+      }
+    }
+    SECTION("weak reference to the sender") {
+      SECTION("strong reference to the receiver") {
+        self->mail("hello world")
+          .delay(1s)
+          .send(dummy, strong_ref, weak_self_ref);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(dummy);
+      }
+      SECTION("weak reference to the receiver") {
+        self->mail("hello world")
+          .delay(1s)
+          .send(dummy, weak_ref, weak_self_ref);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(dummy);
+      }
+    }
+  }
+  SECTION("urgent message") {
+    SECTION("strong reference to the sender") {
+      SECTION("strong reference to the receiver") {
+        self->mail("hello world")
+          .urgent()
+          .delay(1s)
+          .send(dummy, strong_ref, strong_self_ref);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(dummy);
+      }
+      SECTION("weak reference to the receiver") {
+        self->mail("hello world")
+          .urgent()
+          .delay(1s)
+          .send(dummy, weak_ref, strong_self_ref);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(dummy);
+      }
+    }
+    SECTION("weak reference to the sender") {
+      SECTION("strong reference to the receiver") {
+        self->mail("hello world")
+          .urgent()
+          .delay(1s)
+          .send(dummy, strong_ref, weak_self_ref);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(dummy);
+      }
+      SECTION("weak reference to the receiver") {
+        self->mail("hello world")
+          .urgent()
+          .delay(1s)
+          .send(dummy, weak_ref, weak_self_ref);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(dummy);
+      }
+    }
+  }
+}
+
+TEST("delay delegate message") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto delegatee = sys.spawn([](event_based_actor*) -> behavior {
+    return {
+      [=](const std::string&) {},
+    };
+  });
+  SECTION("regular message") {
+    SECTION("strong reference to the sender") {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
+          [=](std::string& str) {
+            return self->mail(std::move(str))
+              .delay(1s)
+              .delegate(delegatee, strong_ref)
+              .first;
+          },
+        };
+      });
+      SECTION("strong reference to the receiver") {
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegatee);
+      }
+      SECTION("weak reference to the receiver") {
+        auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+          return behavior{
+            [=](std::string& str) {
+              return self->mail(std::move(str))
+                .delay(1s)
+                .delegate(delegatee, weak_ref)
+                .first;
+            },
+          };
+        });
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegatee);
+      }
+    }
+    SECTION("strong reference to the sender") {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
+          [=](std::string& str) {
+            return self->mail(std::move(str))
+              .delay(1s)
+              .delegate(delegatee, strong_ref, weak_self_ref)
+              .first;
+          },
+        };
+      });
+      SECTION("strong reference to the receiver") {
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegatee);
+      }
+      SECTION("weak reference to the receiver") {
+        auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+          return behavior{
+            [=](std::string& str) {
+              return self->mail(std::move(str))
+                .delay(1s)
+                .delegate(delegatee, weak_ref, weak_self_ref)
+                .first;
+            },
+          };
+        });
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegatee);
+      }
+    }
+  }
+  SECTION("urgent message") {
+    SECTION("strong reference to the sender") {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
+          [=](std::string& str) {
+            return self->mail(std::move(str))
+              .urgent()
+              .delay(1s)
+              .delegate(delegatee, strong_ref)
+              .first;
+          },
+        };
+      });
+      SECTION("strong reference to the receiver") {
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+      SECTION("weak reference to the receiver") {
+        auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+          return behavior{
+            [=](std::string& str) {
+              return self->mail(std::move(str))
+                .urgent()
+                .delay(1s)
+                .delegate(delegatee, weak_ref)
+                .first;
+            },
+          };
+        });
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+    }
+    SECTION("strong reference to the sender") {
+      auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+        return behavior{
+          [=](std::string& str) {
+            return self->mail(std::move(str))
+              .urgent()
+              .delay(1s)
+              .delegate(delegatee, strong_ref, weak_self_ref)
+              .first;
+          },
+        };
+      });
+      SECTION("strong reference to the receiver") {
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+      SECTION("weak reference to the receiver") {
+        auto delegator = sys.spawn([delegatee](event_based_actor* self) {
+          return behavior{
+            [=](std::string& str) {
+              return self->mail(std::move(str))
+                .urgent()
+                .delay(1s)
+                .delegate(delegatee, weak_ref, weak_self_ref)
+                .first;
+            },
+          };
+        });
+        self->mail("hello world").send(delegator);
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::normal)
+          .from(self)
+          .to(delegator);
+        check_eq(mail_count(), 0u);
+        check_eq(num_timeouts(), 1u);
+        trigger_timeout();
+        expect<std::string>()
+          .with("hello world")
+          .priority(message_priority::high)
+          .from(self)
+          .to(delegatee);
+      }
+    }
+  }
+}
+
+TEST("implicit cancel of a delayed message") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto dummy = sys.spawn([](event_based_actor*) -> behavior {
+    return {
+      [=](const std::string&) {},
+    };
+  });
+  SECTION("canceling due to the sender going out of scope") {
+    self->mail("hello world").delay(1s).send(dummy, strong_ref, weak_self_ref);
+    launch();
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 1u);
+    trigger_timeout();
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 0u);
+  }
+  SECTION("canceling due to the receiver going out of scope") {
+    self->mail("hello world").delay(1s).send(dummy, weak_ref, strong_self_ref);
+    dummy = nullptr;
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 1u);
+    trigger_timeout();
+    check_eq(mail_count(), 0u);
+    check_eq(num_timeouts(), 0u);
+  }
+}
+
+TEST("explicit cancel of a delayed message") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto dummy = sys.spawn([](event_based_actor*) -> behavior {
+    return {
+      [=](const std::string&) {},
+    };
+  });
+  SECTION("strong reference to the sender") {
+    SECTION("strong reference to the receiver") {
+      auto hdl = self->mail("hello world").delay(1s).send(dummy, strong_ref);
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 1u);
+      hdl.dispose();
+      trigger_timeout();
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 0u);
+    }
+    SECTION("weak reference to the receiver") {
+      auto hdl = self->mail("hello world").delay(1s).send(dummy, weak_ref);
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 1u);
+      hdl.dispose();
+      trigger_timeout();
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 0u);
+    }
+  }
+  SECTION("weak reference to the sender") {
+    SECTION("strong reference to the receiver") {
+      auto hdl = self->mail("hello world")
+                   .delay(1s)
+                   .send(dummy, strong_ref, weak_self_ref);
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 1u);
+      hdl.dispose();
+      trigger_timeout();
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 0u);
+    }
+    SECTION("weak reference to the receiver") {
+      auto hdl = self->mail("hello world")
+                   .delay(1s)
+                   .send(dummy, weak_ref, weak_self_ref);
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 1u);
+      hdl.dispose();
+      trigger_timeout();
+      check_eq(mail_count(), 0u);
+      check_eq(num_timeouts(), 0u);
+    }
+  }
+}
+
+TEST("sending to a null handle is a no-op") {
+  auto [self, launch] = sys.spawn_inactive();
+  auto hdl = actor{};
+  self->mail("hello world").send(hdl);
+  check_eq(mail_count(), 0u);
+  check_eq(num_timeouts(), 0u);
+  self->mail("hello world").delay(1s).send(hdl, strong_ref);
+  check_eq(mail_count(), 0u);
+  check_eq(num_timeouts(), 0u);
+  self->mail("hello world").delay(1s).send(hdl, weak_ref);
+  check_eq(mail_count(), 0u);
+  check_eq(num_timeouts(), 0u);
+}
+
+TEST("delegating to a null handle is an error") {
+  auto delegator = sys.spawn([](event_based_actor* self) {
+    return behavior{
+      [=](std::string& str) {
+        return self->mail(std::move(str))
+          .delay(1s)
+          .delegate(actor{}, strong_ref)
+          .first;
+      },
+    };
+  });
+  SECTION("regular dispatch") {
+    auto [self, launch] = sys.spawn_inactive();
+    self->mail("hello world").send(delegator);
+    self->become([](int) {});
+    auto self_hdl = actor_cast<actor>(self);
+    launch();
+    check_eq(mail_count(), 1u);
+    expect<std::string>().with("hello world").from(self_hdl).to(delegator);
+    check_eq(mail_count(), 1u);
+    expect<error>().from(delegator).to(self_hdl);
+  }
+  SECTION("delayed dispatch") {
+    auto [self, launch] = sys.spawn_inactive();
+    self->mail("hello world").send(delegator);
+    self->become([](int) {});
+    auto self_hdl = actor_cast<actor>(self);
+    launch();
+    check_eq(mail_count(), 1u);
+    expect<std::string>().with("hello world").from(self_hdl).to(delegator);
+    check_eq(mail_count(), 1u);
+    expect<error>().from(delegator).to(self_hdl);
+  }
+}
+
+TEST("send asynchronous message as a typed actor") {
+  using sender_actor = typed_actor<result<void>(int)>;
+  auto dummy = sys.spawn([]() -> dummy_behavior {
+    return {
+      [](int value) { return value * value; },
+    };
+  });
+  auto result = std::make_shared<int>(0);
+  auto sender = sys.spawn([dummy, result](sender_actor::pointer self) {
+    self->mail(3).send(dummy);
+    return sender_actor::behavior_type{
+      [result](int x) { *result = x; },
+    };
+  });
+  expect<int>()
+    .with(3)
+    .priority(message_priority::normal)
+    .from(sender)
+    .to(dummy);
+  expect<int>()
+    .with(9)
+    .priority(message_priority::normal)
+    .from(dummy)
+    .to(sender);
+  check_eq(*result, 9);
+}
+
+} // WITH_FIXTURE(test::fixture::deterministic)
+
+namespace {
+
+struct config : actor_system_config {
+  config() {
+    set("caf.scheduler.max-threads", 2u);
+  }
+};
+
+struct blocking_fixture {
+  config cfg;
+  actor_system sys{cfg};
+};
+
+} // namespace
+
+WITH_FIXTURE(blocking_fixture) {
+
+TEST("send blocking request message") {
+  scoped_actor self{sys};
+  auto result = std::make_shared<int>(0);
+  auto on_result = [result](int x) { *result = x; };
+  auto err = std::make_shared<error>();
+  auto on_error = [err](error x) { *err = x; };
+  SECTION("valid response") {
+    auto dummy = sys.spawn([]() -> dummy_behavior {
+      return {
+        [](int value) { return value * value; },
+      };
+    });
+    SECTION("regular message") {
+      self->mail(3).request(dummy, 1s).receive(on_result, on_error);
+      check_eq(*result, 9);
+    }
+    SECTION("urgent message") {
+      self->mail(3).urgent().request(dummy, 1s).receive(on_result, on_error);
+      check_eq(*result, 9);
+    }
+  }
+  SECTION("invalid response") {
+    auto dummy = sys.spawn([]() -> behavior {
+      return {
+        [](int) { return "ok"s; },
+      };
+    });
+    SECTION("regular message") {
+      self->mail(3).request(dummy, 1s).receive(on_result, on_error);
+      check_eq(*err, make_error(sec::unexpected_response));
+    }
+    SECTION("urgent message") {
+      self->mail(3).urgent().request(dummy, 1s).receive(on_result, on_error);
+      check_eq(*err, make_error(sec::unexpected_response));
+    }
+  }
+  SECTION("no response") {
+    auto dummy = sys.spawn([](event_based_actor* self) -> behavior {
+      auto res = std::make_shared<response_promise>();
+      return {
+        [self, res](int) { *res = self->make_response_promise(); },
+      };
+    });
+    self->mail(3).request(dummy, 10ms).receive(on_result, on_error);
+    check_eq(*err, make_error(sec::request_timeout));
+    self->mail(exit_msg{self->address(), exit_reason::user_shutdown})
+      .send(dummy);
+  }
+}
+
+TEST("send blocking delayed request message") {
+  scoped_actor self{sys};
+  auto result = std::make_shared<int>(0);
+  auto on_result = [result](int x) { *result = x; };
+  auto err = std::make_shared<error>();
+  auto on_error = [err](error x) { *err = x; };
+  SECTION("valid response") {
+    auto dummy = sys.spawn([]() -> dummy_behavior {
+      return {
+        [](int value) { return value * value; },
+      };
+    });
+    SECTION("regular message") {
+      self->mail(3).delay(5ms).request(dummy, 1s).receive(on_result, on_error);
+      check_eq(*result, 9);
+    }
+    SECTION("urgent message") {
+      self->mail(3)
+        .urgent()
+        .schedule(self->clock().now() + 5ms)
+        .request(dummy, 1s)
+        .receive(on_result, on_error);
+      check_eq(*result, 9);
+    }
+  }
+  SECTION("invalid response") {
+    auto dummy = sys.spawn([]() -> behavior {
+      return {
+        [](int) { return "ok"s; },
+      };
+    });
+    SECTION("regular message") {
+      self->mail(3).delay(5ms).request(dummy, 1s).receive(on_result, on_error);
+      check_eq(*err, make_error(sec::unexpected_response));
+    }
+    SECTION("urgent message") {
+      auto [hdl, pending] = self->mail(3)
+                              .urgent()
+                              .schedule(self->clock().now() + 5ms)
+                              .request(dummy, 1s);
+      static_assert(
+        std::is_same_v<decltype(hdl), blocking_response_handle<message>>);
+      static_assert(std::is_same_v<decltype(pending), disposable>);
+      std::move(hdl).receive(on_result, on_error);
+      check_eq(*err, make_error(sec::unexpected_response));
+    }
+    SECTION("no response") {
+      auto dummy = sys.spawn([](event_based_actor* self) -> behavior {
+        auto res = std::make_shared<response_promise>();
+        return {
+          [self, res](int) { *res = self->make_response_promise(); },
+        };
+      });
+      self->mail(3)
+        .delay(5ms)
+        .request(dummy, 10ms)
+        .receive(on_result, on_error);
+      check_eq(*err, make_error(sec::request_timeout));
+      self->mail(exit_msg{self->address(), exit_reason::user_shutdown})
+        .send(dummy);
+    }
+  }
+}
+
+TEST("send blocking request message to an invalid receiver") {
+  scoped_actor self{sys};
+  auto result = std::make_shared<int>(0);
+  auto on_result = [result](int x) { *result = x; };
+  auto err = std::make_shared<error>();
+  auto on_error = [err](error x) { *err = x; };
+  SECTION("regular message") {
+    self->mail("hello world").request(actor{}, 1s).receive(on_result, on_error);
+    check_eq(*result, 0);
+    check_eq(*err, make_error(sec::invalid_request));
+  }
+  SECTION("delayed message") {
+    self->mail("hello world")
+      .delay(1s)
+      .request(actor{}, 1s)
+      .receive(on_result, on_error);
+    check_eq(*result, 0);
+    check_eq(*err, make_error(sec::invalid_request));
+  }
+}
+
+TEST("receive response as an expected") {
+  using server_actor
+    = typed_actor<result<void>(get_atom),                // No response.
+                  result<int>(get_atom, int),            // One response value.
+                  result<int, int>(get_atom, int, int)>; // Two response values.
+  scoped_actor self{sys};
+  SECTION("receive without delay") {
+    SECTION("statically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> server_actor::behavior_type {
+        return {
+          [](get_atom) {},
+          [](get_atom, int x) { return x; },
+          [](get_atom, int x, int y) -> result<int, int> { return {x, y}; },
+        };
+      });
+      SECTION("empty result") {
+        auto res = self->mail(get_atom_v).request(server, 1s).receive();
+        check(res.has_value());
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1).request(server, 1s).receive();
+        check_eq(res, 1);
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2).request(server, 1s).receive();
+        check_eq(res, std::tuple{1, 2});
+      }
+    }
+    SECTION("dynamically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> behavior {
+        return {
+          [](get_atom) {},
+          [](get_atom, int x) { return x; },
+          [](get_atom, int x, int y) -> result<int, int> { return {x, y}; },
+        };
+      });
+      SECTION("empty result") {
+        auto res = self->mail(get_atom_v).request(server, 1s).receive<>();
+        check(res.has_value());
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1).request(server, 1s).receive<int>();
+        check_eq(res, 1);
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .request(server, 1s)
+                     .receive<int, int>();
+        check_eq(res, std::tuple{1, 2});
+      }
+    }
+    SECTION("statically typed response with a server returning errors") {
+      auto server = sys.spawn([]() -> server_actor::behavior_type {
+        return {
+          [](get_atom) -> result<void> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int) -> result<int> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int, int) -> result<int, int> {
+            return make_error(sec::runtime_error);
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res = self->mail(get_atom_v).request(server, 1s).receive();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1).request(server, 1s).receive();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2).request(server, 1s).receive();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+    }
+    SECTION("dynamically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> behavior {
+        return {
+          [](get_atom) -> result<void> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int) -> result<int> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int, int) -> result<int, int> {
+            return make_error(sec::runtime_error);
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res = self->mail(get_atom_v).request(server, 1s).receive<>();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1).request(server, 1s).receive<int>();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .request(server, 1s)
+                     .receive<int, int>();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+    }
+  }
+  SECTION("receive with delay") {
+    SECTION("statically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> server_actor::behavior_type {
+        return {
+          [](get_atom) {},
+          [](get_atom, int x) { return x; },
+          [](get_atom, int x, int y) -> result<int, int> { return {x, y}; },
+        };
+      });
+      SECTION("empty result") {
+        auto res
+          = self->mail(get_atom_v).delay(10us).request(server, 1s).receive();
+        check(res.has_value());
+      }
+      SECTION("result with one integer") {
+        auto res
+          = self->mail(get_atom_v, 1).delay(10us).request(server, 1s).receive();
+        check_eq(res, 1);
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive();
+        check_eq(res, std::tuple{1, 2});
+      }
+    }
+    SECTION("dynamically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> behavior {
+        return {
+          [](get_atom) {},
+          [](get_atom, int x) { return x; },
+          [](get_atom, int x, int y) -> result<int, int> { return {x, y}; },
+        };
+      });
+      SECTION("empty result") {
+        auto res
+          = self->mail(get_atom_v).delay(10us).request(server, 1s).receive<>();
+        check(res.has_value());
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive<int>();
+        check_eq(res, 1);
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive<int, int>();
+        check_eq(res, std::tuple{1, 2});
+      }
+    }
+    SECTION("statically typed response with a server returning errors") {
+      auto server = sys.spawn([]() -> server_actor::behavior_type {
+        return {
+          [](get_atom) -> result<void> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int) -> result<int> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int, int) -> result<int, int> {
+            return make_error(sec::runtime_error);
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res
+          = self->mail(get_atom_v).delay(10us).request(server, 1s).receive();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+      SECTION("result with one integer") {
+        auto res
+          = self->mail(get_atom_v, 1).delay(10us).request(server, 1s).receive();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+    }
+    SECTION("dynamically typed response with well-behaved server") {
+      auto server = sys.spawn([]() -> behavior {
+        return {
+          [](get_atom) -> result<void> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int) -> result<int> {
+            return make_error(sec::runtime_error);
+          },
+          [](get_atom, int, int) -> result<int, int> {
+            return make_error(sec::runtime_error);
+          },
+        };
+      });
+      SECTION("empty result") {
+        auto res
+          = self->mail(get_atom_v).delay(10us).request(server, 1s).receive<>();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+      SECTION("result with one integer") {
+        auto res = self->mail(get_atom_v, 1)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive<int>();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+      SECTION("result with two integers") {
+        auto res = self->mail(get_atom_v, 1, 2)
+                     .delay(10us)
+                     .request(server, 1s)
+                     .receive<int, int>();
+        check_eq(res, error_code{sec::runtime_error});
+      }
+    }
+  }
+}
+
+} // WITH_FIXTURE(blocking_fixture)
+
+WITH_FIXTURE(test::fixture::deterministic) {
+
+TEST("send event-based request message") {
   auto [self, launch] = sys.spawn_inactive();
   auto self_hdl = actor_cast<actor>(self);
   SECTION("using .then for the response") {
@@ -328,7 +1258,7 @@ TEST("send request message") {
   }
 }
 
-TEST("send delayed request message") {
+TEST("send event-based delayed request message") {
   auto [self, launch] = sys.spawn_inactive();
   auto self_hdl = actor_cast<actor>(self);
   auto dummy = sys.spawn([]() -> dummy_behavior {
@@ -409,7 +1339,7 @@ TEST("send delayed request message") {
   }
 }
 
-TEST("send delayed request message with no response") {
+TEST("send event-based delayed request message with no response") {
   auto [self, launch] = sys.spawn_inactive();
   auto self_hdl = actor_cast<actor>(self);
   auto result = std::make_shared<error>();
@@ -445,7 +1375,7 @@ TEST("send delayed request message with no response") {
   expect<exit_msg>().to(dummy);
 }
 
-TEST("send request message as a typed actor") {
+TEST("send event-based request message as a typed actor") {
   using sender_actor = typed_actor<result<void>(int)>;
   auto dummy = sys.spawn([]() -> dummy_behavior {
     return {
@@ -472,7 +1402,7 @@ TEST("send request message as a typed actor") {
   check_eq(*result, 9);
 }
 
-TEST("send request message to an invalid receiver") {
+TEST("send event-based request message to an invalid receiver") {
   auto dummy = sys.spawn([]() -> dummy_behavior {
     return {
       [](int value) { return value * value; },

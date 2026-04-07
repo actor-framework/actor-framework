@@ -13,59 +13,12 @@
 #include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/none.hpp"
+#include "caf/policy/blocking_requester.hpp"
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_behavior.hpp"
 
 #include <type_traits>
-
-namespace caf::detail {
-
-template <class Result>
-struct blocking_response_handle_oracle;
-
-template <>
-struct blocking_response_handle_oracle<message> {
-  using type = blocking_response_handle<message>;
-};
-
-template <>
-struct blocking_response_handle_oracle<type_list<void>> {
-  using type = blocking_response_handle<>;
-};
-
-template <class... Results>
-struct blocking_response_handle_oracle<type_list<Results...>> {
-  using type = blocking_response_handle<Results...>;
-};
-
-template <class Result>
-using blocking_response_handle_t =
-  typename blocking_response_handle_oracle<Result>::type;
-
-template <class Result>
-struct blocking_delayed_response_handle_oracle;
-
-template <>
-struct blocking_delayed_response_handle_oracle<message> {
-  using type = blocking_delayed_response_handle<message>;
-};
-
-template <>
-struct blocking_delayed_response_handle_oracle<type_list<void>> {
-  using type = blocking_delayed_response_handle<>;
-};
-
-template <class... Results>
-struct blocking_delayed_response_handle_oracle<type_list<Results...>> {
-  using type = blocking_delayed_response_handle<Results...>;
-};
-
-template <class Result>
-using blocking_delayed_response_handle_t =
-  typename blocking_delayed_response_handle_oracle<Result>::type;
-
-} // namespace caf::detail
 
 namespace caf {
 
@@ -92,6 +45,8 @@ public:
     = std::is_same_v<type_list<Results...>, type_list<message>>;
 
   static constexpr bool is_statically_typed = !is_dynamically_typed;
+
+  static constexpr bool is_blocking = true;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -149,6 +104,8 @@ public:
     = std::is_same_v<type_list<Results...>, type_list<message>>;
 
   static constexpr bool is_statically_typed = !is_dynamically_typed;
+
+  static constexpr bool is_blocking = true;
 
   // -- constructors, destructors, and assignment operators --------------------
 

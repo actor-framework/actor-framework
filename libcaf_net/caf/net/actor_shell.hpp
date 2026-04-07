@@ -10,12 +10,14 @@
 #include "caf/actor_traits.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/dynamically_typed.hpp"
-#include "caf/event_based_mail.hpp"
+#include "caf/event_based_response_handle.hpp" // for the mail() API
 #include "caf/extend.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/fwd.hpp"
+#include "caf/mailer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/none.hpp"
+#include "caf/policy/event_based_requester.hpp"
 
 namespace caf::net {
 
@@ -55,8 +57,8 @@ public:
   /// Starts a new message.
   template <class... Args>
   auto mail(Args&&... args) {
-    return event_based_mail(dynamically_typed{}, this,
-                            std::forward<Args>(args)...);
+    using mailer_policy = policy::event_based_requester;
+    return make_mailer<mailer_policy>(this, std::forward<Args>(args)...);
   }
 
   CAF_ADD_DEPRECATED_REQUEST_API

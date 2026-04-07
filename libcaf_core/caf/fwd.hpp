@@ -78,13 +78,14 @@ template <class...> class result;
 template <class...> class typed_message_view;
 template <class...> class typed_response_promise;
 
+template <class, class...> class event_based_fan_out_response_handle;
+template <class, class...> class event_based_fan_out_delayed_response_handle;
+
 template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor;
 template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor_pointer;
 template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor_view;
 template <class... Ts> requires typed_actor_pack<Ts...> class typed_behavior;
 template <class... Ts> requires typed_actor_pack<Ts...> class typed_event_based_actor;
-
-template <class, class...> class event_based_fan_out_response_handle;
 
 // clang-format on
 
@@ -92,6 +93,7 @@ template <class, class...> class event_based_fan_out_response_handle;
 
 class [[nodiscard]] error;
 class abstract_actor;
+class abstract_blocking_actor;
 class abstract_mailbox;
 class action;
 class actor;

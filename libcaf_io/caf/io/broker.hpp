@@ -12,12 +12,15 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/dynamically_typed.hpp"
+#include "caf/event_based_fan_out_response_handle.hpp" // for the mail() API
+#include "caf/event_based_response_handle.hpp"         // for the mail() API
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/keep_behavior.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mixin/requester.hpp"
+#include "caf/policy/event_based_requester.hpp"
 #include "caf/stateful_actor.hpp"
 
 #include <map>
@@ -59,8 +62,8 @@ public:
   /// Starts a new message.
   template <class... Args>
   auto mail(Args&&... args) {
-    return event_based_mail(dynamically_typed{}, this,
-                            std::forward<Args>(args)...);
+    using mailer_policy = policy::event_based_requester;
+    return make_mailer<mailer_policy>(this, std::forward<Args>(args)...);
   }
 
   CAF_ADD_DEPRECATED_REQUEST_API

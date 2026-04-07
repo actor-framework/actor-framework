@@ -5,7 +5,6 @@
 #include "caf/actor_companion.hpp"
 
 #include "caf/detail/assert.hpp"
-#include "caf/detail/critical.hpp"
 
 namespace caf {
 
@@ -14,14 +13,14 @@ actor_companion::~actor_companion() {
 }
 
 void actor_companion::on_enqueue(enqueue_handler handler) {
-  std::lock_guard guard{mtx_};
+  std::lock_guard guard{companion_mtx_};
   if (!closed_) {
     on_enqueue_ = std::move(handler);
   }
 }
 
 void actor_companion::on_exit(on_exit_handler handler) {
-  std::lock_guard guard{mtx_};
+  std::lock_guard guard{companion_mtx_};
   if (!closed_) {
     on_exit_ = std::move(handler);
   }
@@ -29,7 +28,7 @@ void actor_companion::on_exit(on_exit_handler handler) {
 
 bool actor_companion::enqueue(mailbox_element_ptr what, scheduler*) {
   CAF_ASSERT(what);
-  std::shared_lock guard{mtx_};
+  std::shared_lock guard{companion_mtx_};
   if (on_enqueue_) {
     on_enqueue_(std::move(what));
     return true;
@@ -44,7 +43,7 @@ const char* actor_companion::name() const {
 void actor_companion::on_cleanup(const error&) {
   on_exit_handler handler;
   {
-    std::lock_guard guard{mtx_};
+    std::lock_guard guard{companion_mtx_};
     handler.swap(on_exit_);
   }
   if (handler) {
@@ -56,7 +55,7 @@ bool actor_companion::try_force_close_mailbox() {
   auto result = false;
   enqueue_handler tmp;
   {
-    std::unique_lock guard(mtx_);
+    std::unique_lock guard(companion_mtx_);
     if (!closed_) {
       closed_ = true;
       result = true;
