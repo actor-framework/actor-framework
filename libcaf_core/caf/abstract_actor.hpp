@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/abstract_ref_counted.hpp"
 #include "caf/attachable.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/concepts.hpp"
@@ -44,7 +45,7 @@ using actor_id = uint64_t;
 constexpr actor_id invalid_actor_id = 0;
 
 /// Base class for all actor implementations.
-class CAF_CORE_EXPORT abstract_actor {
+class CAF_CORE_EXPORT abstract_actor : public abstract_ref_counted {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -157,6 +158,12 @@ public:
   /// upon invocation, nothing is done. The return value of this member
   /// function is ignored by scheduled actors.
   bool cleanup(error&& reason, scheduler* sched);
+
+  // -- reference counting -----------------------------------------------------
+
+  void ref() const noexcept override;
+
+  void deref() const noexcept override;
 
   // -- here be dragons: end of public interface -------------------------------
 

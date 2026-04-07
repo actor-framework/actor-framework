@@ -11,6 +11,8 @@
 #include "caf/fwd.hpp"
 #include "caf/keep_behavior.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/mailer.hpp"
+#include "caf/policy/sender.hpp"
 #include "caf/scheduled_actor.hpp"
 
 #include <functional>
@@ -23,11 +25,11 @@ namespace caf {
 /// callback to another object, thus serving as gateway to
 /// allow any object to interact with other actors.
 /// @extends local_actor
-class CAF_CORE_EXPORT actor_companion : public scheduled_actor {
+class CAF_CORE_EXPORT actor_companion : public abstract_actor {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = scheduled_actor;
+  using super = abstract_actor;
 
   /// Required by `spawn` for type deduction.
   using signatures = none_t;
@@ -51,11 +53,7 @@ public:
 
   bool enqueue(mailbox_element_ptr ptr, scheduler* sched) override;
 
-  bool initialize(scheduler*) override;
-
-  void launch(detail::private_thread* worker, scheduler* ctx) override;
-
-  void on_exit() override;
+  const char* name() const override;
 
   // -- modifiers --------------------------------------------------------------
 
@@ -75,39 +73,32 @@ public:
   /// Starts a new message.
   template <class... Args>
   [[nodiscard]] auto mail(Args&&... args) {
-    return async_mail(dynamically_typed{}, this, std::forward<Args>(args)...);
+    return make_mailer<policy::sender>(this, std::forward<Args>(args)...);
   }
 
-  // -- behavior management ----------------------------------------------------
+  // -- miscellaneous ----------------------------------------------------------
 
-  /// @copydoc caf::event_based_actor::become
-  template <class T, class... Ts>
-  void become(T&& arg, Ts&&... args) {
-    if constexpr (std::is_same_v<keep_behavior_t, std::decay_t<T>>) {
-      static_assert(sizeof...(Ts) > 0);
-      do_become(behavior{std::forward<Ts>(args)...}, false);
-    } else {
-      do_become(behavior{std::forward<T>(arg), std::forward<Ts>(args)...},
-                true);
-    }
+  void setup_metrics() {
+    // nop; required by `make_actor`
   }
 
-  /// @copydoc caf::event_based_actor::unbecome
-  void unbecome() {
-    bhvr_stack_.pop_back();
-  }
+protected:
+  void on_cleanup(const error& reason) override;
 
 private:
-  behavior type_erased_initial_behavior() final;
+  bool try_force_close_mailbox() override;
 
-  // set by parent to define custom enqueue action
+  /// Guards access to other member variables.
+  mutable std::shared_mutex mtx_;
+
+  /// Tracks whether the mailbox has been closed.
+  bool closed_ = false;
+
+  /// User-defined handler for incoming messages.
   enqueue_handler on_enqueue_;
 
-  // custom code for on_exit()
+  /// User-defined callback for actor termination.
   on_exit_handler on_exit_;
-
-  // guards access to handler_
-  std::shared_mutex lock_;
 };
 
 } // namespace caf
