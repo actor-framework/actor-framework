@@ -287,6 +287,9 @@ function(caf_add_component name)
   endif()
   if(CAF_ENABLE_TESTING)
     add_executable("caf-${name}-test" ${CMAKE_CURRENT_SOURCE_DIR}/main.test.cpp)
+    if(MSVC)
+      target_compile_options("caf-${name}-test" PRIVATE /bigobj)
+    endif()
     target_compile_definitions(
       "caf-${name}-test" PRIVATE
       CAF_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
