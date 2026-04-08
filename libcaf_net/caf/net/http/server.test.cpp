@@ -20,6 +20,8 @@
 #include "caf/log/test.hpp"
 #include "caf/raise_error.hpp"
 
+#include <source_location>
+
 using namespace caf;
 using namespace std::literals;
 
@@ -186,6 +188,25 @@ struct fixture {
     fd2.id = net::invalid_socket_id;
   }
 
+  /// Reads until successfully receiving the specified number of bytes.
+  byte_buffer read_bytes(net::stream_socket fd, size_t size,
+                         const std::source_location& loc
+                         = std::source_location::current()) {
+    auto& self = test::runnable::current();
+    byte_buffer buf;
+    buf.resize(size);
+    auto bytes_read = net::read(fd, buf);
+    self.require_gt(bytes_read, 0, loc);
+    auto total_bytes_read = static_cast<size_t>(bytes_read);
+    while (total_bytes_read < size) {
+      auto bytes_span = std::span{buf}.subspan(total_bytes_read);
+      auto bytes_read = net::read(fd, bytes_span);
+      self.require_gt(bytes_read, 0, loc);
+      total_bytes_read += static_cast<size_t>(bytes_read);
+    }
+    return buf;
+  }
+
   net::multiplexer_ptr mpx;
   net::stream_socket fd1;
   net::stream_socket fd2;
@@ -195,7 +216,6 @@ struct fixture {
 } // namespace
 
 WITH_FIXTURE(fixture) {
-
 SCENARIO("the server parses HTTP GET requests into header fields") {
   GIVEN("valid HTTP GET request") {
     std::string_view request = "GET /foo/bar?user=foo&pw=bar HTTP/1.1\r\n"
@@ -228,9 +248,7 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
         check_eq(res.hdr.field("Accept-Encoding"), "gzip");
       }
       AND_THEN("the server sends a response from the application layer") {
-        byte_buffer buf;
-        buf.resize(response.size());
-        net::read(fd1, buf);
+        auto buf = read_bytes(fd1, response.size());
         check_eq(to_string_view(buf), response);
       }
     }
@@ -265,9 +283,7 @@ SCENARIO("the client receives a chunked HTTP response") {
       });
       net::write(fd1, as_bytes(std::span{request}));
       THEN("the HTTP layer sends a chunked response to the client") {
-        byte_buffer buf;
-        buf.resize(response.size());
-        net::read(fd1, buf);
+        auto buf = read_bytes(fd1, response.size());
         check_eq(to_string_view(buf), response);
       }
     }
@@ -529,6 +545,100 @@ TEST("the server handles a chunked request without the final zero chunk") {
   net::write(fd1, as_bytes(std::span{req_body}));
   // The server should wait for more data (not timeout immediately)
   // Promise should not be fulfilled yet
+  check(!res_promise.get_future().get(100ms));
+}
+
+SCENARIO("the server sends 100 Continue before reading a request body") {
+  GIVEN("a POST with Expect: 100-continue and Content-Length") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Content-Length: 5\r\n"
+                       "Expect: 100-continue\r\n"
+                       "\r\n"sv;
+    auto req_body = "hello"sv;
+    auto continue_msg = "HTTP/1.1 100 Continue\r\n\r\n"sv;
+    auto ok_response = "HTTP/1.1 200 OK\r\n"
+                       "Content-Type: text/plain\r\n"
+                       "Content-Length: 2\r\n"
+                       "\r\n"
+                       "OK"sv;
+    async::promise<response_t> res_promise;
+    run_server(
+      [](auto* down, const response_t&) {
+        down->send_response(net::http::status::ok, "text/plain", "OK"sv);
+      },
+      res_promise);
+    WHEN("the client sends the headerfields") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      THEN("the server sends 100 Continue") {
+        auto buf = read_bytes(fd1, continue_msg.size());
+        check_eq(to_string_view(buf), continue_msg);
+      }
+      AND_THEN("the client can send the body") {
+        net::write(fd1, as_bytes(std::span{req_body}));
+      }
+      AND_THEN("the server sends the final response") {
+        auto buf = read_bytes(fd1, ok_response.size());
+        check_eq(to_string_view(buf), ok_response);
+      }
+    }
+  }
+}
+
+SCENARIO("the server sends 100 Continue before reading a chunked body") {
+  GIVEN("a chunked POST with Expect: 100-continue") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Transfer-Encoding: chunked\r\n"
+                       "Expect: 100-continue\r\n"
+                       "\r\n"sv;
+    auto req_body = "5\r\nhello\r\n0\r\n\r\n"sv;
+    auto continue_msg = "HTTP/1.1 100 Continue\r\n\r\n"sv;
+    auto ok_response = "HTTP/1.1 200 OK\r\n"
+                       "Content-Type: text/plain\r\n"
+                       "Content-Length: 2\r\n"
+                       "\r\n"
+                       "OK"sv;
+    async::promise<response_t> res_promise;
+    auto cb = [](auto* down, const response_t&) {
+      down->send_response(net::http::status::ok, "text/plain", "OK"sv);
+    };
+    run_server(cb, res_promise);
+    WHEN("sending the request to an HTTP server") {
+      net::write(fd1, as_bytes(std::span{req_headers}));
+      net::write(fd1, as_bytes(std::span{req_body}));
+      THEN("the application receives the chunked payload") {
+        auto maybe_res = res_promise.get_future().get(1s);
+        require(maybe_res.has_value());
+        check_eq(maybe_res->payload_chunks.size(), 1ul);
+        check(std::ranges::equal(maybe_res->payload_chunks[0],
+                                 to_const_byte_span("hello"sv)));
+      }
+      AND_THEN("the client receives 100 Continue before the final response") {
+        auto buf = read_bytes(fd1, continue_msg.size() + ok_response.size());
+        auto all = to_string_view(buf);
+        check_eq(all.substr(0, continue_msg.size()), continue_msg);
+        check_eq(all.substr(continue_msg.size()), ok_response);
+      }
+    }
+  }
+}
+
+TEST("the server responds with 417 for unsupported Expect") {
+  auto req_headers = "POST /upload HTTP/1.1\r\n"
+                     "Host: localhost:8000\r\n"
+                     "Content-Length: 5\r\n"
+                     "Expect: foobar\r\n"
+                     "\r\n"sv;
+  auto expect_response = "HTTP/1.1 417 Expectation Failed\r\n"
+                         "Content-Type: text/plain\r\n"
+                         "Content-Length: 41\r\n\r\n"
+                         "Expectation cannot be met by this server."sv;
+  async::promise<response_t> res_promise;
+  run_server([](auto*, const response_t&) {}, res_promise);
+  net::write(fd1, as_bytes(std::span{req_headers}));
+  auto buf = read_bytes(fd1, expect_response.size());
+  check_eq(to_string_view(buf), expect_response);
   check(!res_promise.get_future().get(100ms));
 }
 

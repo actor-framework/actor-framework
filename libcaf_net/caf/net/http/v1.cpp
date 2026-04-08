@@ -129,8 +129,6 @@ bool end_header(byte_buffer& buf) {
 void write_response(status code, std::string_view content_type,
                     std::string_view content, byte_buffer& buf) {
   write_response(code, content_type, content, {}, buf);
-  writer out{&buf};
-  out << content;
 }
 
 void write_response(status code, std::string_view content_type,
