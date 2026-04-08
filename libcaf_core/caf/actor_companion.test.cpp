@@ -7,6 +7,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/event_based_actor.hpp"
 #include "caf/mailbox_element.hpp"
 
 using namespace caf;
@@ -14,25 +15,40 @@ using namespace caf;
 WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("actor_companion forwards messages to a custom handler") {
-  auto self = sys.make_companion();
-  check_eq(self->enqueue(make_mailbox_element(nullptr, make_message_id(), "42"),
-                         nullptr),
+  auto uut = sys.make_companion();
+  check_eq(uut->enqueue(make_mailbox_element(nullptr, make_message_id(), "42"),
+                        nullptr),
            false);
   message msg;
-  self->on_enqueue([&msg](mailbox_element_ptr ptr) { msg = ptr->content(); });
-  check(self->enqueue(make_mailbox_element(nullptr, make_message_id(), "42"),
-                      nullptr));
+  uut->on_enqueue([&msg](mailbox_element_ptr ptr) { msg = ptr->content(); });
+  check(uut->enqueue(make_mailbox_element(nullptr, make_message_id(), "42"),
+                     nullptr));
   check_eq(to_string(msg), R"_(message("42"))_");
-  check_eq(self->mailbox().size(), 0u);
 }
 
 TEST("actor_companion calls the on_exit handler on shutdown") {
   auto exited = std::make_shared<bool>(false);
   {
-    auto self = sys.make_companion();
-    self->on_exit([exited]() { *exited = true; });
+    auto uut = sys.make_companion();
+    uut->on_exit([exited]() { *exited = true; });
   }
   check(*exited);
+}
+
+TEST("actor_companion can send messages") {
+  auto adder = sys.spawn([] {
+    return behavior{
+      [](int value) { return value + 1; },
+    };
+  });
+  auto uut = sys.make_companion();
+  auto msg = std::make_shared<message>();
+  uut->on_enqueue([msg](mailbox_element_ptr ptr) { *msg = ptr->content(); });
+  uut->mail(41).send(adder);
+  expect<int>().with(41).to(adder);
+  if (check_ne(msg, nullptr)) {
+    check_eq(to_string(*msg), R"_(message(42))_");
+  }
 }
 
 } // WITH_FIXTURE(test::fixture::deterministic)

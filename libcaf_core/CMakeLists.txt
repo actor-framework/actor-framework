@@ -115,14 +115,12 @@ caf_add_component(
     caf/async/promise.test.cpp
     caf/async/publisher.test.cpp
     caf/async/spsc_buffer.test.cpp
-    caf/async_mail.test.cpp
     caf/attachable.cpp
     caf/behavior.cpp
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
     caf/blocking_actor.cpp
     caf/blocking_actor.test.cpp
-    caf/blocking_mail.test.cpp
     caf/byte_reader.cpp
     caf/byte_span.cpp
     caf/byte_writer.cpp
@@ -233,7 +231,6 @@ caf_add_component(
     caf/error.test.cpp
     caf/event_based_actor.cpp
     caf/event_based_actor.test.cpp
-    caf/event_based_mail.test.cpp
     caf/exit_reason.test.cpp
     caf/flow/byte.test.cpp
     caf/flow/combine_latest.test.cpp
@@ -326,6 +323,7 @@ caf_add_component(
     caf/mail_cache.test.cpp
     caf/mailbox_element.cpp
     caf/mailbox_element.test.cpp
+    caf/mailer.test.cpp
     caf/message.cpp
     caf/message.test.cpp
     caf/message_builder.cpp

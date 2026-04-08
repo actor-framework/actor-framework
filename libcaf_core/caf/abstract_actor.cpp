@@ -181,6 +181,14 @@ bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
   return true;
 }
 
+void abstract_actor::ref() const noexcept {
+  ctrl()->ref();
+}
+
+void abstract_actor::deref() const noexcept {
+  ctrl()->deref();
+}
+
 void abstract_actor::add_link(abstract_actor* x) {
   // Add backlink on `x` first and add the local attachable only on success.
   auto lg = log::core::trace("x = {}", x);

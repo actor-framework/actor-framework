@@ -879,10 +879,9 @@ void actor_system::demonitor(const node_id& node, const actor_addr& observer) {
 
 intrusive_ptr<actor_companion> actor_system::make_companion() {
   actor_config cfg{no_spawn_options};
-  cfg.mbox_factory = mailbox_factory();
-  auto hdl = spawn_class<actor_companion>(cfg);
-  return intrusive_ptr<actor_companion>{actor_cast<actor_companion*>(hdl),
-                                        add_ref};
+  auto hdl = make_actor<actor_companion, strong_actor_ptr>(next_actor_id(),
+                                                           node(), this, cfg);
+  return {actor_cast<actor_companion*>(hdl.release()), adopt_ref};
 }
 
 void actor_system::thread_started(thread_owner owner) {

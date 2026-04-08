@@ -10,7 +10,7 @@
 #include "caf/actor_traits.hpp"
 #include "caf/after.hpp"
 #include "caf/behavior.hpp"
-#include "caf/blocking_mail.hpp"
+#include "caf/blocking_response_handle.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/blocking_behavior.hpp"
 #include "caf/detail/concepts.hpp"
@@ -23,9 +23,11 @@
 #include "caf/intrusive/stack.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/mailer.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/arg.hpp"
+#include "caf/policy/blocking_requester.hpp"
 #include "caf/telemetry/actor_metrics.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/typed_actor.hpp"
@@ -284,8 +286,8 @@ public:
 
   template <class... Args>
   auto mail(Args&&... args) {
-    return blocking_mail(dynamically_typed{}, this,
-                         std::forward<Args>(args)...);
+    using mailer_policy = policy::blocking_requester;
+    return make_mailer<mailer_policy>(this, std::forward<Args>(args)...);
   }
 
   CAF_ADD_DEPRECATED_REQUEST_API

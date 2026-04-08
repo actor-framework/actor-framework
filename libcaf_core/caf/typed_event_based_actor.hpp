@@ -5,10 +5,13 @@
 #pragma once
 
 #include "caf/detail/to_statically_typed_trait.hpp"
-#include "caf/event_based_mail.hpp"
+#include "caf/event_based_fan_out_response_handle.hpp" // for the mail() API
+#include "caf/event_based_response_handle.hpp"         // for the mail() API
 #include "caf/extend.hpp"
 #include "caf/keep_behavior.hpp"
+#include "caf/mailer.hpp"
 #include "caf/mixin/requester.hpp"
+#include "caf/policy/typed_event_based_requester.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_behavior.hpp"
@@ -53,7 +56,8 @@ public:
   /// Starts a new message.
   template <class... Args>
   auto mail(Args&&... args) {
-    return event_based_mail(trait{}, this, std::forward<Args>(args)...);
+    using mailer_policy = policy::typed_event_based_requester<trait>;
+    return make_mailer<mailer_policy>(this, std::forward<Args>(args)...);
   }
 
   CAF_ADD_DEPRECATED_REQUEST_API

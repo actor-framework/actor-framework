@@ -15,54 +15,6 @@
 
 #include <utility>
 
-namespace caf::detail {
-
-template <class Result>
-struct event_based_response_handle_oracle;
-
-template <>
-struct event_based_response_handle_oracle<message> {
-  using type = event_based_response_handle<message>;
-};
-
-template <>
-struct event_based_response_handle_oracle<type_list<void>> {
-  using type = event_based_response_handle<>;
-};
-
-template <class... Results>
-struct event_based_response_handle_oracle<type_list<Results...>> {
-  using type = event_based_response_handle<Results...>;
-};
-
-template <class Result>
-using event_based_response_handle_t =
-  typename event_based_response_handle_oracle<Result>::type;
-
-template <class Result>
-struct event_based_delayed_response_handle_oracle;
-
-template <>
-struct event_based_delayed_response_handle_oracle<message> {
-  using type = event_based_delayed_response_handle<message>;
-};
-
-template <>
-struct event_based_delayed_response_handle_oracle<type_list<void>> {
-  using type = event_based_delayed_response_handle<>;
-};
-
-template <class... Results>
-struct event_based_delayed_response_handle_oracle<type_list<Results...>> {
-  using type = event_based_delayed_response_handle<Results...>;
-};
-
-template <class Result>
-using event_based_delayed_response_handle_t =
-  typename event_based_delayed_response_handle_oracle<Result>::type;
-
-} // namespace caf::detail
-
 namespace caf {
 
 /// Holds state for a event-based response handles.
@@ -94,6 +46,8 @@ public:
     = std::is_same_v<type_list<Results...>, type_list<message>>;
 
   static constexpr bool is_statically_typed = !is_dynamically_typed;
+
+  static constexpr bool is_blocking = false;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -197,6 +151,8 @@ public:
     = std::is_same_v<type_list<Results...>, type_list<message>>;
 
   static constexpr bool is_statically_typed = !is_dynamically_typed;
+
+  static constexpr bool is_blocking = false;
 
   // -- constructors, destructors, and assignment operators --------------------
 

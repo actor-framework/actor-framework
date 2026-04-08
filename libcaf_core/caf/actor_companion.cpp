@@ -13,47 +13,56 @@ actor_companion::~actor_companion() {
 }
 
 void actor_companion::on_enqueue(enqueue_handler handler) {
-  std::lock_guard guard{lock_};
-  on_enqueue_ = std::move(handler);
+  std::lock_guard guard{companion_mtx_};
+  if (!closed_) {
+    on_enqueue_ = std::move(handler);
+  }
 }
 
 void actor_companion::on_exit(on_exit_handler handler) {
-  on_exit_ = std::move(handler);
+  std::lock_guard guard{companion_mtx_};
+  if (!closed_) {
+    on_exit_ = std::move(handler);
+  }
 }
 
-bool actor_companion::enqueue(mailbox_element_ptr ptr, scheduler*) {
-  CAF_ASSERT(ptr);
-  std::shared_lock guard{lock_};
+bool actor_companion::enqueue(mailbox_element_ptr what, scheduler*) {
+  CAF_ASSERT(what);
+  std::shared_lock guard{companion_mtx_};
   if (on_enqueue_) {
-    on_enqueue_(std::move(ptr));
+    on_enqueue_(std::move(what));
     return true;
-  } else {
-    return false;
+  }
+  return false;
+}
+
+const char* actor_companion::name() const {
+  return "caf.actor-companion";
+}
+
+void actor_companion::on_cleanup(const error&) {
+  on_exit_handler handler;
+  {
+    std::lock_guard guard{companion_mtx_};
+    handler.swap(on_exit_);
+  }
+  if (handler) {
+    handler();
   }
 }
 
-bool actor_companion::initialize(scheduler*) {
-  setf(is_initialized_flag);
-  return true;
-}
-
-void actor_companion::launch([[maybe_unused]] detail::private_thread* worker,
-                             scheduler*) {
-  CAF_ASSERT(worker == nullptr);
-}
-
-void actor_companion::on_exit() {
+bool actor_companion::try_force_close_mailbox() {
+  auto result = false;
   enqueue_handler tmp;
-  { // lifetime scope of guard
-    std::unique_lock guard(lock_);
-    on_enqueue_.swap(tmp);
+  {
+    std::unique_lock guard(companion_mtx_);
+    if (!closed_) {
+      closed_ = true;
+      result = true;
+      on_enqueue_.swap(tmp);
+    }
   }
-  if (on_exit_)
-    on_exit_();
-}
-
-behavior actor_companion::type_erased_initial_behavior() {
-  return {};
+  return result;
 }
 
 } // namespace caf

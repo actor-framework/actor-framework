@@ -7,6 +7,7 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/fwd.hpp"
+#include "caf/unit.hpp"
 
 #include <type_traits>
 
@@ -175,7 +176,11 @@ T actor_cast(U&& what) {
 /// of type `Tag::handle_type`.
 template <class U, class Tag>
 auto actor_cast(U&& what, Tag) {
-  return actor_cast<typename Tag::handle_type>(std::forward<U>(what));
+  if constexpr (std::is_same_v<std::decay_t<U>, unit_t>) {
+    return typename Tag::handle_type{};
+  } else {
+    return actor_cast<typename Tag::handle_type>(std::forward<U>(what));
+  }
 }
 
 } // namespace caf

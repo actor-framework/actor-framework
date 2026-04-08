@@ -21,29 +21,6 @@
 
 namespace caf::detail {
 
-template <class Policy, class Result>
-struct event_based_fan_out_response_handle_oracle;
-
-template <class Policy>
-struct event_based_fan_out_response_handle_oracle<Policy, message> {
-  using type = event_based_fan_out_response_handle<Policy, message>;
-};
-
-template <class Policy>
-struct event_based_fan_out_response_handle_oracle<Policy, type_list<void>> {
-  using type = event_based_fan_out_response_handle<Policy>;
-};
-
-template <class Policy, class... Results>
-struct event_based_fan_out_response_handle_oracle<Policy,
-                                                  type_list<Results...>> {
-  using type = event_based_fan_out_response_handle<Policy, Results...>;
-};
-
-template <class Policy, class Result>
-using event_based_fan_out_response_handle_t =
-  typename event_based_fan_out_response_handle_oracle<Policy, Result>::type;
-
 /// Holds state for a event-based response handles.
 struct event_based_fan_out_response_handle_state {
   static constexpr bool is_fan_out = true;
@@ -315,32 +292,6 @@ public:
   /// delayed/scheduled.
   disposable pending_request;
 };
-
-// Type aliases for event_based_fan_out_delayed_response_handle
-template <class Policy, class Result>
-struct event_based_fan_out_delayed_response_handle_oracle;
-
-template <class Policy>
-struct event_based_fan_out_delayed_response_handle_oracle<Policy, message> {
-  using type = event_based_fan_out_delayed_response_handle<Policy, message>;
-};
-
-template <class Policy>
-struct event_based_fan_out_delayed_response_handle_oracle<Policy,
-                                                          type_list<void>> {
-  using type = event_based_fan_out_delayed_response_handle<Policy>;
-};
-
-template <class Policy, class... Results>
-struct event_based_fan_out_delayed_response_handle_oracle<
-  Policy, type_list<Results...>> {
-  using type = event_based_fan_out_delayed_response_handle<Policy, Results...>;
-};
-
-template <class Policy, class Result>
-using event_based_fan_out_delayed_response_handle_t =
-  typename event_based_fan_out_delayed_response_handle_oracle<Policy,
-                                                              Result>::type;
 
 // tuple-like access for event_based_fan_out_delayed_response_handle
 
