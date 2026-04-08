@@ -15,6 +15,7 @@
 #include "caf/detail/format.hpp"
 #include "caf/error.hpp"
 #include "caf/log/net.hpp"
+#include "caf/string_algorithms.hpp"
 
 #include <algorithm>
 
@@ -184,6 +185,8 @@ public:
             input = remainder;
             // Transition to the next mode.
             if (hdr_.chunked_transfer_encoding()) {
+              if (!handle_expect_header())
+                return -1;
               mode_ = mode::read_chunks;
               if (auto err = up_->begin_chunked_message(hdr_); err.valid()) {
                 write_response(status::internal_server_error,
@@ -199,6 +202,8 @@ public:
                 abort(sec::protocol_error, "payload exceeds maximum size");
                 return -1;
               }
+              if (!handle_expect_header())
+                return -1;
               // Transition to read_payload mode and continue.
               payload_len_ = *len;
               mode_ = mode::read_payload;
@@ -320,6 +325,22 @@ private:
     } else {
       return true;
     }
+  }
+
+  /// Handles RFC 7231 `Expect` before reading a request body.
+  bool handle_expect_header() {
+    if (!hdr_.has_field("Expect"))
+      return true;
+    if (hdr_.field_equals(ignore_case, "Expect", "100-continue")) {
+      down_->begin_output();
+      v1::write_response_header(status::continue_request, {},
+                                down_->output_buffer());
+      return down_->end_output();
+    }
+    write_response(status::expectation_failed,
+                   "Expectation cannot be met by this server.");
+    abort(sec::protocol_error, "unsupported Expect header");
+    return false;
   }
 
   octet_stream::lower_layer* down_;
