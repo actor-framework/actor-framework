@@ -142,6 +142,25 @@ struct fixture {
     fd2.id = net::invalid_socket_id;
   }
 
+  /// Reads until successfully receiving the specified number of bytes.
+  byte_buffer read_bytes(net::stream_socket fd, size_t size,
+                         const caf::detail::source_location& loc
+                         = caf::detail::source_location::current()) {
+    auto& self = test::runnable::current();
+    byte_buffer buf;
+    buf.resize(size);
+    auto bytes_read = net::read(fd, buf);
+    self.require_gt(bytes_read, 0, loc);
+    auto total_bytes_read = static_cast<size_t>(bytes_read);
+    while (total_bytes_read < size) {
+      auto bytes_span = make_span(buf).subspan(total_bytes_read);
+      auto bytes_read = net::read(fd, bytes_span);
+      self.require_gt(bytes_read, 0, loc);
+      total_bytes_read += static_cast<size_t>(bytes_read);
+    }
+    return buf;
+  }
+
   net::multiplexer_ptr mpx;
   net::stream_socket fd1;
   net::stream_socket fd2;
@@ -151,7 +170,6 @@ struct fixture {
 } // namespace
 
 WITH_FIXTURE(fixture) {
-
 SCENARIO("the server parses HTTP GET requests into header fields") {
   GIVEN("valid HTTP GET request") {
     std::string_view request = "GET /foo/bar?user=foo&pw=bar HTTP/1.1\r\n"
@@ -189,9 +207,7 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
         check_eq(res.hdr.field("Accept-Encoding"), "gzip");
       }
       AND_THEN("the server sends a response from the application layer") {
-        byte_buffer buf;
-        buf.resize(response.size());
-        net::read(fd1, buf);
+        auto buf = read_bytes(fd1, response.size());
         check_eq(to_str(buf), response);
       }
     }
@@ -227,9 +243,7 @@ SCENARIO("the client receives a chunked HTTP response") {
       });
       net::write(fd1, as_bytes(make_span(request)));
       THEN("the HTTP layer sends a chunked response to the client") {
-        byte_buffer buf;
-        buf.resize(response.size());
-        net::read(fd1, buf);
+        auto buf = read_bytes(fd1, response.size());
         check_eq(to_str(buf), response);
       }
     }
@@ -281,6 +295,62 @@ SCENARIO("the client sends a multipart HTTP request") {
       }
     }
   }
+}
+
+SCENARIO("the server sends 100 Continue before reading a request body") {
+  GIVEN("a POST with Expect: 100-continue and Content-Length") {
+    auto req_headers = "POST /upload HTTP/1.1\r\n"
+                       "Host: localhost:8000\r\n"
+                       "Content-Length: 5\r\n"
+                       "Expect: 100-continue\r\n"
+                       "\r\n"sv;
+    auto req_body = "hello"sv;
+    auto continue_msg = "HTTP/1.1 100 Continue\r\n\r\n"sv;
+    auto ok_response = "HTTP/1.1 200 OK\r\n"
+                       "Content-Type: text/plain\r\n"
+                       "Content-Length: 2\r\n"
+                       "\r\n"
+                       "OK"sv;
+    async::promise<response_t> res_promise;
+    run_server(
+      [](auto* down, const net::http::request_header&, const_byte_span) {
+        down->send_response(net::http::status::ok, "text/plain", "OK"sv);
+      },
+      res_promise);
+    WHEN("the client sends the header fields") {
+      net::write(fd1, as_bytes(make_span(req_headers)));
+      THEN("the server sends 100 Continue") {
+        auto buf = read_bytes(fd1, continue_msg.size());
+        check_eq(to_str(make_span(buf)), continue_msg);
+      }
+      AND_THEN("the client can send the body") {
+        net::write(fd1, as_bytes(make_span(req_body)));
+      }
+      AND_THEN("the server sends the final response") {
+        auto buf = read_bytes(fd1, ok_response.size());
+        check_eq(to_str(make_span(buf)), ok_response);
+      }
+    }
+  }
+}
+
+TEST("the server responds with 417 for unsupported Expect") {
+  auto req_headers = "POST /upload HTTP/1.1\r\n"
+                     "Host: localhost:8000\r\n"
+                     "Content-Length: 5\r\n"
+                     "Expect: foobar\r\n"
+                     "\r\n"sv;
+  auto expect_response = "HTTP/1.1 417 Expectation Failed\r\n"
+                         "Content-Type: text/plain\r\n"
+                         "Content-Length: 41\r\n\r\n"
+                         "Expectation cannot be met by this server."sv;
+  async::promise<response_t> res_promise;
+  run_server([](auto*, const net::http::request_header&, const_byte_span) {},
+             res_promise);
+  net::write(fd1, as_bytes(make_span(req_headers)));
+  auto buf = read_bytes(fd1, expect_response.size());
+  check_eq(to_str(make_span(buf)), expect_response);
+  check(!res_promise.get_future().get(100ms));
 }
 
 TEST("GH-2073 Regression - incoming data must be parsed only once") {
