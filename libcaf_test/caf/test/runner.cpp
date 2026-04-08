@@ -13,7 +13,9 @@
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/detail/log_level.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/log/level.hpp"
 #include "caf/settings.hpp"
@@ -144,6 +146,11 @@ auto default_log_component_filter() {
 
 class runner_impl : public runner {
 public:
+  explicit runner_impl(std::unique_ptr<reporter> ptr)
+    : reporter_(std::move(ptr)) {
+    // nop
+  }
+
   /// Bundles the result of a command line parsing operation.
   struct parse_cli_result {
     /// Stores whether parsing the command line arguments was successful.
@@ -153,9 +160,9 @@ public:
   };
 
   int run(int argc, char** argv) override {
-    auto default_reporter = reporter::make_default();
-    reporter::instance(default_reporter.get());
-    auto default_logger = reporter::make_logger();
+    reporter::instance(reporter_.get());
+    auto reporter_guard
+      = detail::scope_guard{[]() noexcept { reporter::instance(nullptr); }};
     if (auto [ok, help_printed] = parse_cli(argc, argv); !ok) {
       return EXIT_FAILURE;
     } else if (help_printed) {
@@ -177,13 +184,14 @@ public:
       println_to(stderr, "no suites found that match the given filters");
       return EXIT_FAILURE;
     }
-    default_reporter->no_colors(get_or(cfg_, "no-colors", false));
-    default_reporter->log_component_filter(
+    reporter_->no_colors(get_or(cfg_, "no-colors", false));
+    reporter_->log_component_filter(
       get_or(cfg_, "log-component-filter", default_log_component_filter()));
-    default_reporter->start();
+    auto default_logger = reporter::make_logger();
+    reporter_->start();
     watchdog runtime_guard{get_or(cfg_, "max-runtime", 0)};
     for (auto& [suite_name, suite] : suites) {
-      default_reporter->begin_suite(suite_name);
+      reporter_->begin_suite(suite_name);
       for (auto [test_name, factory_instance] : suite) {
         auto state = std::make_shared<context>();
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -193,43 +201,43 @@ public:
         try {
           do {
             logger::current_logger(default_logger.get());
-            default_reporter->begin_test(state, test_name);
+            reporter_->begin_test(state, test_name);
             def = factory_instance->make(state);
             do_run(*def);
-            default_reporter->end_test();
+            reporter_->end_test();
             state->clear_stacks();
             def.reset();
           } while (state->can_run());
         } catch (const nesting_error& ex) {
-          default_reporter->unhandled_exception(ex.message(), ex.location());
-          default_reporter->end_test();
+          reporter_->unhandled_exception(ex.message(), ex.location());
+          reporter_->end_test();
         } catch (const requirement_failed& ex) {
           auto event = log::event::make(log::level::error, "caf.test",
                                         ex.location(), 0,
                                         "requirement failed: {}", ex.message());
-          default_reporter->print(event);
-          default_reporter->end_test();
+          reporter_->print(event);
+          reporter_->end_test();
         } catch (const std::exception& ex) {
-          default_reporter->unhandled_exception(ex.what());
-          default_reporter->end_test();
+          reporter_->unhandled_exception(ex.what());
+          reporter_->end_test();
         } catch (...) {
-          default_reporter->unhandled_exception("unknown exception type");
-          default_reporter->end_test();
+          reporter_->unhandled_exception("unknown exception type");
+          reporter_->end_test();
         }
 #else
         do {
-          default_reporter->begin_test(state, test_name);
+          reporter_->begin_test(state, test_name);
           auto def = factory_instance->make(state);
           do_run(*def);
-          default_reporter->end_test();
+          reporter_->end_test();
           state->clear_stacks();
         } while (state->can_run());
 #endif
       }
-      default_reporter->end_suite(suite_name);
+      reporter_->end_suite(suite_name);
     }
-    default_reporter->stop();
-    return default_reporter->success() ? EXIT_SUCCESS : EXIT_FAILURE;
+    reporter_->stop();
+    return reporter_->success() ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 
   parse_cli_result parse_cli(int argc, char** argv) {
@@ -284,6 +292,7 @@ public:
   }
 
   caf::settings cfg_;
+  std::unique_ptr<reporter> reporter_;
 };
 
 } // namespace
@@ -293,7 +302,14 @@ runner::~runner() {
 }
 
 std::unique_ptr<runner> runner::make() {
-  return std::make_unique<runner_impl>();
+  return make(reporter::make_default());
+}
+
+std::unique_ptr<runner> runner::make(std::unique_ptr<reporter> ptr) {
+  if (!ptr) {
+    caf::detail::critical("cannot construct test runner with a null reporter");
+  }
+  return std::make_unique<runner_impl>(std::move(ptr));
 }
 
 void runner::do_run(runnable& what) {
