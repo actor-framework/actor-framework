@@ -11,6 +11,7 @@
 #include "caf/ref_counted.hpp"
 #include "caf/type_id.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <iterator>
@@ -309,10 +310,8 @@ template <class Serializer>
 bool save(Serializer& sink, const array& arr) {
   if (!sink.begin_sequence(arr.size()))
     return false;
-  for (const auto& val : arr)
-    if (!save(sink, val))
-      return false;
-  return sink.end_sequence();
+  auto f = [&sink](const auto& val) { return save(sink, val); };
+  return std::ranges::all_of(arr, f) && sink.end_sequence();
 }
 
 // -- loading ------------------------------------------------------------------

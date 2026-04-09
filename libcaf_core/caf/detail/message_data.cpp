@@ -9,6 +9,7 @@
 #include "caf/message.hpp"
 #include "caf/raise_error.hpp"
 
+#include <numeric>
 #include <utility>
 
 namespace caf::detail {
@@ -39,9 +40,10 @@ message_data* message_data::copy() const {
   // Note: no need to perform bound checks or nullptr checks here, because
   //       we verify the type IDs while constructing the original message.
   auto gmos = global_meta_objects();
-  size_t storage_size = 0;
-  for (auto id : types_)
-    storage_size += gmos[id].padded_size;
+  auto storage_size = std::accumulate(types_.begin(), types_.end(), size_t{0},
+                                      [&](size_t acc, type_id_t id) {
+                                        return acc + gmos[id].padded_size;
+                                      });
   auto total_size = sizeof(message_data) + storage_size;
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
@@ -61,9 +63,10 @@ message_data* message_data::copy() const {
 
 intrusive_ptr<message_data>
 message_data::make_uninitialized(type_id_list types) {
-  size_t storage_size = 0;
-  for (auto id : types)
-    storage_size += global_meta_object(id).padded_size;
+  auto storage_size = std::accumulate(
+    types.begin(), types.end(), size_t{0}, [&](size_t acc, type_id_t id) {
+      return acc + global_meta_object(id).padded_size;
+    });
   auto total_size = sizeof(message_data) + storage_size;
   auto vptr = malloc(total_size);
   if (vptr == nullptr)

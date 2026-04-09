@@ -4,7 +4,9 @@
 
 #include "caf/detail/base64.hpp"
 
+#include <algorithm>
 #include <cstdint>
+#include <iterator>
 
 namespace caf::detail {
 
@@ -38,8 +40,10 @@ void encode_impl(std::string_view in, Storage& out) {
       ((str[1] & 0x0f) << 2) + ((str[2] & 0xc0) >> 6),
       str[2] & 0x3f,
     };
-    for (auto x : buf)
-      out.push_back(static_cast<value_type>(encoding_tbl[x]));
+    auto mapper = [](auto x) {
+      return static_cast<value_type>(encoding_tbl[x]);
+    };
+    std::ranges::transform(buf, std::back_inserter(out), mapper);
   };
   // Iterate the input in chunks of three bytes.
   auto ptr = in.data();
@@ -51,8 +55,8 @@ void encode_impl(std::string_view in, Storage& out) {
     char buf[] = {0, 0, 0};
     std::copy(ptr, end, buf);
     consume(buf);
-    for (auto j = out.end() - (3 - (in.size() % 3)); j != out.end(); ++j)
-      *j = static_cast<value_type>('=');
+    auto j = out.end() - (3 - (in.size() % 3));
+    std::fill(j, out.end(), static_cast<value_type>('='));
   }
 }
 

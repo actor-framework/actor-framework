@@ -44,10 +44,10 @@ std::string_view type_name_from(const caf::detail::json::value& got) {
 
 const caf::detail::json::member*
 find_member(const caf::detail::json::object* obj, std::string_view key) {
-  for (const auto& member : *obj)
-    if (member.key == key)
-      return &member;
-  return nullptr;
+  auto i = std::ranges::find_if(*obj, [key](const auto& member) {
+    return member.key == key;
+  });
+  return i != obj->end() ? &*i : nullptr;
 }
 
 std::string_view field_type(const caf::detail::json::object* obj,

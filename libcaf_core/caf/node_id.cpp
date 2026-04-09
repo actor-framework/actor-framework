@@ -106,8 +106,7 @@ node_id hashed_node_id::local(const actor_system_config&) {
   std::uniform_int_distribution<> dis(std::numeric_limits<uint8_t>::min(),
                                       std::numeric_limits<uint8_t>::max());
   host_id_type hid;
-  for (auto& x : hid)
-    x = static_cast<uint8_t>(dis(gen));
+  std::ranges::generate(hid, [&] { return static_cast<uint8_t>(dis(gen)); });
   return make_node_id(detail::get_process_id(), hid);
 }
 

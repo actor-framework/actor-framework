@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <numeric>
 #include <string_view>
 
 using namespace std::literals;
@@ -84,9 +85,9 @@ expected<std::pair<size_t, byte_span>> parse_chunk(byte_span input) {
       "Integer overflow while parsing chunk size."};
   // This parsing method is only safe because of the previous checks.
   detail::parser::ascii_to_int<16, size_t> f;
-  size_t chunk_size = 0;
-  for (auto c : chunk)
-    chunk_size = chunk_size * 16 + f(c);
+  auto chunk_size
+    = std::accumulate(chunk.begin(), chunk.end(), size_t{0},
+                      [&](size_t acc, char c) { return acc * 16 + f(c); });
   const auto parsed_len = input.size() - remainder.size();
   return std::make_pair(chunk_size, input.subspan(parsed_len));
 }

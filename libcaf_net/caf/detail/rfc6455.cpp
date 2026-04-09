@@ -6,7 +6,9 @@
 
 #include "caf/detail/network_order.hpp"
 
+#include <algorithm>
 #include <cstring>
+#include <iterator>
 #include <limits>
 
 namespace caf::detail {
@@ -52,8 +54,7 @@ void rfc6455::assemble_frame(uint8_t opcode, uint32_t mask_key,
     std::byte len_data[2];
     memcpy(len_data, &no_len, 2);
     out.push_back(mask_bit | std::byte{126});
-    for (auto x : len_data)
-      out.push_back(x);
+    std::ranges::copy(len_data, std::back_inserter(out));
   } else {
     auto len = static_cast<uint64_t>(data.size());
     auto no_len = to_network_order(len);

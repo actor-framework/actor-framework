@@ -89,8 +89,7 @@ void handshake::randomize_key() {
 void handshake::randomize_key(unsigned seed) {
   std::minstd_rand rng{seed};
   std::uniform_int_distribution<> f{0, 255};
-  for (auto& x : key_)
-    x = static_cast<std::byte>(f(rng));
+  std::ranges::generate(key_, [&] { return static_cast<std::byte>(f(rng)); });
 }
 
 void handshake::endpoint(std::string value) {

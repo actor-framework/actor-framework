@@ -8,6 +8,8 @@
 #include "caf/actor_system.hpp"
 #include "caf/event_based_actor.hpp"
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -66,9 +68,7 @@ private:
 
 struct nop_split {
   void operator()(actor_msg_vec& xs, message& y) const {
-    for (auto& x : xs) {
-      x.second = y;
-    }
+    std::ranges::for_each(xs, [&y](auto& x) { x.second = y; });
   }
 };
 
@@ -87,8 +87,10 @@ public:
       return;
     actor_msg_vec xs;
     xs.reserve(workers.size());
-    for (const auto& worker : workers)
-      xs.emplace_back(worker, message{});
+    std::ranges::transform(
+      workers, std::back_inserter(xs), [](const auto& worker) {
+        return std::pair<actor, message>{worker, message{}};
+      });
     ulock.unlock();
     using collector_t = split_join_collector<T, Split, Join>;
     auto hdl = sys.spawn<collector_t, lazy_init>(init_, sf_, jf_,
