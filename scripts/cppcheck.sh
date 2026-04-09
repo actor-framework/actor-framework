@@ -51,6 +51,9 @@ else
   jobs="$(sysctl -n hw.ncpu 2>/dev/null || echo 1)"
 fi
 
+echo "[cppcheck] Building generated sources"
+cmake --build "$buildDir" --target caf-code-gen
+
 suppressionsFile="$repoRoot/.cppcheck-suppressions"
 echo "[cppcheck] Running cppcheck (compile database: $compileCommands)"
 set +e
