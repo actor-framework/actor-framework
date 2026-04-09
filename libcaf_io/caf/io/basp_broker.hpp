@@ -127,8 +127,8 @@ public:
   /// Keeps context information for all open connections.
   ctx_map ctx;
 
-  /// points to the current context for callbacks.
-  basp::endpoint_context* this_context;
+  /// Points to the current endpoint context for callbacks.
+  basp::endpoint_context* current_context;
 
   /// Stores handles to spawn servers for other nodes. These servers are
   /// spawned whenever the broker learns a new node ID and tries to get a

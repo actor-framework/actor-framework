@@ -85,8 +85,8 @@ connection_state instance::handle(scheduler* ctx, new_data_msg& dm, header& hdr,
 void instance::handle_heartbeat(scheduler* ctx) {
   auto lg = log::io::trace("");
   for (auto& kvp : tbl_.direct_by_hdl_) {
-    auto lg = log::io::trace("kvp.first = {}, kvp.second = {}", kvp.first,
-                             kvp.second);
+    auto loop_lg = log::io::trace("kvp.first = {}, kvp.second = {}", kvp.first,
+                                  kvp.second);
     write_heartbeat(ctx, callee_.get_buffer(kvp.first));
     callee_.flush(kvp.first);
   }
@@ -312,7 +312,7 @@ void instance::write_heartbeat(scheduler* ctx, byte_buffer& buf) {
 
 connection_state instance::handle(scheduler* ctx, connection_handle hdl,
                                   header& hdr, byte_buffer* payload) {
-  auto lg = log::io::trace("hdl = {}, hdr = {}", hdl, hdr);
+  auto handle_lg = log::io::trace("hdl = {}, hdr = {}", hdl, hdr);
   // Check payload validity.
   if (payload == nullptr) {
     if (hdr.payload_len != 0) {

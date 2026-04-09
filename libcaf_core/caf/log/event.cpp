@@ -111,16 +111,16 @@ void event_fields_builder::field(std::string_view key, chunked_string str) {
 }
 
 void event_fields_builder::field(std::string_view key, event::field_list list) {
-  auto& field = fields_.emplace_back(std::string_view{}, std::nullopt);
-  field.key = deep_copy(key);
+  auto& outer_field = fields_.emplace_back(std::string_view{}, std::nullopt);
+  outer_field.key = deep_copy(key);
   auto nested = event_fields_builder{resource()};
-  for (auto field : list) {
-    auto add = [&nested, key = field.key](const auto& val) {
+  for (auto nested_field : list) {
+    auto add = [&nested, key = nested_field.key](const auto& val) {
       nested.field(key, val);
     };
-    std::visit(add, field.value);
+    std::visit(add, nested_field.value);
   }
-  field.value = nested.build();
+  outer_field.value = nested.build();
 }
 
 std::string_view event_fields_builder::deep_copy(std::string_view str) {

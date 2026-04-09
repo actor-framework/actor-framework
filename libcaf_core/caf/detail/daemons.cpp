@@ -39,8 +39,8 @@ struct daemons::impl {
       id = 0;
       stopped_workers.swap(workers);
     }
-    for (auto& [id, st] : stopped_workers) {
-      st.do_stop(std::move(st.hdl));
+    for (auto& kvp : stopped_workers) {
+      kvp.second.do_stop(std::move(kvp.second.hdl));
     }
   }
 

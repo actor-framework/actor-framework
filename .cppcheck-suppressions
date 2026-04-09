@@ -33,7 +33,6 @@ constParameterReference:*
 useInitializationList:*
 constVariablePointer:*
 duplInheritedMember:*
-shadowVariable:*
 unusedStructMember:*
 constParameterPointer:*
 missingOverride:*

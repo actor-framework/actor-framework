@@ -55,7 +55,7 @@ basp_broker::basp_broker(actor_config& cfg)
   : super(cfg),
     basp::instance::callee(super::system(),
                            static_cast<proxy_registry::backend&>(*this)),
-    this_context(nullptr) {
+    current_context(nullptr) {
   new (&instance) basp::instance(this, *this);
   CAF_ASSERT(this_node() != none);
 }
@@ -135,19 +135,20 @@ behavior basp_broker::make_behavior() {
     [this](new_data_msg& msg) {
       auto lg = log::io::trace("msg.handle = {}", msg.handle);
       set_context(msg.handle);
-      auto& ctx = *this_context;
-      auto next = instance.handle(context(), msg, ctx.hdr,
-                                  ctx.cstate == basp::await_payload);
+      auto& endpoint_ctx = *current_context;
+      auto next = instance.handle(context(), msg, endpoint_ctx.hdr,
+                                  endpoint_ctx.cstate == basp::await_payload);
       if (requires_shutdown(next)) {
         connection_cleanup(msg.handle, to_sec(next));
         close(msg.handle);
         return;
       }
-      if (next != ctx.cstate) {
-        auto rd_size = next == basp::await_payload ? ctx.hdr.payload_len
-                                                   : basp::header_size;
+      if (next != endpoint_ctx.cstate) {
+        auto rd_size = next == basp::await_payload
+                         ? endpoint_ctx.hdr.payload_len
+                         : basp::header_size;
         configure_read(msg.handle, receive_policy::exactly(rd_size));
-        ctx.cstate = next;
+        endpoint_ctx.cstate = next;
       }
     },
     // received from proxy instances
@@ -467,9 +468,9 @@ strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
       // using res->id() instead of aid keeps this actor instance alive
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
-      auto bptr = static_cast<basp_broker*>(selfptr->get());
-      if (!bptr->getf(abstract_actor::is_terminated_flag))
-        bptr->proxies().erase(nid, res->id(), rsn);
+      auto self_broker = static_cast<basp_broker*>(selfptr->get());
+      if (!self_broker->getf(abstract_actor::is_terminated_flag))
+        self_broker->proxies().erase(nid, res->id(), rsn);
     });
   });
   return res;
@@ -482,9 +483,9 @@ void basp_broker::set_last_hop(node_id* ptr) {
 void basp_broker::finalize_handshake(const node_id& nid, actor_id aid,
                                      std::set<std::string>& sigs) {
   auto lg = log::io::trace("nid = {}, aid = {}, sigs = {}", nid, aid, sigs);
-  CAF_ASSERT(this_context != nullptr);
-  this_context->id = nid;
-  auto& cb = this_context->callback;
+  CAF_ASSERT(current_context != nullptr);
+  current_context->id = nid;
+  auto& cb = current_context->callback;
   if (!cb)
     return;
   strong_actor_ptr ptr;
@@ -679,7 +680,7 @@ void basp_broker::set_context(connection_handle hdl) {
   } else {
     i->second.last_seen = now;
   }
-  this_context = &i->second;
+  current_context = &i->second;
   t_last_hop = &i->second.id;
 }
 
