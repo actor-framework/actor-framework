@@ -22,9 +22,11 @@ arithOperationsOnVoidPointer:*libcaf_io/caf/io/network/receive_buffer.hpp
 // some global suppressions only match in test code, which may be excluded
 unmatchedSuppression:*
 
+// false positive: cppcheck flags moved-access in chained mail() API usage
+accessMoved:*
+
 // TODO: need to be re-enabled one-by-one,
 //       see https://github.com/actor-framework/actor-framework/issues/2294
-accessMoved:*
 passedByValue:*
 uninitMemberVar:*
 constVariableReference:*
