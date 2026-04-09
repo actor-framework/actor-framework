@@ -6,7 +6,7 @@
 #
 #   scripts/cppcheck.sh
 #
-# Requires: cppcheck, cppcheck-htmlreport (Python)
+# Requires: cppcheck, cppcheck-htmlreport (Python), jq
 # Output:   cppcheck-report.xml, cppcheck-report-html/ (HTML report)
 #
 # The compile database is read from build/compile_commands.json
@@ -26,6 +26,7 @@ else
 fi
 
 compileCommands="$buildDir/compile_commands.json"
+filteredCompileCommands="$buildDir/filtered_compile_commands.json"
 reportXml="$repoRoot/cppcheck-report.xml"
 reportHtmlDir="$repoRoot/cppcheck-report-html"
 
@@ -37,7 +38,7 @@ if [ ! -f "$compileCommands" ]; then
   exit 1
 fi
 
-for cmd in cppcheck cppcheck-htmlreport; do
+for cmd in cppcheck cppcheck-htmlreport jq; do
   if ! command -v "$cmd" &>/dev/null; then
     echo "Required command not found: $cmd" >&2
     exit 1
@@ -51,16 +52,19 @@ else
   jobs="$(sysctl -n hw.ncpu 2>/dev/null || echo 1)"
 fi
 
+jq '[.[] | select(.file | test("\\.test\\.(hpp|cpp)$") | not)]' \
+  "$compileCommands" >"$filteredCompileCommands"
+
 echo "[cppcheck] Building generated sources"
 cmake --build "$buildDir" --target caf-code-gen
 
 suppressionsFile="$repoRoot/.cppcheck-suppressions"
-echo "[cppcheck] Running cppcheck (compile database: $compileCommands)"
+echo "[cppcheck] Running cppcheck (compile database: $filteredCompileCommands)"
 set +e
 cppcheck \
   -j "$jobs" \
   -D __cppcheck__ \
-  --project="$compileCommands" \
+  --project="$filteredCompileCommands" \
   --xml \
   --xml-version=2 \
   --enable=all \

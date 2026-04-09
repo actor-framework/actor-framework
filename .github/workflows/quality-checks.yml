@@ -60,7 +60,8 @@ jobs:
         run: |
           sudo apt-get update -y \
             && sudo apt-get install -y --no-install-recommends \
-              cppcheck
+              cppcheck \
+              jq
       - name: Create compile database for cppcheck
         run: ./configure
       - name: cppcheck
