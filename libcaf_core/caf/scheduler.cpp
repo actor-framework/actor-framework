@@ -169,7 +169,7 @@ private:
     // any jobs, we enter the relaxed polling strategy that has no upper limit
     // on the number of polling attempts.
     for (size_t index = 0; index < 2; ++index) {
-      auto& strategy = data_.strategies[index];
+      const auto& strategy = data_.strategies[index];
       for (size_t attempt = 1; attempt <= strategy.attempts;
            attempt += strategy.step_size) {
         // Wait for some work to appear.
@@ -184,7 +184,7 @@ private:
     }
     // We assume pretty much nothing is going on, so we can fall back to the
     // relaxed polling strategy.
-    auto& relaxed = data_.strategies[2];
+    const auto& relaxed = data_.strategies[2];
     for (;;) {
       if (auto* job = data_.queue.try_take_head(relaxed.sleep_duration))
         return {job, adopt_ref};

@@ -302,7 +302,7 @@ std::string to_string(const uri::authority_type& x) {
   std::string str;
   if (x.userinfo) {
     uri::encode(str, x.userinfo->name);
-    if (auto& pw = x.userinfo->password) {
+    if (const auto& pw = x.userinfo->password) {
       str += ':';
       uri::encode(str, *pw);
     }

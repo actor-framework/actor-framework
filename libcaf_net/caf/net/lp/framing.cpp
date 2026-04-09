@@ -215,10 +215,12 @@ private:
   template <class T>
   bool end_message_impl() {
     using detail::to_network_order;
+    // cppcheck-suppress constVariableReference
     auto& buf = down_->output_buffer();
     CAF_ASSERT(message_offset_ < buf.size());
-    auto msg_begin = buf.begin() + static_cast<ptrdiff_t>(message_offset_);
-    auto msg_size = std::distance(msg_begin + hdr_size_, buf.end());
+    auto* msg_begin = buf.data() + static_cast<ptrdiff_t>(message_offset_);
+    auto* msg_end = buf.data() + static_cast<ptrdiff_t>(buf.size());
+    auto msg_size = std::distance(msg_begin + hdr_size_, msg_end);
     if (msg_size > 0 && static_cast<size_t>(msg_size) > max_message_size_) {
       log::net::debug("maximum message size exceeded");
       return false;
@@ -228,7 +230,7 @@ private:
       hdr_size_field = static_cast<uint8_t>(msg_size);
     else
       hdr_size_field = to_network_order(static_cast<T>(msg_size));
-    memcpy(std::addressof(*msg_begin), &hdr_size_field, hdr_size_);
+    memcpy(msg_begin, &hdr_size_field, hdr_size_);
     down_->end_output();
     return true;
   }

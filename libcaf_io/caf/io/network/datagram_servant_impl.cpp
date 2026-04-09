@@ -124,7 +124,7 @@ void datagram_servant_impl::remove_from_loop() {
 }
 
 void datagram_servant_impl::detach_handles() {
-  for (auto& p : handler_.endpoints()) {
+  for (const auto& p : handler_.endpoints()) {
     if (p.first != hdl())
       parent()->erase(p.first);
   }

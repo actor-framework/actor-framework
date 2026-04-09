@@ -457,7 +457,7 @@ public:
       return duration_cast<milliseconds>(tn - t0).count();
     };
     // clang-format off
-    for (auto& f : lf)
+    for (const auto& f : lf)
       switch (f.kind) {
         case category_field:     buf.append(x.component());                    break;
         case class_name_field:   buf.append("null");                           break;

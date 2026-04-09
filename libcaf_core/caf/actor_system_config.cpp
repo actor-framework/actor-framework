@@ -70,7 +70,7 @@ struct c_args_wrapper {
     argv = new char*[argc + 1];
     argv[0] = copy_str(program_name);
     auto index = size_t{1};
-    for (auto& arg : args) {
+    for (const auto& arg : args) {
       argv[index++] = copy_str(arg);
     }
   }

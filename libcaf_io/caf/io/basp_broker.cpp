@@ -82,7 +82,7 @@ void basp_broker::on_exit() {
   // Release any obsolete state.
   ctx.clear();
   // Make sure all spawn servers are down before clearing the container.
-  for (auto& kvp : spawn_servers)
+  for (const auto& kvp : spawn_servers)
     anon_send_exit(kvp.second, exit_reason::kill);
   // Clear remaining state.
   spawn_servers.clear();
@@ -545,7 +545,7 @@ void basp_broker::proxy_announced(const node_id& nid, actor_id aid) {
         auto i = monitored_actors.find(entry);
         if (i == monitored_actors.end())
           return;
-        for (auto& nid : i->second)
+        for (const auto& nid : i->second)
           send_basp_down_message(nid, entry.id(), reason);
         monitored_actors.erase(i);
       });
