@@ -90,7 +90,6 @@ public:
 protected:
   virtual behavior make_behavior();
 
-private:
   behavior type_erased_initial_behavior() final;
 };
 

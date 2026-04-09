@@ -40,7 +40,6 @@ returnStdMoveLocal:*
 class_X_Y:*
 knownConditionTrueFalse:*
 unreadVariable:*
-unusedPrivateFunction:*
 danglingTempReference:*
 missingReturn:*
 noCopyConstructor:*

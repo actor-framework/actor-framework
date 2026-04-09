@@ -383,10 +383,6 @@ public:
   void send() &&;
 
 private:
-  [[nodiscard]] std::pmr::memory_resource* resource() noexcept {
-    return &event_->resource_;
-  }
-
   logger* logger_ = nullptr;
 
   event_ptr event_;
