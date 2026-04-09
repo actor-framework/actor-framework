@@ -940,7 +940,7 @@ size_t deterministic::trigger_all_timeouts(const std::source_location& loc) {
 }
 
 size_t deterministic::num_timeouts() noexcept {
-  auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
+  const auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.num_timeouts();
 }
 

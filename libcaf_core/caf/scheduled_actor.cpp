@@ -855,8 +855,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       case message_category::ordinary: {
         detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
         if (!bhvr_stack_.empty()) {
-          auto& bhvr = bhvr_stack_.back();
-          if (bhvr(visitor, x.payload))
+          if (bhvr_stack_.back().invoke(visitor, x.payload))
             return invoke_message_result::consumed;
         }
         if (x.payload.size() == 1) {

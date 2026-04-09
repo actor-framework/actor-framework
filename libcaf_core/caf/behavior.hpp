@@ -115,8 +115,13 @@ public:
   }
 
   /// Runs this handler with callback.
-  bool operator()(detail::invoke_result_visitor& f, message& xs) {
+  bool invoke(detail::invoke_result_visitor& f, message& xs) {
     return impl_ ? impl_->invoke(f, xs) : false;
+  }
+
+  /// Runs this handler with callback.
+  bool operator()(detail::invoke_result_visitor& f, message& xs) {
+    return invoke(f, xs);
   }
 
   /// Checks whether this behavior is not empty.

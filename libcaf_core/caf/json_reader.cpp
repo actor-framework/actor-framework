@@ -348,7 +348,7 @@ public:
     return consume<false>(fn, [this,
                                &type_name](const detail::json::value& val) {
       if (val.data.index() == detail::json::value::object_index) {
-        auto& obj = std::get<detail::json::object>(val.data);
+        const auto& obj = std::get<detail::json::object>(val.data);
         if (auto mem_ptr = find_member(&obj, "@type")) {
           if (mem_ptr->val->data.index() == detail::json::value::string_index) {
             type_name = std::get<std::string_view>(mem_ptr->val->data);

@@ -51,7 +51,7 @@ void metric_registry::merge(metric_registry& other) {
   std::unique_lock<std::mutex> guard2{other.families_mx_, std::defer_lock};
   std::lock(guard1, guard2);
   families_.reserve(families_.size() + other.families_.size());
-  for (auto& fptr : other.families_)
+  for (const auto& fptr : other.families_)
     if (fetch(fptr->prefix(), fptr->name()) != nullptr)
       CAF_RAISE_ERROR("failed to merge metrics: duplicated family found");
   families_.insert(families_.end(),

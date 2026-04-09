@@ -364,7 +364,7 @@ bool default_multiplexer::poll_once_impl(bool block) {
       }
     }
     log::io::debug("poll-res.size = {}", poll_res.size());
-    for (auto& e : poll_res) {
+    for (const auto& e : poll_res) {
       // we try to read/write as much as possible by ignoring
       // error states as long as there are still valid
       // operations possible on the socket
@@ -716,7 +716,7 @@ int64_t default_multiplexer::next_endpoint_id() {
 
 void default_multiplexer::handle_internal_events() {
   auto lg = log::io::trace("num-events = {}", events_.size());
-  for (auto& e : events_)
+  for (const auto& e : events_)
     handle(e);
   events_.clear();
 }

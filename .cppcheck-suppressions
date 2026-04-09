@@ -29,7 +29,6 @@ accessMoved:*
 //       see https://github.com/actor-framework/actor-framework/issues/2294
 passedByValue:*
 uninitMemberVar:*
-constVariableReference:*
 constParameterReference:*
 useInitializationList:*
 constVariablePointer:*

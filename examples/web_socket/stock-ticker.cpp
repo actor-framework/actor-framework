@@ -91,7 +91,7 @@ struct random_feed_state {
              .interval(update_interval)
              .map([this](int64_t) {
                writer.reset();
-               auto& x = update();
+               const auto& x = update();
                if (!writer.apply(x)) {
                  self->println("*** failed to generate JSON: {}",
                                writer.get_error());

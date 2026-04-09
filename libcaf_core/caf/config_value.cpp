@@ -211,7 +211,7 @@ error_code<sec> config_value::default_construct(type_id_t id) {
         if (meta->save(writer, ptr)) {
           return {};
         } else {
-          auto& err = writer.get_error();
+          const auto& err = writer.get_error();
           if (err.category() == type_id_v<sec>)
             return error_code{static_cast<sec>(err.code())};
           else
