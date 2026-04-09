@@ -32,7 +32,7 @@ void encode_impl(std::string_view in, Storage& out) {
   using value_type = typename Storage::value_type;
   // Consumes three characters from the input at once.
   auto consume = [&out](const char* str) {
-    int buf[] = {
+    const int buf[] = {
       (str[0] & 0xfc) >> 2,
       ((str[0] & 0x03) << 4) + ((str[1] & 0xf0) >> 4),
       ((str[1] & 0x0f) << 2) + ((str[2] & 0xc0) >> 6),
