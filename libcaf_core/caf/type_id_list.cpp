@@ -8,13 +8,16 @@
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/message.hpp"
 
+#include <algorithm>
+#include <numeric>
+
 namespace caf {
 
 size_t type_id_list::data_size() const noexcept {
-  auto result = size_t{0};
-  for (auto type : *this)
-    result += detail::global_meta_object(type).padded_size;
-  return result;
+  return std::accumulate(
+    begin(), end(), size_t{0}, [](size_t acc, type_id_t type) {
+      return acc + detail::global_meta_object(type).padded_size;
+    });
 }
 
 std::string to_string(type_id_list xs) {
@@ -36,13 +39,14 @@ std::string to_string(type_id_list xs) {
 }
 
 type_id_list type_id_list::concat(std::span<type_id_list> lists) {
-  auto total_size = size_t{0};
-  for (auto ls : lists)
-    total_size += ls.size();
+  auto total_size = std::accumulate(lists.begin(), lists.end(), size_t{0},
+                                    [](size_t acc, type_id_list ls) {
+                                      return acc + ls.size();
+                                    });
   detail::type_id_list_builder builder{total_size};
-  for (auto ls : lists)
-    for (auto id : ls)
-      builder.push_back(id);
+  std::ranges::for_each(lists, [&](type_id_list ls) {
+    std::ranges::for_each(ls, [&](type_id_t id) { builder.push_back(id); });
+  });
   return builder.move_to_list();
 }
 

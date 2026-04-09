@@ -7,6 +7,7 @@
 #include "caf/detail/callable_trait.hpp"
 #include "caf/detail/concepts.hpp"
 
+#include <algorithm>
 #include <vector>
 
 namespace caf::detail {
@@ -75,9 +76,9 @@ container_view<F, Container> make_container_view(Container& x) {
 /// a pointer to the found object on success instead of returning an iterator.
 template <class T>
 typename T::value_type* ptr_find(T& xs, const typename T::value_type& x) {
-  for (auto& y : xs)
-    if (y == x)
-      return &y;
+  auto i = std::ranges::find(xs, x);
+  if (i != xs.end())
+    return &*i;
   return nullptr;
 }
 
@@ -86,9 +87,9 @@ typename T::value_type* ptr_find(T& xs, const typename T::value_type& x) {
 template <class T>
 const typename T::value_type*
 ptr_find(const T& xs, const typename T::value_type& x) {
-  for (auto& y : xs)
-    if (y == x)
-      return &y;
+  auto i = std::ranges::find(xs, x);
+  if (i != xs.end())
+    return &*i;
   return nullptr;
 }
 
@@ -97,9 +98,9 @@ ptr_find(const T& xs, const typename T::value_type& x) {
 /// iterator.
 template <class T, class Predicate>
 typename T::value_type* ptr_find_if(T& xs, Predicate pred) {
-  for (auto& x : xs)
-    if (pred(x))
-      return &x;
+  auto i = std::ranges::find_if(xs, pred);
+  if (i != xs.end())
+    return &*i;
   return nullptr;
 }
 
@@ -108,9 +109,9 @@ typename T::value_type* ptr_find_if(T& xs, Predicate pred) {
 /// iterator.
 template <class T, class Predicate>
 const typename T::value_type* ptr_find_if(const T& xs, Predicate pred) {
-  for (auto& x : xs)
-    if (pred(x))
-      return &x;
+  auto i = std::ranges::find_if(xs, pred);
+  if (i != xs.end())
+    return &*i;
   return nullptr;
 }
 

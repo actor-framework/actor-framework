@@ -24,6 +24,7 @@
 #include "caf/uri.hpp"
 #include "caf/variant_wrapper.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -297,8 +298,8 @@ private:
       } else {
         list result;
         result.reserve(x.size());
-        for (auto& val : x)
-          result.emplace_back(std::move(val));
+        auto wrap = [](auto& val) { return config_value{std::move(val)}; };
+        std::ranges::transform(x, std::back_inserter(result), wrap);
         return result;
       }
     }

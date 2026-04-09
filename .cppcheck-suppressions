@@ -29,7 +29,6 @@ passedByValue:*
 uninitMemberVar:*
 constVariableReference:*
 constParameterReference:*
-useStlAlgorithm:*
 useInitializationList:*
 constVariablePointer:*
 duplInheritedMember:*

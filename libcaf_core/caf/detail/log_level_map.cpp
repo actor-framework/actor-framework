@@ -37,9 +37,9 @@ log_level_map::log_level_map() {
 }
 
 std::string_view log_level_map::operator[](unsigned level) const noexcept {
-  for (auto i = mapping_.begin(); i != mapping_.end(); ++i)
-    if (level >= i->first)
-      return i->second;
+  auto pred = [level](const auto& kvp) { return level >= kvp.first; };
+  if (auto i = std::ranges::find_if(mapping_, pred); i != mapping_.end())
+    return i->second;
   return "OFF";
 }
 

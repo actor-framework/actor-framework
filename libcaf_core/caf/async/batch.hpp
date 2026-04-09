@@ -13,6 +13,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/type_id.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -232,10 +233,8 @@ public:
 
   template <class Next, class... Steps>
   bool on_next(const async::batch& xs, Next& next, Steps&... steps) {
-    for (const auto& item : xs.template items<T>())
-      if (!next.on_next(item, steps...))
-        return false;
-    return true;
+    auto f = [&](const T& item) { return next.on_next(item, steps...); };
+    return std::ranges::all_of(xs.template items<T>(), f);
   }
 
   template <class Next, class... Steps>

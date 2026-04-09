@@ -9,9 +9,11 @@
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <iomanip>
+#include <iterator>
 #include <numeric>
 #include <vector>
 
@@ -74,11 +76,12 @@ struct matrix_state {
     : self(selfptr), rows(num_rows), columns(num_columns) {
     // Spawn all cells.
     data.resize(rows);
-    for (auto& row : data) {
+    std::ranges::for_each(data, [this](auto& row) {
       row.resize(columns);
-      for (auto& field : row)
-        field = self->spawn(actor_from_state<cell_state>);
-    }
+      std::ranges::generate(row, [this] {
+        return self->spawn(actor_from_state<cell_state>);
+      });
+    });
   }
 
   matrix::behavior_type make_behavior() {
@@ -127,8 +130,8 @@ struct matrix_state {
         }
         auto cells = std::vector<cell>{}; // The cells we need to query.
         cells.reserve(rows);
-        for (auto& row : data)
-          cells.emplace_back(row[column]);
+        std::ranges::transform(data, std::back_inserter(cells),
+                               [column](auto& row) { return row[column]; });
         auto rp = self->make_response_promise<double>();
         self->mail(get)
           .fan_out_request(cells, infinite, policy::select_all_tag)

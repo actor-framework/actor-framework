@@ -35,6 +35,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <numeric>
 
 namespace caf {
 
@@ -402,10 +403,10 @@ private:
 
   template <class Container>
   size_t attach_functor(const Container& xs) {
-    size_t res = 0;
-    for (auto& x : xs)
-      res += attach_functor(x);
-    return res;
+    auto f = [this](size_t acc, const auto& x) {
+      return acc + attach_functor(x);
+    };
+    return std::accumulate(xs.begin(), xs.end(), size_t{0}, f);
   }
 
   // -- member variables -------------------------------------------------------

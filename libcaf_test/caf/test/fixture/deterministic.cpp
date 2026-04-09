@@ -56,11 +56,8 @@ namespace {
 using events_list_ptr = deterministic::events_list_ptr;
 
 size_t mail_count(const deterministic::events_list& events) {
-  size_t result = 0;
-  for (auto& event : events)
-    if (event->target && event->item)
-      ++result;
-  return result;
+  auto pred = [](const auto& event) { return event->target && event->item; };
+  return std::count_if(events.begin(), events.end(), pred);
 }
 
 size_t mail_count(const deterministic::events_list& events,
