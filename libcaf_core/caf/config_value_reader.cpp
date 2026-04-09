@@ -333,22 +333,24 @@ public:
     key += '@';
     key.insert(key.end(), name.begin(), name.end());
     key += "-type";
-    type_id_t id = 0;
-    if (auto str = get_if<std::string>(top, key); !str) {
+    auto str = get_if<std::string>(top, key);
+    if (!str) {
       emplace_error(sec::runtime_error,
                     "could not find type annotation: " + key);
       return false;
-    } else if (id = query_type_id(*str); id == invalid_type_id) {
+    }
+    type_id_t id = query_type_id(*str);
+    if (id == invalid_type_id) {
       emplace_error(sec::runtime_error, "no such type: " + *str);
       return false;
-    } else if (auto i = std::ranges::find(types, id); i == types.end()) {
-      emplace_error(sec::conversion_failed,
-                    "instrid type for variant field: " + *str);
-      return false;
-    } else {
-      index = static_cast<size_t>(std::distance(types.begin(), i));
     }
-    return begin_field(name);
+    if (auto i = std::ranges::find(types, id); i != types.end()) {
+      index = static_cast<size_t>(std::distance(types.begin(), i));
+      return begin_field(name);
+    }
+    emplace_error(sec::conversion_failed,
+                  "instrid type for variant field: " + *str);
+    return false;
   }
 
   bool begin_field(std::string_view name, bool& is_present,

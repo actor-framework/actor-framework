@@ -91,7 +91,7 @@ int server(actor_system& sys, uint16_t port) {
 int client(actor_system& sys, const std::string& host, uint16_t port) {
   auto attempt = 0;
   auto src = sys.middleman().remote_actor(host, port);
-  if (!src) {
+  while (!src) {
     if (++attempt == 8) {
       std::cout << "could not connect to server\n";
       return EXIT_FAILURE;

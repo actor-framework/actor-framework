@@ -143,10 +143,10 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
   };
   using unique_void_ptr = std::unique_ptr<void, free_t>;
   auto msg_size = size_t{0};
-  std::vector<object_ptr> objects;
   GUARDED(source.begin_sequence(msg_size));
   if (msg_size > 0) {
     // Deserialize message elements individually.
+    std::vector<object_ptr> objects;
     detail::type_id_list_builder ids;
     objects.reserve(msg_size);
     auto data_size = size_t{0};
