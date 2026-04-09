@@ -48,7 +48,6 @@ uninitMemberVarPrivate:*
 uselessOverride:*
 variableScope:*
 operatorEqVarError:*
-redundantInitialization:*
 unusedVariable:*
 virtualCallInConstructor:*
 assertWithSideEffect:*
