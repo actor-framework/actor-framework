@@ -111,7 +111,7 @@ public:
     auto res = wcs_->start();
     wcs_ = nullptr;
     if (!res) {
-      return std::move(res.error());
+      return std::move(res).error();
     }
     auto [pull, push] = *res;
     return super::init(&down_ptr->mpx(), std::move(pull), std::move(push));
@@ -125,7 +125,7 @@ public:
     }
     auto wcs = wca_->accept(hdr, parent_);
     if (!wcs) {
-      return std::move(wcs.error());
+      return std::move(wcs).error();
     }
     wcs_ = *wcs;
     return {};

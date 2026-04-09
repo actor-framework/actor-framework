@@ -185,7 +185,7 @@ public:
       write_buf_.reserve(max_write_buf_size_ * 2ul);
     } else {
       log::net::error("send_buffer_size: {}", socket_buf_size.error());
-      return std::move(socket_buf_size.error());
+      return std::move(socket_buf_size).error();
     }
     return up_->start(this);
   }

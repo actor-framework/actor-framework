@@ -163,7 +163,7 @@ public:
   error init() override {
     auto pipe_handles = make_pipe();
     if (!pipe_handles)
-      return std::move(pipe_handles.error());
+      return std::move(pipe_handles).error();
     auto updater = pollset_updater::make(pipe_handles->first);
     auto mgr = socket_manager::make(this, std::move(updater));
     if (auto err = mgr->start(); err.valid()) {

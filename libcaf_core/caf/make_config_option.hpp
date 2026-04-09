@@ -21,7 +21,7 @@ template <class T>
 error sync_impl(void* ptr, config_value& x) {
   auto val = get_as<T>(x);
   if (!val)
-    return std::move(val.error());
+    return std::move(val).error();
   if (auto err = x.assign(*val); err.valid())
     return err;
   if (ptr)

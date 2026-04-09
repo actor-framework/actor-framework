@@ -38,7 +38,6 @@ shadowVariable:*
 unusedStructMember:*
 constParameterPointer:*
 missingOverride:*
-returnStdMoveLocal:*
 class_X_Y:*
 knownConditionTrueFalse:*
 unreadVariable:*

@@ -221,7 +221,7 @@ error parse(std::string_view str, node_id& dest) {
     dest = make_node_id(std::move(*nid_uri));
     return none;
   } else {
-    return std::move(nid_uri.error());
+    return std::move(nid_uri).error();
   }
 }
 
