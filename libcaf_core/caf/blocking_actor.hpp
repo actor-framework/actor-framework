@@ -271,7 +271,7 @@ public:
   void wait_for(Ts&&... xs) {
     size_t expected = 0;
     size_t i = 0;
-    size_t attach_results[] = {attach_functor(xs)...};
+    const size_t attach_results[] = {attach_functor(xs)...};
     for (auto res : attach_results)
       expected += res;
     receive_for(i, expected)([](wait_for_atom) {

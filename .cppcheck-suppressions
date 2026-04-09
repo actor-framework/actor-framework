@@ -50,7 +50,6 @@ operatorEqVarError:*
 unusedVariable:*
 virtualCallInConstructor:*
 assertWithSideEffect:*
-constVariable:*
 containerOutOfBounds:*
 duplicateConditionalAssign:*
 postfixOperator:*
