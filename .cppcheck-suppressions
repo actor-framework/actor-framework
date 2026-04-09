@@ -4,6 +4,7 @@ noExplicitConstructor:libcaf_core/caf/expected.hpp
 noExplicitConstructor:libcaf_core/caf/intrusive_cow_ptr.hpp
 noExplicitConstructor:libcaf_core/caf/intrusive_ptr.hpp
 noExplicitConstructor:libcaf_core/caf/result.hpp
+noExplicitConstructor:libcaf_core/caf/placement_ptr.hpp
 noExplicitConstructor:libcaf_net/caf/net/dsl/arg.hpp
 
 // our parser FSM DSL injects code that may be unreachable in some cases
@@ -63,3 +64,4 @@ operatorEqMissingReturnStatement:*
 redundantAssignment:*
 redundantContinue:*
 uninitvar:*
+constParameter:*
