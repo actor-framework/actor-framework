@@ -132,9 +132,9 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
   auto lg = log::core::trace("mid = {}, content = {}", mid, content);
   if (auto view = make_const_typed_message_view<exit_msg>(content)) {
     // acquire second mutex as well
-    std::vector<actor> workers;
     auto reason = get<0>(view).reason;
     if (cleanup(std::move(reason), sched)) {
+      std::vector<actor> workers;
       // send exit messages *always* to all workers and clear vector afterwards
       // but first swap workers_ out of the critical section
       workers_.swap(workers);

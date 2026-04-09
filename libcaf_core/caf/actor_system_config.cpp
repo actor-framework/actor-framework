@@ -491,10 +491,11 @@ error actor_system_config::parse(std::vector<std::string> args,
 }
 
 error actor_system_config::parse(std::vector<std::string> args) {
-  if (auto&& [err, path] = extract_config_file_path(args); err.empty()) {
+  if (auto&& extracted = extract_config_file_path(args);
+      extracted.first.empty()) {
     std::ifstream conf;
-    if (!path.empty()) {
-      conf.open(path);
+    if (!extracted.second.empty()) {
+      conf.open(extracted.second);
     } else {
       // Try the user-defined config file paths or fall back to the default.
       auto try_open = [this, &conf](auto&& what) {
@@ -506,8 +507,7 @@ error actor_system_config::parse(std::vector<std::string> args) {
           return false;
         }
       };
-      auto paths = config_file_paths();
-      if (paths.empty())
+      if (auto paths = config_file_paths(); paths.empty())
         try_open(default_config_file);
       else
         std::ignore = std::ranges::any_of(paths, try_open);
@@ -516,7 +516,7 @@ error actor_system_config::parse(std::vector<std::string> args) {
     }
     return parse(std::move(args), conf);
   } else {
-    return err;
+    return extracted.first;
   }
 }
 

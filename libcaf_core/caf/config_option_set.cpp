@@ -137,13 +137,14 @@ auto config_option_set::parse(settings& config, argument_iterator first,
     // Extract option name and category.
     auto opt_name = opt.long_name();
     auto opt_ctg = opt.category();
-    // Try inserting a new submap into the config or fill existing one.
-    auto& entry = opt_ctg == "global" ? config : select_entry(config, opt_ctg);
     // Flags only consume the current element.
     if (arg_begin != arg_end) {
       auto arg_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
       config_value val{std::string_view{std::addressof(*arg_begin), arg_size}};
       if (auto err = opt.sync(val); err.empty()) {
+        // Try inserting a new submap into the config or fill existing one.
+        auto& entry = opt_ctg == "global" ? config
+                                          : select_entry(config, opt_ctg);
         entry[opt_name] = std::move(val);
         return pec::success;
       } else {

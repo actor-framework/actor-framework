@@ -785,9 +785,9 @@ private:
   activation_result run_with_metrics(mailbox_element& x, F body) {
     if (metrics_.mailbox_time) {
       auto t0 = std::chrono::steady_clock::now();
-      auto mbox_time = x.seconds_until(t0);
       auto res = body();
       if (res != activation_result::skipped) {
+        auto mbox_time = x.seconds_until(t0);
         telemetry::timer::observe(metrics_.processing_time, t0);
         metrics_.mailbox_time->observe(mbox_time);
         metrics_.mailbox_size->dec();

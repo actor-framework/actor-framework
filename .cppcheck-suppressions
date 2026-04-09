@@ -48,7 +48,6 @@ missingReturn:*
 noCopyConstructor:*
 uninitMemberVarPrivate:*
 uselessOverride:*
-variableScope:*
 operatorEqVarError:*
 redundantInitialization:*
 unusedVariable:*
