@@ -100,7 +100,7 @@ public:
     ++class2_instances;
   }
 
-  class2(std::string value) : value(std::move(value)) {
+  explicit class2(std::string value) : value(std::move(value)) {
     ++class2_instances;
   }
 

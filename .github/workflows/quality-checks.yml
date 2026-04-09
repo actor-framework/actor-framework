@@ -8,6 +8,8 @@ on:
       - '**/CMakeLists.txt'
       - 'cmake/**'
       - '.github/workflows/**'
+      - 'scripts/cppcheck.sh'
+      - '.cppcheck-suppressions'
   push:
     branches:
       - main
@@ -49,3 +51,27 @@ jobs:
       - uses: actions/checkout@v4
       - name: type-id-block-offsets
         run: python3 scripts/get-next-free-block-offset.py 1>/dev/null && echo OK
+
+  cppcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update -y \
+            && sudo apt-get install -y --no-install-recommends \
+              cppcheck \
+              jq
+      - name: Create compile database for cppcheck
+        run: ./configure
+      - name: cppcheck
+        run: scripts/cppcheck.sh
+      - name: Upload cppcheck report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-report
+          if-no-files-found: warn
+          path: |
+            cppcheck-report.xml
+            cppcheck-report-html/

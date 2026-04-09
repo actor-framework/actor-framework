@@ -113,7 +113,7 @@ public:
     ++custom_unshare_instances;
   }
 
-  custom_unshare(std::string value) : value(std::move(value)) {
+  explicit custom_unshare(std::string value) : value(std::move(value)) {
     ++custom_unshare_instances;
   }
 

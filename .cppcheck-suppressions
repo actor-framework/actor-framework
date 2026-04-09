@@ -1,12 +1,77 @@
 // types with intentionally non-explicit constructors
-noExplicitConstructor:libcaf_core/caf/actor.hpp
-noExplicitConstructor:libcaf_core/caf/expected.hpp
-noExplicitConstructor:libcaf_core/caf/intrusive_cow_ptr.hpp
-noExplicitConstructor:libcaf_core/caf/intrusive_ptr.hpp
-noExplicitConstructor:libcaf_core/caf/result.hpp
-noExplicitConstructor:libcaf_net/caf/net/dsl/arg.hpp
+noExplicitConstructor:*libcaf_core/caf/actor.hpp
+noExplicitConstructor:*libcaf_core/caf/expected.hpp
+noExplicitConstructor:*libcaf_core/caf/intrusive_cow_ptr.hpp
+noExplicitConstructor:*libcaf_core/caf/intrusive_ptr.hpp
+noExplicitConstructor:*libcaf_core/caf/result.hpp
+noExplicitConstructor:*libcaf_core/caf/placement_ptr.hpp
+noExplicitConstructor:*libcaf_core/caf/actor_addr.hpp
+noExplicitConstructor:*libcaf_net/caf/net/dsl/arg.hpp
+noExplicitConstructor:*libcaf_net/caf/net/actor_shell.hpp
 
 // our parser FSM DSL injects code that may be unreachable in some cases
-unreachableCode:libcaf_core/caf/detail/parser/*
-unreachableCode:libcaf_core/caf/detail/format.cpp
-unreachableCode:libcaf_core/caf/detail/json.cpp
+unreachableCode:*libcaf_core/caf/detail/parser/*
+unreachableCode:*libcaf_core/caf/detail/format.cpp
+unreachableCode:*libcaf_core/caf/detail/json.cpp
+
+// void-pointer arithmetic is intentional in these low-level buffers
+arithOperationsOnVoidPointer:*libcaf_core/caf/detail/ring_buffer.hpp
+arithOperationsOnVoidPointer:*libcaf_core/caf/config_option.cpp
+arithOperationsOnVoidPointer:*libcaf_io/caf/io/network/receive_buffer.hpp
+
+// some global suppressions only match in test code, which may be excluded
+unmatchedSuppression:*
+
+// TODO: need to be re-enabled one-by-one,
+//       see https://github.com/actor-framework/actor-framework/issues/2294
+accessMoved:*
+passedByValue:*
+shadowFunction:*
+uninitMemberVar:*
+constVariableReference:*
+constParameterReference:*
+useStlAlgorithm:*
+useInitializationList:*
+constVariablePointer:*
+duplInheritedMember:*
+shadowVariable:*
+unusedStructMember:*
+constParameterPointer:*
+missingOverride:*
+returnStdMoveLocal:*
+class_X_Y:*
+knownConditionTrueFalse:*
+unreadVariable:*
+unusedPrivateFunction:*
+danglingTempReference:*
+missingReturn:*
+noCopyConstructor:*
+uninitMemberVarPrivate:*
+uselessOverride:*
+variableScope:*
+operatorEqVarError:*
+redundantInitialization:*
+unusedVariable:*
+virtualCallInConstructor:*
+assertWithSideEffect:*
+constVariable:*
+containerOutOfBounds:*
+duplicateConditionalAssign:*
+postfixOperator:*
+returnByReference:*
+returnTempReference:*
+shadowArgument:*
+stlIfStrFind:*
+copyCtorPointerCopying:*
+cstyleCast:*
+danglingLifetime:*
+derefInvalidIteratorRedundantCheck:*
+ignoredReturnValue:*
+knownPointerToBool:*
+noConstructor:*
+noOperatorEq:*
+operatorEqMissingReturnStatement:*
+redundantAssignment:*
+redundantContinue:*
+uninitvar:*
+constParameter:*
