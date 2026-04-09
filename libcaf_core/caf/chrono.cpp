@@ -117,7 +117,7 @@ char* print_fractional_component(char* pos, int ns, int precision,
       return pos;
     }
     // Check what the maximum precision is that we can actually print.
-    auto effective_precision = precision;
+    int effective_precision;
     if (ns_val > 0 && precision == 9) {
       effective_precision = 9;
     } else if (us_val > 0 && precision >= 6) {
