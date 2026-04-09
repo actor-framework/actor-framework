@@ -62,11 +62,12 @@ int fetch_addr_str(bool get_ipv4, bool get_ipv6, char (&buf)[INET6_ADDRSTRLEN],
                    sockaddr* addr) {
   if (addr == nullptr)
     return AF_UNSPEC;
-  auto family = addr->sa_family;
-  auto in_addr = fetch_in_addr(family, addr);
-  return ((family == AF_INET && get_ipv4) || (family == AF_INET6 && get_ipv6))
-             && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
-           ? family
+  auto addr_family = addr->sa_family;
+  auto in_addr = fetch_in_addr(addr_family, addr);
+  return ((addr_family == AF_INET && get_ipv4)
+          || (addr_family == AF_INET6 && get_ipv6))
+             && inet_ntop(addr_family, in_addr, buf, INET6_ADDRSTRLEN) == buf
+           ? addr_family
            : AF_UNSPEC;
 }
 
@@ -113,10 +114,11 @@ void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
   for (auto i = ifs.get(); i != nullptr; i = i->Next) {
     for (auto j = i->FirstUnicastAddress; j != nullptr; j = j->Next) {
       auto addr = j->Address.lpSockaddr;
-      auto family = fetch_addr_str(get_ipv4, get_ipv6, buffer, addr);
-      if (family != AF_UNSPEC)
-        fun(i->AdapterName, family == AF_INET ? protocol::ipv4 : protocol::ipv6,
-            false, buffer);
+      auto addr_family = fetch_addr_str(get_ipv4, get_ipv6, buffer, addr);
+      if (addr_family != AF_UNSPEC)
+        fun(i->AdapterName,
+            addr_family == AF_INET ? protocol::ipv4 : protocol::ipv6, false,
+            buffer);
     }
   }
 }
@@ -134,9 +136,9 @@ void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
   char buffer[INET6_ADDRSTRLEN];
   std::unique_ptr<ifaddrs, decltype(freeifaddrs)*> ifs{tmp, freeifaddrs};
   for (auto i = ifs.get(); i != nullptr; i = i->ifa_next) {
-    auto family = fetch_addr_str(get_ipv4, get_ipv6, buffer, i->ifa_addr);
-    if (family != AF_UNSPEC)
-      fun(i->ifa_name, family == AF_INET ? protocol::ipv4 : protocol::ipv6,
+    auto addr_family = fetch_addr_str(get_ipv4, get_ipv6, buffer, i->ifa_addr);
+    if (addr_family != AF_UNSPEC)
+      fun(i->ifa_name, addr_family == AF_INET ? protocol::ipv4 : protocol::ipv6,
           (i->ifa_flags & IFF_LOOPBACK) != 0, buffer);
   }
 }
@@ -217,10 +219,10 @@ interfaces::native_address(const std::string& host,
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
   char buffer[INET6_ADDRSTRLEN];
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
-    auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
-    if (family != AF_UNSPEC)
-      return std::make_pair(buffer, family == AF_INET ? protocol::ipv4
-                                                      : protocol::ipv6);
+    auto addr_family = fetch_addr_str(true, true, buffer, i->ai_addr);
+    if (addr_family != AF_UNSPEC)
+      return std::make_pair(buffer, addr_family == AF_INET ? protocol::ipv4
+                                                           : protocol::ipv6);
   }
   return std::nullopt;
 }
@@ -247,10 +249,11 @@ interfaces::server_address(uint16_t port, const char* host,
   // Take the first ipv6 address or the first available address otherwise
   std::vector<addr_pair> results;
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
-    auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
-    if (family != AF_UNSPEC) {
-      results.emplace_back(std::string{buffer},
-                           family == AF_INET ? protocol::ipv4 : protocol::ipv6);
+    auto addr_family = fetch_addr_str(true, true, buffer, i->ai_addr);
+    if (addr_family != AF_UNSPEC) {
+      results.emplace_back(std::string{buffer}, addr_family == AF_INET
+                                                  ? protocol::ipv4
+                                                  : protocol::ipv6);
     }
   }
   std::stable_partition(std::begin(results), std::end(results),

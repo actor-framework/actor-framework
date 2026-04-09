@@ -195,12 +195,12 @@ constexpr message_id make_message_id(message_priority p) {
 
 template <class Inspector>
 bool inspect(Inspector& f, message_id& x) {
-  auto get = [&x] { return x.integer_value(); };
+  auto getter = [&x] { return x.integer_value(); };
   auto set = [&x](uint64_t val) {
     x = message_id{val};
     return true;
   };
-  return f.apply(get, set);
+  return f.apply(getter, set);
 }
 
 } // namespace caf

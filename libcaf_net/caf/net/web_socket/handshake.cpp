@@ -158,9 +158,9 @@ void handshake::write_http_1_request(byte_buffer& buf) const {
       << "Connection: Upgrade\r\n"
       << "Sec-WebSocket-Version: 13\r\n"
       << "Sec-WebSocket-Key: " << encoded_key << "\r\n";
-  for (auto& [key, val] : fields_) {
-    if (key[0] != internal_key_prefix) {
-      out << key << ": " << val << "\r\n";
+  for (auto& [field_name, field_value] : fields_) {
+    if (field_name[0] != internal_key_prefix) {
+      out << field_name << ": " << field_value << "\r\n";
     }
   }
   out << "\r\n";
@@ -242,8 +242,8 @@ bool handshake::is_valid_http_1_response(std::string_view http_response) const {
   auto seed = detail::base64::encode(key_);
   seed += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
   auto response_key_sha = hash::sha1::compute(seed);
-  auto response_key = detail::base64::encode(response_key_sha);
-  response_checker checker{response_key};
+  auto ws_accept_key = detail::base64::encode(response_key_sha);
+  response_checker checker{ws_accept_key};
   for_each_http_line(http_response, checker);
   return checker.ok();
 }

@@ -165,15 +165,16 @@ public:
     // Use varbyte encoding to compress sequence size on the wire.
     // For 64-bit values, the encoded representation cannot get larger than 10
     // bytes. A scratch space of 16 bytes suffices as upper bound.
-    uint8_t buf[16];
-    auto i = buf;
+    uint8_t bytes_buf[16];
+    auto i = bytes_buf;
     auto x = static_cast<uint32_t>(list_size);
     while (x > 0x7f) {
       *i++ = (static_cast<uint8_t>(x) & 0x7f) | 0x80;
       x >>= 7;
     }
     *i++ = static_cast<uint8_t>(x) & 0x7f;
-    return value(as_bytes(std::span{buf, static_cast<size_t>(i - buf)}));
+    return value(
+      as_bytes(std::span{bytes_buf, static_cast<size_t>(i - bytes_buf)}));
   }
 
   constexpr bool end_sequence() {

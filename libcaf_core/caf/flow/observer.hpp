@@ -91,10 +91,10 @@ public:
     CAF_ASSERT(pimpl_ != nullptr);
     // Defend against impl::on_complete() indirectly calling member functions on
     // this object again.
-    auto ptr = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
-    auto* parent = ptr->parent();
-    ptr->on_complete();
-    parent->release_later(ptr);
+    auto impl_ptr = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
+    auto* parent = impl_ptr->parent();
+    impl_ptr->on_complete();
+    parent->release_later(impl_ptr);
   }
 
   /// @pre `valid()`
@@ -103,10 +103,10 @@ public:
     CAF_ASSERT(pimpl_ != nullptr);
     // Defend against impl::on_error() indirectly calling member functions on
     // this object again.
-    auto ptr = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
-    auto* parent = ptr->parent();
-    ptr->on_error(what);
-    parent->release_later(ptr);
+    auto impl_ptr = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
+    auto* parent = impl_ptr->parent();
+    impl_ptr->on_error(what);
+    parent->release_later(impl_ptr);
   }
 
   // -- properties -------------------------------------------------------------

@@ -134,17 +134,17 @@ bool batch::load_impl(Inspector& source) {
     }
     return source.end_field() && source.end_object();
   }
-  auto item_type = invalid_type_id;
+  auto payload_type = invalid_type_id;
   if (!source.has_human_readable_format()) {
-    if (!source.value(item_type))
+    if (!source.value(payload_type))
       return false;
   } else {
     std::string type_name;
     if (!source.value(type_name))
       return false;
-    item_type = query_type_id(type_name);
+    payload_type = query_type_id(type_name);
   }
-  const auto* meta = detail::global_meta_object_or_null(item_type);
+  const auto* meta = detail::global_meta_object_or_null(payload_type);
   if (!meta) {
     source.emplace_error(sec::unknown_type);
     return false;
@@ -176,9 +176,9 @@ bool batch::load_impl(Inspector& source) {
   // We start the item count at 0 and increment it for each successfully loaded
   // item. This makes sure that the destructor only destroys fully constructed
   // items in case of an error or exception.
-  intrusive_ptr<batch::data> ptr{new (vptr)
-                                   batch::data(dynamic_item_destructor,
-                                               item_type, meta->simple_size, 0),
+  intrusive_ptr<batch::data> ptr{new (vptr) batch::data(dynamic_item_destructor,
+                                                        payload_type,
+                                                        meta->simple_size, 0),
                                  adopt_ref};
   auto* storage = ptr->storage_;
   for (auto i = size_t{0}; i < len; ++i) {

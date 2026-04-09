@@ -111,16 +111,16 @@ public:
       static_assert(std::is_base_of_v<coordinated, Observer>);
       static_assert(std::is_same_v<typename Observable::output_type,
                                    typename Observer::input_type>);
-      auto ptr = parent->template add_child<fwd_impl>(src, snk);
-      return subscription{std::move(ptr)};
+      auto child = parent->template add_child<fwd_impl>(src, snk);
+      return subscription{std::move(child)};
     }
 
     /// Like @ref make but without any type checking.
     static subscription make_unsafe(coordinator* parent, listener* src,
                                     coordinated* snk) {
-      intrusive_ptr<subscription::impl> ptr{new fwd_impl(parent, src, snk),
-                                            adopt_ref};
-      return subscription{std::move(ptr)};
+      intrusive_ptr<subscription::impl> child{new fwd_impl(parent, src, snk),
+                                              adopt_ref};
+      return subscription{std::move(child)};
     }
 
     void ref() const noexcept final {
@@ -199,10 +199,10 @@ public:
     if (pimpl_) {
       // Defend against impl::cancel() indirectly calling member functions on
       // this object again.
-      auto ptr = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
-      auto* parent = ptr->parent();
-      ptr->cancel();
-      parent->release_later(ptr);
+      auto handle = intrusive_ptr<impl>{pimpl_.release(), adopt_ref};
+      auto* parent = handle->parent();
+      handle->cancel();
+      parent->release_later(handle);
     }
   }
 

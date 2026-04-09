@@ -632,14 +632,14 @@ void scheduled_actor::add_multiplexed_response_handler(
 scheduled_actor::message_category
 scheduled_actor::categorize(mailbox_element& x) {
   auto lg = log::core::trace("x = {}", x);
-  auto& content = x.content();
-  if (content.match_elements<sys_atom, get_atom, std::string>()) {
+  auto& msg_content = x.content();
+  if (msg_content.match_elements<sys_atom, get_atom, std::string>()) {
     auto rp = make_response_promise();
     if (!rp.pending()) {
       log::system::warning("received anonymous ('get', 'sys', $key) message");
       return message_category::internal;
     }
-    auto& what = content.get_as<std::string>(2);
+    auto& what = msg_content.get_as<std::string>(2);
     if (what == "info") {
       log::core::debug("reply to 'info' message");
       rp.deliver(ok_atom_v, what, strong_actor_ptr{ctrl(), add_ref}, name());
@@ -648,9 +648,9 @@ scheduled_actor::categorize(mailbox_element& x) {
     }
     return message_category::internal;
   }
-  if (content.size() != 1)
+  if (msg_content.size() != 1)
     return message_category::ordinary;
-  switch (content.type_at(0)) {
+  switch (msg_content.type_at(0)) {
     case type_id_v<exit_msg>: {
       auto& em = x.payload.get_mutable_as<exit_msg>(0);
       // Make sure to get rid of attachables if they're no longer needed.
@@ -665,13 +665,13 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::ordinary;
     }
     case type_id_v<timeout_msg>: {
-      auto id = content.get_as<timeout_msg>(0).id;
+      auto id = msg_content.get_as<timeout_msg>(0).id;
       if (timeout_state_.id == id)
         handle_timeout();
       return message_category::internal;
     }
     case type_id_v<action>: {
-      auto what = content.get_as<action>(0);
+      auto what = msg_content.get_as<action>(0);
       CAF_ASSERT(what.ptr() != nullptr);
       log::core::debug("run action");
       what.run();
@@ -679,7 +679,7 @@ scheduled_actor::categorize(mailbox_element& x) {
     }
     case type_id_v<stream_open_msg>: {
       // Try to subscribe the sink to the observable.
-      auto& [str_id, ptr, sink_id] = content.get_as<stream_open_msg>(0);
+      auto& [str_id, ptr, sink_id] = msg_content.get_as<stream_open_msg>(0);
       if (!ptr) {
         log::system::error("received a stream_open_msg with a null sink");
         return message_category::internal;
@@ -729,7 +729,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<stream_demand_msg>: {
-      auto [sub_id, new_demand] = content.get_as<stream_demand_msg>(0);
+      auto [sub_id, new_demand] = msg_content.get_as<stream_demand_msg>(0);
       if (auto i = stream_subs_.find(sub_id); i != stream_subs_.end()) {
         // Note: `i` might become invalid as a result of calling `request`.
         auto ptr = i->second;
@@ -738,7 +738,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<stream_cancel_msg>: {
-      auto [sub_id] = content.get_as<stream_cancel_msg>(0);
+      auto [sub_id] = msg_content.get_as<stream_cancel_msg>(0);
       if (auto i = stream_subs_.find(sub_id); i != stream_subs_.end()) {
         log::core::debug("canceled stream {}", sub_id);
         auto ptr = i->second;
@@ -748,7 +748,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<stream_ack_msg>: {
-      auto [ptr, sink_id, src_id, mipb] = content.get_as<stream_ack_msg>(0);
+      auto [ptr, sink_id, src_id, mipb] = msg_content.get_as<stream_ack_msg>(0);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
         auto ptr = i->second;
         ptr->ack(src_id, mipb);
@@ -756,7 +756,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<stream_batch_msg>: {
-      const auto& [sink_id, xs] = content.get_as<stream_batch_msg>(0);
+      const auto& [sink_id, xs] = msg_content.get_as<stream_batch_msg>(0);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
         auto ptr = i->second;
         ptr->push(xs);
@@ -764,7 +764,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<stream_close_msg>: {
-      auto [sink_id] = content.get_as<stream_close_msg>(0);
+      auto [sink_id] = msg_content.get_as<stream_close_msg>(0);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
         auto ptr = i->second;
         stream_bridges_.erase(i);
@@ -773,7 +773,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<stream_abort_msg>: {
-      const auto& [sink_id, reason] = content.get_as<stream_abort_msg>(0);
+      const auto& [sink_id, reason] = msg_content.get_as<stream_abort_msg>(0);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
         auto ptr = i->second;
         stream_bridges_.erase(i);
@@ -1052,8 +1052,8 @@ void scheduled_actor::call_error_handler(error& err) {
 disposable scheduled_actor::run_scheduled(timestamp when, action what) {
   CAF_ASSERT(what.ptr() != nullptr);
   auto lg = log::core::trace("when = {}", when);
-  auto delay = when - make_timestamp();
-  return run_scheduled(clock().now() + delay, std::move(what));
+  auto delta = when - make_timestamp();
+  return run_scheduled(clock().now() + delta, std::move(what));
 }
 
 disposable scheduled_actor::run_scheduled(actor_clock::time_point when,
@@ -1068,8 +1068,8 @@ disposable scheduled_actor::run_scheduled(actor_clock::time_point when,
 disposable scheduled_actor::run_scheduled_weak(timestamp when, action what) {
   CAF_ASSERT(what.ptr() != nullptr);
   auto lg = log::core::trace("when = {}", when);
-  auto delay = when - make_timestamp();
-  return run_scheduled_weak(clock().now() + delay, std::move(what));
+  auto delta = when - make_timestamp();
+  return run_scheduled_weak(clock().now() + delta, std::move(what));
 }
 
 disposable scheduled_actor::run_scheduled_weak(actor_clock::time_point when,

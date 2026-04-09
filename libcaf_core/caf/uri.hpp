@@ -59,8 +59,8 @@ public:
     /// Returns whether `host` is empty, i.e., the host is not an IP address
     /// and the string is empty.
     bool empty() const noexcept {
-      auto str = std::get_if<std::string>(&host);
-      return str != nullptr && str->empty();
+      auto host_str_ptr = std::get_if<std::string>(&host);
+      return host_str_ptr != nullptr && host_str_ptr->empty();
     }
   };
 
@@ -293,12 +293,12 @@ struct inspector_access<uri> : inspector_access_base<uri> {
   template <class Inspector>
   static bool apply(Inspector& f, uri& x) {
     if (f.has_human_readable_format()) {
-      auto get = [&x] { return to_string(x); };
+      auto get_fn = [&x] { return to_string(x); };
       auto set = [&x](std::string str) {
         auto err = parse(str, x);
         return err.empty();
       };
-      return f.apply(get, set);
+      return f.apply(get_fn, set);
     } else {
       if constexpr (Inspector::is_loading)
         if (x.impl_->strong_reference_count() != 1)

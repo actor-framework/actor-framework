@@ -108,8 +108,8 @@ bool multipart_reader::do_parse(consume_fn& fn) {
         && content_view.substr(content_view.size() - 2) == "\r\n") {
       content_view = content_view.substr(0, content_view.size() - 2);
     }
-    auto content = as_bytes(std::span{content_view});
-    fn(std::move(hdr), content);
+    auto bytes_view = as_bytes(std::span{content_view});
+    fn(std::move(hdr), bytes_view);
     payload.remove_prefix(next_boundary + boundary_size);
   }
   return true;

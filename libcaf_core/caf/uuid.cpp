@@ -186,9 +186,9 @@ uuid uuid::random() noexcept {
 }
 
 bool uuid::can_parse(std::string_view str) noexcept {
-  array_type bytes;
+  array_type bytes_buf;
   string_parser_state ps{str.begin(), str.end()};
-  return parse_impl(ps, bytes) == valid_uuid;
+  return parse_impl(ps, bytes_buf) == valid_uuid;
 }
 
 error parse(std::string_view str, uuid& dest) {
