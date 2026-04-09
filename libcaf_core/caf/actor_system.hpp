@@ -425,11 +425,6 @@ public:
     println(term::reset, fmt, std::forward<Args>(args)...);
   }
 
-  CAF_DEPRECATED("configure a factory for the printer instead")
-  void redirect_text_output(void* out,
-                            void (*write)(void*, term, const char*, size_t),
-                            void (*cleanup)(void*));
-
   /// @cond
 
   /// Calls all thread started hooks

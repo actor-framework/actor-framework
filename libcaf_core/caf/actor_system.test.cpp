@@ -102,17 +102,5 @@ TEST("println renders its arguments to a text stream") {
     actor_system sys{cfg};
     do_print(sys);
   }
-  SECTION("redirect_text_output") {
-    actor_system sys{cfg};
-    auto* out = new test_console_printer(str);
-    auto write = [](void* vptr, term color, const char* buf, size_t len) {
-      static_cast<test_console_printer*>(vptr)->print(color, buf, len);
-    };
-    auto cleanup = [](void* vptr) {
-      delete static_cast<test_console_printer*>(vptr);
-    };
-    sys.redirect_text_output(out, write, cleanup);
-    do_print(sys);
-  }
   check_eq(*str, "line1\n<red>line2</red>\nline3\n<green>line4</green>\n");
 }

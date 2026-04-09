@@ -136,34 +136,6 @@ struct base_metrics_t {
   telemetry::int_gauge_family* mailbox_size;
 };
 
-/// Adapter that implements the console_printer interface by forwarding to the
-/// legacy callback-based API (for the deprecated redirect_text_output
-/// overload).
-class callback_printer : public console_printer {
-public:
-  using print_fun = void (*)(void*, term, const char*, size_t);
-  using cleanup_fun = void (*)(void*);
-
-  callback_printer(void* out, print_fun write, cleanup_fun cleanup)
-    : out_(out), write_(write), cleanup_(cleanup) {
-  }
-
-  void print(term color, const char* buf, size_t len) override {
-    if (write_)
-      write_(out_, color, buf, len);
-  }
-
-  ~callback_printer() override {
-    if (cleanup_)
-      cleanup_(out_);
-  }
-
-private:
-  void* out_;
-  print_fun write_;
-  cleanup_fun cleanup_;
-};
-
 /// Thread-safe holder for the current console printer.
 class printer_holder {
 public:
@@ -938,14 +910,6 @@ void actor_system::release_private_thread(detail::private_thread* ptr) {
 
 detail::mailbox_factory* actor_system::mailbox_factory() {
   return impl_->mailbox_factory();
-}
-
-void actor_system::redirect_text_output(void* out,
-                                        void (*write)(void*, term, const char*,
-                                                      size_t),
-                                        void (*cleanup)(void*)) {
-  impl_->redirect_text_output(
-    std::make_unique<callback_printer>(out, write, cleanup));
 }
 
 void actor_system::do_print(term color, const char* buf, size_t num_bytes) {

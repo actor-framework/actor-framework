@@ -154,6 +154,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Removed the deprecated `actor_ostream` class and the `aout` utility. They have
   been deprecated since CAF 1.0.0. Users should now use `println` instead, which
   is available on actors as well as on the `actor_system`.
+- Removed the deprecated callback overload of
+  `actor_system::redirect_text_output`. Configure a console printer via
+  `actor_system_config::console_printer_factory()` before constructing the actor
+  system.
 - The getters `spawn_serv` and `config_serv` have been removed from the public
   interface of `actor_system`. These actors are an implementation detail of the
   I/O module and should not be accessed directly by users.
