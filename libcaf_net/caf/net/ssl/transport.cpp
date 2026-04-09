@@ -119,9 +119,9 @@ public:
           owner_->register_writing();
           break;
         default: {
-          auto err = make_error(sec::cannot_connect_to_node,
-                                policy_.conn.last_error_string(res));
-          up_->abort(std::move(err));
+          auto handshake_err = make_error(sec::cannot_connect_to_node,
+                                          policy_.conn.last_error_string(res));
+          up_->abort(std::move(handshake_err));
           owner_->deregister();
         }
       }
