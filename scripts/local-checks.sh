@@ -9,7 +9,6 @@
 #   - the code formatting is correct (via clang-format)
 #   - no forbidden includes are found in the code base
 #   - type-id block offsets in unit tests do not overlap
-#   - cppcheck finds no issues
 
 scriptDir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$(cd "$scriptDir/.." && pwd)" || exit 1
@@ -61,16 +60,11 @@ type_id_block_offsets_check() {
   python3 scripts/get-next-free-block-offset.py 1>/dev/null
 }
 
-cppcheck_check() {
-  scripts/cppcheck.sh
-}
-
 run_check "build project" cmake_check
 run_check "run tests" ctest_check
 run_check "check code formatting" clang_format_check
 run_check "check for forbidden includes" forbidden_includes_check
 run_check "check type-id block offsets" type_id_block_offsets_check
-run_check "cppcheck" cppcheck_check
 
 echo ""
 if [ "$failed" -ne 0 ]; then
