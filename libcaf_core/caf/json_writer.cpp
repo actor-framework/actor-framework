@@ -586,28 +586,6 @@ private:
     return false;
   }
 
-  // Backs up one level of nesting but checks that the top is `t` afterwards.
-  bool pop_if_next(internal::json_node t) {
-    if (stack_.size() > 1
-        && (stack_[stack_.size() - 2] == t
-            || can_morph(stack_[stack_.size() - 2].t, t))) {
-      stack_.pop_back();
-      return true;
-    }
-    if (stack_.size() < 2) {
-      err_ = format_to_error(sec::runtime_error,
-                             "pop_if_next failed: expected {} "
-                             "but found a stack of size",
-                             as_json_type_name(t), stack_.size());
-    } else {
-      err_ = format_to_error(sec::runtime_error,
-                             "pop_if_next failed: expected {} but found {}",
-                             as_json_type_name(t),
-                             as_json_type_name(stack_[stack_.size() - 2].t));
-    }
-    return false;
-  }
-
   // Tries to morph the current top of the stack to t.
   bool morph(internal::json_node t) {
     internal::json_node unused;
