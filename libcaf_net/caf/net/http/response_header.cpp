@@ -69,7 +69,7 @@ response_header::parse(std::string_view raw) {
   auto [first_line, remainder]
     = split_by(std::string_view{raw_.data(), raw_.size()}, eol);
   auto [version_str, first_line_remainder] = split_by(first_line, " ");
-  auto [status_str, status_text] = split_by(first_line_remainder, " ");
+  auto [status_str, status_text_line] = split_by(first_line_remainder, " ");
   if (!validate_http_version(version_str)) {
     log::net::debug("Invalid http version.");
     raw_.clear();
@@ -84,7 +84,7 @@ response_header::parse(std::string_view raw) {
   } else {
     status_ = *res;
   }
-  status_text_ = trim(status_text);
+  status_text_ = trim(status_text_line);
   if (status_text_.empty()) {
     log::net::debug("Empty status text.");
     raw_.clear();

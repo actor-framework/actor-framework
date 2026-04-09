@@ -481,9 +481,9 @@ public:
         x = result;
       }
     };
-    auto& top = reader.top();
-    if (holds_alternative<const config_value*>(top)) {
-      auto ptr = get<const config_value*>(top);
+    auto& current = reader.top();
+    if (holds_alternative<const config_value*>(current)) {
+      auto ptr = get<const config_value*>(current);
       if (auto val = get_as<internal_type>(*ptr)) {
         assign(*val);
         reader.pop();
@@ -492,8 +492,8 @@ public:
         reader.set_error(std::move(val.error()));
         return false;
       }
-    } else if (holds_alternative<sequence>(top)) {
-      auto& seq = get<sequence>(top);
+    } else if (holds_alternative<sequence>(current)) {
+      auto& seq = get<sequence>(current);
       if (seq.at_end()) {
         reader.emplace_error(sec::runtime_error,
                              "value: sequence out of bounds");
@@ -508,8 +508,8 @@ public:
         reader.set_error(std::move(val.error()));
         return false;
       }
-    } else if (holds_alternative<key_ptr>(top)) {
-      auto ptr = get<key_ptr>(top);
+    } else if (holds_alternative<key_ptr>(current)) {
+      auto ptr = get<key_ptr>(current);
       if constexpr (std::is_same_v<std::string, T>) {
         x = *ptr;
         reader.pop();
@@ -614,7 +614,7 @@ public:
       return false;
     }
     for (size_t index = 0; index < x.size(); index += 2) {
-      uint8_t value = 0;
+      uint8_t byte = 0;
       for (size_t i = 0; i < 2; ++i) {
         auto c = x[index + i];
         if (!isxdigit(c)) {
@@ -622,9 +622,9 @@ public:
                         "invalid character in hex-formatted string");
           return false;
         }
-        detail::parser::add_ascii<16>(value, c);
+        detail::parser::add_ascii<16>(byte, c);
       }
-      bytes[index / 2] = static_cast<std::byte>(value);
+      bytes[index / 2] = static_cast<std::byte>(byte);
     }
     return true;
   }

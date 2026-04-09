@@ -56,10 +56,10 @@ public:
   template <class... Ts>
   static message concat(Ts&&... xs) {
     static_assert(sizeof...(Ts) >= 2);
-    auto types = type_id_list::concat(types_of(xs)...);
-    auto ptr = detail::message_data::make_uninitialized(types);
-    ptr->init_from(std::forward<Ts>(xs)...);
-    return message{data_ptr{ptr.release(), false}};
+    auto type_ids = type_id_list::concat(types_of(xs)...);
+    auto storage = detail::message_data::make_uninitialized(type_ids);
+    storage->init_from(std::forward<Ts>(xs)...);
+    return message{data_ptr{storage.release(), false}};
   }
 
   // -- properties -------------------------------------------------------------

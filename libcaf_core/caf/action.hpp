@@ -179,9 +179,9 @@ public:
   }
 
   bool disposed() const noexcept override {
-    auto current_state = state_.load();
-    return current_state == action::state::disposed
-           || current_state == action::state::deferred_dispose;
+    auto st = state_.load();
+    return st == action::state::disposed
+           || st == action::state::deferred_dispose;
   }
 
   action::state current_state() const noexcept override {

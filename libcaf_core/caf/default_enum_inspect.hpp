@@ -26,13 +26,13 @@ template <class Inspector, class Enumeration>
 bool default_enum_inspect(Inspector& f, Enumeration& x) {
   using integer_type = std::underlying_type_t<Enumeration>;
   if (f.has_human_readable_format()) {
-    auto get = [&x] { return to_string(x); };
+    auto get_value = [&x] { return to_string(x); };
     auto set = [&x](std::string_view str) { return from_string(str, x); };
-    return f.apply(get, set);
+    return f.apply(get_value, set);
   } else {
-    auto get = [&x] { return static_cast<integer_type>(x); };
+    auto get_value = [&x] { return static_cast<integer_type>(x); };
     auto set = [&x](integer_type val) { return from_integer(val, x); };
-    return f.apply(get, set);
+    return f.apply(get_value, set);
   }
 }
 

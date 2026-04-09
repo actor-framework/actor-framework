@@ -90,8 +90,9 @@ void request::respond(status code, std::string_view content_type,
   unordered_flat_map<std::string, std::string> fields;
   fields.emplace("Content-Type"sv, content_type);
   fields.emplace("Content-Length"sv, content_size);
-  auto body = std::vector<std::byte>{content.begin(), content.end()};
-  impl_->prom.set_value(response{code, std::move(fields), std::move(body)});
+  auto body_bytes = std::vector<std::byte>{content.begin(), content.end()};
+  impl_->prom.set_value(
+    response{code, std::move(fields), std::move(body_bytes)});
 }
 
 bool request::orphaned() const noexcept {

@@ -29,8 +29,8 @@ caf::uri::impl_type default_instance;
 namespace caf {
 
 std::string uri::authority_type::host_str() const {
-  if (auto* str = std::get_if<std::string>(&host))
-    return *str;
+  if (auto* str_ptr = std::get_if<std::string>(&host))
+    return *str_ptr;
   return to_string(std::get<ip_address>(host));
 }
 
@@ -116,10 +116,10 @@ std::optional<uri> uri::authority_only() const {
   auto result = make_counted<uri::impl_type>();
   result->scheme = impl_->scheme;
   result->authority = impl_->authority;
-  auto& str = result->str;
-  str = impl_->scheme;
-  str += "://";
-  str += to_string(impl_->authority);
+  auto& uri_str = result->str;
+  uri_str = impl_->scheme;
+  uri_str += "://";
+  uri_str += to_string(impl_->authority);
   return uri{std::move(result)};
 }
 

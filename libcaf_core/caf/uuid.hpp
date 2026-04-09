@@ -163,9 +163,9 @@ CAF_CORE_EXPORT expected<uuid> make_uuid(std::string_view str);
 template <class Inspector>
 bool inspect(Inspector& f, uuid& x) {
   if (f.has_human_readable_format()) {
-    auto get = [&x] { return to_string(x); };
+    auto getter = [&x] { return to_string(x); };
     auto set = [&x](std::string str) { return parse(str, x); };
-    return f.apply(get, set);
+    return f.apply(getter, set);
   } else {
     return f.apply(x.bytes());
   }

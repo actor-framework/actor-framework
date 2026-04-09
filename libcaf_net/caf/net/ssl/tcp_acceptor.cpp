@@ -34,31 +34,31 @@ tcp_acceptor::make_with_cert_file(tcp_accept_socket fd,
                                   const char* cert_file_path,
                                   const char* key_file_path,
                                   format file_format) {
-  auto ctx = context::make_server(tls::any);
-  if (!ctx) {
+  auto ssl_ctx = context::make_server(tls::any);
+  if (!ssl_ctx) {
     return expected<tcp_acceptor>{unexpect, sec::runtime_error,
                                   "unable to create SSL context"};
   }
-  if (!ctx->use_certificate_file(cert_file_path, file_format)) {
+  if (!ssl_ctx->use_certificate_file(cert_file_path, file_format)) {
     return format_to_unexpected(sec::runtime_error,
                                 "unable to load certificate file: {}",
-                                ctx->last_error_string());
+                                ssl_ctx->last_error_string());
   }
-  if (!ctx->use_private_key_file(key_file_path, file_format)) {
+  if (!ssl_ctx->use_private_key_file(key_file_path, file_format)) {
     return format_to_unexpected(sec::runtime_error,
                                 "unable to load private key file: {}",
-                                ctx->last_error_string());
+                                ssl_ctx->last_error_string());
   }
-  return {tcp_acceptor{fd, std::move(*ctx)}};
+  return {tcp_acceptor{fd, std::move(*ssl_ctx)}};
 }
 
 expected<tcp_acceptor>
 tcp_acceptor::make_with_cert_file(uint16_t port, const char* cert_file_path,
                                   const char* key_file_path,
                                   format file_format) {
-  if (auto fd = make_tcp_accept_socket(port)) {
-    return tcp_acceptor::make_with_cert_file(*fd, cert_file_path, key_file_path,
-                                             file_format);
+  if (auto accept_fd = make_tcp_accept_socket(port)) {
+    return tcp_acceptor::make_with_cert_file(*accept_fd, cert_file_path,
+                                             key_file_path, file_format);
   } else {
     return expected<tcp_acceptor>{unexpect, sec::cannot_open_port};
   }

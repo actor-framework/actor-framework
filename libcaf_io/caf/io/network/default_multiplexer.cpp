@@ -915,11 +915,12 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
   auto fd = invalid_native_socket;
   protocol::network proto{};
   for (auto& elem : addrs) {
-    auto host = elem.first.c_str();
-    auto p
-      = elem.second == ipv4
-          ? new_ip_acceptor_impl<AF_INET, SOCK_DGRAM>(port, host, reuse, any)
-          : new_ip_acceptor_impl<AF_INET6, SOCK_DGRAM>(port, host, reuse, any);
+    auto host_str = elem.first.c_str();
+    auto p = elem.second == ipv4
+               ? new_ip_acceptor_impl<AF_INET, SOCK_DGRAM>(port, host_str,
+                                                           reuse, any)
+               : new_ip_acceptor_impl<AF_INET6, SOCK_DGRAM>(port, host_str,
+                                                            reuse, any);
     if (!p) {
       log::io::debug("{}", p.error());
       continue;

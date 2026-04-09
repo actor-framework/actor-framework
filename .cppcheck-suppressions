@@ -26,7 +26,6 @@ unmatchedSuppression:*
 //       see https://github.com/actor-framework/actor-framework/issues/2294
 accessMoved:*
 passedByValue:*
-shadowFunction:*
 uninitMemberVar:*
 constVariableReference:*
 constParameterReference:*

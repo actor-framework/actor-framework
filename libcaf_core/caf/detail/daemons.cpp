@@ -85,11 +85,11 @@ actor daemons::do_launch(std::function<actor(actor_system&)> do_spawn,
   if (impl_->id == 0) {
     return {};
   }
-  auto id = impl_->id++;
-  auto& st = impl_->workers[id];
+  auto worker_id = impl_->id++;
+  auto& st = impl_->workers[worker_id];
   st.hdl = do_spawn(*impl_->sys);
   st.do_stop = std::move(do_stop);
-  anon_mail(st.hdl, id).send(impl_->cleaner);
+  anon_mail(st.hdl, worker_id).send(impl_->cleaner);
   return st.hdl;
 }
 

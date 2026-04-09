@@ -318,9 +318,9 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
   auto basp = named_broker<basp_broker>("BASP");
   strong_actor_ptr result;
   scoped_actor self{system(), true};
-  auto id = basp::header::config_server_id;
+  auto config_server_id = basp::header::config_server_id;
   self
-    ->mail(forward_atom_v, nid, id,
+    ->mail(forward_atom_v, nid, config_server_id,
            make_message(registry_lookup_atom_v, std::move(name)))
     .send(basp);
   self->receive([&](strong_actor_ptr& addr) { result = std::move(addr); },

@@ -158,7 +158,7 @@ public:
   template <class Inspector>
   friend bool inspect(Inspector& f, node_id& x) {
     auto is_present = [&x] { return x.data_ != nullptr; };
-    auto get = [&]() -> const auto& { return x.data_->content; };
+    auto getter = [&]() -> const auto& { return x.data_->content; };
     auto reset = [&x] { x.data_.reset(); };
     auto set = [&x](node_id_data::variant_type&& val) {
       if (x.data_ && x.data_->strong_reference_count() == 1)
@@ -167,7 +167,7 @@ public:
         x.data_.emplace(std::move(val));
       return true;
     };
-    return f.object(x).fields(f.field("data", is_present, get, reset, set));
+    return f.object(x).fields(f.field("data", is_present, getter, reset, set));
   }
 
   // -- private API ------------------------------------------------------------

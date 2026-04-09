@@ -117,7 +117,7 @@ request_header::parse(std::string_view raw) {
     raw_.clear();
     return {status::bad_request, "Invalid HTTP method."};
   }
-  auto [uri_str, version] = split_by(first_line_remainder, " ");
+  auto [uri_str, http_version] = split_by(first_line_remainder, " ");
   if (auto maybe_uri = parse_request_target(method_, uri_str)) {
     uri_ = std::move(*maybe_uri);
   } else {
@@ -126,7 +126,7 @@ request_header::parse(std::string_view raw) {
     return {status::bad_request, "Malformed Request-URI."};
   }
   // Store the remaining header fields.
-  version_ = version;
+  version_ = http_version;
   auto ok = parse_fields(remainder);
   if (ok)
     return {status::ok, "OK"};

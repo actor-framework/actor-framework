@@ -442,9 +442,9 @@ struct inspector_access<std::byte> : inspector_access_base<std::byte> {
   template <class Inspector>
   [[nodiscard]] static bool apply(Inspector& f, std::byte& x) {
     using integer_type = std::underlying_type_t<std::byte>;
-    auto get = [&x] { return static_cast<integer_type>(x); };
+    auto getter = [&x] { return static_cast<integer_type>(x); };
     auto set = [&x](integer_type val) { x = static_cast<std::byte>(val); };
-    return f.apply(get, set);
+    return f.apply(getter, set);
   }
 };
 
@@ -631,7 +631,7 @@ struct inspector_access<std::chrono::duration<Rep, Period>>
   template <class Inspector>
   static bool apply(Inspector& f, value_type& x) {
     if (f.has_human_readable_format()) {
-      auto get = [&x] {
+      auto getter = [&x] {
         std::string str;
         detail::print(str, x);
         return str;
@@ -640,14 +640,14 @@ struct inspector_access<std::chrono::duration<Rep, Period>>
         auto err = detail::parse(str, x);
         return err.empty();
       };
-      return f.apply(get, set);
+      return f.apply(getter, set);
     } else {
-      auto get = [&x] { return x.count(); };
+      auto getter = [&x] { return x.count(); };
       auto set = [&x](Rep value) {
         x = std::chrono::duration<Rep, Period>{value};
         return true;
       };
-      return f.apply(get, set);
+      return f.apply(getter, set);
     }
   }
 };
@@ -663,21 +663,21 @@ struct inspector_access<
   template <class Inspector>
   static bool apply(Inspector& f, value_type& x) {
     if (f.has_human_readable_format()) {
-      auto get = [&x] {
+      auto getter = [&x] {
         std::string str;
         detail::print(str, x);
         return str;
       };
       auto set = [&x](std::string str) { return detail::parse(str, x); };
-      return f.apply(get, set);
+      return f.apply(getter, set);
     } else {
       using rep_type = typename Duration::rep;
-      auto get = [&x] { return x.time_since_epoch().count(); };
+      auto getter = [&x] { return x.time_since_epoch().count(); };
       auto set = [&x](rep_type value) {
         x = value_type{Duration{value}};
         return true;
       };
-      return f.apply(get, set);
+      return f.apply(getter, set);
     }
   }
 };
