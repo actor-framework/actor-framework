@@ -1,16 +1,16 @@
 // types with intentionally non-explicit constructors
-noExplicitConstructor:libcaf_core/caf/actor.hpp
-noExplicitConstructor:libcaf_core/caf/expected.hpp
-noExplicitConstructor:libcaf_core/caf/intrusive_cow_ptr.hpp
-noExplicitConstructor:libcaf_core/caf/intrusive_ptr.hpp
-noExplicitConstructor:libcaf_core/caf/result.hpp
-noExplicitConstructor:libcaf_core/caf/placement_ptr.hpp
-noExplicitConstructor:libcaf_net/caf/net/dsl/arg.hpp
+noExplicitConstructor:*libcaf_core/caf/actor.hpp
+noExplicitConstructor:*libcaf_core/caf/expected.hpp
+noExplicitConstructor:*libcaf_core/caf/intrusive_cow_ptr.hpp
+noExplicitConstructor:*libcaf_core/caf/intrusive_ptr.hpp
+noExplicitConstructor:*libcaf_core/caf/result.hpp
+noExplicitConstructor:*libcaf_core/caf/placement_ptr.hpp
+noExplicitConstructor:*libcaf_net/caf/net/dsl/arg.hpp
 
 // our parser FSM DSL injects code that may be unreachable in some cases
-unreachableCode:libcaf_core/caf/detail/parser/*
-unreachableCode:libcaf_core/caf/detail/format.cpp
-unreachableCode:libcaf_core/caf/detail/json.cpp
+unreachableCode:*libcaf_core/caf/detail/parser/*
+unreachableCode:*libcaf_core/caf/detail/format.cpp
+unreachableCode:*libcaf_core/caf/detail/json.cpp
 
 // TODO: need to be re-enabled one-by-one,
 //       see https://github.com/actor-framework/actor-framework/issues/2294
