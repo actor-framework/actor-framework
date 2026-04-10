@@ -95,11 +95,14 @@ public:
   template <class T>
   T* get(int id, std::string_view description,
          const std::source_location& loc) {
-    auto& result = steps[std::make_pair(id, example_id)];
-    if (!result) {
-      result = std::make_unique<T>(this, id, description, loc);
+    const auto key = step_id{id, example_id};
+    if (auto it = steps.find(key); it != steps.end()) {
+      return static_cast<T*>(it->second.get());
     }
-    return static_cast<T*>(result.get());
+    auto it = steps
+                .emplace(key, std::make_unique<T>(this, id, description, loc))
+                .first;
+    return static_cast<T*>(it->second.get());
   }
 
   /// Tries to find the first step that immediately precedes `caller_id` in the
