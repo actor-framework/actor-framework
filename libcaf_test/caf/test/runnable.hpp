@@ -13,7 +13,6 @@
 #include "caf/test/reporter.hpp"
 #include "caf/test/requirement_failed.hpp"
 
-#include "caf/callback.hpp"
 #include "caf/config_value.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/format.hpp"
@@ -23,6 +22,7 @@
 #include "caf/format_string_with_location.hpp"
 #include "caf/fwd.hpp"
 #include "caf/log/level.hpp"
+#include "caf/predicate.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/telemetry/label_view.hpp"
 
@@ -40,22 +40,21 @@ concept metric_predicate_value
   = std::is_floating_point_v<T>
     || (std::is_integral_v<T> && std::is_signed_v<T>);
 
-template <class T>
-struct metric_predicate_signature_oracle;
+template <class F, class T>
+struct metric_predicate_ref;
 
-template <std::integral T>
-struct metric_predicate_signature_oracle<T> {
-  using type = bool(int64_t);
+template <class F, std::integral T>
+struct metric_predicate_ref<F, T> {
+  using type = predicate_ref_impl<F, int64_t>;
 };
 
-template <std::floating_point T>
-struct metric_predicate_signature_oracle<T> {
-  using type = bool(double);
+template <class F, std::floating_point T>
+struct metric_predicate_ref<F, T> {
+  using type = predicate_ref_impl<F, double>;
 };
 
-template <class T>
-using metric_predicate_signature =
-  typename metric_predicate_signature_oracle<T>::type;
+template <class F, class T>
+using metric_predicate_ref_t = typename metric_predicate_ref<F, T>::type;
 
 template <class T0, class T1>
 concept safely_int_comparable
@@ -283,9 +282,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other == value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, {}, pred, location);
   }
 
@@ -298,9 +296,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other == value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, labels, pred, location);
   }
 
@@ -312,7 +309,7 @@ public:
                        const std::source_location& location
                        = std::source_location::current()) {
     auto fn = [value](double other) { return other == value; };
-    callback_ref_impl<decltype(fn), bool(double)> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), double> pred{fn};
     return do_check_metric(prefix, name, {}, pred, location);
   }
 
@@ -325,7 +322,7 @@ public:
                        const std::source_location& location
                        = std::source_location::current()) {
     auto fn = [value](double other) { return other == value; };
-    callback_ref_impl<decltype(fn), bool(double)> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), double> pred{fn};
     return do_check_metric(prefix, name, labels, pred, location);
   }
 
@@ -337,9 +334,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other != value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, {}, pred, location);
   }
 
@@ -352,9 +348,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other != value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, labels, pred, location);
   }
 
@@ -366,7 +361,7 @@ public:
                        const std::source_location& location
                        = std::source_location::current()) {
     auto fn = [value](double other) { return other != value; };
-    callback_ref_impl<decltype(fn), bool(double)> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), double> pred{fn};
     return do_check_metric(prefix, name, {}, pred, location);
   }
 
@@ -379,7 +374,7 @@ public:
                        const std::source_location& location
                        = std::source_location::current()) {
     auto fn = [value](double other) { return other != value; };
-    callback_ref_impl<decltype(fn), bool(double)> pred{fn};
+    detail::predicate_ref_impl<decltype(fn), double> pred{fn};
     return do_check_metric(prefix, name, labels, pred, location);
   }
 
@@ -391,9 +386,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other < value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, {}, pred, location);
   }
 
@@ -406,9 +400,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other < value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, labels, pred, location);
   }
 
@@ -420,9 +413,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other <= value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, {}, pred, location);
   }
 
@@ -435,9 +427,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other <= value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, labels, pred, location);
   }
 
@@ -449,9 +440,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other > value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, {}, pred, location);
   }
 
@@ -464,9 +454,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other > value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, labels, pred, location);
   }
 
@@ -478,9 +467,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other >= value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, {}, pred, location);
   }
 
@@ -493,9 +481,8 @@ public:
                        ValueType value,
                        const std::source_location& location
                        = std::source_location::current()) {
-    using signature = detail::metric_predicate_signature<ValueType>;
     auto fn = [value](auto other) { return other >= value; };
-    callback_ref_impl<decltype(fn), signature> pred{fn};
+    detail::metric_predicate_ref_t<decltype(fn), ValueType> pred{fn};
     return do_check_metric(prefix, name, labels, pred, location);
   }
 
@@ -937,12 +924,12 @@ public:
 private:
   bool do_check_metric(std::string_view prefix, std::string_view name,
                        std::span<const telemetry::label_view> labels,
-                       callback<bool(int64_t)>& pred,
+                       const predicate<int64_t>& pred,
                        const std::source_location& location);
 
   bool do_check_metric(std::string_view prefix, std::string_view name,
                        std::span<const telemetry::label_view> labels,
-                       callback<bool(double)>& pred,
+                       const predicate<double>& pred,
                        const std::source_location& location);
 
   void run_next_test_branch();

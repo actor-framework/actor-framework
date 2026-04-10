@@ -75,7 +75,7 @@ struct message_verifier;
 
 template <class... Ts>
 struct message_verifier<spawn_mode::function, type_list<Ts...>> {
-  bool operator()(message& msg) {
+  bool operator()(const message& msg) {
     return msg.types() == make_type_id_list<Ts...>();
   }
 };
@@ -83,7 +83,7 @@ struct message_verifier<spawn_mode::function, type_list<Ts...>> {
 template <class Self, class... Ts>
 struct message_verifier<spawn_mode::function_with_selfptr,
                         type_list<Self*, Ts...>> {
-  bool operator()(message& msg) {
+  bool operator()(const message& msg) {
     return msg.types() == make_type_id_list<Ts...>();
   }
 };

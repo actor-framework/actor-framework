@@ -8,8 +8,8 @@
 #include "caf/test/factory.hpp"
 #include "caf/test/fwd.hpp"
 
-#include "caf/callback.hpp"
 #include "caf/detail/test_export.hpp"
+#include "caf/predicate.hpp"
 #include "caf/unit.hpp"
 #include "caf/unordered_flat_map.hpp"
 
@@ -50,11 +50,9 @@ public:
   /// Returns all test suites that match the given filters.
   template <class SuiteFilter, class TestFilter>
   static suites_map suites(SuiteFilter suite_filter, TestFilter test_filter) {
-    using suite_fn = callback_ref_impl<SuiteFilter, bool(std::string_view)>;
-    using test_fn = callback_ref_impl<TestFilter, bool(std::string_view)>;
-    suite_fn suite_cb{suite_filter};
-    test_fn test_cb{test_filter};
-    return selected_suites(suite_cb, test_cb);
+    detail::predicate_ref_impl<SuiteFilter, std::string_view> sf{suite_filter};
+    detail::predicate_ref_impl<TestFilter, std::string_view> tf{test_filter};
+    return selected_suites(sf, tf);
   }
 
   /// Adds a new test factory to the suite `suite_name`.
@@ -85,8 +83,8 @@ public:
 
 private:
   static suites_map
-  selected_suites(caf::callback<bool(std::string_view)>& suite_filter,
-                  caf::callback<bool(std::string_view)>& test_filter);
+  selected_suites(const caf::predicate<std::string_view>& suite_filter,
+                  const caf::predicate<std::string_view>& test_filter);
 
   ptrdiff_t add(factory* new_factory);
 
