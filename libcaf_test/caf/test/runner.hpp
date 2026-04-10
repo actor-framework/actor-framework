@@ -23,6 +23,9 @@ public:
   /// Creates a new runner.
   static std::unique_ptr<runner> make();
 
+  /// Creates a new runner with a custom reporter.
+  static std::unique_ptr<runner> make(std::unique_ptr<reporter>);
+
 protected:
   void do_run(runnable& what);
 };
