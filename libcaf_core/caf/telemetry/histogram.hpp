@@ -71,9 +71,9 @@ public:
     // The last bucket has an upper bound of +inf or int_max, so we'll always
     // find a bucket and increment the counters.
     for (size_t index = 0;; ++index) {
-      auto& [upper_bound, count] = buckets_[index];
-      if (value <= upper_bound) {
-        count.inc();
+      auto& bucket = buckets_[index];
+      if (value <= bucket.upper_bound) {
+        bucket.count.inc();
         sum_.inc(value);
         return;
       }

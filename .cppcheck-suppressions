@@ -45,7 +45,6 @@ missingReturn:*
 noCopyConstructor:*
 uninitMemberVarPrivate:*
 uselessOverride:*
-variableScope:*
 operatorEqVarError:*
 unusedVariable:*
 virtualCallInConstructor:*
