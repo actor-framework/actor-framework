@@ -38,6 +38,18 @@ bool lower_layer::server::send_response(status code,
 }
 
 bool lower_layer::server::send_response(status code,
+                                        std::unordered_map<std::string, std::string> headers,
+                                        const_byte_span content) {
+  auto content_size = std::to_string(content.size());
+  begin_header(code);
+  for (const auto& [key: value] : headers) {
+    add_header_field(key, value);
+  }
+  add_header_field("Content-Length"sv, content_size);
+  return end_header() && send_payload(content);
+}
+
+bool lower_layer::server::send_response(status code,
                                         std::string_view content_type,
                                         std::string_view content) {
   return send_response(code, content_type, as_bytes(std::span{content}));
