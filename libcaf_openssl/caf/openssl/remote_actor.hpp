@@ -32,7 +32,7 @@ remote_actor(actor_system& sys, std::string host, uint16_t port) {
   auto res = remote_actor(sys, sys.message_types(tk), std::move(host), port);
   if (res)
     return actor_cast<ActorHandle>(std::move(*res));
-  return std::move(res.error());
+  return std::move(res).error();
 }
 
 } // namespace caf::openssl

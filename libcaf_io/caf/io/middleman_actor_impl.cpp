@@ -190,7 +190,7 @@ middleman_actor_impl::put(uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
     in = nullptr;
   auto res = open(port, in, reuse_addr);
   if (!res)
-    return std::move(res.error());
+    return std::move(res).error();
   auto& ptr = *res;
   actual_port = ptr->port();
   anon_mail(publish_atom_v, std::move(ptr), actual_port, std::move(whom),
@@ -211,7 +211,7 @@ middleman_actor_impl::put_udp(uint16_t port, strong_actor_ptr& whom,
     in = nullptr;
   auto res = open_udp(port, in, reuse_addr);
   if (!res)
-    return std::move(res.error());
+    return std::move(res).error();
   auto& ptr = *res;
   actual_port = ptr->local_port();
   anon_mail(publish_udp_atom_v, std::move(ptr), actual_port, std::move(whom),
