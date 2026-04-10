@@ -481,13 +481,6 @@ public:
     return spawn_inactive_impl(Options);
   }
 
-  template <class, spawn_options Options = no_spawn_options>
-    requires(is_unbound(Options))
-  CAF_DEPRECATED("call spawn_inactive without a class parameter instead")
-  auto spawn_inactive() {
-    return spawn_inactive_impl(Options);
-  }
-
   detail::private_thread* acquire_private_thread();
 
   void release_private_thread(detail::private_thread*);
