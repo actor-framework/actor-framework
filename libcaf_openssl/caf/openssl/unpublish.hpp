@@ -9,8 +9,8 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
-#include "caf/typed_actor.hpp"
 
 #include <cstdint>
 
@@ -24,8 +24,10 @@ expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
   if (!whom)
     return sec::invalid_argument;
   auto& sys = whom.home_system();
-  auto f = make_function_view(sys.openssl_manager().actor_handle());
-  return f(unpublish_atom::value, port);
+  auto self = scoped_actor{sys};
+  return self->mail(unpublish_atom_v, whom, port)
+    .request(sys.openssl_manager().actor_handle(), infinite)
+    .receive();
 }
 
 } // namespace caf::openssl
