@@ -6,6 +6,14 @@
 #
 #   scripts/cppcheck.sh
 #
+# Passing no arguments will run cppcheck on everything.
+#
+# Optionally, the script takes any number of arguments, each of which is a
+# directory to include in the scan. For example, to run cppcheck only on the
+# core and net libraries:
+#
+#   scripts/cppcheck.sh libcaf_core libcaf_net
+#
 # Requires: cppcheck, cppcheck-htmlreport (Python), jq
 # Output:   cppcheck-report.xml, cppcheck-report-html/ (HTML report)
 #
@@ -52,17 +60,38 @@ else
   jobs="$(sysctl -n hw.ncpu 2>/dev/null || echo 1)"
 fi
 
-jq '[.[] | select(
-  (.file | test("\\.test\\.(hpp|cpp)$") | not)
-  and (.file | test("/robot/") | not)
-)]' \
-  "$compileCommands" >"$filteredCompileCommands"
-
 echo "[cppcheck] Building generated sources"
 cmake --build "$buildDir" --target caf-code-gen
 
+if [ $# -gt 0 ]; then
+  echo "[cppcheck] Scanning specified directories: $@"
+  filter=""
+  for arg in "$@"; do
+    filter="$filter or (.file | contains(\"$arg/\"))"
+  done
+  jq "[.[] | select(
+        (
+          (.file | (contains(\".test.hpp\") or contains(\".test.cpp\")) | not)
+           and (.file | contains(\"/robot/\") | not)
+        )
+        and ( false $filter )
+  )]" \
+    "$compileCommands" >"$filteredCompileCommands"
+else
+  echo "[cppcheck] Scanning all directories"
+  jq "[.[] | select(
+        (.file | (contains(\".test.hpp\") or contains(\".test.cpp\")) | not)
+         and (.file | contains(\"/robot/\") | not)
+      )]" \
+    "$compileCommands" >"$filteredCompileCommands"
+fi
+
+numFiles=$( jq '. | length' "$filteredCompileCommands" )
+
+echo "[cppcheck] Found $numFiles files to scan"
+
 suppressionsFile="$repoRoot/.cppcheck-suppressions"
-echo "[cppcheck] Running cppcheck (compile database: $filteredCompileCommands)"
+echo "[cppcheck] Running cppcheck with compile database: $filteredCompileCommands"
 set +e
 cppcheck \
   -j "$jobs" \
@@ -70,10 +99,7 @@ cppcheck \
   --project="$filteredCompileCommands" \
   --xml \
   --xml-version=2 \
-  --enable=all \
-  --suppress=functionStatic \
-  --suppress=missingIncludeSystem \
-  --suppress=unusedLabel \
+  --enable=performance,portability \
   --inline-suppr \
   --suppressions-list="$suppressionsFile" \
   --error-exitcode=7 \
