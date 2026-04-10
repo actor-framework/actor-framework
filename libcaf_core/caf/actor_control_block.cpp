@@ -134,20 +134,7 @@ error_code<sec> save_actor(const strong_actor_ptr& storage, actor_id aid,
 namespace {
 
 void append_to_string_impl(std::string& str, const actor_control_block* ptr) {
-  if (ptr != nullptr) {
-    auto& nid = ptr->node();
-    if (wraps_uri(nid)) {
-      append_to_string(str, nid);
-      str += "/id/";
-      str += std::to_string(ptr->id());
-    } else {
-      str += std::to_string(ptr->id());
-      str += '@';
-      append_to_string(str, nid);
-    }
-  } else {
-    str += "null";
-  }
+  detail::format_to(std::back_inserter(str), "{}", detail::formatted{ptr});
 }
 
 std::string to_string_impl(const actor_control_block* ptr) {

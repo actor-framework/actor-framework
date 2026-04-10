@@ -14,6 +14,7 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/concepts.hpp"
+#include "caf/detail/formatted.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/inspector_access_type.hpp"
 
@@ -23,6 +24,32 @@
 #ifdef CAF_USE_STD_FORMAT
 
 #  include <format>
+
+namespace std {
+
+template <class T>
+struct formatter<caf::detail::formatted<T>, char> {
+  template <class ParseContext>
+  constexpr auto parse(ParseContext& ctx) const noexcept {
+    return ctx.begin();
+  }
+
+  template <class FmtContext>
+  auto format(formatted<T> what, FmtContext& ctx) const {
+    if (what.value != nullptr) {
+      caf::detail::simple_formatter<T> formatter;
+      return formatter.format(*what.value_, ctx.out());
+    }
+    auto out = ctx.out();
+    const char* str = "null";
+    for (auto c = *str; c != '\0'; c = *++str) {
+      *out++ = c;
+    }
+    return out;
+  }
+};
+
+} // namespace std
 
 namespace caf::detail {
 
@@ -88,7 +115,16 @@ using format_arg
 
 template <class T>
 format_arg make_format_arg(const T& arg) {
-  if constexpr (one_of<T, bool, char, const char*, std::string_view>) {
+  if constexpr (is_formatted_wrapper<T>::value) {
+    std::string result;
+    if (arg.value_ != nullptr) {
+      simple_formatter<typename T::value_type> formatter;
+      formatter.format(*arg.value_, std::back_inserter(result));
+    } else {
+      result = "null";
+    }
+    return {std::move(result)};
+  } else if constexpr (one_of<T, bool, char, const char*, std::string_view>) {
     return format_arg{arg};
   } else if constexpr (std::is_integral_v<T>) {
     if constexpr (std::is_signed_v<T>) {

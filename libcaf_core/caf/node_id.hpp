@@ -4,7 +4,10 @@
 
 #pragma once
 
+#include "caf/detail/append_hex.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/formatted.hpp"
+#include "caf/detail/print.hpp"
 #include "caf/fwd.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/inspector_access.hpp"
@@ -293,3 +296,35 @@ struct hash<caf::node_id> {
 };
 
 } // namespace std
+
+namespace caf::detail {
+
+template <>
+struct simple_formatter<node_id> {
+  template <class OutputIterator>
+  OutputIterator format(const caf::node_id& nid, OutputIterator out) const {
+    using namespace std::literals;
+    if (!nid) {
+      const auto prefix = "caf:local"sv;
+      print_iterator_adapter<OutputIterator> buf{out};
+      buf.insert(buf.end(), prefix.begin(), prefix.end());
+      return buf.pos;
+    }
+    const auto& content = nid->content;
+    if (std::holds_alternative<uri>(content)) {
+      const auto str = std::get<uri>(content).str();
+      return std::copy(str.begin(), str.end(), out);
+    }
+    const auto& hashed = std::get<hashed_node_id>(content);
+    const auto prefix = "caf:io:"sv;
+    print_iterator_adapter<OutputIterator> buf{out};
+    buf.insert(buf.end(), prefix.begin(), prefix.end());
+    append_hex<hex_format::lowercase>(buf, hashed.host.data(),
+                                      hashed.host.size());
+    buf.push_back(':');
+    print(buf, hashed.process_id);
+    return buf.pos;
+  }
+};
+
+} // namespace caf::detail

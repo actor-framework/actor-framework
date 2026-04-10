@@ -8,7 +8,10 @@
 #include "caf/detail/control_block_ref_count.hpp"
 #include "caf/detail/control_block_traits.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/critical.hpp"
+#include "caf/detail/formatted.hpp"
 #include "caf/detail/memory_interface.hpp"
+#include "caf/detail/print.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -245,3 +248,23 @@ struct hash<caf::weak_actor_ptr> {
 };
 
 } // namespace std
+
+namespace caf::detail {
+
+template <>
+struct simple_formatter<actor_control_block> {
+  template <class OutputIterator>
+  OutputIterator
+  format(const actor_control_block& ctrl, OutputIterator out) const {
+    using namespace std::literals;
+    const simple_formatter<node_id> prefix;
+    out = prefix.format(ctrl.node(), out);
+    const auto infix = "/actor/id/"sv;
+    print_iterator_adapter<OutputIterator> buf{out};
+    buf.insert(buf.end(), infix.begin(), infix.end());
+    print(buf, ctrl.id());
+    return buf.pos;
+  }
+};
+
+} // namespace caf::detail
