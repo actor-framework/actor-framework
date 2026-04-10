@@ -21,20 +21,20 @@
 
 namespace {
 
-uint16_t port_of(sockaddr_in& what) {
+uint16_t port_of(const sockaddr_in& what) {
   return what.sin_port;
 }
 
-uint16_t port_of(sockaddr_in6& what) {
+uint16_t port_of(const sockaddr_in6& what) {
   return what.sin6_port;
 }
 
-uint16_t port_of(sockaddr& what) {
+uint16_t port_of(const sockaddr& what) {
   switch (what.sa_family) {
     case AF_INET:
-      return port_of(reinterpret_cast<sockaddr_in&>(what));
+      return port_of(reinterpret_cast<const sockaddr_in&>(what));
     case AF_INET6:
-      return port_of(reinterpret_cast<sockaddr_in6&>(what));
+      return port_of(reinterpret_cast<const sockaddr_in6&>(what));
     default:
       break;
   }

@@ -50,21 +50,21 @@ using std::string;
 
 namespace {
 
-auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
+auto port_of(const sockaddr_in& what) -> decltype(what.sin_port) {
   return what.sin_port;
 }
 
-auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
+auto port_of(const sockaddr_in6& what) -> decltype(what.sin6_port) {
   return what.sin6_port;
 }
 
-auto port_of(sockaddr& what)
-  -> decltype(port_of(std::declval<sockaddr_in&>())) {
+auto port_of(const sockaddr& what)
+  -> decltype(port_of(std::declval<const sockaddr_in&>())) {
   switch (what.sa_family) {
     case AF_INET:
-      return port_of(reinterpret_cast<sockaddr_in&>(what));
+      return port_of(reinterpret_cast<const sockaddr_in&>(what));
     case AF_INET6:
-      return port_of(reinterpret_cast<sockaddr_in6&>(what));
+      return port_of(reinterpret_cast<const sockaddr_in6&>(what));
     default:
       break;
   }

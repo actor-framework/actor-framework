@@ -50,11 +50,12 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
   auto lg = log::io::trace("");
   auto res = behavior{
     [this](publish_atom, uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
-           std::string& addr, bool reuse) -> put_res {
+           const std::string& addr, bool reuse) -> put_res {
       auto lg = log::io::trace("");
       return put(port, whom, sigs, addr.c_str(), reuse);
     },
-    [this](open_atom, uint16_t port, std::string& addr, bool reuse) -> put_res {
+    [this](open_atom, uint16_t port, const std::string& addr,
+           bool reuse) -> put_res {
       auto lg = log::io::trace("");
       strong_actor_ptr whom;
       mpi_set sigs;

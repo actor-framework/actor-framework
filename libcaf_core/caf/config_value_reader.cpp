@@ -474,7 +474,7 @@ public:
   bool pull(impl& reader, T& x) {
     using internal_type
       = std::conditional_t<std::is_floating_point_v<T>, config_value::real, T>;
-    auto assign = [&x](auto& result) {
+    auto assign = [&x](const auto& result) {
       if constexpr (std::is_floating_point_v<T>) {
         x = static_cast<T>(result);
       } else {

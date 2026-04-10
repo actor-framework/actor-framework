@@ -71,7 +71,7 @@ bool valid(const tcp_acceptor& acc) {
 }
 
 void close(tcp_acceptor& acc) {
-  close(acc.fd());
+  close(static_cast<socket>(acc.fd()));
 }
 
 expected<connection> accept(tcp_acceptor& acc) {

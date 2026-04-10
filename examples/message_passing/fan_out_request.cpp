@@ -131,7 +131,9 @@ struct matrix_state {
         auto cells = std::vector<cell>{}; // The cells we need to query.
         cells.reserve(rows);
         std::ranges::transform(data, std::back_inserter(cells),
-                               [column](auto& row) { return row[column]; });
+                               [column](const auto& row) {
+                                 return row[column];
+                               });
         auto rp = self->make_response_promise<double>();
         self->mail(get)
           .fan_out_request(cells, infinite, policy::select_all_tag)

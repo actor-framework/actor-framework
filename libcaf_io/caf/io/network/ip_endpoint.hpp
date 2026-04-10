@@ -96,9 +96,9 @@ CAF_IO_EXPORT bool is_ipv4(const ip_endpoint& ep);
 
 CAF_IO_EXPORT bool is_ipv6(const ip_endpoint& ep);
 
-CAF_IO_EXPORT error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t& f,
-                                            std::string& h, uint16_t& p,
-                                            size_t& l);
+CAF_IO_EXPORT error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t f,
+                                            const std::string& h, uint16_t p,
+                                            size_t l);
 
 CAF_IO_EXPORT error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f,
                                             std::string& h, uint16_t& p,
@@ -106,10 +106,10 @@ CAF_IO_EXPORT error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f,
 
 template <class Inspector>
 bool inspect(Inspector& f, ip_endpoint& x) {
-  uint32_t fam;
+  uint32_t fam = 0;
   std::string h;
-  uint16_t p;
-  size_t l;
+  uint16_t p = 0;
+  size_t l = 0;
   if constexpr (!Inspector::is_loading) {
     if (*x.length() > 0) {
       fam = family(x);

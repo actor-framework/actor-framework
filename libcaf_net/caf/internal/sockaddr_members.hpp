@@ -12,7 +12,16 @@ inline auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
   return what.sin_addr;
 }
 
+inline auto addr_of(const sockaddr_in& what) -> const decltype(what.sin_addr)& {
+  return what.sin_addr;
+}
+
 inline auto family_of(sockaddr_in& what) -> decltype(what.sin_family)& {
+  return what.sin_family;
+}
+
+inline auto family_of(const sockaddr_in& what) -> const
+  decltype(what.sin_family)& {
   return what.sin_family;
 }
 
@@ -20,7 +29,16 @@ inline auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
   return what.sin_port;
 }
 
+inline auto port_of(const sockaddr_in& what) -> const decltype(what.sin_port)& {
+  return what.sin_port;
+}
+
 inline auto addr_of(sockaddr_in6& what) -> decltype(what.sin6_addr)& {
+  return what.sin6_addr;
+}
+
+inline auto addr_of(const sockaddr_in6& what) -> const
+  decltype(what.sin6_addr)& {
   return what.sin6_addr;
 }
 
@@ -28,7 +46,17 @@ inline auto family_of(sockaddr_in6& what) -> decltype(what.sin6_family)& {
   return what.sin6_family;
 }
 
+inline auto family_of(const sockaddr_in6& what) -> const
+  decltype(what.sin6_family)& {
+  return what.sin6_family;
+}
+
 inline auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
+  return what.sin6_port;
+}
+
+inline auto port_of(const sockaddr_in6& what) -> const
+  decltype(what.sin6_port)& {
   return what.sin6_port;
 }
 

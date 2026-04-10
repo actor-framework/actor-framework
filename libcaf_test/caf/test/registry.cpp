@@ -36,16 +36,16 @@ registry::suites_map registry::suites() {
 }
 
 registry::suites_map
-registry::selected_suites(caf::callback<bool(std::string_view)>& suite_filter,
-                          caf::callback<bool(std::string_view)>& test_filter) {
+registry::selected_suites(caf::callback<bool(std::string_view)>* suite_filter,
+                          caf::callback<bool(std::string_view)>* test_filter) {
   auto res = suites();
   for (auto i = res.begin(); i != res.end();) {
-    if (!suite_filter(i->first)) {
+    if (!(*suite_filter)(i->first)) {
       i = res.erase(i);
       continue;
     }
-    std::erase_if(i->second.container(), [&test_filter](auto& entry) {
-      return !test_filter(entry.first);
+    std::erase_if(i->second.container(), [test_filter](const auto& entry) {
+      return !(*test_filter)(entry.first);
     });
     if (i->second.empty()) {
       i = res.erase(i);

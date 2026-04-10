@@ -54,7 +54,7 @@ public:
     using test_fn = callback_ref_impl<TestFilter, bool(std::string_view)>;
     suite_fn suite_cb{suite_filter};
     test_fn test_cb{test_filter};
-    return selected_suites(suite_cb, test_cb);
+    return selected_suites(&suite_cb, &test_cb);
   }
 
   /// Adds a new test factory to the suite `suite_name`.
@@ -85,8 +85,8 @@ public:
 
 private:
   static suites_map
-  selected_suites(caf::callback<bool(std::string_view)>& suite_filter,
-                  caf::callback<bool(std::string_view)>& test_filter);
+  selected_suites(caf::callback<bool(std::string_view)>* suite_filter,
+                  caf::callback<bool(std::string_view)>* test_filter);
 
   ptrdiff_t add(factory* new_factory);
 

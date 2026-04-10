@@ -217,10 +217,10 @@ public:
     if (push) {
       auto producer = make_http_request_producer({mpx, add_ref},
                                                  push.try_open());
-      auto new_route = make_route([producer](responder& res) {
-        if (!producer->push(responder{res}.to_request())) {
+      auto new_route = make_route([producer](responder& mutable_res) {
+        if (!producer->push(responder{mutable_res}.to_request())) {
           auto err = make_error(sec::runtime_error, "flow disconnected");
-          res.router()->abort_and_shutdown(err);
+          mutable_res.router()->abort_and_shutdown(err);
         }
       });
       if (!new_route) {

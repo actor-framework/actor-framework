@@ -65,7 +65,7 @@ public:
   zip_with_sub(coordinator* parent, F fn, observer<output_type> out,
                std::tuple<observable<Ts>...>& srcs)
     : parent_(parent), fn_(std::move(fn)), out_(std::move(out)) {
-    for_each_input([this, &srcs](auto index, auto& input) {
+    for_each_input([this, &srcs](auto index, const auto& input) {
       using index_type = decltype(index);
       using value_type = typename std::decay_t<decltype(input)>::value_type;
       using fwd_impl = forwarder<value_type, zip_with_sub, index_type>;

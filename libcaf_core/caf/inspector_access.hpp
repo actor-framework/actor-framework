@@ -324,7 +324,7 @@ struct optional_inspector_traits<intrusive_cow_ptr<T>> {
     return x.unshared();
   }
 
-  static const value_type& deref_save(container_type& x) {
+  static const value_type& deref_save(const container_type& x) {
     return *x;
   }
 };
