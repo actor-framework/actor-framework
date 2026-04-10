@@ -211,8 +211,8 @@ bool is_ipv6(const ip_endpoint& ep) {
   return family(ep) == AF_INET6;
 }
 
-error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
-                              uint16_t& p, size_t& l) {
+error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t f, const std::string& h,
+                              uint16_t p, size_t l) {
   ep.clear();
   if (l > 0) {
     *ep.length() = l;

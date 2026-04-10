@@ -216,8 +216,8 @@ bool metric_registry::wait_for_impl(std::string_view prefix,
                                     std::span<const label_view> labels,
                                     timespan rel_timeout,
                                     timespan poll_interval,
-                                    callback<bool(int64_t)>& int_pred,
-                                    callback<bool(double)>& dbl_pred) const {
+                                    const predicate<int64_t>& int_pred,
+                                    const predicate<double>& dbl_pred) const {
   auto pred = [&int_pred, &dbl_pred]<class T>(T x) -> bool {
     if constexpr (std::is_same_v<T, int64_t>) {
       return int_pred(x);

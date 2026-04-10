@@ -45,7 +45,7 @@ std::string_view log_level_map::operator[](unsigned level) const noexcept {
 
 unsigned log_level_map::by_name(std::string_view val) const noexcept {
   auto& xs = mapping_;
-  auto i = std::ranges::find_if(xs, [val](auto& kvp) {
+  auto i = std::ranges::find_if(xs, [val](const auto& kvp) {
     return icase_equal(kvp.second, val);
   });
   if (i != xs.end())

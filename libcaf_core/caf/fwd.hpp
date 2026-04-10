@@ -73,6 +73,7 @@ template <class...> class cow_tuple;
 template <class...> class delegated;
 template <class...> class event_based_delayed_response_handle;
 template <class...> class event_based_response_handle;
+template <class...> class predicate;
 template <class...> class result;
 template <class...> class typed_message_view;
 template <class...> class typed_response_promise;

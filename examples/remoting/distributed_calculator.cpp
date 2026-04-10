@@ -231,7 +231,7 @@ void client_repl(actor_system& sys, const config& cfg) {
       anon_send_exit(client, exit_reason::user_shutdown);
       done = true;
     },
-    [&](string& arg0, string& arg1, string& arg2) {
+    [&](const string& arg0, string& arg1, const string& arg2) {
       if (arg0 == "connect") {
         char* end = nullptr;
         auto lport = strtoul(arg2.c_str(), &end, 10);

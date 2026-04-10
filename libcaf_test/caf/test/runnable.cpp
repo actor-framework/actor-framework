@@ -223,7 +223,7 @@ bool labels_match(const Range1& want, const Range2& found) {
 
 bool runnable::do_check_metric(std::string_view prefix, std::string_view name,
                                std::span<const telemetry::label_view> labels,
-                               callback<bool(int64_t)>& pred,
+                               const predicate<int64_t>& pred,
                                const std::source_location& location) {
   using namespace std::literals;
   if (!test_state_->current_registry_) {
@@ -265,7 +265,7 @@ bool runnable::do_check_metric(std::string_view prefix, std::string_view name,
 
 bool runnable::do_check_metric(std::string_view prefix, std::string_view name,
                                std::span<const telemetry::label_view> labels,
-                               callback<bool(double)>& pred,
+                               const predicate<double>& pred,
                                const std::source_location& location) {
   using namespace std::literals;
   if (!test_state_->current_registry_) {

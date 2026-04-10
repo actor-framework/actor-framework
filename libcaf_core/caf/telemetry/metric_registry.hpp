@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "caf/callback.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/predicate.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/settings.hpp"
 #include "caf/telemetry/counter.hpp"
@@ -532,8 +532,8 @@ public:
         }
       }
     };
-    callback_ref_impl<decltype(f), bool(int64_t)> int_cb{f};
-    callback_ref_impl<decltype(f), bool(double)> dbl_cb{f};
+    detail::predicate_ref_impl<decltype(f), int64_t> int_cb{f};
+    detail::predicate_ref_impl<decltype(f), double> dbl_cb{f};
     return wait_for_impl(prefix, name, labels,
                          std::chrono::duration_cast<timespan>(rel_timeout),
                          std::chrono::duration_cast<timespan>(poll_interval),
@@ -587,8 +587,8 @@ private:
 
   bool wait_for_impl(std::string_view prefix, std::string_view name,
                      std::span<const label_view> labels, timespan rel_timeout,
-                     timespan poll_interval, callback<bool(int64_t)>& int_pred,
-                     callback<bool(double)>& dbl_pred) const;
+                     timespan poll_interval, const predicate<int64_t>& int_pred,
+                     const predicate<double>& dbl_pred) const;
 
   template <class F>
   static auto visit_family(F& f, const metric_family* ptr) {

@@ -23,37 +23,25 @@ registry::~registry() {
 }
 
 registry::suites_map registry::suites() {
-  suites_map result;
-  for (auto* ptr = instance().head_; ptr != nullptr; ptr = ptr->next_) {
-    auto& suite = result[ptr->suite_name_];
-    if (auto [iter, ok] = suite.emplace(ptr->description_, ptr); !ok) {
-      auto msg = detail::format("duplicate test name in suite {}: {}",
-                                ptr->suite_name(), ptr->description_);
-      CAF_RAISE_ERROR(std::logic_error, msg.c_str());
-    }
-  }
-  return result;
+  auto select_all = [](std::string_view) { return true; };
+  return suites(select_all, select_all);
 }
 
 registry::suites_map
-registry::selected_suites(caf::callback<bool(std::string_view)>& suite_filter,
-                          caf::callback<bool(std::string_view)>& test_filter) {
-  auto res = suites();
-  for (auto i = res.begin(); i != res.end();) {
-    if (!suite_filter(i->first)) {
-      i = res.erase(i);
-      continue;
+registry::selected_suites(const caf::predicate<std::string_view>& suite_filter,
+                          const caf::predicate<std::string_view>& test_filter) {
+  suites_map result;
+  for (auto* ptr = instance().head_; ptr != nullptr; ptr = ptr->next_) {
+    if (suite_filter(ptr->suite_name_) && test_filter(ptr->description_)) {
+      auto& suite = result[ptr->suite_name_];
+      if (auto [iter, ok] = suite.emplace(ptr->description_, ptr); !ok) {
+        auto msg = detail::format("duplicate test name in suite {}: {}",
+                                  ptr->suite_name(), ptr->description_);
+        CAF_RAISE_ERROR(std::logic_error, msg.c_str());
+      }
     }
-    std::erase_if(i->second.container(), [&test_filter](auto& entry) {
-      return !test_filter(entry.first);
-    });
-    if (i->second.empty()) {
-      i = res.erase(i);
-      continue;
-    }
-    ++i;
   }
-  return res;
+  return result;
 }
 
 ptrdiff_t registry::add(factory* new_factory) {

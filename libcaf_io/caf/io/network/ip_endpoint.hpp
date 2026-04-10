@@ -96,9 +96,9 @@ CAF_IO_EXPORT bool is_ipv4(const ip_endpoint& ep);
 
 CAF_IO_EXPORT bool is_ipv6(const ip_endpoint& ep);
 
-CAF_IO_EXPORT error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t& f,
-                                            std::string& h, uint16_t& p,
-                                            size_t& l);
+CAF_IO_EXPORT error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t f,
+                                            const std::string& h, uint16_t p,
+                                            size_t l);
 
 CAF_IO_EXPORT error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f,
                                             std::string& h, uint16_t& p,
