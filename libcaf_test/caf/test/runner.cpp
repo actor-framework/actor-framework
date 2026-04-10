@@ -147,18 +147,19 @@ public:
   /// Bundles the result of a command line parsing operation.
   struct parse_cli_result {
     /// Stores whether parsing the command line arguments was successful.
-    bool ok;
+    [[maybe_unused]] bool ok;
     /// Stores whether a help text was printed.
-    bool help_printed;
+    [[maybe_unused]] bool help_printed;
   };
 
   int run(int argc, char** argv) override {
     auto default_reporter = reporter::make_default();
     reporter::instance(default_reporter.get());
     auto default_logger = reporter::make_logger();
-    if (auto [ok, help_printed] = parse_cli(argc, argv); !ok) {
+    auto parse_result = parse_cli(argc, argv);
+    if (!parse_result.ok) {
       return EXIT_FAILURE;
-    } else if (help_printed) {
+    } else if (parse_result.help_printed) {
       return EXIT_SUCCESS;
     }
     auto suite_regex = to_regex(get_or(cfg_, "suites", ".*"));

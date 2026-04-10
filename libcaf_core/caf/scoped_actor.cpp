@@ -40,6 +40,8 @@ public:
     CAF_ASSERT(worker == nullptr);
     detail::current_actor_guard guard{this};
     auto lg = log::system::trace("");
+    static_assert(has_spawn_option(spawn_options::blocking_flag,
+                                   spawn_options::blocking_flag));
     CAF_ASSERT(getf(is_blocking_flag));
     initialize(ctx);
   }
@@ -75,11 +77,12 @@ public:
 
 scoped_actor::scoped_actor(actor_system& sys, bool hide) {
   CAF_SET_LOGGER_SYS(&sys);
+  constexpr auto forced_spawn_options = impl::forced_spawn_options;
   auto do_spawn = [&sys, hide] {
     if (hide) {
-      return sys.spawn<impl, hidden>();
+      return sys.spawn<impl, hidden + forced_spawn_options>();
     }
-    return sys.spawn<impl>();
+    return sys.spawn<impl, forced_spawn_options>();
   };
   self_ = actor_cast<strong_actor_ptr>(do_spawn());
 }

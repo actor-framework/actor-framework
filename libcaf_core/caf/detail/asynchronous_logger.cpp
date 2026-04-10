@@ -235,6 +235,7 @@ public:
 
   /// Configures the size of the circular event queue.
   static constexpr size_t queue_size = 128;
+  static_assert(queue_size > 0);
 
   // -- member types -----------------------------------------------------------
 
