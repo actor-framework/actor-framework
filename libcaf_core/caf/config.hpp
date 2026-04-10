@@ -66,6 +66,16 @@
     _Pragma("clang diagnostic ignored \"-Winvalid-offsetof\"")
 #  define CAF_PUSH_STRINGOP_OVERREAD_WARNING                                   \
     _Pragma("clang diagnostic push")
+#  if __has_warning("-Wc2y-extensions")
+#    define CAF_PUSH_C2Y_EXTENSIONS_WARNING                                    \
+       _Pragma("clang diagnostic push")                                        \
+       _Pragma("clang diagnostic ignored \"-Wc2y-extensions\"")
+#    define CAF_POP_C2Y_EXTENSIONS_WARNING                                     \
+       _Pragma("clang diagnostic pop")
+#  else
+#    define CAF_PUSH_C2Y_EXTENSIONS_WARNING
+#    define CAF_POP_C2Y_EXTENSIONS_WARNING
+#  endif
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("clang diagnostic pop")
 #  define CAF_COMPILER_VERSION                                                 \
@@ -99,6 +109,8 @@
     _Pragma("GCC diagnostic push")                                             \
     _Pragma("GCC diagnostic ignored \"-Wstringop-overread\"")
 #endif
+#  define CAF_PUSH_C2Y_EXTENSIONS_WARNING
+#  define CAF_POP_C2Y_EXTENSIONS_WARNING
 #  define CAF_POP_WARNINGS                                                     \
     _Pragma("GCC diagnostic pop")
 #  define CAF_COMPILER_VERSION                                                 \
@@ -118,6 +130,8 @@
     __pragma(warning(push))
 #  define CAF_PUSH_STRINGOP_OVERREAD_WARNING                                   \
     __pragma(warning(push))
+#  define CAF_PUSH_C2Y_EXTENSIONS_WARNING
+#  define CAF_POP_C2Y_EXTENSIONS_WARNING
 #  define CAF_POP_WARNINGS __pragma(warning(pop))
 #  define CAF_COMPILER_VERSION _MSC_FULL_VER
 #  pragma warning( disable : 4624 )
@@ -128,6 +142,8 @@
 #  endif // NOMINMAX
 #else
 #  define CAF_PUSH_DEPRECATED_WARNING
+#  define CAF_PUSH_C2Y_EXTENSIONS_WARNING
+#  define CAF_POP_C2Y_EXTENSIONS_WARNING
 #  define CAF_POP_WARNINGS
 #endif
 // clang-format on
