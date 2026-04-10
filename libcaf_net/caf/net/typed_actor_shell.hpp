@@ -161,7 +161,6 @@ public:
     // nop
   }
 
-  // cppcheck-suppress noExplicitConstructor
   typed_actor_shell_ptr(typed_actor_shell_ptr&& other) noexcept = default;
 
   typed_actor_shell_ptr& operator=(typed_actor_shell_ptr&& other) noexcept

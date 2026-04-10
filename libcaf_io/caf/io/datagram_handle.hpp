@@ -33,7 +33,6 @@ public:
     // nop
   }
 
-  // cppcheck-suppress noExplicitConstructor
   constexpr datagram_handle(const invalid_datagram_handle_t&) {
     // nop
   }

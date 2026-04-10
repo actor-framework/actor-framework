@@ -32,7 +32,6 @@ public:
     // nop
   }
 
-  // cppcheck-suppress noExplicitConstructor
   constexpr accept_handle(const invalid_accept_handle_t&) {
     // nop
   }

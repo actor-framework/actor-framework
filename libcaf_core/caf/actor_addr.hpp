@@ -128,7 +128,6 @@ private:
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
-  // cppcheck-suppress noExplicitConstructor
   actor_addr(actor_control_block*);
 
   weak_actor_ptr ptr_;
