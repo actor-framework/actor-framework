@@ -80,7 +80,7 @@ logger::~logger() {
 }
 
 void logger::legacy_api_log(unsigned level, std::string_view component,
-                            std::string msg, std::source_location loc) {
+                            const std::string& msg, std::source_location loc) {
   do_log(log::event::make(level, component, loc, thread_local_aid(), msg));
 }
 

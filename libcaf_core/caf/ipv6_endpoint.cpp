@@ -24,12 +24,12 @@ size_t ipv6_endpoint::hash_code() const noexcept {
   return hash::fnv<size_t>::compute(address_, port_);
 }
 
-long ipv6_endpoint::compare(ipv6_endpoint x) const noexcept {
+long ipv6_endpoint::compare(const ipv6_endpoint& x) const noexcept {
   auto res = address_.compare(x.address());
   return res == 0 ? port_ - x.port() : res;
 }
 
-long ipv6_endpoint::compare(ipv4_endpoint x) const noexcept {
+long ipv6_endpoint::compare(const ipv4_endpoint& x) const noexcept {
   ipv6_endpoint y{x.address(), x.port()};
   return compare(y);
 }

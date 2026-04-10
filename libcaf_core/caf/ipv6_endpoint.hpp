@@ -39,7 +39,7 @@ public:
   }
 
   /// Sets the address of this endpoint.
-  void address(ipv6_address x) noexcept {
+  void address(const ipv6_address& x) noexcept {
     address_ = x;
   }
 
@@ -59,12 +59,12 @@ public:
   /// Compares this endpoint to `x`.
   /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
   /// value otherwise.
-  long compare(ipv6_endpoint x) const noexcept;
+  long compare(const ipv6_endpoint& x) const noexcept;
 
   /// Compares this endpoint to `x`.
   /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
   /// value otherwise.
-  long compare(ipv4_endpoint x) const noexcept;
+  long compare(const ipv4_endpoint& x) const noexcept;
 
   template <class Inspector>
   friend bool inspect(Inspector& f, ipv6_endpoint& x) {

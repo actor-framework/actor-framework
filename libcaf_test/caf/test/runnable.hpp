@@ -129,7 +129,7 @@ public:
   /// Records a failure with the given message and aborts the test by raising
   /// requirement_failed.
   template <class... Ts>
-  [[noreturn]] void fail(format_string_with_location fwl, Ts&&... xs) {
+  [[noreturn]] void fail(const format_string_with_location& fwl, Ts&&... xs) {
     auto msg = detail::format(fwl.value, std::forward<Ts>(xs)...);
     reporter::instance().fail(msg, fwl.location);
     requirement_failed::raise(fwl.location);
@@ -596,7 +596,7 @@ public:
   /// @pre `current_metric_registry() != nullptr`
   template <std::integral ValueType>
   void require_metric_eq(std::string_view prefix, std::string_view name,
-                         std::vector<telemetry::label_view> labels,
+                         const std::vector<telemetry::label_view>& labels,
                          ValueType value,
                          const std::source_location& location
                          = std::source_location::current()) {
@@ -619,7 +619,7 @@ public:
   /// configured timeout. Fails otherwise.
   /// @pre `current_metric_registry() != nullptr`
   void require_metric_eq(std::string_view prefix, std::string_view name,
-                         std::vector<telemetry::label_view> labels,
+                         const std::vector<telemetry::label_view>& labels,
                          approx<double> value,
                          const std::source_location& location
                          = std::source_location::current()) {
@@ -644,7 +644,7 @@ public:
   /// @pre `current_metric_registry() != nullptr`
   template <std::integral ValueType>
   void require_metric_ne(std::string_view prefix, std::string_view name,
-                         std::vector<telemetry::label_view> labels,
+                         const std::vector<telemetry::label_view>& labels,
                          ValueType value,
                          const std::source_location& location
                          = std::source_location::current()) {
@@ -669,7 +669,7 @@ public:
   /// timeout. Fails otherwise.
   /// @pre `current_metric_registry() != nullptr`
   void require_metric_ne(std::string_view prefix, std::string_view name,
-                         std::vector<telemetry::label_view> labels,
+                         const std::vector<telemetry::label_view>& labels,
                          approx<double> value,
                          const std::source_location& location
                          = std::source_location::current()) {
@@ -694,7 +694,7 @@ public:
   /// @pre `current_metric_registry() != nullptr`
   template <detail::metric_predicate_value ValueType>
   void require_metric_lt(std::string_view prefix, std::string_view name,
-                         std::vector<telemetry::label_view> labels,
+                         const std::vector<telemetry::label_view>& labels,
                          ValueType value,
                          const std::source_location& location
                          = std::source_location::current()) {
@@ -721,7 +721,7 @@ public:
   /// @pre `current_metric_registry() != nullptr`
   template <detail::metric_predicate_value ValueType>
   void require_metric_le(std::string_view prefix, std::string_view name,
-                         std::vector<telemetry::label_view> labels,
+                         const std::vector<telemetry::label_view>& labels,
                          ValueType value,
                          const std::source_location& location
                          = std::source_location::current()) {
@@ -746,7 +746,7 @@ public:
   /// @pre `current_metric_registry() != nullptr`
   template <detail::metric_predicate_value ValueType>
   void require_metric_gt(std::string_view prefix, std::string_view name,
-                         std::vector<telemetry::label_view> labels,
+                         const std::vector<telemetry::label_view>& labels,
                          ValueType value,
                          const std::source_location& location
                          = std::source_location::current()) {
@@ -773,7 +773,7 @@ public:
   /// @pre `current_metric_registry() != nullptr`
   template <detail::metric_predicate_value ValueType>
   void require_metric_ge(std::string_view prefix, std::string_view name,
-                         std::vector<telemetry::label_view> labels,
+                         const std::vector<telemetry::label_view>& labels,
                          ValueType value,
                          const std::source_location& location
                          = std::source_location::current()) {

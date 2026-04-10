@@ -58,7 +58,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   event_based_fan_out_response_handle(abstract_scheduled_actor* self,
-                                      std::vector<message_id> mids,
+                                      const std::vector<message_id>& mids,
                                       disposable pending_timeout)
     : state_{self, mids, std::move(pending_timeout)} {
     // nop
@@ -216,11 +216,10 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  event_based_fan_out_delayed_response_handle(abstract_scheduled_actor* self,
-                                              std::vector<message_id> mids,
-                                              disposable pending_timeout,
-                                              disposable pending_request)
-    : decorated(self, std::move(mids), std::move(pending_timeout)),
+  event_based_fan_out_delayed_response_handle(
+    abstract_scheduled_actor* self, const std::vector<message_id>& mids,
+    disposable pending_timeout, disposable pending_request)
+    : decorated(self, mids, std::move(pending_timeout)),
       pending_request(std::move(pending_request)) {
     // nop
   }

@@ -12,7 +12,8 @@ namespace caf::detail {
 
 /// Like `critical`, but uses the format API instead of just accepting a string.
 template <class... Args>
-[[noreturn]] void panic(caf::format_string_with_location fstr, Args&&... args) {
+[[noreturn]] void
+panic(const caf::format_string_with_location& fstr, Args&&... args) {
   auto errmsg = format(fstr.value, std::forward<Args>(args)...);
   critical(errmsg.c_str(), fstr.location, 1);
 }

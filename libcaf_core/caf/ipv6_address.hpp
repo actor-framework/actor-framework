@@ -56,7 +56,7 @@ public:
 
   /// Returns a negative number if `*this < other`, zero if `*this == other`
   /// and a positive number if `*this > other`.
-  int compare(ipv6_address other) const noexcept;
+  int compare(const ipv6_address& other) const noexcept;
 
   /// Returns a negative number if `*this < other`, zero if `*this == other`
   /// and a positive number if `*this > other`.
@@ -114,7 +114,7 @@ public:
     return f.object(x).fields(f.field("bytes", x.bytes_));
   }
 
-  friend CAF_CORE_EXPORT std::string to_string(ipv6_address x);
+  friend CAF_CORE_EXPORT std::string to_string(const ipv6_address& x);
 
 private:
   // -- member variables -------------------------------------------------------

@@ -38,13 +38,13 @@ public:
 
   uri_builder& host(std::string str);
 
-  uri_builder& host(ip_address addr);
+  uri_builder& host(const ip_address& addr);
 
   uri_builder& port(uint16_t value);
 
   uri_builder& path(std::string str);
 
-  uri_builder& query(uri::query_map map);
+  uri_builder& query(const uri::query_map& map);
 
   uri_builder& fragment(std::string str);
 

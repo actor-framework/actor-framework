@@ -28,7 +28,7 @@ struct ipv6_address_consumer {
     // nop
   }
 
-  void value(ipv6_address val) {
+  void value(const ipv6_address& val) {
     dest = val;
   }
 };
@@ -104,7 +104,7 @@ ipv6_address::ipv6_address(array_type bytes) {
 
 // -- comparison ---------------------------------------------------------------
 
-int ipv6_address::compare(ipv6_address other) const noexcept {
+int ipv6_address::compare(const ipv6_address& other) const noexcept {
   return memcmp(bytes().data(), other.bytes().data(), num_bytes);
 }
 
@@ -172,7 +172,7 @@ u16_range longest_streak(u16_iterator first, u16_iterator last) {
 
 } // namespace
 
-std::string to_string(ipv6_address x) {
+std::string to_string(const ipv6_address& x) {
   // Shortcut for embedded v4 addresses.
   if (x.embeds_v4())
     return to_string(x.embedded_v4());

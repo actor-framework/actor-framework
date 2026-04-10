@@ -164,7 +164,7 @@ template <class Inspector>
 bool inspect(Inspector& f, uuid& x) {
   if (f.has_human_readable_format()) {
     auto getter = [&x] { return to_string(x); };
-    auto set = [&x](std::string str) { return parse(str, x); };
+    auto set = [&x](const std::string& str) { return parse(str, x); };
     return f.apply(getter, set);
   } else {
     return f.apply(x.bytes());

@@ -58,10 +58,10 @@ public:
   }
 
   /// Returns whether `addr` belongs to this subnet.
-  bool contains(ipv6_address addr) const noexcept;
+  bool contains(const ipv6_address& addr) const noexcept;
 
   /// Returns whether this subnet includes `other`.
-  bool contains(ipv6_subnet other) const noexcept;
+  bool contains(const ipv6_subnet& other) const noexcept;
 
   /// Returns whether `addr` belongs to this subnet.
   bool contains(ipv4_address addr) const noexcept;
@@ -91,6 +91,6 @@ private:
 // -- related free functions ---------------------------------------------------
 
 /// @relates ipv6_subnet
-CAF_CORE_EXPORT std::string to_string(ipv6_subnet x);
+CAF_CORE_EXPORT std::string to_string(const ipv6_subnet& x);
 
 } // namespace caf

@@ -48,7 +48,7 @@ template <class... Ts>
 void append(prometheus::char_buffer&, std::string_view, Ts&&...);
 
 template <class... Ts>
-void append(prometheus::char_buffer&, separator_to_underline, Ts&&...);
+void append(prometheus::char_buffer&, const separator_to_underline&, Ts&&...);
 
 template <class... Ts>
 void append(prometheus::char_buffer&, char, Ts&&...);
@@ -85,7 +85,7 @@ void append(prometheus::char_buffer& buf, std::string_view str, Ts&&... xs) {
 }
 
 template <class... Ts>
-void append(prometheus::char_buffer& buf, separator_to_underline x,
+void append(prometheus::char_buffer& buf, const separator_to_underline& x,
             Ts&&... xs) {
   for (auto c : x.str) {
     switch (c) {

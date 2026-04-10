@@ -122,9 +122,9 @@ private:
   std::minstd_rand engine_;
 };
 
-std::string not_found_str(std::string_view name) {
+std::string not_found_str(std::string name) {
   auto result = "Name '"s;
-  result += name;
+  result += std::move(name);
   result += "' not found. Try 'epictetus', 'seneca' or 'plato'.";
   return result;
 }
@@ -177,7 +177,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                  auto quotes = quotes_by_name(name);
                  if (quotes.empty()) {
                    res.respond(http::status::not_found, "text/plain",
-                               not_found_str(name));
+                               not_found_str(std::move(name)));
                  } else {
                    pick_random f;
                    res.respond(http::status::ok, "text/plain", f(quotes));
@@ -189,7 +189,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                ws::switch_protocol()
                  // Check that the client asks for a known philosopher.
                  .on_request(
-                   [](ws::acceptor<caf::cow_string>& acc, std::string name) {
+                  [](ws::acceptor<caf::cow_string>& acc, std::string name) {
                      auto quotes = quotes_by_name(name);
                      if (quotes.empty()) {
                        auto err = make_error(caf::sec::invalid_argument,

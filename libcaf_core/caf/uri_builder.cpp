@@ -41,7 +41,7 @@ uri_builder& uri_builder::host(std::string str) {
   return *this;
 }
 
-uri_builder& uri_builder::host(ip_address addr) {
+uri_builder& uri_builder::host(const ip_address& addr) {
   impl_->authority.host = addr;
   return *this;
 }
@@ -57,7 +57,7 @@ uri_builder& uri_builder::path(std::string str) {
   return *this;
 }
 
-uri_builder& uri_builder::query(uri::query_map map) {
+uri_builder& uri_builder::query(const uri::query_map& map) {
   for (auto [key, val] : map) {
     uri::decode(key);
     uri::decode(val);

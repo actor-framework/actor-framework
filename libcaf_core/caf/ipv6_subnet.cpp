@@ -41,11 +41,11 @@ ipv4_subnet ipv6_subnet::embedded_v4() const noexcept {
           static_cast<uint8_t>(prefix_length_ - v4_offset)};
 }
 
-bool ipv6_subnet::contains(ipv6_address addr) const noexcept {
+bool ipv6_subnet::contains(const ipv6_address& addr) const noexcept {
   return address_ == addr.network_address(prefix_length_);
 }
 
-bool ipv6_subnet::contains(ipv6_subnet other) const noexcept {
+bool ipv6_subnet::contains(const ipv6_subnet& other) const noexcept {
   // We can only contain a subnet if it's prefix is greater or equal.
   if (prefix_length_ > other.prefix_length_)
     return false;
@@ -70,7 +70,7 @@ int ipv6_subnet::compare(const ipv6_subnet& other) const noexcept {
                       : static_cast<int>(prefix_length_) - other.prefix_length_;
 }
 
-std::string to_string(ipv6_subnet x) {
+std::string to_string(const ipv6_subnet& x) {
   if (x.embeds_v4())
     return to_string(x.embedded_v4());
   auto result = to_string(x.network_address());

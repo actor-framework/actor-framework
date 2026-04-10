@@ -27,7 +27,6 @@ accessMoved:*
 
 // TODO: need to be re-enabled one-by-one,
 //       see https://github.com/actor-framework/actor-framework/issues/2294
-passedByValue:*
 uninitMemberVar:*
 constParameterReference:*
 useInitializationList:*

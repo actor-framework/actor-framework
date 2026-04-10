@@ -139,7 +139,7 @@ struct label_name_eq {
     return x.name() == y;
   }
 
-  bool operator()(label_view x, label_view y) const noexcept {
+  bool operator()(const label_view& x, const label_view& y) const noexcept {
     return x == y;
   }
 };

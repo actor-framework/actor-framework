@@ -147,7 +147,7 @@ public:
   /// @param args Arguments for the format string.
   template <class... Ts>
   static void log(unsigned level, std::string_view component,
-                  format_string_with_location fmt_str, Ts&&... args) {
+                  const format_string_with_location& fmt_str, Ts&&... args) {
     auto* instance = current_logger();
     if (instance && instance->accepts(level, component)) {
       instance->do_log(log::event::make(level, component, fmt_str.location,
@@ -173,7 +173,7 @@ public:
   /// @param args Arguments for the format string.
   template <class... Ts>
   [[nodiscard]] static trace_exit_guard
-  trace(std::string_view component, format_string_with_location fmt_str,
+  trace(std::string_view component, const format_string_with_location& fmt_str,
         Ts&&... args) {
     auto* instance = current_logger();
     if (instance && instance->accepts(log::level::trace, component)) {
@@ -197,13 +197,14 @@ public:
   /// @private
   CAF_DEPRECATED("use the new logging functions instead")
   void
-  legacy_api_log(unsigned level, std::string_view component, std::string msg,
+  legacy_api_log(unsigned level, std::string_view component,
+                 const std::string& msg,
                  std::source_location loc = std::source_location::current());
 
   /// @private
   CAF_DEPRECATED("use the new logging functions instead")
   trace_exit_guard legacy_api_log_trace(std::string_view component,
-                                        std::string msg,
+                                        const std::string& msg,
                                         std::source_location loc
                                         = std::source_location::current()) {
     auto event = log::event::make(log::level::trace, component, loc,

@@ -326,9 +326,14 @@ private:
     return std::string{str.begin(), str.end()};
   }
 
-  // Moves the content of `str` into a new string.
-  static std::string copy(std::string str) {
+  // Copies the content of `str` into a new string.
+  static std::string copy(const std::string& str) {
     return str;
+  }
+
+  // Moves the content of `str` into a new string.
+  static std::string copy(std::string&& str) {
+    return std::move(str);
   }
 
   map_type xs_;

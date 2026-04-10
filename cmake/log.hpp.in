@@ -21,7 +21,8 @@ constexpr std::string_view component = "caf.@CAF_COMPONENT_NAME@";
 /// @param fmt_str The format string (with source location) for the message.
 /// @param args Arguments for the format string.
 template <class... Ts>
-[[nodiscard]] auto trace(format_string_with_location fmt_str, Ts&&... args) {
+[[nodiscard]] auto trace(const format_string_with_location& fmt_str,
+                         Ts&&... args) {
   return logger::trace(component, fmt_str, std::forward<Ts>(args)...);
 }
 
@@ -45,7 +46,7 @@ template <class... Ts>
 /// @param fmt_str The format string (with source location) for the message.
 /// @param args Arguments for the format string.
 template <class... Ts>
-void debug(format_string_with_location fmt_str, Ts&&... args) {
+void debug(const format_string_with_location& fmt_str, Ts&&... args) {
   logger::log(level::debug, component, fmt_str,
               std::forward<Ts>(args)...);
 }
@@ -59,7 +60,7 @@ void debug(format_string_with_location fmt_str, Ts&&... args) {
 /// @param fmt_str The format string (with source location) for the message.
 /// @param args Arguments for the format string.
 template <class... Ts>
-void info(format_string_with_location fmt_str, Ts&&... args) {
+void info(const format_string_with_location& fmt_str, Ts&&... args) {
   logger::log(level::info, component, fmt_str,
               std::forward<Ts>(args)...);
 }
@@ -73,7 +74,7 @@ void info(format_string_with_location fmt_str, Ts&&... args) {
 /// @param fmt_str The format string (with source location) for the message.
 /// @param args Arguments for the format string.
 template <class... Ts>
-void warning(format_string_with_location fmt_str, Ts&&... args) {
+void warning(const format_string_with_location& fmt_str, Ts&&... args) {
   logger::log(level::warning, component, fmt_str,
               std::forward<Ts>(args)...);
 }
@@ -87,7 +88,7 @@ void warning(format_string_with_location fmt_str, Ts&&... args) {
 /// @param fmt_str The format string (with source location) for the message.
 /// @param args Arguments for the format string.
 template <class... Ts>
-void error(format_string_with_location fmt_str, Ts&&... args) {
+void error(const format_string_with_location& fmt_str, Ts&&... args) {
   logger::log(level::error, component, fmt_str,
               std::forward<Ts>(args)...);
 }
