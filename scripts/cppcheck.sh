@@ -52,7 +52,10 @@ else
   jobs="$(sysctl -n hw.ncpu 2>/dev/null || echo 1)"
 fi
 
-jq '[.[] | select(.file | test("\\.test\\.(hpp|cpp)$") | not)]' \
+jq '[.[] | select(
+  (.file | test("\\.test\\.(hpp|cpp)$") | not)
+  and (.file | test("/robot/") | not)
+)]' \
   "$compileCommands" >"$filteredCompileCommands"
 
 echo "[cppcheck] Building generated sources"
