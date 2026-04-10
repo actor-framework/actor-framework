@@ -297,7 +297,7 @@ public:
       auto cb = make_action([p = ptr] { p->shutdown(); });
       ptr->add_cleanup_listener(make_action([cb]() mutable { cb.dispose(); }));
       auto ctx = async::execution_context_ptr{mpx, add_ref};
-      for (auto& hdl : monitored_actors) {
+      for (const auto& hdl : monitored_actors) {
         CAF_ASSERT(hdl);
         hdl->get()->attach_functor([ctx, cb] {
           if (!cb.disposed())
