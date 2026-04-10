@@ -11,6 +11,7 @@
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include "caf/abstract_actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/defaults.hpp"
@@ -292,6 +293,18 @@ public:
     transport->max_consecutive_reads(max_consecutive_reads);
     transport->active_policy().accept();
     auto ptr = net::socket_manager::make(mpx, std::move(transport));
+    if (!monitored_actors.empty()) {
+      auto cb = make_action([p = ptr] { p->shutdown(); });
+      ptr->add_cleanup_listener(make_action([cb]() mutable { cb.dispose(); }));
+      auto ctx = async::execution_context_ptr{mpx, add_ref};
+      for (auto& hdl : monitored_actors) {
+        CAF_ASSERT(hdl);
+        hdl->get()->attach_functor([ctx, cb] {
+          if (!cb.disposed())
+            ctx->schedule(cb);
+        });
+      }
+    }
     if (mpx->start(ptr))
       return disposable{std::move(ptr)};
     return expected<disposable>{
