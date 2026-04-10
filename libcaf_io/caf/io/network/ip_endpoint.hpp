@@ -106,10 +106,10 @@ CAF_IO_EXPORT error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f,
 
 template <class Inspector>
 bool inspect(Inspector& f, ip_endpoint& x) {
-  uint32_t fam;
+  uint32_t fam = 0;
   std::string h;
-  uint16_t p;
-  size_t l;
+  uint16_t p = 0;
+  size_t l = 0;
   if constexpr (!Inspector::is_loading) {
     if (*x.length() > 0) {
       fam = family(x);
