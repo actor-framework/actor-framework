@@ -387,6 +387,8 @@ TEST("GH-2309 Host header field in outgoing requests") {
                         .get();
     require_has_value(client_res);
     auto maybe_resp = client_res->first.get(1s);
+    require_has_value(maybe_resp);
+    require(host_fut.wait_for(1s) == std::future_status::ready);
     check_eq(host_fut.get(), expected_host);
   };
 

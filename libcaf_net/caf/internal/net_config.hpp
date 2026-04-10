@@ -76,8 +76,8 @@ public:
       }
     };
 
-    /// Configuration for a server that handles a single established TCP stream,
-    /// for example one end of a connected socket pair.
+    /// Configuration for a server that handles a single connected stream
+    /// socket, for example one end of a connected socket pair.
     class stream {
     public:
       explicit stream(net::stream_socket fd) : fd(fd) {

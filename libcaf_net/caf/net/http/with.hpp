@@ -315,7 +315,7 @@ public:
   /// @returns an `server` object that will start a server on `fd`.
   [[nodiscard]] server accept(tcp_accept_socket fd) &&;
 
-  /// Creates a new server factory for an already-connected TCP stream, for
+  /// Creates a new server factory for an already-connected stream socket, for
   /// example one end of a socket pair from @ref net::make_stream_socket_pair.
   /// @param fd The stream socket that speaks HTTP to exactly one peer.
   /// @returns a `server` object that will run the protocol on `fd`.

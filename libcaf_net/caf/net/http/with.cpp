@@ -597,6 +597,7 @@ with_t::client with_t::connect(expected<uri> endpoint,
     config_->client.assign(std::move(*endpoint), std::move(fd));
   } else if (endpoint.error().valid()) {
     config_->err = std::move(endpoint.error());
+    net::close(fd);
   }
   return client{std::move(config_)};
 }
