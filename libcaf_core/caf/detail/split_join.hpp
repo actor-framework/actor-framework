@@ -68,7 +68,9 @@ private:
 
 struct nop_split {
   void operator()(actor_msg_vec& xs, message& y) const {
-    std::ranges::for_each(xs, [&y](auto& x) { x.second = y; });
+    for (auto& x : xs) {
+      x.second = y;
+    }
   }
 };
 

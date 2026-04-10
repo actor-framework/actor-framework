@@ -8,7 +8,6 @@
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/message.hpp"
 
-#include <algorithm>
 #include <numeric>
 
 namespace caf {
@@ -44,9 +43,11 @@ type_id_list type_id_list::concat(std::span<type_id_list> lists) {
                                       return acc + ls.size();
                                     });
   detail::type_id_list_builder builder{total_size};
-  std::ranges::for_each(lists, [&](type_id_list ls) {
-    std::ranges::for_each(ls, [&](type_id_t id) { builder.push_back(id); });
-  });
+  for (const auto& ls : lists) {
+    for (auto id : ls) {
+      builder.push_back(id);
+    }
+  }
   return builder.move_to_list();
 }
 
