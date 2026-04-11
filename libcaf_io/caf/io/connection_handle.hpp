@@ -33,7 +33,6 @@ public:
     // nop
   }
 
-  // cppcheck-suppress noExplicitConstructor
   constexpr connection_handle(const invalid_connection_handle_t&) {
     // nop
   }

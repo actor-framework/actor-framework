@@ -54,7 +54,6 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  // cppcheck-suppress noExplicitConstructor
   from_steps_sub(coordinator* parent, observer<output_type> out,
                  std::tuple<Steps...> steps)
     : parent_(parent), out_(std::move(out)), steps_(std::move(steps)) {
@@ -243,7 +242,6 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  // cppcheck-suppress noExplicitConstructor
   from_steps(coordinator* parent, intrusive_ptr<base<input_type>> input,
              std::tuple<Steps...> steps)
     : super(parent), input_(std::move(input)), steps_(std::move(steps)) {

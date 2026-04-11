@@ -68,7 +68,6 @@ public:
 
   error() noexcept = default;
 
-  // cppcheck-suppress noExplicitConstructor
   error(none_t) noexcept;
 
   error(error&&) noexcept = default;
@@ -80,7 +79,6 @@ public:
   error& operator=(const error&);
 
   template <error_code_enum Enum>
-  // cppcheck-suppress noExplicitConstructor
   error(Enum code) : error(static_cast<uint8_t>(code), type_id_v<Enum>) {
     // nop
   }

@@ -785,7 +785,6 @@ private:
   activation_result run_with_metrics(mailbox_element& x, F body) {
     if (metrics_.mailbox_time) {
       auto t0 = std::chrono::steady_clock::now();
-      // cppcheck-suppress variableScope
       auto mbox_time = x.seconds_until(t0);
       auto res = body();
       if (res != activation_result::skipped) {

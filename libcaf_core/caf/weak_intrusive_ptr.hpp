@@ -121,7 +121,6 @@ public:
   }
 
   template <detail::weak_assignable_from<managed_type, control_block_type, T> U>
-  // cppcheck-suppress noExplicitConstructor
   weak_intrusive_ptr(weak_intrusive_ptr<U> other) noexcept
     : ptr_(std::exchange(other.ptr_, nullptr)) {
     // nop
@@ -231,7 +230,6 @@ public:
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
-  // cppcheck-suppress noExplicitConstructor
   weak_intrusive_ptr(control_block_pointer ptr,
                      bool increase_ref_count = true) noexcept
     : ptr_(ptr) {

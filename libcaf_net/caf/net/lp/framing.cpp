@@ -215,7 +215,6 @@ private:
   template <class T>
   bool end_message_impl() {
     using detail::to_network_order;
-    // cppcheck-suppress constVariableReference
     auto& buf = down_->output_buffer();
     CAF_ASSERT(message_offset_ < buf.size());
     auto* msg_begin = buf.data() + static_cast<ptrdiff_t>(message_offset_);

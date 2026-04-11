@@ -76,12 +76,12 @@ struct matrix_state {
     : self(selfptr), rows(num_rows), columns(num_columns) {
     // Spawn all cells.
     data.resize(rows);
-    std::ranges::for_each(data, [this](auto& row) {
+    for (auto& row : data) {
       row.resize(columns);
       std::ranges::generate(row, [this] {
         return self->spawn(actor_from_state<cell_state>);
       });
-    });
+    }
   }
 
   matrix::behavior_type make_behavior() {

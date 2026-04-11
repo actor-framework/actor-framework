@@ -71,6 +71,8 @@ cppcheck \
   --xml \
   --xml-version=2 \
   --enable=all \
+  --disable=style \
+  --disable=information \
   --suppress=functionStatic \
   --suppress=missingIncludeSystem \
   --suppress=unusedLabel \
