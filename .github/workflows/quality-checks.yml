@@ -64,8 +64,14 @@ jobs:
               jq
       - name: Create compile database for cppcheck
         run: ./configure
-      - name: cppcheck
+      - name: Run full cppcheck on main
+        if: github.ref_name == 'main'
         run: scripts/cppcheck.sh
+      - name: Run cppcheck on modified modules
+        if: github.ref_name != 'main'
+        # note: add 'build' so the list is never empty;
+        #       the directory has auto-generated sources and is fast to scan
+        run: scripts/cppcheck.sh build $( git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep -oE 'examples|libcaf_[a-z]+' | sort -u )
       - name: Upload cppcheck report
         if: always()
         uses: actions/upload-artifact@v4
