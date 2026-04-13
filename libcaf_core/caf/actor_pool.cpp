@@ -4,12 +4,14 @@
 
 #include "caf/actor_pool.hpp"
 
+#include "caf/actor_cast.hpp"
 #include "caf/anon_mail.hpp"
-#include "caf/default_attachable.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/current_actor.hpp"
-#include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/internal/attachable_factory.hpp"
+#include "caf/internal/attachable_predicate.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/system_messages.hpp"
 
 #include <atomic>
 #include <random>
@@ -93,14 +95,14 @@ actor actor_pool::make(actor_system& sys, policy pol) {
 
 actor actor_pool::make(actor_system& sys, size_t num_workers,
                        const factory& fac, policy pol) {
+  using internal::attachable_factory;
   auto res = make(sys, std::move(pol));
-  auto ptr = actor_cast<actor_pool*>(res);
-  auto res_addr = ptr->address();
+  auto* self = actor_cast<actor_pool*>(res);
   for (size_t i = 0; i < num_workers; ++i) {
     auto worker = fac();
-    worker->attach(
-      default_attachable::make_monitor(worker.address(), res_addr));
-    ptr->workers_.push_back(std::move(worker));
+    auto* wptr = actor_cast<abstract_actor*>(worker);
+    self->add_monitor(wptr, attachable_factory::make_monitor(self->address()));
+    self->workers_.push_back(std::move(worker));
   }
   return res;
 }
@@ -130,9 +132,10 @@ void actor_pool::on_cleanup([[maybe_unused]] const error& reason) {
 bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
                         message_id mid, message& content, scheduler* sched) {
   auto lg = log::core::trace("mid = {}, content = {}", mid, content);
-  if (auto view = make_const_typed_message_view<exit_msg>(content)) {
-    // acquire second mutex as well
-    auto reason = get<0>(view).reason;
+  if (const_typed_message_view<exit_msg> view{content}) {
+    const auto& em = get<0>(view);
+    unlink_from(em.source);
+    auto reason = em.reason;
     if (cleanup(std::move(reason), sched)) {
       std::vector<actor> workers;
       // send exit messages *always* to all workers and clear vector afterwards
@@ -144,16 +147,16 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
     }
     return true;
   }
-  if (auto view = make_const_typed_message_view<down_msg>(content)) {
+  if (const_typed_message_view<down_msg> view{content}) {
     // remove failed worker from pool
     const auto& dm = get<0>(view);
-    auto last = workers_.end();
+    clear_incoming_edges(dm.source);
     auto i = std::find(workers_.begin(), workers_.end(), dm.source);
-    if (i == last) {
+    if (i == workers_.end()) {
       log::core::debug("received down message for an unknown worker");
-    }
-    if (i != last)
+    } else {
       workers_.erase(i);
+    }
     if (workers_.empty()) {
       planned_reason_ = exit_reason::out_of_workers;
       guard.unlock();
@@ -161,32 +164,28 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
     }
     return true;
   }
-  if (auto view
-      = make_const_typed_message_view<sys_atom, put_atom, actor>(content)) {
+  if (const_typed_message_view<sys_atom, put_atom, actor> view{content}) {
+    using factory = internal::attachable_factory;
     const auto& worker = get<2>(view);
-    worker->attach(
-      default_attachable::make_monitor(worker.address(), address()));
+    auto* wptr = actor_cast<abstract_actor*>(worker);
+    add_monitor(wptr, factory::make_monitor(address()));
     workers_.push_back(worker);
     return true;
   }
-  if (auto view
-      = make_const_typed_message_view<sys_atom, delete_atom, actor>(content)) {
-    auto& what = get<2>(view);
-    auto last = workers_.end();
-    auto i = std::find(workers_.begin(), last, what);
-    if (i != last) {
-      default_attachable::observe_token tk{address(),
-                                           default_attachable::monitor};
-      what->detach(attachable::token{tk});
+  if (const_typed_message_view<sys_atom, delete_atom, actor> view{content}) {
+    const auto& what = get<2>(view);
+    auto i = std::find(workers_.begin(), workers_.end(), what);
+    if (i != workers_.end()) {
+      del_monitor(actor_cast<abstract_actor*>(what),
+                  internal::attachable_predicate::monitored_by(ctrl()));
       workers_.erase(i);
     }
     return true;
   }
   if (content.match_elements<sys_atom, delete_atom>()) {
-    for (auto& worker : workers_) {
-      default_attachable::observe_token tk{address(),
-                                           default_attachable::monitor};
-      worker->detach(attachable::token{tk});
+    for (const auto& worker : workers_) {
+      del_monitor(actor_cast<abstract_actor*>(worker),
+                  internal::attachable_predicate::monitored_by(ctrl()));
     }
     workers_.clear();
     return true;

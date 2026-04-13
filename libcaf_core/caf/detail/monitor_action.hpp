@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/action.hpp"
+#include "caf/actor_addr.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 
@@ -14,9 +15,34 @@ namespace caf::detail {
 
 class CAF_CORE_EXPORT abstract_monitor_action : public action::impl {
 public:
+  abstract_monitor_action(actor_addr observer, actor_addr observed)
+    : observer_(std::move(observer)), observed_(std::move(observed)) {
+    // nop
+  }
+
   ~abstract_monitor_action() noexcept override;
 
   virtual bool set_reason(error value) = 0;
+
+  void ref() const noexcept final;
+
+  void deref() const noexcept final;
+
+  const actor_addr& observer() const noexcept {
+    return observer_;
+  }
+
+  const actor_addr& observed() const noexcept {
+    return observed_;
+  }
+
+protected:
+  void on_dispose();
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
+  actor_addr observer_;
+  actor_addr observed_;
 };
 
 using abstract_monitor_action_ptr = intrusive_ptr<abstract_monitor_action>;
@@ -26,31 +52,34 @@ using abstract_monitor_action_ptr = intrusive_ptr<abstract_monitor_action>;
 template <class F>
 class monitor_action : public abstract_monitor_action {
 public:
-  explicit monitor_action(F fn)
-    : state_(action::state::scheduled),
+  using super = abstract_monitor_action;
+
+  explicit monitor_action(actor_addr observer, actor_addr observed, F fn)
+    : super(std::move(observer), std::move(observed)),
+      state_(action::state::scheduled),
       f_(function_wrapper{std::move(fn), error{}}) {
     // nop
   }
 
   ~monitor_action() noexcept override {
     std::lock_guard guard{mtx_};
-    if (state_ == action::state::scheduled)
+    if (state_ == action::state::scheduled) {
       f_.~function_wrapper();
-  }
-
-  void ref() const noexcept final {
-    ref_count_.inc();
-  }
-
-  void deref() const noexcept final {
-    ref_count_.dec(this);
+    }
   }
 
   void dispose() override {
-    std::lock_guard guard{mtx_};
-    if (state_ == action::state::scheduled) {
-      state_ = action::state::disposed;
-      f_.~function_wrapper();
+    bool call_on_dispose = false;
+    {
+      std::lock_guard guard{mtx_};
+      if (state_ == action::state::scheduled) {
+        state_ = action::state::disposed;
+        f_.~function_wrapper();
+        call_on_dispose = true;
+      }
+    }
+    if (call_on_dispose) {
+      this->on_dispose();
     }
   }
 
@@ -96,7 +125,6 @@ private:
       return std::move(f)(std::move(arg));
     }
   };
-  mutable detail::atomic_ref_count ref_count_;
   mutable std::mutex mtx_;
   action::state state_;
   union {

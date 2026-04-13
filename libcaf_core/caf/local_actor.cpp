@@ -6,26 +6,18 @@
 
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/default_attachable.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/disposable.hpp"
-#include "caf/exit_reason.hpp"
+#include "caf/internal/attachable_factory.hpp"
+#include "caf/internal/attachable_predicate.hpp"
 #include "caf/log/core.hpp"
 #include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/resumable.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/sec.hpp"
-#include "caf/telemetry/histogram.hpp"
-#include "caf/telemetry/metric.hpp"
-#include "caf/telemetry/metric_family.hpp"
-#include "caf/telemetry/metric_family_impl.hpp"
+#include "caf/telemetry/gauge.hpp"
 
-#include <algorithm>
-#include <condition_variable>
-#include <string>
+#include <utility>
 
 namespace caf {
 
@@ -73,17 +65,17 @@ void local_actor::demonitor(const node_id& node) {
 }
 
 void local_actor::do_monitor(abstract_actor* ptr, message_priority priority) {
-  if (ptr != nullptr)
-    ptr->attach(
-      default_attachable::make_monitor(ptr->address(), address(), priority));
+  if (ptr == nullptr)
+    return;
+  using factory = internal::attachable_factory;
+  add_monitor(ptr, factory::make_monitor(address(), priority));
 }
 
 void local_actor::do_demonitor(const strong_actor_ptr& whom) {
   auto lg = log::core::trace("whom = {}", whom);
   if (whom) {
-    default_attachable::observe_token tk{address(),
-                                         default_attachable::monitor};
-    whom->get()->detach(attachable::token{tk});
+    del_monitor(actor_cast<abstract_actor*>(whom),
+                internal::attachable_predicate::monitored_by(ctrl()));
   }
 }
 

@@ -409,6 +409,36 @@ bool operator!=(const intrusive_ptr<Lhs>& lhs,
 
 /// @relates weak_intrusive_ptr
 template <class T>
+bool operator==(
+  const weak_intrusive_ptr<T>& lhs,
+  const typename weak_intrusive_ptr<T>::control_block_pointer rhs) {
+  return lhs.ctrl() == rhs;
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
+bool operator==(const typename weak_intrusive_ptr<T>::control_block_pointer lhs,
+                const weak_intrusive_ptr<T>& rhs) {
+  return lhs == rhs.ctrl();
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
+bool operator!=(
+  const weak_intrusive_ptr<T>& lhs,
+  const typename weak_intrusive_ptr<T>::control_block_pointer rhs) {
+  return !(lhs == rhs);
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
+bool operator!=(const typename weak_intrusive_ptr<T>::control_block_pointer lhs,
+                const weak_intrusive_ptr<T>& rhs) {
+  return !(lhs == rhs);
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
 bool operator==(const weak_intrusive_ptr<T>& lhs, std::nullptr_t) {
   return lhs.compare(nullptr) == 0;
 }

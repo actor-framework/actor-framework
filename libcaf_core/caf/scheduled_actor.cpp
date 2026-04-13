@@ -8,11 +8,11 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/anon_mail.hpp"
-#include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
+#include "caf/detail/build_config.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
@@ -22,6 +22,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/internal/attachable_factory.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
 #include "caf/mailbox_element.hpp"
@@ -663,6 +664,10 @@ scheduled_actor::categorize(mailbox_element& x) {
       // handle the message, we will call the exit handler later.
       return message_category::ordinary;
     }
+    case type_id_v<down_msg>: {
+      clear_incoming_edges(x.payload.get_as<down_msg>(0).source);
+      return message_category::ordinary;
+    }
     case type_id_v<timeout_msg>: {
       auto id = msg_content.get_as<timeout_msg>(0).id;
       if (timeout_state_.id == id)
@@ -1256,19 +1261,12 @@ bool scheduled_actor::try_force_close_mailbox() {
 // -- monitoring ---------------------------------------------------------------
 
 disposable
-scheduled_actor::do_monitor(abstract_actor* ptr,
+scheduled_actor::do_monitor(abstract_actor* observed,
                             detail::abstract_monitor_action_ptr on_down) {
-  if (ptr == nullptr)
-    return {};
-  ptr->attach_functor([self = address(), on_down](error reason) {
-    // Failing to set the arg means the action was disposed.
-    if (on_down->set_reason(std::move(reason))) {
-      if (auto shdl = actor_cast<actor>(self))
-        shdl->enqueue(make_mailbox_element(nullptr, make_message_id(),
-                                           action{on_down}),
-                      nullptr);
-    }
-  });
+  CAF_ASSERT(observed != nullptr);
+  CAF_ASSERT(on_down != nullptr);
+  using factory = internal::attachable_factory;
+  add_monitor(observed, factory::make_monitor(on_down));
   return on_down->as_disposable();
 }
 

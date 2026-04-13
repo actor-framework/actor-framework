@@ -120,6 +120,10 @@ public:
     return ptr_.ctrl();
   }
 
+  const weak_actor_ptr& ptr() const noexcept {
+    return ptr_;
+  }
+
   /// @endcond
 
 private:

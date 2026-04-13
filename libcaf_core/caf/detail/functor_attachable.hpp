@@ -5,34 +5,42 @@
 #pragma once
 
 #include "caf/attachable.hpp"
-#include "caf/detail/callable_trait.hpp"
-#include "caf/detail/concepts.hpp"
+
+#include <type_traits>
 
 namespace caf::detail {
 
 template <class F>
 class functor_attachable : public attachable {
 public:
-  static constexpr size_t num_args
-    = tl_size<typename get_callable_trait<F>::arg_types>::value;
+  static constexpr bool is_fn_0 = std::is_invocable_v<F>;
 
-  static_assert(num_args < 3, "Only 0, 1 or 2 arguments for F are supported");
+  static constexpr bool is_fn_1 = std::is_invocable_v<F, const error&>;
+
+  static constexpr bool is_fn_2
+    = std::is_invocable_v<F, const error&, scheduler*>;
+
+  static_assert(is_fn_0 || is_fn_1 || is_fn_2,
+                "F must be a function or a function object "
+                "with 0, 1 or 2 arguments");
+
+  static_assert((is_fn_0 ? 1 : 0) + (is_fn_1 ? 1 : 0) + (is_fn_2 ? 1 : 0) == 1,
+                "F may not accept multiple signatures");
 
   explicit functor_attachable(F fn) : fn_(std::move(fn)) {
     // nop
   }
 
-  void actor_exited(const error& fail_state,
+  void actor_exited(abstract_actor*, const error& fail_state,
                     [[maybe_unused]] scheduler* sched) override {
-    if constexpr (num_args == 0)
+    if constexpr (is_fn_0) {
       fn_();
-    else if constexpr (num_args == 1)
+    } else if constexpr (is_fn_1) {
       fn_(fail_state);
-    else
+    } else {
       fn_(fail_state, sched);
+    }
   }
-
-  static constexpr size_t token_type = attachable::token::anonymous;
 
 private:
   F fn_;
