@@ -66,6 +66,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix a bug in actor shells when calling `quit` (#2299).
 - Include the port number in the `Host` header field when making HTTP requests
   to non-standard ports (#2309).
+- When running an HTTP server, CAF now recognizes the `Expect: 100-continue`
+  HTTP header field and responds to it accordingly.
 
 ## [1.1.0] - 2025-07-25
 
