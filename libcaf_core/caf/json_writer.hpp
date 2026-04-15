@@ -26,8 +26,6 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  const_byte_span bytes() const final;
-
   [[nodiscard]] std::string_view str() const noexcept final;
 
   [[nodiscard]] size_t indentation() const noexcept final;

@@ -39,11 +39,11 @@ char last_non_ws_char(const std::vector<char>& buf) {
 
 namespace caf {
 
-class json_writer::impl : public byte_writer {
+class json_writer::impl : public text_writer {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = byte_writer;
+  using super = text_writer;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -60,55 +60,51 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  const_byte_span bytes() const override {
-    return to_const_byte_span(str());
-  }
-
-  [[nodiscard]] std::string_view str() const noexcept {
+  [[nodiscard]] std::string_view str() const noexcept override {
     return {buf_.data(), buf_.size()};
   }
 
-  [[nodiscard]] size_t indentation() const noexcept {
+  [[nodiscard]] size_t indentation() const noexcept override {
     return indentation_factor_;
   }
 
-  void indentation(size_t factor) noexcept {
+  void indentation(size_t factor) noexcept override {
     indentation_factor_ = factor;
   }
 
-  [[nodiscard]] bool compact() const noexcept {
+  [[nodiscard]] bool compact() const noexcept override {
     return indentation_factor_ == 0;
   }
 
-  [[nodiscard]] bool skip_empty_fields() const noexcept {
+  [[nodiscard]] bool skip_empty_fields() const noexcept override {
     return skip_empty_fields_;
   }
 
-  void skip_empty_fields(bool value) noexcept {
+  void skip_empty_fields(bool value) noexcept override {
     skip_empty_fields_ = value;
   }
 
-  [[nodiscard]] bool skip_object_type_annotation() const noexcept {
+  [[nodiscard]] bool skip_object_type_annotation() const noexcept override {
     return skip_object_type_annotation_;
   }
 
-  void skip_object_type_annotation(bool value) noexcept {
+  void skip_object_type_annotation(bool value) noexcept override {
     skip_object_type_annotation_ = value;
   }
 
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept override {
     return field_type_suffix_;
   }
 
-  void field_type_suffix(std::string_view suffix) noexcept {
+  void field_type_suffix(std::string_view suffix) noexcept override {
     field_type_suffix_ = suffix;
   }
 
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept override {
     return mapper_;
   }
 
-  void mapper(const type_id_mapper* ptr) noexcept {
+  void mapper(const type_id_mapper* ptr) noexcept override {
     mapper_ = ptr;
   }
 
@@ -736,10 +732,6 @@ json_writer::~json_writer() {
 }
 
 // -- properties ---------------------------------------------------------------
-
-const_byte_span json_writer::bytes() const {
-  return impl_->bytes();
-}
 
 std::string_view json_writer::str() const noexcept {
   return impl_->str();
