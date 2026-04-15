@@ -96,11 +96,11 @@ std::string_view field_type(const caf::detail::json::object* obj,
 
 namespace caf {
 
-class json_reader::impl : public byte_reader {
+class json_reader::impl : public text_reader {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = byte_reader;
+  using super = text_reader;
 
   struct sequence {
     detail::json::array::const_iterator pos;
