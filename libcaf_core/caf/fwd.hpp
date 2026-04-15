@@ -136,6 +136,7 @@ class json_object;
 class json_reader;
 class json_value;
 class json_writer;
+class text_writer;
 class local_actor;
 class logger;
 class mail_cache;
