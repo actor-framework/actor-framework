@@ -4,18 +4,19 @@
 
 #pragma once
 
-#include "caf/byte_reader.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
 
 /// Deserializes inspectable objects from textual formats.
-class CAF_CORE_EXPORT text_reader : public byte_reader {
+class CAF_CORE_EXPORT text_reader : public deserializer {
 public:
-  using byte_reader::byte_reader;
-
   ~text_reader() override;
+
+  /// Resets the reader and loads a sequence of bytes to deserialize from.
+  virtual bool load_bytes(const_byte_span bytes) = 0;
 
   /// Returns the suffix for generating type annotation fields for variant
   /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"

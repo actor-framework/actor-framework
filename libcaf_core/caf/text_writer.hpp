@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "caf/byte_writer.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/serializer.hpp"
 
 #include <cstddef>
 #include <string_view>
@@ -15,10 +15,8 @@ namespace caf {
 class type_id_mapper;
 
 /// Serializes inspectable objects to a text-based format.
-class CAF_CORE_EXPORT text_writer : public byte_writer {
+class CAF_CORE_EXPORT text_writer : public serializer {
 public:
-  using byte_writer::byte_writer;
-
   ~text_writer() override;
 
   /// Returns a string view into the internal buffer.
@@ -65,6 +63,9 @@ public:
 
   /// Changes the type ID mapper for the writer.
   virtual void mapper(const type_id_mapper* ptr) noexcept = 0;
+
+  /// Clears any buffered data and resets the writer to its initial state.
+  virtual void reset() = 0;
 };
 
 } // namespace caf

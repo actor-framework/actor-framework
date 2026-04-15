@@ -194,22 +194,22 @@ public:
   /// Returns the suffix for generating type annotation fields for variant
   /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
   /// for a variant field called "foo".
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept override {
     return field_type_suffix_;
   }
 
   /// Configures whether the writer omits empty fields.
-  void field_type_suffix(std::string_view suffix) noexcept {
+  void field_type_suffix(std::string_view suffix) noexcept override {
     field_type_suffix_ = suffix;
   }
 
   /// Returns the type ID mapper used by the writer.
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept override {
     return mapper_;
   }
 
   /// Changes the type ID mapper for the writer.
-  void mapper(const type_id_mapper* ptr) noexcept {
+  void mapper(const type_id_mapper* ptr) noexcept override {
     mapper_ = ptr;
   }
 
