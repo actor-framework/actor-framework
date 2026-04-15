@@ -16,21 +16,8 @@ set(CAF_VERSION "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}.${CAF_VERSION_PATCH}"
     CACHE INTERNAL "The full CAF version string" FORCE)
 
 # The full version number as integer.
-if(CAF_VERSION_MAJOR LESS 1)
-  set(CAF_VERSION_INT ${CAF_VERSION_MAJOR})
-else()
-  set(CAF_VERSION_INT "")
-endif()
-if(CAF_VERSION_MINOR LESS 10)
-  set(CAF_VERSION_INT ${CAF_VERSION_INT}0${CAF_VERSION_MINOR})
-else()
-  set(CAF_VERSION_INT ${CAF_VERSION_INT}${CAF_VERSION_MINOR})
-endif()
-if(CAF_VERSION_PATCH LESS 10)
-  set(CAF_VERSION_INT ${CAF_VERSION_INT}0${CAF_VERSION_PATCH})
-else()
-  set(CAF_VERSION_INT ${CAF_VERSION_INT}${CAF_VERSION_PATCH})
-endif()
+math(EXPR CAF_VERSION_INT
+     "${CAF_VERSION_MAJOR} * 10000 + ${CAF_VERSION_MINOR} * 100 + ${CAF_VERSION_PATCH}")
 
 # -- includes ------------------------------------------------------------------
 
