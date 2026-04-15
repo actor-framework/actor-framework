@@ -41,16 +41,6 @@ void move_construct(void* ptr, void* src) {
 }
 
 template <class T>
-bool save_binary(binary_serializer& sink, const void* ptr) {
-  return sink.apply(*static_cast<const T*>(ptr));
-}
-
-template <class T>
-bool load_binary(binary_deserializer& source, void* ptr) {
-  return source.apply(*static_cast<T*>(ptr));
-}
-
-template <class T>
 bool save(serializer& sink, const void* ptr) {
   return sink.apply(*static_cast<const T*>(ptr));
 }
@@ -86,8 +76,6 @@ meta_object make_meta_object(std::string_view type_name) {
     default_function::default_construct<T>,
     default_function::copy_construct<T>,
     default_function::move_construct<T>,
-    default_function::save_binary<T>,
-    default_function::load_binary<T>,
     default_function::save<T>,
     default_function::load<T>,
     default_function::stringify<T>,

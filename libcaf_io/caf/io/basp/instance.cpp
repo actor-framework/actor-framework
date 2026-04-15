@@ -208,8 +208,7 @@ void instance::write(actor_system& sys, scheduler*, byte_buffer& buf,
   binary_serializer sink{sys, buf};
   if (pw != nullptr) {
     // Write the BASP header after the payload.
-    auto header_offset = buf.size();
-    sink.skip(header_size);
+    auto header_offset = sink.skip(header_size);
     auto& mm_metrics = sys.middleman().metric_singletons;
     auto t0 = telemetry::timer::clock_type::now();
     if (!(*pw)(sink)) {
@@ -217,14 +216,21 @@ void instance::write(actor_system& sys, scheduler*, byte_buffer& buf,
       return;
     }
     telemetry::timer::observe(mm_metrics.serialization_time, t0);
-    sink.seek(header_offset);
-    auto payload_len = buf.size() - (header_offset + basp::header_size);
+    std::array<std::byte, header_size> hdr_buf;
+    auto payload_len = buf.size() - (header_offset + header_size);
     auto signed_payload_len = static_cast<uint32_t>(payload_len);
     mm_metrics.outbound_messages_size->observe(signed_payload_len);
     hdr.payload_len = static_cast<uint32_t>(payload_len);
+    hdr.write_to(hdr_buf);
+    if (!sink.update(header_offset, hdr_buf)) {
+      log::io::error("{}", sink.get_error());
+    }
+    return;
   }
-  if (!sink.apply(hdr))
+  // Write header-only messages such as heartbeats.
+  if (!sink.apply(hdr)) {
     log::io::error("{}", sink.get_error());
+  }
 }
 
 void instance::write_server_handshake(scheduler* ctx, byte_buffer& out_buf,

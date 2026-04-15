@@ -33,12 +33,6 @@ class binary_serializer::impl : public save_inspector_base<impl> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = save_inspector_base<binary_serializer>;
-
-  using container_type = byte_buffer;
-
-  using value_type = std::byte;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   impl(byte_buffer& buf, actor_system* sys) noexcept
@@ -65,25 +59,39 @@ public:
     return buf_;
   }
 
-  size_t write_pos() const noexcept {
-    return write_pos_;
+  caf::actor_system* sys() const noexcept {
+    return context_;
   }
 
-  static constexpr bool has_human_readable_format() noexcept {
+  bool has_human_readable_format() const noexcept {
     return false;
+  }
+
+  void reset() noexcept {
+    buf_.clear();
+    write_pos_ = 0;
   }
 
   // -- position management ----------------------------------------------------
 
-  void seek(size_t offset) noexcept {
-    write_pos_ = offset;
-  }
-
-  void skip(size_t num_bytes) {
+  size_t skip(size_t num_bytes) {
+    auto offset = write_pos_;
     auto remaining = buf_.size() - write_pos_;
     if (remaining < num_bytes)
       buf_.insert(buf_.end(), num_bytes - remaining, std::byte{0});
     write_pos_ += num_bytes;
+    return offset;
+  }
+
+  bool update(size_t offset, const_byte_span content) noexcept {
+    if (offset + content.size() > buf_.size()) {
+      set_error(make_error(sec::end_of_stream,
+                           "cannot update buffer at given offset because it "
+                           "would exceed the buffer size"));
+      return false;
+    }
+    memcpy(buf_.data() + offset, content.data(), content.size());
+    return true;
   }
 
   // -- interface functions ----------------------------------------------------
@@ -442,26 +450,31 @@ actor_system* binary_serializer::context() const noexcept {
   return impl_->context();
 }
 
-byte_buffer& binary_serializer::buf() noexcept {
+void binary_serializer::reset() {
+  impl_->reset();
+}
+
+const_byte_span binary_serializer::bytes() const noexcept {
   return impl_->buf();
 }
 
-const byte_buffer& binary_serializer::buf() const noexcept {
-  return impl_->buf();
+caf::actor_system* binary_serializer::sys() const noexcept {
+  return impl_->sys();
 }
 
-size_t binary_serializer::write_pos() const noexcept {
-  return impl_->write_pos();
+bool binary_serializer::has_human_readable_format() const noexcept {
+  return impl_->has_human_readable_format();
 }
 
 // -- position management ----------------------------------------------------
 
-void binary_serializer::seek(size_t offset) noexcept {
-  impl_->seek(offset);
+size_t binary_serializer::skip(size_t num_bytes) {
+  return impl_->skip(num_bytes);
 }
 
-void binary_serializer::skip(size_t num_bytes) {
-  impl_->skip(num_bytes);
+bool binary_serializer::update(size_t offset,
+                               const_byte_span content) noexcept {
+  return impl_->update(offset, content);
 }
 
 // -- interface functions ----------------------------------------------------

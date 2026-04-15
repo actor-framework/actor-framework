@@ -42,12 +42,6 @@ struct meta_object {
   /// constructor.
   void (*move_construct)(void*, void*);
 
-  /// Applies an object to a binary serializer.
-  bool (*save_binary)(caf::binary_serializer&, const void*);
-
-  /// Applies an object to a binary deserializer.
-  bool (*load_binary)(caf::binary_deserializer&, void*);
-
   /// Applies an object to a generic serializer.
   bool (*save)(caf::serializer&, const void*);
 

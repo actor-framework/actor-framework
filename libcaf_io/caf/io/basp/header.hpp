@@ -7,22 +7,26 @@
 #include "caf/io/basp/message_type.hpp"
 
 #include "caf/detail/io_export.hpp"
-#include "caf/error.hpp"
-#include "caf/node_id.hpp"
+#include "caf/fwd.hpp"
 
+#include <array>
 #include <cstdint>
-#include <string>
 
 namespace caf::io::basp {
 
 /// @addtogroup BASP
 /// @{
 
+/// Size of a BASP header in serialized form
+/// @relates header
+constexpr size_t header_size = sizeof(actor_id) * 2 + sizeof(uint32_t) * 2
+                               + sizeof(uint64_t);
+
 /// The header of a Binary Actor System Protocol (BASP) message. A BASP header
 /// consists of a routing part, i.e., source and destination, as well as an
 /// operation and operation data. Several message types consist of only a
 /// header.
-struct header {
+struct CAF_IO_EXPORT header {
   message_type operation;
   uint8_t padding1 = 0;
   uint8_t padding2 = 0;
@@ -58,6 +62,8 @@ struct header {
   bool has(uint8_t flag) const {
     return (flags & flag) != 0;
   }
+
+  void write_to(std::array<std::byte, header_size>& buf) const noexcept;
 };
 
 /// @relates header
@@ -87,11 +93,6 @@ inline bool is_heartbeat(const header& hdr) {
 /// Checks whether given BASP header is valid.
 /// @relates header
 CAF_IO_EXPORT bool valid(const header& hdr);
-
-/// Size of a BASP header in serialized form
-/// @relates header
-constexpr size_t header_size = sizeof(actor_id) * 2 + sizeof(uint32_t) * 2
-                               + sizeof(uint64_t);
 
 /// @}
 

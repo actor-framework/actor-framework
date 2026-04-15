@@ -37,11 +37,11 @@ public:
     return static_cast<size_t>(end_ - current_);
   }
 
-  const_byte_span remainder() const noexcept {
-    return std::span{current_, end_};
+  actor_system* context() const noexcept {
+    return context_;
   }
 
-  actor_system* context() const noexcept {
+  caf::actor_system* sys() const noexcept {
     return context_;
   }
 
@@ -51,9 +51,10 @@ public:
     current_ += num_bytes;
   }
 
-  void reset(const_byte_span bytes) noexcept {
+  bool load_bytes(const_byte_span bytes) noexcept {
     current_ = bytes.data();
     end_ = current_ + bytes.size();
+    return true;
   }
 
   const std::byte* current() const noexcept {
@@ -64,7 +65,7 @@ public:
     return end_;
   }
 
-  static constexpr bool has_human_readable_format() noexcept {
+  bool has_human_readable_format() const noexcept {
     return false;
   }
 
@@ -509,32 +510,20 @@ binary_deserializer::~binary_deserializer() {
 
 // -- properties -------------------------------------------------------------
 
-size_t binary_deserializer::remaining() const noexcept {
-  return impl_->remaining();
-}
-
-const_byte_span binary_deserializer::remainder() const noexcept {
-  return impl_->remainder();
-}
-
 actor_system* binary_deserializer::context() const noexcept {
   return impl_->context();
 }
 
-void binary_deserializer::skip(size_t num_bytes) {
-  impl_->skip(num_bytes);
+bool binary_deserializer::load_bytes(const_byte_span bytes) {
+  return impl_->load_bytes(bytes);
 }
 
-void binary_deserializer::reset(const_byte_span bytes) noexcept {
-  impl_->reset(bytes);
+actor_system* binary_deserializer::sys() const noexcept {
+  return impl_->sys();
 }
 
-const std::byte* binary_deserializer::current() const noexcept {
-  return impl_->current();
-}
-
-const std::byte* binary_deserializer::end() const noexcept {
-  return impl_->end();
+bool binary_deserializer::has_human_readable_format() const noexcept {
+  return impl_->has_human_readable_format();
 }
 
 // -- overridden member functions --------------------------------------------

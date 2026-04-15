@@ -37,11 +37,6 @@ bool load(const detail::meta_object& meta, caf::deserializer& source,
   return meta.load(source, obj);
 }
 
-bool load(const detail::meta_object& meta, caf::binary_deserializer& source,
-          void* obj) {
-  return meta.load_binary(source, obj);
-}
-
 template <class Deserializer>
 bool load_data(Deserializer& source, message::data_ptr& data) {
   // For machine-to-machine data formats, we prefix the type information.
@@ -208,11 +203,6 @@ namespace {
 bool save(const detail::meta_object& meta, caf::serializer& sink,
           const void* obj) {
   return meta.save(sink, obj);
-}
-
-bool save(const detail::meta_object& meta, caf::binary_serializer& sink,
-          const void* obj) {
-  return meta.save_binary(sink, obj);
 }
 
 template <class Serializer>
