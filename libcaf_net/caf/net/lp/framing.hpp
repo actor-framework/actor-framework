@@ -16,11 +16,11 @@
 
 namespace caf::net::lp {
 
-/// Implements length-prefix framing for discretizing a Byte stream into
-/// messages of varying size. The framing uses 4 Bytes for the length prefix,
-/// but messages (including the 4 Bytes for the length prefix) are limited to a
-/// maximum size of INT32_MAX. This limitation comes from the POSIX API (recv)
-/// on 32-bit platforms.
+/// Implements length-prefix framing for discretizing a byte stream into
+/// messages of varying size.
+///
+/// The framing prepends each message with a configurable unsigned size field
+/// (see `size_field_type`) and enforces a configurable maximum payload size.
 class CAF_NET_EXPORT framing : public octet_stream::upper_layer,
                                public lp::lower_layer {
 public:
@@ -30,6 +30,13 @@ public:
 
   // -- factories --------------------------------------------------------------
 
+  /// Creates a new framing protocol with CAF 1.x compatible framing defaults.
+  ///
+  /// Uses `size_field_type::u4` and `caf::defaults::net::lp_max_message_size`
+  /// as maximum payload size.
+  static std::unique_ptr<framing> make(upper_layer_ptr up);
+
+  /// Creates a new framing protocol with custom framing options.
   static std::unique_ptr<framing>
   make(upper_layer_ptr up, size_field_type size_field, size_t max_message_size);
 

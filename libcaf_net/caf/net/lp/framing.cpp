@@ -60,7 +60,8 @@ public:
       case lp::size_field_type::u4:
         hdr_size_ = sizeof(uint32_t);
         break;
-      case lp::size_field_type::u8:
+      default:
+        CAF_ASSERT(size_field_ == lp::size_field_type::u8);
         hdr_size_ = sizeof(uint64_t);
         break;
     }
@@ -85,7 +86,8 @@ public:
         return consume_impl<uint16_t>(input, {});
       case lp::size_field_type::u4:
         return consume_impl<uint32_t>(input, {});
-      case lp::size_field_type::u8:
+      default:
+        CAF_ASSERT(size_field_ == lp::size_field_type::u8);
         return consume_impl<uint64_t>(input, {});
     }
     log::net::error("invalid size field type");
@@ -252,6 +254,11 @@ private:
 } // namespace
 
 // -- factories ----------------------------------------------------------------
+
+std::unique_ptr<framing> framing::make(upper_layer_ptr up) {
+  return make(std::move(up), size_field_type::u4,
+              caf::defaults::net::lp_max_message_size);
+}
 
 std::unique_ptr<framing> framing::make(upper_layer_ptr up,
                                        size_field_type size_field,

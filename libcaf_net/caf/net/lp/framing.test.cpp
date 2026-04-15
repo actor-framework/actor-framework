@@ -324,4 +324,47 @@ SCENARIO("max_message_size rejects oversized messages") {
   }
 }
 
+SCENARIO("framing::make uses 32-bit header and lp_max_message_size defaults") {
+  GIVEN("a framing object constructed via the one-argument overload") {
+    WHEN("sending a 1-byte payload with a 32-bit header") {
+      auto buf = std::make_shared<buffer>();
+      auto app = app_t::make(mpx, [](net::lp::lower_layer*) {}, buf);
+      auto client = net::lp::framing::make(std::move(app));
+      auto transport = net::octet_stream::transport::make(fd2,
+                                                          std::move(client));
+      auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+      require(mpx->start(mgr));
+      fd2.id = net::invalid_socket_id;
+      net::write(fd1, encode("x"sv));
+      THEN("the app receives the payload") {
+        require(buf->wait_for_entries(1, 1s));
+        auto [entries, err] = buf->get();
+        if (err)
+          fail("unexpected error: {}", err);
+        if (check_eq(entries.size(), 1u))
+          check_eq(entries[0], "x");
+      }
+    }
+    WHEN("sending a payload larger than lp_max_message_size") {
+      auto buf = std::make_shared<buffer>();
+      auto app = app_t::make(mpx, [](net::lp::lower_layer*) {}, buf);
+      auto client = net::lp::framing::make(std::move(app));
+      auto transport = net::octet_stream::transport::make(fd2,
+                                                          std::move(client));
+      auto mgr = net::socket_manager::make(mpx.get(), std::move(transport));
+      require(mpx->start(mgr));
+      fd2.id = net::invalid_socket_id;
+      auto payload_size = caf::defaults::net::lp_max_message_size + 1;
+      auto payload_size_u32 = static_cast<uint32_t>(payload_size);
+      auto header = detail::to_network_order(payload_size_u32);
+      net::write(fd1, as_bytes(std::span{&header, size_t{1}}));
+      THEN("the message is rejected") {
+        std::this_thread::sleep_for(100ms);
+        auto [entries, err] = buf->get();
+        check_eq(entries.size(), 0u);
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(fixture)
