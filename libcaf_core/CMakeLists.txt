@@ -125,6 +125,7 @@ caf_add_component(
     caf/byte_span.cpp
     caf/byte_writer.cpp
     caf/text_reader.cpp
+    caf/text_writer.cpp
     caf/chrono.cpp
     caf/chrono.test.cpp
     caf/chunk.cpp

@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include "caf/byte_writer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/placement_ptr.hpp"
+#include "caf/text_writer.hpp"
 
 #include <cstddef>
 
 namespace caf {
 
 /// Serializes an inspectable object to a JSON-formatted string.
-class CAF_CORE_EXPORT json_writer : public byte_writer {
+class CAF_CORE_EXPORT json_writer : public text_writer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -28,50 +28,29 @@ public:
 
   const_byte_span bytes() const final;
 
-  /// Returns a string view into the internal buffer.
-  /// @warning This view becomes invalid when calling any non-const member
-  ///          function on the writer object.
-  [[nodiscard]] std::string_view str() const noexcept;
+  [[nodiscard]] std::string_view str() const noexcept final;
 
-  /// Returns the current indentation factor.
-  [[nodiscard]] size_t indentation() const noexcept;
+  [[nodiscard]] size_t indentation() const noexcept final;
 
-  /// Sets the indentation level.
-  /// @param factor The number of spaces to add to each level of indentation. A
-  ///               value of 0 (the default) disables indentation, printing the
-  ///               entire JSON output into a single line.
-  void indentation(size_t factor) noexcept;
+  void indentation(size_t factor) noexcept final;
 
-  /// Returns whether the writer generates compact JSON output without any
-  /// spaces or newlines to separate values.
-  [[nodiscard]] bool compact() const noexcept;
+  [[nodiscard]] bool compact() const noexcept final;
 
-  /// Returns whether the writer omits empty fields entirely (true) or renders
-  /// empty fields as `$field: null` (false).
-  [[nodiscard]] bool skip_empty_fields() const noexcept;
+  [[nodiscard]] bool skip_empty_fields() const noexcept final;
 
-  /// Configures whether the writer omits empty fields.
-  void skip_empty_fields(bool value) noexcept;
+  void skip_empty_fields(bool value) noexcept final;
 
-  /// Returns whether the writer omits `@type` annotations for JSON objects.
-  [[nodiscard]] bool skip_object_type_annotation() const noexcept;
+  [[nodiscard]] bool skip_object_type_annotation() const noexcept final;
 
-  /// Configures whether the writer omits `@type` annotations for JSON objects.
-  void skip_object_type_annotation(bool value) noexcept;
+  void skip_object_type_annotation(bool value) noexcept final;
 
-  /// Returns the suffix for generating type annotation fields for variant
-  /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
-  /// for a variant field called "foo".
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept;
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept final;
 
-  /// Configures whether the writer omits empty fields.
-  void field_type_suffix(std::string_view suffix) noexcept;
+  void field_type_suffix(std::string_view suffix) noexcept final;
 
-  /// Returns the type ID mapper used by the writer.
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept final;
 
-  /// Changes the type ID mapper for the writer.
-  void mapper(const type_id_mapper* ptr) noexcept;
+  void mapper(const type_id_mapper* ptr) noexcept final;
 
   // -- modifiers --------------------------------------------------------------
 
@@ -122,7 +101,7 @@ public:
 
   bool end_associative_array() final;
 
-  using byte_writer::value;
+  using text_writer::value;
 
   bool value(std::byte x) final;
 
