@@ -4,17 +4,17 @@
 
 #pragma once
 
-#include "caf/byte_reader.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/placement_ptr.hpp"
+#include "caf/text_reader.hpp"
 
 #include <cstddef>
 
 namespace caf {
 
 /// Deserializes an inspectable object from a JSON-formatted string.
-class CAF_CORE_EXPORT json_reader : public byte_reader {
+class CAF_CORE_EXPORT json_reader : public text_reader {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -30,19 +30,13 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the suffix for generating type annotation fields for variant
-  /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
-  /// for a variant field called "foo".
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept;
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept final;
 
-  /// Configures whether the writer omits empty fields.
-  void field_type_suffix(std::string_view suffix) noexcept;
+  void field_type_suffix(std::string_view suffix) noexcept final;
 
-  /// Returns the type ID mapper used by the writer.
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept final;
 
-  /// Changes the type ID mapper for the writer.
-  void mapper(const type_id_mapper* ptr) noexcept;
+  void mapper(const type_id_mapper* ptr) noexcept final;
 
   // -- modifiers --------------------------------------------------------------
 
@@ -126,7 +120,7 @@ public:
 
   bool end_associative_array() final;
 
-  using byte_reader::value;
+  using text_reader::value;
 
   bool value(std::byte& x) final;
 
