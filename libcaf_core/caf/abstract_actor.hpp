@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/abstract_ref_counted.hpp"
+#include "caf/actor_control_block.hpp"
 #include "caf/attachable.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/concepts.hpp"
@@ -12,11 +13,13 @@
 #include "caf/detail/functor_attachable.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/fwd.hpp"
+#include "caf/intrusive/lifo_uptr_queue.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message_id.hpp"
 #include "caf/node_id.hpp"
 #include "caf/spawn_options.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 #include <atomic>
 #include <condition_variable>
@@ -26,7 +29,6 @@
 #include <set>
 #include <string>
 #include <type_traits>
-#include <vector>
 
 namespace caf::io::basp {
 
@@ -34,6 +36,12 @@ template <class>
 class remote_message_handler;
 
 } // namespace caf::io::basp
+
+namespace caf::internal {
+
+class attachable_predicate;
+
+} // namespace caf::internal
 
 namespace caf {
 
@@ -54,6 +62,10 @@ public:
   template <class>
   friend class caf::io::basp::remote_message_handler;
 
+  friend class actor_pool; // access to add_monitor
+
+  friend class detail::abstract_monitor_action; // access to del_monitor
+
   // -- constructors, destructors, and assignment operators --------------------
 
   /// @note calls `detail::current_actor(this)`; re-setting the current actor
@@ -68,19 +80,19 @@ public:
 
   // -- attachables ------------------------------------------------------------
 
-  /// Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
-  /// exit, or immediately if it already finished execution.
-  void attach(attachable_ptr ptr);
+  /// Attaches `ptr` to this actor. During cleanup, the actor invokes
+  /// `ptr->actor_exited` with the exit reason. If the actor has already
+  /// terminated, `actor_exited` runs immediately instead.
+  /// @returns `true` if `ptr` was enqueued; `false` if the actor had already
+  ///          terminated (in which case `actor_exited` runs immediately).
+  bool attach(attachable_ptr ptr);
 
   /// Convenience function that attaches the functor `f` to this actor. The
   /// actor executes `f()` on exit or immediately if it is not running.
   template <class F>
   void attach_functor(F f) {
-    attach(attachable_ptr{new detail::functor_attachable<F>(std::move(f))});
+    attach(std::make_unique<detail::functor_attachable<F>>(std::move(f)));
   }
-
-  /// Detaches the first attached object that matches `what`.
-  size_t detach(const attachable::token& what);
 
   // -- linking ----------------------------------------------------------------
 
@@ -157,6 +169,11 @@ public:
   /// This member function is thread-safe, and if the actor has already exited
   /// upon invocation, nothing is done. The return value of this member
   /// function is ignored by scheduled actors.
+  ///
+  /// Cleanup runs in two phases: (1) revoke outgoing monitor/link edges on
+  /// peers—without holding `mtx_` while locking peers—and (2) run
+  /// `actor_exited` on the swapped local attachable list (links, incoming
+  /// monitors, functors, etc.).
   bool cleanup(error&& reason, scheduler* sched);
 
   // -- reference counting -----------------------------------------------------
@@ -315,12 +332,26 @@ protected:
 
   // -- attachables ------------------------------------------------------------
 
-  // precondition: `mtx_` is acquired
-  void attach_impl(attachable_ptr& ptr);
+  /// Registers a monitor attachable on @p observed (this actor is the
+  /// observer). On successful `attach`, increments `incoming_edges_` for @p
+  /// observed. Call sites that remove that attachable from @p observed must go
+  /// through @ref del_monitor and never erase a monitor attachable from
+  /// `attachables_` directly.
+  /// @warning Must *not* be called inside a critical section.
+  void add_monitor(abstract_actor* observed, attachable_ptr&& what);
 
-  // precondition: `mtx_` is acquired
-  size_t detach_impl(const attachable::token& what, bool stop_on_hit = false,
-                     bool dry_run = false);
+  /// Removes the first attachable on @p observed matching @p pred and, if one
+  /// was removed, decrements `incoming_edges_` for @p observed. Must be used
+  /// for every explicit teardown of a monitor edge created via @ref add_monitor
+  /// for the counts to stay consistent.
+  /// @warning Must *not* be called inside a critical section.
+  void del_monitor(abstract_actor* observed,
+                   const internal::attachable_predicate& pred);
+
+  /// Clears all incoming edges from @p other. Called after receiving a
+  /// `down_msg` from @p other.
+  /// @warning Must *not* be called inside a critical section.
+  void clear_incoming_edges(const actor_addr& other);
 
   // -- linking ----------------------------------------------------------------
 
@@ -355,8 +386,18 @@ protected:
   /// Stores the user-defined exit reason if this actor has finished execution.
   error fail_state_;
 
-  /// Points to the first attachable in the linked list of attachables (if any).
-  attachable_ptr attachables_head_;
+  /// LIFO queue of @ref attachable instances owned by this actor: functor
+  /// attachments, links, and monitor attachables that observers registered on
+  /// this actor (each monitor from another actor is an incoming edge in
+  /// bookkeeping terms).
+  intrusive::lifo_uptr_queue<attachable> attachables_;
+
+  /// Per observed actor, how many monitor attachables this actor has
+  /// registered on that actor (keys are weak pointers to the observed actor's
+  /// control block). Only monitor edges use this map; links are maintained
+  /// separately. Counts are adjusted by @ref add_monitor / @ref del_monitor;
+  /// observed actor termination does not decrement these entries.
+  unordered_flat_map<weak_actor_ptr, size_t> incoming_edges_;
 
 private:
   /// Tries to transition the mailbox from a blocked state to a closed state.

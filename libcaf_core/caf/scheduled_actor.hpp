@@ -650,9 +650,14 @@ public:
   disposable monitor(Handle whom, Fn func) {
     static_assert(!Handle::has_weak_ptr_semantics);
     static_assert(std::is_invocable_v<Fn, error>);
+    if (!whom) {
+      return {};
+    }
     using impl_t = detail::monitor_action<Fn>;
-    return do_monitor(actor_cast<abstract_actor*>(whom),
-                      make_counted<impl_t>(std::move(func)));
+    auto* observed = actor_cast<abstract_actor*>(whom);
+    auto impl = make_counted<impl_t>(address(), observed->address(),
+                                     std::move(func));
+    return do_monitor(observed, std::move(impl));
   }
 
   // -- properties -------------------------------------------------------------
@@ -726,7 +731,7 @@ protected:
 private:
   using super::do_monitor;
 
-  disposable do_monitor(abstract_actor* ptr,
+  disposable do_monitor(abstract_actor* observed,
                         detail::abstract_monitor_action_ptr on_down);
 
   virtual behavior type_erased_initial_behavior() = 0;

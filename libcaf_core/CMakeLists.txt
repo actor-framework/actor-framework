@@ -145,7 +145,6 @@ caf_add_component(
     caf/cow_string.test.cpp
     caf/cow_tuple.test.cpp
     caf/deep_to_string.test.cpp
-    caf/default_attachable.cpp
     caf/delegate.test.cpp
     caf/deserializer.cpp
     caf/detached_actors.test.cpp
@@ -287,6 +286,7 @@ caf_add_component(
     caf/intrusive/lifo_inbox.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
+    caf/intrusive/lifo_uptr_queue.test.cpp
     caf/intrusive_cow_ptr.test.cpp
     caf/intrusive_ptr.test.cpp
     caf/ipv4_address.cpp

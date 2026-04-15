@@ -11,9 +11,10 @@
 #include "caf/actor_system.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/config.hpp"
-#include "caf/default_attachable.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/current_actor.hpp"
+#include "caf/internal/attachable_factory.hpp"
+#include "caf/internal/attachable_predicate.hpp"
 #include "caf/log/core.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/system_messages.hpp"
@@ -35,60 +36,80 @@ abstract_actor::~abstract_actor() {
 
 // -- attachables ------------------------------------------------------------
 
-void abstract_actor::attach(attachable_ptr ptr) {
+bool abstract_actor::attach(attachable_ptr ptr) {
   auto lg = log::core::trace("");
   CAF_ASSERT(ptr != nullptr);
   error fail_state;
-  auto attached = exclusive_critical_section([&] {
+  auto attached = exclusive_critical_section([this, &fail_state, &ptr] {
     if (getf(is_terminated_flag)) {
       fail_state = fail_state_;
       return false;
     }
-    attach_impl(ptr);
+    attachables_.push(std::move(ptr));
     return true;
   });
   if (!attached) {
-    log::core::debug(
-      "cannot attach functor to terminated actor: call immediately");
-    ptr->actor_exited(fail_state, nullptr);
+    log::core::debug("cannot attach to terminated actor: call immediately");
+    ptr->actor_exited(this, fail_state, nullptr);
+    return false;
   }
+  return true;
 }
 
-size_t abstract_actor::detach(const attachable::token& what) {
-  auto lg = log::core::trace("");
-  std::unique_lock<std::mutex> guard{mtx_};
-  return detach_impl(what);
-}
+// Note: add_monitor / del_monitor keep incoming_edges_ in sync: one inc after a
+// successful attach on the observed actor, one dec after erase_first_if removes
+// a monitor attachable there. Only cleanup() does not call dec, but it will
+// clear the entire map anyway. The third function to modify incoming_edges_ is
+// clear_incoming_edges, which is called after receiving a `down_msg` from
+// another actor. Since the other actor has terminated once we receive its
+// `down_msg`, any subsequent `del_monitor` call will not find any matching
+// entry in the map and thus will not attempt to decrement the count (which
+// would result in a panic).
 
-void abstract_actor::attach_impl(attachable_ptr& ptr) {
-  ptr->next.swap(attachables_head_);
-  attachables_head_.swap(ptr);
-}
-
-size_t abstract_actor::detach_impl(const attachable::token& what,
-                                   bool stop_on_hit, bool dry_run) {
-  auto lg = log::core::trace("stop_on_hit = {}, dry_run = {}", stop_on_hit,
-                             dry_run);
-  size_t count = 0;
-  auto i = &attachables_head_;
-  while (*i != nullptr) {
-    if ((*i)->matches(what)) {
-      ++count;
-      if (!dry_run) {
-        log::core::debug("removed element");
-        attachable_ptr next;
-        next.swap((*i)->next);
-        (*i).swap(next);
-      } else {
-        i = &((*i)->next);
+void abstract_actor::add_monitor(abstract_actor* observed,
+                                 attachable_ptr&& what) {
+  CAF_ASSERT(observed != nullptr);
+  CAF_ASSERT(what != nullptr);
+  if (observed->attach(std::move(what))) {
+    // Increment how many monitor attachables we have added to `observed`.
+    // During cleanup, we need to remove those attachables from `observed`
+    // again to prevent stale references.
+    auto* observed_ctrl = observed->ctrl();
+    exclusive_critical_section([this, observed_ctrl] { //
+      if (auto iter = incoming_edges_.find(observed_ctrl);
+          iter != incoming_edges_.end()) {
+        ++iter->second;
+        return;
       }
-      if (stop_on_hit)
-        return count;
-    } else {
-      i = &((*i)->next);
-    }
+      auto& entries = incoming_edges_.container();
+      entries.emplace_back(weak_actor_ptr{observed_ctrl, add_ref}, 1);
+    });
   }
-  return count;
+}
+
+void abstract_actor::del_monitor(abstract_actor* observed,
+                                 const internal::attachable_predicate& pred) {
+  CAF_ASSERT(observed != nullptr);
+  auto removed = observed->exclusive_critical_section([observed, &pred] { //
+    return observed->attachables_.erase_first_if(pred);
+  });
+  if (removed) {
+    // Decrement how many monitor attachables we have added to `observed`. If
+    // this was the last one, we can remove the entry from `incoming_edges_` and
+    // skip the extra steps during cleanup.
+    auto* observed_ctrl = observed->ctrl();
+    exclusive_critical_section([this, observed_ctrl] { //
+      auto iter = incoming_edges_.find(observed_ctrl);
+      if (iter != incoming_edges_.end()) {
+        if (--iter->second == 0) {
+          incoming_edges_.erase(iter);
+        }
+        return;
+      }
+      log::core::error("cannot decrement incoming edges to unknown actor {}",
+                       observed_ctrl);
+    });
+  }
 }
 
 // -- linking ------------------------------------------------------------------
@@ -106,8 +127,14 @@ void abstract_actor::unlink_from(const actor_addr& other) {
     unlink_from(hdl);
     return;
   }
-  default_attachable::observe_token tk{other, default_attachable::link};
-  exclusive_critical_section([&] { detach_impl(attachable::token{tk}, true); });
+  // Promoting weak to strong reference fails if-and-only-if the strong
+  // reference count is already at 0 which means the other actor must have
+  // terminated. However, we call this overload automatically after receiving an
+  // exit message to clean up leftover state.
+  auto pred = internal::attachable_predicate::linked_to(other.ptr().ctrl());
+  exclusive_critical_section([this, &pred] { //
+    attachables_.erase_first_if(pred);
+  });
 }
 
 // -- properties ---------------------------------------------------------------
@@ -154,7 +181,8 @@ void abstract_actor::on_cleanup(const error&) {
 
 bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
   auto lg = log::core::trace("reason = {}", reason);
-  attachable_ptr head;
+  decltype(attachables_) attachables;
+  decltype(incoming_edges_) incoming;
   auto fs = 0;
   bool do_cleanup = exclusive_critical_section([&, this]() -> bool {
     fs = flags();
@@ -162,7 +190,8 @@ bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
       // local actors pass fail_state_ as first argument
       if (&fail_state_ != &reason)
         fail_state_ = std::move(reason);
-      attachables_head_.swap(head);
+      attachables_.swap(attachables);
+      incoming_edges_.swap(incoming);
       flags(fs | is_terminated_flag);
       return true;
     }
@@ -171,9 +200,20 @@ bool abstract_actor::cleanup(error&& reason, scheduler* sched) {
   if (!do_cleanup)
     return false;
   log::core::debug("actor {} cleans up with reason {}", id(), fail_state_);
-  // send exit messages
-  for (attachable* i = head.get(); i != nullptr; i = i->next.get())
-    i->actor_exited(fail_state_, sched);
+  // Phase 1: clean up attachables from other actors that point to this actor.
+  auto pred = internal::attachable_predicate::observed_by(ctrl());
+  for (auto& kvp : incoming) {
+    if (auto peer = kvp.first.lock()) {
+      auto* ptr = actor_cast<abstract_actor*>(peer.get());
+      ptr->exclusive_critical_section([ptr, &pred] { //
+        ptr->attachables_.erase_if(pred);
+      });
+    }
+  }
+  // Phase 2: trigger actor_exited for all attachables.
+  attachables.for_each([this, sched](attachable& entry) {
+    entry.actor_exited(this, fail_state_, sched);
+  });
   if (getf(is_registered_flag)) {
     home_system().dec_running_actors_count(id());
   }
@@ -191,17 +231,18 @@ void abstract_actor::deref() const noexcept {
 
 void abstract_actor::add_link(abstract_actor* x) {
   // Add backlink on `x` first and add the local attachable only on success.
+  // Note: links are bidirectional, so they don't produce incoming edges.
   auto lg = log::core::trace("x = {}", x);
   CAF_ASSERT(x != nullptr);
   error fail_state;
   bool send_exit_immediately = false;
-  auto tmp = default_attachable::make_link(address(), x->address());
+  auto tmp = internal::attachable_factory::make_link(x->address());
   joined_exclusive_critical_section(this, x, [&] {
     if (getf(is_terminated_flag)) {
       fail_state = fail_state_;
       send_exit_immediately = true;
     } else if (x->add_backlink(this)) {
-      attach_impl(tmp);
+      attachables_.push(std::move(tmp));
     }
   });
   if (send_exit_immediately) {
@@ -213,42 +254,47 @@ void abstract_actor::add_link(abstract_actor* x) {
 
 void abstract_actor::remove_link(abstract_actor* x) {
   auto lg = log::core::trace("x = {}", x);
-  default_attachable::observe_token tk{x->address(), default_attachable::link};
+  auto pred = internal::attachable_predicate::linked_to(x->ctrl());
   joined_exclusive_critical_section(this, x, [&] {
     x->remove_backlink(this);
-    detach_impl(attachable::token{tk}, true);
+    attachables_.erase_first_if(pred);
   });
 }
 
 bool abstract_actor::add_backlink(abstract_actor* x) {
-  // Called in an exclusive critical section.
+  // Called in an exclusive critical section, i.e., while holding `mtx_`.
   auto lg = log::core::trace("x = {}", x);
   CAF_ASSERT(x);
-  error fail_state;
-  bool send_exit_immediately = false;
-  default_attachable::observe_token tk{x->address(), default_attachable::link};
-  auto tmp = default_attachable::make_link(address(), x->address());
-  auto success = false;
   if (getf(is_terminated_flag)) {
-    fail_state = fail_state_;
-    send_exit_immediately = true;
-  } else if (detach_impl(attachable::token{tk}, true, true) == 0) {
-    attach_impl(tmp);
-    success = true;
-  }
-  if (send_exit_immediately) {
     auto ptr = make_mailbox_element(nullptr, make_message_id(),
-                                    exit_msg{address(), fail_state});
+                                    exit_msg{address(), fail_state_});
     x->enqueue(std::move(ptr), nullptr);
+    return false;
   }
-  return success;
+  auto pred = internal::attachable_predicate::linked_to(x->ctrl());
+  if (!attachables_.any_of(pred)) {
+    auto tmp = internal::attachable_factory::make_link(x->address());
+    attachables_.push(std::move(tmp));
+    return true;
+  }
+  return false;
 }
 
 bool abstract_actor::remove_backlink(abstract_actor* x) {
   // Called in an exclusive critical section.
   auto lg = log::core::trace("x = {}", x);
-  default_attachable::observe_token tk{x->address(), default_attachable::link};
-  return detach_impl(attachable::token{tk}, true) > 0;
+  auto pred = internal::attachable_predicate::linked_to(x->ctrl());
+  return attachables_.erase_first_if(pred);
+}
+
+void abstract_actor::clear_incoming_edges(const actor_addr& other) {
+  auto lg = log::core::trace("other = {}", other);
+  exclusive_critical_section([this, &other] { //
+    auto iter = incoming_edges_.find(other.ptr().ctrl());
+    if (iter != incoming_edges_.end()) {
+      incoming_edges_.erase(iter);
+    }
+  });
 }
 
 } // namespace caf

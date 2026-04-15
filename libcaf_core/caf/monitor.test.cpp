@@ -35,13 +35,13 @@ TEST("monitoring another actor") {
       };
     });
     inject_exit(client1);
-    expect<down_msg>().with(std::ignore).from(client1).to(observer);
+    expect<down_msg>().with(std::ignore).to(observer);
     check_eq(*call_count, 1);
     inject_exit(client2);
-    expect<down_msg>().with(std::ignore).from(client2).to(observer);
+    expect<down_msg>().with(std::ignore).to(observer);
     check_eq(*call_count, 2);
     inject_exit(client3);
-    expect<down_msg>().with(std::ignore).from(client3).to(observer);
+    expect<down_msg>().with(std::ignore).to(observer);
     check_eq(*call_count, 3);
   }
   SECTION("monitoring with a callback") {
@@ -81,6 +81,36 @@ TEST("monitoring another actor") {
     check_eq(*call_count2, 1);
     check_eq(*call_count3, 1);
   }
+  SECTION("duplicate monitors on one actor deliver two down messages") {
+    auto call_count = std::make_shared<int32_t>(0);
+    auto observer = sys.spawn([=](event_based_actor* self) {
+      self->monitor(client1);
+      self->monitor(client1);
+      self->set_down_handler(
+        [call_count](const down_msg&) { *call_count += 1; });
+      return behavior{
+        [](int32_t) {},
+      };
+    });
+    inject_exit(client1);
+    expect<down_msg>().with(std::ignore).to(observer);
+    check_eq(*call_count, 1);
+    expect<down_msg>().with(std::ignore).to(observer);
+    check_eq(*call_count, 2);
+  }
+  SECTION("double demonitor clears duplicate monitors") {
+    auto observer = sys.spawn([=](event_based_actor* self) {
+      self->monitor(client1);
+      self->monitor(client1);
+      self->demonitor(client1);
+      self->demonitor(client1);
+      return behavior{
+        [](int32_t) {},
+      };
+    });
+    inject_exit(client1);
+    check_eq(mail_count(observer), 0u);
+  }
   SECTION("demonitoring an actor cancels the down handler") {
     auto call_count = std::make_shared<int32_t>(0);
     auto observer = sys.spawn([=](event_based_actor* self) {
@@ -97,7 +127,7 @@ TEST("monitoring another actor") {
     check_eq(mail_count(observer), 0u);
     check_eq(*call_count, 0);
     inject_exit(client2);
-    expect<down_msg>().with(std::ignore).from(client2).to(observer);
+    expect<down_msg>().with(std::ignore).to(observer);
     check_eq(*call_count, 1);
   }
   SECTION("canceling a monitor with a callback") {

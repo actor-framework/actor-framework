@@ -4,10 +4,32 @@
 
 #include "caf/detail/monitor_action.hpp"
 
+#include "caf/abstract_actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/internal/attachable_predicate.hpp"
+
 namespace caf::detail {
 
 abstract_monitor_action::~abstract_monitor_action() noexcept {
   // nop
+}
+
+void abstract_monitor_action::ref() const noexcept {
+  ref_count_.inc();
+}
+
+void abstract_monitor_action::deref() const noexcept {
+  ref_count_.dec(this);
+}
+
+void abstract_monitor_action::on_dispose() {
+  if (auto observer = actor_cast<strong_actor_ptr>(observer_)) {
+    if (auto observed = actor_cast<strong_actor_ptr>(observed_)) {
+      auto* self = actor_cast<abstract_actor*>(observer);
+      auto pred = internal::attachable_predicate::monitored_with_callback(this);
+      self->del_monitor(actor_cast<abstract_actor*>(observed), pred);
+    }
+  }
 }
 
 } // namespace caf::detail

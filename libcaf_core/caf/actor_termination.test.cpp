@@ -3,6 +3,7 @@
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
 #include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
@@ -104,6 +105,126 @@ TEST("multiple awaited requests") {
   auto received_down_msg = std::make_shared<bool>(false);
   self->receive([received_down_msg](down_msg&) { *received_down_msg = true; });
   check(*received_down_msg);
+}
+
+SCENARIO("actors clean up incoming edges when they terminate") {
+  GIVEN("a client that monitors a server using the legacy API") {
+    auto server = sys.spawn([] {
+      return behavior{
+        [](int value) { return value + 1; },
+      };
+    });
+    auto client = sys.spawn([server](event_based_actor* self) {
+      self->monitor(server);
+      return behavior{
+        [self, server](int value) {
+          return self->mail(value).delegate(server);
+        },
+      };
+    });
+    auto wptr = actor_cast<weak_actor_ptr>(client);
+    // only the `client` variable holds a strong reference to the client actor
+    check_eq(client->ctrl()->strong_reference_count(), 1u);
+    // implicit ref (from the strong refs) + the ref from the monitor + `wptr`
+    check_eq(client->ctrl()->weak_reference_count(), 3u);
+    WHEN("the client terminates") {
+      client = nullptr; // will be cleaned up as unreachable
+      check_eq(mail_count(), 0u);
+      THEN("the server no longer holds a weak reference to the client") {
+        check_eq(wptr.ctrl()->strong_reference_count(), 0u);
+        check_eq(wptr.ctrl()->weak_reference_count(), 1u);
+      }
+    }
+  }
+  GIVEN("a client that monitors a server using the callback API") {
+    auto server = sys.spawn([] {
+      return behavior{
+        [](int value) { return value + 1; },
+      };
+    });
+    auto client = sys.spawn([server](event_based_actor* self) {
+      self->monitor(server, [](const error&) {});
+      return behavior{
+        [self, server](int value) {
+          return self->mail(value).delegate(server);
+        },
+      };
+    });
+    auto wptr = actor_cast<weak_actor_ptr>(client);
+    // only the `client` variable holds a strong reference to the client actor
+    check_eq(client->ctrl()->strong_reference_count(), 1u);
+    // implicit ref (from the strong refs) + the ref from the monitor + `wptr`
+    check_eq(client->ctrl()->weak_reference_count(), 3u);
+    WHEN("the client terminates") {
+      client = nullptr; // will be cleaned up as unreachable
+      check_eq(mail_count(), 0u);
+      THEN("the server no longer holds a weak reference to the client") {
+        check_eq(wptr.ctrl()->strong_reference_count(), 0u);
+        check_eq(wptr.ctrl()->weak_reference_count(), 1u);
+      }
+    }
+  }
+  GIVEN("a client that links to a server") {
+    auto server = sys.spawn([] {
+      return behavior{
+        [](int value) { return value + 1; },
+      };
+    });
+    auto client = sys.spawn([server](event_based_actor* self) {
+      self->link_to(server);
+      return behavior{
+        [self, server](int value) {
+          return self->mail(value).delegate(server);
+        },
+      };
+    });
+    auto wptr = actor_cast<weak_actor_ptr>(client);
+    // only the `client` variable holds a strong reference to the client actor
+    check_eq(client->ctrl()->strong_reference_count(), 1u);
+    // implicit ref + `wptr` + one backlink attachable on the server
+    check_eq(client->ctrl()->weak_reference_count(), 3u);
+    WHEN("the client terminates") {
+      client = nullptr; // will be cleaned up as unreachable
+      check_eq(mail_count(), 1u);
+      expect<exit_msg>().to(server);
+      check_eq(mail_count(), 0u);
+      THEN("the server no longer holds a weak reference to the client") {
+        check_eq(wptr.ctrl()->strong_reference_count(), 0u);
+        check_eq(wptr.ctrl()->weak_reference_count(), 1u);
+      }
+    }
+  }
+}
+
+SCENARIO("disposing monitor actions removes the attachable") {
+  GIVEN("a client that monitors a server") {
+    auto server = sys.spawn([] {
+      return behavior{
+        [](int value) { return value + 1; },
+      };
+    });
+    auto client = sys.spawn([server](event_based_actor* self) {
+      auto hdl = self->monitor(server, [](const error&) {});
+      return behavior{
+        [hdl](ok_atom) mutable { hdl.dispose(); },
+        [self, server](int value) {
+          return self->mail(value).delegate(server);
+        },
+      };
+    });
+    auto wptr = actor_cast<weak_actor_ptr>(client);
+    // only the `client` variable holds a strong reference to the client actor
+    check_eq(client->ctrl()->strong_reference_count(), 1u);
+    // implicit ref (from the strong refs) + the ref from the monitor + `wptr`
+    check_eq(client->ctrl()->weak_reference_count(), 3u);
+    WHEN("the client disposes the monitor action") {
+      inject().with(ok_atom_v).to(client);
+      THEN("the server no longer holds a weak reference to the client") {
+        check_eq(client->ctrl()->strong_reference_count(), 1u);
+        check_eq(client->ctrl()->weak_reference_count(), 2u);
+      }
+    }
+  }
 }
 
 } // WITH_FIXTURE(fixture)

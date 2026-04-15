@@ -52,6 +52,16 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `caf.metrics.filters.exclude`) now use simple wildcard matching with `*`
   (zero or more characters) and `?` (exactly one character) only. Glob-style
   patterns (`**`, `/`, `\`) are no longer supported.
+- Messages that CAF sends as part of terminating an actor such as `exit_msg` and
+  `down_msg` are now always sent anonymously, i.e., without a sender. This
+  avoids adding strong references to actors that are already shutting down. For
+  actors that terminate because they became unreachable, this change allows CAF
+  to destroy the actor object immediately after running cleanup code instead of
+  having to wait for the newly added references to expire again.
+- The `attachable::actor_exited` member function has received an additional
+  `abstract_actor* self` parameter. This allows us to remove weak pointers in
+  the attachable implementations to avoid unnecessary increment and decrement
+  operations on the reference count.
 
 ### Deprecated
 
@@ -147,6 +157,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix build issues on some BSD derivatives (#2135).
 - Fix alignment of `caf::async::batch` on 32bit ARM architecture (#2142).
 - Timestamps in log output are now rendered without surrounding quotes (#2216).
+- Actors now keep track of any other actor they have monitored during their
+  lifetime. When terminating, actors will now remove themselves from the
+  monitoring lists of other actors to avoid leaving stale weak pointers behind.
+  This change allows CAF to clean up memory earlier. In extreme cases, like
+  having central actors that are frequently monitored but usually live for the
+  duration of the application, those stale weak pointers effectively caused
+  memory leaks since memory can only be freed fully once all strong and weak
+  references have expired.
 
 ### Removed
 

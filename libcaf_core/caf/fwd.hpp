@@ -95,6 +95,7 @@ class [[nodiscard]] error;
 class abstract_actor;
 class abstract_blocking_actor;
 class abstract_mailbox;
+class abstract_ref_counted;
 class action;
 class actor;
 class actor_addr;
@@ -194,6 +195,7 @@ struct unit_t;
 
 enum class exit_reason : uint8_t;
 enum class invoke_message_result;
+enum class message_priority;
 enum class pec : uint8_t;
 enum class sec : uint8_t;
 enum class spawn_options : int;
@@ -357,6 +359,7 @@ namespace detail {
 
 struct meta_object;
 
+class abstract_monitor_action;
 class abstract_worker;
 class abstract_worker_hub;
 class actor_system_access;
@@ -370,6 +373,7 @@ class response_promise_state;
 class stream_bridge;
 class stream_bridge_sub;
 
+using abstract_monitor_action_ptr = intrusive_ptr<abstract_monitor_action>;
 using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
 
 } // namespace detail
@@ -391,6 +395,7 @@ using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
 // -- unique pointer aliases ---------------------------------------------------
 
+using attachable_ptr = std::unique_ptr<attachable>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element>;
 
 } // namespace caf
