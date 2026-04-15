@@ -12,15 +12,26 @@ namespace caf {
 /// Serializes inspectable objects to a sequence of bytes.
 class CAF_CORE_EXPORT byte_writer : public serializer {
 public:
-  using serializer::serializer;
-
   ~byte_writer() override;
 
   /// Retrieves the serialized bytes.
-  virtual const_byte_span bytes() const = 0;
+  /// @warning This span becomes invalid when calling any non-const member
+  ///          function on the writer object.
+  [[nodiscard]] virtual const_byte_span bytes() const = 0;
 
   /// Clears any buffered data and resets the writer to its initial state.
   virtual void reset() = 0;
+
+  /// Jumps `num_bytes` forward by inserting zeros at the end of the buffer.
+  /// @returns the offset where the zeros were inserted.
+  [[nodiscard]] virtual size_t skip(size_t num_bytes) = 0;
+
+  /// Overrides the buffer at `offset` with `content`.
+  /// @returns `true` if the buffer had enough space to hold `content`, `false`
+  ///          otherwise.
+  [[nodiscard]] virtual bool
+  update(size_t offset, const_byte_span content) noexcept
+    = 0;
 };
 
 } // namespace caf

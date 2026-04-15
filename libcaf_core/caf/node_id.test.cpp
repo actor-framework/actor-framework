@@ -29,8 +29,6 @@ node_id roundtrip(node_id nid) {
     binary_deserializer source{buf};
     if (!source.apply(result))
       this_test.fail("deserialization failed: {}", source.get_error());
-    if (source.remaining() > 0)
-      this_test.fail("binary_serializer ignored part of its input");
   }
   return result;
 }

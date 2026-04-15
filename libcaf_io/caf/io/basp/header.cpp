@@ -4,6 +4,9 @@
 
 #include "caf/io/basp/header.hpp"
 
+#include "caf/detail/network_order.hpp"
+
+#include <cstring>
 #include <sstream>
 
 namespace caf::io::basp {
@@ -48,6 +51,24 @@ bool heartbeat_valid(const header& hdr) {
 }
 
 } // namespace
+
+void header::write_to(std::array<std::byte, header_size>& buf) const noexcept {
+  auto* pos = buf.data();
+  *pos++ = static_cast<std::byte>(operation);
+  *pos++ = static_cast<std::byte>(0); // padding 1
+  *pos++ = static_cast<std::byte>(0); // padding 2
+  *pos++ = static_cast<std::byte>(flags);
+  auto append = [&pos](auto uint_value) {
+    auto out_value = detail::to_network_order(uint_value);
+    auto bytes = as_bytes(std::span{&out_value, 1});
+    memcpy(pos, bytes.data(), bytes.size());
+    pos += bytes.size();
+  };
+  append(payload_len);
+  append(operation_data);
+  append(source_actor);
+  append(dest_actor);
+}
 
 bool valid(const header& hdr) {
   switch (hdr.operation) {
