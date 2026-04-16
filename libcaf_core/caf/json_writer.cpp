@@ -40,7 +40,7 @@ char last_non_ws_char(const std::vector<char>& buf) {
 
 namespace caf {
 
-class json_writer::impl : public text_writer {
+class json_writer_impl : public text_writer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -48,7 +48,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit impl(caf::actor_handle_codec* codec) : codec_(codec) {
+  explicit json_writer_impl(caf::actor_handle_codec* codec) : codec_(codec) {
     // Reserve some reasonable storage for the character buffer. JSON grows
     // quickly, so we can start at 1kb to avoid a couple of small allocations in
     // the beginning.
@@ -704,12 +704,12 @@ private:
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-json_writer::json_writer(caf::actor_handle_codec* codec) {
-  static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(codec));
+json_writer::json_writer(caf::actor_handle_codec* codec)
+  : super(new (impl_storage_) json_writer_impl(codec)) {
+  static_assert(sizeof(json_writer_impl) <= impl_storage_size);
 }
 
-json_writer::~json_writer() {
+json_writer::~json_writer() noexcept {
   // nop
 }
 
@@ -767,154 +767,6 @@ void json_writer::mapper(const type_id_mapper* ptr) noexcept {
 
 void json_writer::reset() {
   impl_->reset();
-}
-
-// -- overrides ----------------------------------------------------------------
-
-void json_writer::set_error(error stop_reason) {
-  impl_->set_error(std::move(stop_reason));
-}
-
-error& json_writer::get_error() noexcept {
-  return impl_->get_error();
-}
-
-bool json_writer::has_human_readable_format() const noexcept {
-  return impl_->has_human_readable_format();
-}
-
-bool json_writer::begin_object(type_id_t id, std::string_view name) {
-  return impl_->begin_object(id, name);
-}
-
-bool json_writer::end_object() {
-  return impl_->end_object();
-}
-
-bool json_writer::begin_field(std::string_view name) {
-  return impl_->begin_field(name);
-}
-
-bool json_writer::begin_field(std::string_view name, bool is_present) {
-  return impl_->begin_field(name, is_present);
-}
-
-bool json_writer::begin_field(std::string_view name,
-                              std::span<const type_id_t> types, size_t index) {
-  return impl_->begin_field(name, types, index);
-}
-
-bool json_writer::begin_field(std::string_view name, bool is_present,
-                              std::span<const type_id_t> types, size_t index) {
-  return impl_->begin_field(name, is_present, types, index);
-}
-
-bool json_writer::end_field() {
-  return impl_->end_field();
-}
-
-bool json_writer::begin_tuple(size_t size) {
-  return impl_->begin_tuple(size);
-}
-
-bool json_writer::end_tuple() {
-  return impl_->end_tuple();
-}
-
-bool json_writer::begin_key_value_pair() {
-  return impl_->begin_key_value_pair();
-}
-
-bool json_writer::end_key_value_pair() {
-  return impl_->end_key_value_pair();
-}
-
-bool json_writer::begin_sequence(size_t size) {
-  return impl_->begin_sequence(size);
-}
-
-bool json_writer::end_sequence() {
-  return impl_->end_sequence();
-}
-
-bool json_writer::begin_associative_array(size_t size) {
-  return impl_->begin_associative_array(size);
-}
-
-bool json_writer::end_associative_array() {
-  return impl_->end_associative_array();
-}
-
-bool json_writer::value(std::byte x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(bool x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(int8_t x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(uint8_t x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(int16_t x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(uint16_t x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(int32_t x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(uint32_t x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(int64_t x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(uint64_t x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(float x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(double x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(long double x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(std::string_view x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(const std::u16string& x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(const std::u32string& x) {
-  return impl_->value(x);
-}
-
-bool json_writer::value(const_byte_span x) {
-  return impl_->value(x);
-}
-
-caf::actor_handle_codec* json_writer::actor_handle_codec() {
-  return impl_->actor_handle_codec();
 }
 
 } // namespace caf

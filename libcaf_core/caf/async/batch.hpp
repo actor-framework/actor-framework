@@ -197,14 +197,14 @@ private:
 
 template <class Inspector>
   requires(!Inspector::is_loading)
-auto inspect(Inspector& f, batch& x) -> decltype(x.save(f)) {
-  return x.save(f);
+auto inspect(Inspector& f, batch& x) -> decltype(x.save(f.as_serializer())) {
+  return x.save(f.as_serializer());
 }
 
 template <class Inspector>
   requires Inspector::is_loading
-auto inspect(Inspector& f, batch& x) -> decltype(x.load(f)) {
-  return x.load(f);
+auto inspect(Inspector& f, batch& x) -> decltype(x.load(f.as_deserializer())) {
+  return x.load(f.as_deserializer());
 }
 
 template <class List>

@@ -6,7 +6,7 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/placement_ptr.hpp"
+#include "caf/load_inspector_base.hpp"
 #include "caf/text_reader.hpp"
 
 #include <cstddef>
@@ -14,8 +14,11 @@
 namespace caf {
 
 /// Deserializes an inspectable object from a JSON-formatted string.
-class CAF_CORE_EXPORT json_reader : public text_reader {
+class CAF_CORE_EXPORT json_reader final
+  : public load_inspector_base<json_reader, text_reader> {
 public:
+  using super = load_inspector_base<json_reader, text_reader>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit json_reader(caf::actor_handle_codec* codec = nullptr);
@@ -24,23 +27,17 @@ public:
 
   json_reader& operator=(const json_reader&) = delete;
 
-  ~json_reader() override;
+  ~json_reader() noexcept override;
 
   // -- properties -------------------------------------------------------------
 
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept final;
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept;
 
-  void field_type_suffix(std::string_view suffix) noexcept final;
+  void field_type_suffix(std::string_view suffix) noexcept;
 
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept final;
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
 
-  void mapper(const type_id_mapper* ptr) noexcept final;
-
-  // -- modifiers --------------------------------------------------------------
-
-  void set_error(error stop_reason) final;
-
-  error& get_error() noexcept final;
+  void mapper(const type_id_mapper* ptr) noexcept;
 
   /// Parses @p json_text into an internal representation. After loading the
   /// JSON input, the reader is ready for attempting to deserialize inspectable
@@ -51,7 +48,7 @@ public:
   /// @note Implicitly calls `reset`.
   bool load(std::string_view json_text);
 
-  bool load_bytes(const_byte_span bytes) final;
+  bool load_bytes(const_byte_span bytes);
 
   /// Reads the input stream @p input and parses the content into an internal
   /// representation. After loading the JSON input, the reader is ready for
@@ -76,92 +73,24 @@ public:
   /// Removes any loaded JSON data and reclaims memory resources.
   void reset();
 
-  // -- finals --------------------------------------------------------------
+  bool fetch_next_object_name(std::string_view& type_name) {
+    return impl_->fetch_next_object_name(type_name);
+  }
 
-  bool has_human_readable_format() const noexcept final;
+  bool next_object_name_matches(std::string_view type_name) {
+    return impl_->next_object_name_matches(type_name);
+  }
 
-  bool fetch_next_object_type(type_id_t& type) final;
+  bool assert_next_object_name(std::string_view type_name) {
+    return impl_->assert_next_object_name(type_name);
+  }
 
-  bool fetch_next_object_name(std::string_view& type_name) final;
-
-  bool begin_object(type_id_t type, std::string_view name) final;
-
-  bool end_object() final;
-
-  bool begin_field(std::string_view) final;
-
-  bool begin_field(std::string_view name, bool& is_present) final;
-
-  bool begin_field(std::string_view name, std::span<const type_id_t> types,
-                   size_t& index) final;
-
-  bool begin_field(std::string_view name, bool& is_present,
-                   std::span<const type_id_t> types, size_t& index) final;
-
-  bool end_field() final;
-
-  bool begin_tuple(size_t size) final;
-
-  bool end_tuple() final;
-
-  bool begin_key_value_pair() final;
-
-  bool end_key_value_pair() final;
-
-  bool begin_sequence(size_t& size) final;
-
-  bool end_sequence() final;
-
-  bool begin_associative_array(size_t& size) final;
-
-  bool end_associative_array() final;
-
-  using text_reader::value;
-
-  bool value(std::byte& x) final;
-
-  bool value(bool& x) final;
-
-  bool value(int8_t& x) final;
-
-  bool value(uint8_t& x) final;
-
-  bool value(int16_t& x) final;
-
-  bool value(uint16_t& x) final;
-
-  bool value(int32_t& x) final;
-
-  bool value(uint32_t& x) final;
-
-  bool value(int64_t& x) final;
-
-  bool value(uint64_t& x) final;
-
-  bool value(float& x) final;
-
-  bool value(double& x) final;
-
-  bool value(long double& x) final;
-
-  bool value(std::string& x) final;
-
-  bool value(std::u16string& x) final;
-
-  bool value(std::u32string& x) final;
-
-  bool value(byte_span x) final;
-
-  caf::actor_handle_codec* actor_handle_codec() final;
+  bool has_human_readable_format() const noexcept {
+    return true;
+  }
 
 private:
   static constexpr size_t impl_storage_size = 196;
-
-  /// Opaque implementation class.
-  class impl;
-
-  /// Pointer to the implementation object.
-  placement_ptr<impl> impl_;
 
   /// Storage for the implementation object.
   alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
