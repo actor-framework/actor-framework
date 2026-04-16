@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/as_mutable_ref.hpp"
 #include "caf/sec.hpp"
 
 #include <string>

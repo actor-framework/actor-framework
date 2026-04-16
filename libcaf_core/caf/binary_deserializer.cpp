@@ -276,10 +276,9 @@ public:
 
   bool value(long double& x) override {
     // TODO: Our IEEE-754 conversion currently does not work for long double.
-    // The
-    //       standard does not guarantee a fixed representation for this type,
-    //       but on X86 we can usually rely on 80-bit precision. For now, we
-    //       fall back to string conversion.
+    //       The standard does not guarantee a fixed representation for this
+    //       type, but on X86 we can usually rely on 80-bit precision. For now,
+    //       we fall back to string conversion.
     std::string tmp;
     if (!value(tmp))
       return false;
@@ -350,6 +349,61 @@ public:
     return end_sequence();
   }
 
+  bool value(std::vector<bool>& what) override {
+    what.clear();
+    size_t len = 0;
+    if (!begin_sequence(len))
+      return false;
+    if (len == 0)
+      return end_sequence();
+    size_t blocks = len / 8;
+    for (size_t block = 0; block < blocks; ++block) {
+      uint8_t tmp = 0;
+      if (!value(tmp))
+        return false;
+      what.emplace_back((tmp & 0b1000'0000) != 0);
+      what.emplace_back((tmp & 0b0100'0000) != 0);
+      what.emplace_back((tmp & 0b0010'0000) != 0);
+      what.emplace_back((tmp & 0b0001'0000) != 0);
+      what.emplace_back((tmp & 0b0000'1000) != 0);
+      what.emplace_back((tmp & 0b0000'0100) != 0);
+      what.emplace_back((tmp & 0b0000'0010) != 0);
+      what.emplace_back((tmp & 0b0000'0001) != 0);
+    }
+    auto trailing_block_size = len % 8;
+    if (trailing_block_size > 0) {
+      uint8_t tmp = 0;
+      if (!value(tmp))
+        return false;
+      switch (trailing_block_size) {
+        case 7:
+          what.emplace_back((tmp & 0b0100'0000) != 0);
+          [[fallthrough]];
+        case 6:
+          what.emplace_back((tmp & 0b0010'0000) != 0);
+          [[fallthrough]];
+        case 5:
+          what.emplace_back((tmp & 0b0001'0000) != 0);
+          [[fallthrough]];
+        case 4:
+          what.emplace_back((tmp & 0b0000'1000) != 0);
+          [[fallthrough]];
+        case 3:
+          what.emplace_back((tmp & 0b0000'0100) != 0);
+          [[fallthrough]];
+        case 2:
+          what.emplace_back((tmp & 0b0000'0010) != 0);
+          [[fallthrough]];
+        case 1:
+          what.emplace_back((tmp & 0b0000'0001) != 0);
+          [[fallthrough]];
+        default:
+          break;
+      }
+    }
+    return end_sequence();
+  }
+
 private:
   /// Checks whether we can read `read_size` more bytes.
   bool range_check(size_t read_size) const noexcept {
@@ -403,85 +457,20 @@ private:
 
 binary_deserializer::binary_deserializer(
   const_byte_span input, caf::actor_handle_codec* codec) noexcept
-  : impl_(new(impl_storage_)
+  : super(new(impl_storage_)
             binary_deserializer_impl(input.data(), input.size(), codec)) {
   static_assert(sizeof(binary_deserializer_impl) <= impl_storage_size);
 }
 
 binary_deserializer::binary_deserializer(
   const void* buf, size_t size, caf::actor_handle_codec* codec) noexcept
-  : impl_(new(impl_storage_) binary_deserializer_impl(
+  : super(new(impl_storage_) binary_deserializer_impl(
       reinterpret_cast<const std::byte*>(buf), size, codec)) {
-  static_assert(sizeof(binary_deserializer_impl) <= impl_storage_size);
+  // nop
 }
 
 binary_deserializer::~binary_deserializer() noexcept {
   // nop
-}
-
-// -- interface functions ----------------------------------------------------
-
-void binary_deserializer::set_error(error stop_reason) {
-  impl_->set_error(std::move(stop_reason));
-}
-
-error& binary_deserializer::get_error() noexcept {
-  return impl_->get_error();
-}
-
-bool binary_deserializer::value(std::vector<bool>& what) {
-  what.clear();
-  size_t len = 0;
-  if (!begin_sequence(len))
-    return false;
-  if (len == 0)
-    return end_sequence();
-  size_t blocks = len / 8;
-  for (size_t block = 0; block < blocks; ++block) {
-    uint8_t tmp = 0;
-    if (!value(tmp))
-      return false;
-    what.emplace_back((tmp & 0b1000'0000) != 0);
-    what.emplace_back((tmp & 0b0100'0000) != 0);
-    what.emplace_back((tmp & 0b0010'0000) != 0);
-    what.emplace_back((tmp & 0b0001'0000) != 0);
-    what.emplace_back((tmp & 0b0000'1000) != 0);
-    what.emplace_back((tmp & 0b0000'0100) != 0);
-    what.emplace_back((tmp & 0b0000'0010) != 0);
-    what.emplace_back((tmp & 0b0000'0001) != 0);
-  }
-  auto trailing_block_size = len % 8;
-  if (trailing_block_size > 0) {
-    uint8_t tmp = 0;
-    if (!value(tmp))
-      return false;
-    switch (trailing_block_size) {
-      case 7:
-        what.emplace_back((tmp & 0b0100'0000) != 0);
-        [[fallthrough]];
-      case 6:
-        what.emplace_back((tmp & 0b0010'0000) != 0);
-        [[fallthrough]];
-      case 5:
-        what.emplace_back((tmp & 0b0001'0000) != 0);
-        [[fallthrough]];
-      case 4:
-        what.emplace_back((tmp & 0b0000'1000) != 0);
-        [[fallthrough]];
-      case 3:
-        what.emplace_back((tmp & 0b0000'0100) != 0);
-        [[fallthrough]];
-      case 2:
-        what.emplace_back((tmp & 0b0000'0010) != 0);
-        [[fallthrough]];
-      case 1:
-        what.emplace_back((tmp & 0b0000'0001) != 0);
-        [[fallthrough]];
-      default:
-        break;
-    }
-  }
-  return end_sequence();
 }
 
 } // namespace caf

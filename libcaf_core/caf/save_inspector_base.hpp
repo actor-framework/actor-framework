@@ -5,15 +5,23 @@
 #pragma once
 
 #include "caf/inspector_access.hpp"
+#include "caf/placement_ptr.hpp"
 #include "caf/save_inspector.hpp"
 
-#include <string_view>
+#include <concepts>
+#include <cstddef>
+#include <span>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 namespace caf {
 
+template <class Subtype, class SubtypeInterface = void>
+class save_inspector_base;
+
 template <class Subtype>
-class save_inspector_base : public save_inspector {
+class save_inspector_base<Subtype, void> : public save_inspector {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -114,6 +122,142 @@ private:
   Subtype& dref() {
     return *static_cast<Subtype*>(this);
   }
+};
+
+template <class Subtype, class SubtypeInterface>
+class save_inspector_base : public save_inspector_base<Subtype, void> {
+public:
+  void set_error(error stop_reason) final {
+    impl_->set_error(std::move(stop_reason));
+  }
+
+  error& get_error() noexcept final {
+    return impl_->get_error();
+  }
+
+  bool begin_object(type_id_t id, std::string_view name) noexcept {
+    return impl_->begin_object(id, name);
+  }
+
+  bool end_object() {
+    return impl_->end_object();
+  }
+
+  bool begin_field(std::string_view type_name) noexcept {
+    return impl_->begin_field(type_name);
+  }
+
+  bool begin_field(std::string_view type_name, bool is_present) {
+    return impl_->begin_field(type_name, is_present);
+  }
+
+  bool begin_field(std::string_view type_name, std::span<const type_id_t> types,
+                   size_t index) {
+    return impl_->begin_field(type_name, types, index);
+  }
+
+  bool begin_field(std::string_view type_name, bool is_present,
+                   std::span<const type_id_t> types, size_t index) {
+    return impl_->begin_field(type_name, is_present, types, index);
+  }
+
+  bool end_field() {
+    return impl_->end_field();
+  }
+
+  bool begin_tuple(size_t size) {
+    return impl_->begin_tuple(size);
+  }
+
+  bool end_tuple() {
+    return impl_->end_tuple();
+  }
+
+  bool begin_key_value_pair() {
+    return impl_->begin_key_value_pair();
+  }
+
+  bool end_key_value_pair() {
+    return impl_->end_key_value_pair();
+  }
+
+  bool begin_sequence(size_t list_size) {
+    return impl_->begin_sequence(list_size);
+  }
+
+  bool end_sequence() {
+    return impl_->end_sequence();
+  }
+
+  bool begin_associative_array(size_t size) {
+    return impl_->begin_associative_array(size);
+  }
+
+  bool end_associative_array() {
+    return impl_->end_associative_array();
+  }
+
+  bool value(std::byte what) {
+    return impl_->value(what);
+  }
+
+  template <std::integral T>
+  bool value(T what) {
+    return impl_->value(static_cast<detail::squashed_int_t<T>>(what));
+  }
+
+  template <std::floating_point T>
+  bool value(T what) {
+    return impl_->value(what);
+  }
+
+  bool value(const strong_actor_ptr& what) {
+    return impl_->value(what);
+  }
+
+  bool value(const weak_actor_ptr& what) {
+    return impl_->value(what);
+  }
+
+  bool value(std::string_view what) {
+    return impl_->value(what);
+  }
+
+  bool value(const std::u16string& what) {
+    return impl_->value(what);
+  }
+
+  bool value(const std::u32string& what) {
+    return impl_->value(what);
+  }
+
+  bool value(const_byte_span what) {
+    return impl_->value(what);
+  }
+
+  bool value(const std::vector<bool>& x) {
+    return impl_->value(x);
+  }
+
+  bool builtin_inspect(const std::vector<bool>& x) {
+    return value(x);
+  }
+
+  caf::actor_handle_codec* actor_handle_codec() {
+    return impl_->actor_handle_codec();
+  }
+
+  SubtypeInterface& as_serializer() noexcept {
+    return *impl_;
+  }
+
+protected:
+  explicit save_inspector_base(SubtypeInterface* impl) noexcept : impl_(impl) {
+    // nop
+  }
+
+  /// Pointer to the implementation object.
+  placement_ptr<SubtypeInterface> impl_;
 };
 
 } // namespace caf

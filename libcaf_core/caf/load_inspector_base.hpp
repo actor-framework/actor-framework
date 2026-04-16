@@ -6,16 +6,24 @@
 
 #include "caf/inspector_access.hpp"
 #include "caf/load_inspector.hpp"
+#include "caf/placement_ptr.hpp"
 #include "caf/sec.hpp"
 
-#include <array>
+#include <concepts>
+#include <cstddef>
+#include <span>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 namespace caf {
 
+template <class Subtype, class SubtypeInterface = void>
+class load_inspector_base;
+
+/// Adds entry points for the type inspection DSL.
 template <class Subtype>
-class load_inspector_base : public load_inspector {
+class load_inspector_base<Subtype, void> : public load_inspector {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -157,6 +165,190 @@ private:
   Subtype& dref() {
     return *static_cast<Subtype*>(this);
   }
+};
+
+/// Adds entry points for the type inspection DSL and dispatches common
+/// operations to the implementation object.
+template <class Subtype, class SubtypeInterface>
+class load_inspector_base : public load_inspector_base<Subtype, void> {
+public:
+  void set_error(error stop_reason) final {
+    impl_->set_error(std::move(stop_reason));
+  }
+
+  error& get_error() noexcept final {
+    return impl_->get_error();
+  }
+
+  bool fetch_next_object_type(type_id_t& type) noexcept {
+    return impl_->fetch_next_object_type(type);
+  }
+
+  bool begin_object(type_id_t type, std::string_view name) noexcept {
+    return impl_->begin_object(type, name);
+  }
+
+  bool end_object() noexcept {
+    return impl_->end_object();
+  }
+
+  bool begin_field(std::string_view name) noexcept {
+    return impl_->begin_field(name);
+  }
+
+  bool begin_field(std::string_view name, bool& is_present) noexcept {
+    return impl_->begin_field(name, is_present);
+  }
+
+  bool begin_field(std::string_view name, std::span<const type_id_t> types,
+                   size_t& index) noexcept {
+    return impl_->begin_field(name, types, index);
+  }
+
+  bool begin_field(std::string_view name, bool& is_present,
+                   std::span<const type_id_t> types, size_t& index) noexcept {
+    return impl_->begin_field(name, is_present, types, index);
+  }
+
+  bool end_field() {
+    return impl_->end_field();
+  }
+
+  bool begin_tuple(size_t size) noexcept {
+    return impl_->begin_tuple(size);
+  }
+
+  bool end_tuple() noexcept {
+    return impl_->end_tuple();
+  }
+
+  bool begin_key_value_pair() noexcept {
+    return impl_->begin_key_value_pair();
+  }
+
+  bool end_key_value_pair() noexcept {
+    return impl_->end_key_value_pair();
+  }
+
+  bool begin_sequence(size_t& list_size) noexcept {
+    return impl_->begin_sequence(list_size);
+  }
+
+  bool end_sequence() noexcept {
+    return impl_->end_sequence();
+  }
+
+  bool begin_associative_array(size_t& size) noexcept {
+    return impl_->begin_associative_array(size);
+  }
+
+  bool end_associative_array() noexcept {
+    return impl_->end_associative_array();
+  }
+
+  bool value(bool& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(std::byte& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(uint8_t& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(int8_t& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(int16_t& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(uint16_t& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(int32_t& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(uint32_t& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(int64_t& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(uint64_t& what) noexcept {
+    return impl_->value(what);
+  }
+
+  template <std::integral T>
+  bool value(T& what) noexcept {
+    auto tmp = detail::squashed_int_t<T>{0};
+    if (impl_->value(tmp)) {
+      what = static_cast<T>(tmp);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  template <std::floating_point T>
+  bool value(T& what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(strong_actor_ptr& what) {
+    return impl_->value(what);
+  }
+
+  bool value(weak_actor_ptr& what) {
+    return impl_->value(what);
+  }
+
+  bool value(std::string& what) {
+    return impl_->value(what);
+  }
+
+  bool value(std::u16string& what) {
+    return impl_->value(what);
+  }
+
+  bool value(std::u32string& what) {
+    return impl_->value(what);
+  }
+
+  bool value(byte_span what) noexcept {
+    return impl_->value(what);
+  }
+
+  bool value(std::vector<bool>& x) {
+    return impl_->value(x);
+  }
+
+  bool builtin_inspect(std::vector<bool>& x) {
+    return value(x);
+  }
+
+  caf::actor_handle_codec* actor_handle_codec() {
+    return impl_->actor_handle_codec();
+  }
+
+  SubtypeInterface& as_deserializer() noexcept {
+    return *impl_;
+  }
+
+protected:
+  explicit load_inspector_base(SubtypeInterface* impl) noexcept : impl_(impl) {
+    // nop
+  }
+
+  /// Pointer to the implementation object.
+  placement_ptr<SubtypeInterface> impl_;
 };
 
 } // namespace caf

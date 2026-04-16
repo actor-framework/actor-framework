@@ -16,7 +16,20 @@ public:
   ~text_reader() override;
 
   /// Resets the reader and loads a sequence of bytes to deserialize from.
+  /// Usually interprets the bytes as UTF-8 encoded text.
   virtual bool load_bytes(const_byte_span bytes) = 0;
+
+  /// Resets the reader and loads a string to deserialize from.
+  virtual bool load_text(std::string_view text) = 0;
+
+  /// Reverts the state of the reader back to where it was after calling
+  /// `load_bytes`.
+  /// @post The reader is ready for attempting to deserialize another
+  ///       inspectable object.
+  virtual void revert() = 0;
+
+  /// Removes any loaded data and reclaims memory resources.
+  virtual void reset() = 0;
 
   /// Returns the suffix for generating type annotation fields for variant
   /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"

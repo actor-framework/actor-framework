@@ -270,10 +270,9 @@ public:
 
   bool value(long double x) override {
     // TODO: Our IEEE-754 conversion currently does not work for long double.
-    // The
-    //       standard does not guarantee a fixed representation for this type,
-    //       but on X86 we can usually rely on 80-bit precision. For now, we
-    //       fall back to string conversion.
+    //       The standard does not guarantee a fixed representation for this
+    //       type, but on X86 we can usually rely on 80-bit precision. For now,
+    //       we fall back to string conversion.
     std::ostringstream oss;
     oss << std::setprecision(std::numeric_limits<long double>::digits) << x;
     auto tmp = oss.str();
@@ -307,6 +306,78 @@ public:
     return end_sequence();
   }
 
+  bool value(const std::vector<bool>& what) override {
+    auto len = what.size();
+    if (!begin_sequence(len))
+      return false;
+    if (len == 0)
+      return end_sequence();
+    size_t pos = 0;
+    size_t blocks = len / 8;
+    for (size_t block = 0; block < blocks; ++block) {
+      uint8_t tmp = 0;
+      if (what[pos++])
+        tmp |= 0b1000'0000;
+      if (what[pos++])
+        tmp |= 0b0100'0000;
+      if (what[pos++])
+        tmp |= 0b0010'0000;
+      if (what[pos++])
+        tmp |= 0b0001'0000;
+      if (what[pos++])
+        tmp |= 0b0000'1000;
+      if (what[pos++])
+        tmp |= 0b0000'0100;
+      if (what[pos++])
+        tmp |= 0b0000'0010;
+      if (what[pos++])
+        tmp |= 0b0000'0001;
+      if (!value(tmp)) {
+        return false;
+      }
+    }
+    auto trailing_block_size = len % 8;
+    if (trailing_block_size > 0) {
+      uint8_t tmp = 0;
+      switch (trailing_block_size) {
+        case 7:
+          if (what[pos++])
+            tmp |= 0b0100'0000;
+          [[fallthrough]];
+        case 6:
+          if (what[pos++])
+            tmp |= 0b0010'0000;
+          [[fallthrough]];
+        case 5:
+          if (what[pos++])
+            tmp |= 0b0001'0000;
+          [[fallthrough]];
+        case 4:
+          if (what[pos++])
+            tmp |= 0b0000'1000;
+          [[fallthrough]];
+        case 3:
+          if (what[pos++])
+            tmp |= 0b0000'0100;
+          [[fallthrough]];
+        case 2:
+          if (what[pos++])
+            tmp |= 0b0000'0010;
+          [[fallthrough]];
+        case 1:
+          if (what[pos++])
+            tmp |= 0b0000'0001;
+          [[fallthrough]];
+        default:
+          break;
+      }
+      if (!value(tmp)) {
+        return false;
+      }
+    }
+    return end_sequence();
+  }
+
 private:
   template <class T>
   bool int_value(T x) {
@@ -330,88 +401,12 @@ private:
 
 binary_serializer::binary_serializer(byte_buffer& buf,
                                      caf::actor_handle_codec* codec) noexcept
-  : impl_(new(impl_storage_) binary_serializer_impl(buf, codec)) {
+  : super(new(impl_storage_) binary_serializer_impl(buf, codec)) {
   static_assert(sizeof(binary_serializer_impl) <= impl_storage_size);
 }
 
 binary_serializer::~binary_serializer() noexcept {
   // nop
-}
-
-void binary_serializer::set_error(error stop_reason) {
-  impl_->set_error(std::move(stop_reason));
-}
-
-error& binary_serializer::get_error() noexcept {
-  return impl_->get_error();
-}
-
-bool binary_serializer::value(const std::vector<bool>& what) {
-  auto len = what.size();
-  if (!begin_sequence(len))
-    return false;
-  if (len == 0)
-    return end_sequence();
-  size_t pos = 0;
-  size_t blocks = len / 8;
-  for (size_t block = 0; block < blocks; ++block) {
-    uint8_t tmp = 0;
-    if (what[pos++])
-      tmp |= 0b1000'0000;
-    if (what[pos++])
-      tmp |= 0b0100'0000;
-    if (what[pos++])
-      tmp |= 0b0010'0000;
-    if (what[pos++])
-      tmp |= 0b0001'0000;
-    if (what[pos++])
-      tmp |= 0b0000'1000;
-    if (what[pos++])
-      tmp |= 0b0000'0100;
-    if (what[pos++])
-      tmp |= 0b0000'0010;
-    if (what[pos++])
-      tmp |= 0b0000'0001;
-    value(tmp);
-  }
-  auto trailing_block_size = len % 8;
-  if (trailing_block_size > 0) {
-    uint8_t tmp = 0;
-    switch (trailing_block_size) {
-      case 7:
-        if (what[pos++])
-          tmp |= 0b0100'0000;
-        [[fallthrough]];
-      case 6:
-        if (what[pos++])
-          tmp |= 0b0010'0000;
-        [[fallthrough]];
-      case 5:
-        if (what[pos++])
-          tmp |= 0b0001'0000;
-        [[fallthrough]];
-      case 4:
-        if (what[pos++])
-          tmp |= 0b0000'1000;
-        [[fallthrough]];
-      case 3:
-        if (what[pos++])
-          tmp |= 0b0000'0100;
-        [[fallthrough]];
-      case 2:
-        if (what[pos++])
-          tmp |= 0b0000'0010;
-        [[fallthrough]];
-      case 1:
-        if (what[pos++])
-          tmp |= 0b0000'0001;
-        [[fallthrough]];
-      default:
-        break;
-    }
-    value(tmp);
-  }
-  return end_sequence();
 }
 
 } // namespace caf

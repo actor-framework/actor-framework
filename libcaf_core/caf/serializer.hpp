@@ -153,16 +153,17 @@ public:
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
   virtual bool value(const_byte_span x) = 0;
 
+  /// Adds the vector of booleans to the output.
+  virtual bool value(const std::vector<bool>& x);
+
+  // Announce special handling of `vector<bool>` to the inspection API.
+  bool builtin_inspect(const std::vector<bool>& x) {
+    return value(x);
+  }
+
   bool value(const strong_actor_ptr& ptr);
 
   bool value(const weak_actor_ptr& ptr);
-
-  using super::list;
-
-  /// Adds each boolean in `xs` to the output. Derived classes can override this
-  /// member function to pack the booleans, for example to avoid using one
-  /// byte for each value in a binary output format.
-  virtual bool list(const std::vector<bool>& xs);
 
   virtual caf::actor_handle_codec* actor_handle_codec() = 0;
 
