@@ -30,15 +30,7 @@
 
 namespace caf {
 
-namespace {
-
-bool load(const detail::meta_object& meta, caf::deserializer& source,
-          void* obj) {
-  return meta.load(source, obj);
-}
-
-template <class Deserializer>
-bool load_data(Deserializer& source, message::data_ptr& data) {
+bool message::load(deserializer& source) {
   // For machine-to-machine data formats, we prefix the type information.
   if (!source.has_human_readable_format()) {
     GUARDED(source.begin_object(type_id_v<message>, "message"));
@@ -49,7 +41,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     if (msg_size > static_cast<size_t>(uint16_limits::max() - 1))
       STOP(sec::invalid_argument, "too many types for message");
     if (msg_size == 0) {
-      data.reset();
+      data_.reset();
       return source.end_sequence()           //
              && source.end_field()           //
              && source.begin_field("values") //
@@ -86,11 +78,11 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
       auto& meta = gmos[types[i]];
       meta.default_construct(pos);
       ptr->inc_constructed_elements();
-      if (!load(meta, source, pos))
+      if (!meta.load(source, pos))
         return false;
       pos += meta.padded_size;
     }
-    data.reset(ptr.release(), adopt_ref);
+    data_.reset(ptr.release(), adopt_ref);
     return source.end_tuple() && source.end_field() && source.end_object();
   }
   // For human-readable data formats, we serialize messages as a single list of
@@ -157,7 +149,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
           STOP(sec::runtime_error, "unable to allocate memory");
         meta_obj->default_construct(vptr.get());
         objects.emplace_back(vptr.release(), meta_obj);
-        if (!load(*meta_obj, source, objects.back().obj))
+        if (!meta_obj->load(source, objects.back().obj))
           return false;
       } else {
         STOP(sec::unknown_type);
@@ -180,37 +172,19 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
       ptr->inc_constructed_elements();
       pos += x.meta->padded_size;
     }
-    data.reset(ptr.release(), adopt_ref);
+    data_.reset(ptr.release(), adopt_ref);
     return true;
   } else {
-    data.reset();
+    data_.reset();
     return source.end_sequence();
   }
 }
 
-} // namespace
-
-bool message::load(deserializer& source) {
-  return load_data(source, data_);
-}
-
-bool message::load(binary_deserializer& source) {
-  return load_data(source, data_);
-}
-
-namespace {
-
-bool save(const detail::meta_object& meta, caf::serializer& sink,
-          const void* obj) {
-  return meta.save(sink, obj);
-}
-
-template <class Serializer>
-bool save_data(Serializer& sink, const message::data_ptr& data) {
+bool message::save(serializer& sink) const {
   auto gmos = detail::global_meta_objects();
   // For machine-to-machine data formats, we prefix the type information.
   if (!sink.has_human_readable_format()) {
-    if (data == nullptr) {
+    if (data_ == nullptr) {
       // Short-circuit empty tuples.
       return sink.begin_object(type_id_v<message>, "message") //
              && sink.begin_field("types")                     //
@@ -224,47 +198,37 @@ bool save_data(Serializer& sink, const message::data_ptr& data) {
              && sink.end_object();
     }
     GUARDED(sink.begin_object(type_id_v<message>, "message"));
-    auto type_ids = data->types();
+    auto type_ids = data_->types();
     // Write type information.
     GUARDED(sink.begin_field("types") && sink.begin_sequence(type_ids.size()));
     for (auto id : type_ids)
       GUARDED(sink.value(id));
     GUARDED(sink.end_sequence() && sink.end_field());
     // Write elements.
-    auto storage = data->storage();
+    auto storage = data_->storage();
     GUARDED(sink.begin_field("values") && sink.begin_tuple(type_ids.size()));
     for (auto id : type_ids) {
       auto& meta = gmos[id];
-      GUARDED(save(meta, sink, storage));
+      GUARDED(meta.save(sink, storage));
       storage += meta.padded_size;
     }
     return sink.end_tuple() && sink.end_field() && sink.end_object();
   }
   // For human-readable data formats, we serialize messages as a single list of
   // dynamically-typed objects.
-  if (data == nullptr) {
+  if (data_ == nullptr) {
     // Short-circuit empty tuples.
     return sink.begin_sequence(0) && sink.end_sequence();
   }
-  auto type_ids = data->types();
+  auto type_ids = data_->types();
   GUARDED(sink.begin_sequence(type_ids.size()));
-  auto storage = data->storage();
+  auto storage = data_->storage();
   for (auto id : type_ids) {
     auto& meta = gmos[id];
-    GUARDED(save(meta, sink, storage));
+    GUARDED(meta.save(sink, storage));
     storage += meta.padded_size;
   }
   return sink.end_sequence();
-}
-
-} // namespace
-
-bool message::save(serializer& sink) const {
-  return save_data(sink, data_);
-}
-
-bool message::save(binary_serializer& sink) const {
-  return save_data(sink, data_);
 }
 
 bool message::save(detail::stringification_inspector& sink) const {

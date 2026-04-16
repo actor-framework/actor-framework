@@ -131,13 +131,9 @@ public:
 
   bool save(serializer& sink) const;
 
-  bool save(binary_serializer& sink) const;
-
   bool save(detail::stringification_inspector& sink) const;
 
   bool load(deserializer& source);
-
-  bool load(binary_deserializer& source);
 
   // -- element access ---------------------------------------------------------
 
@@ -278,15 +274,16 @@ message make_message_from_tuple(Tuple&& xs) {
 /// @relates message
 template <class Inspector>
   requires Inspector::is_loading
-auto inspect(Inspector& f, message& x) -> decltype(x.load(f)) {
-  return x.load(f);
+auto inspect(Inspector& f, message& x)
+  -> decltype(x.load(f.as_deserializer())) {
+  return x.load(f.as_deserializer());
 }
 
 /// @relates message
 template <class Inspector>
   requires(!Inspector::is_loading)
-auto inspect(Inspector& f, message& x) -> decltype(x.save(f)) {
-  return x.save(f);
+auto inspect(Inspector& f, message& x) -> decltype(x.save(f.as_serializer())) {
+  return x.save(f.as_serializer());
 }
 
 /// @relates message

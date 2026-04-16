@@ -165,6 +165,13 @@ public:
   virtual bool list(const std::vector<bool>& xs);
 
   virtual caf::actor_handle_codec* actor_handle_codec() = 0;
+
+  /// Returns a reference to the serializer. Convenience member function for
+  /// compatibility with other serializer types that expose the implementation
+  /// object via this getter.
+  serializer& as_serializer() noexcept {
+    return *this;
+  }
 };
 
 } // namespace caf
