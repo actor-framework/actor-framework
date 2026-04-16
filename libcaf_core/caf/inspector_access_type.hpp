@@ -9,9 +9,7 @@
 #include "caf/detail/is_complete.hpp"
 #include "caf/fwd.hpp"
 
-#include <string>
 #include <type_traits>
-#include <vector>
 
 namespace caf {
 

@@ -8,7 +8,6 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/detail/default_actor_handle_codec.hpp"
 
 #include <vector>
 
@@ -21,7 +20,7 @@ class test_serializer : public serializer {
 public:
   using super = serializer;
 
-  test_serializer(actor_system& sys, bool state) : codec_(sys), state_(state) {
+  test_serializer(bool state) : state_(state) {
     // nop
   }
 
@@ -40,7 +39,7 @@ public:
   }
 
   caf::actor_handle_codec* actor_handle_codec() override {
-    return &codec_;
+    return nullptr;
   }
 
   bool has_human_readable_format() const noexcept override {
@@ -92,6 +91,8 @@ public:
   bool end_sequence() override {
     return state_;
   };
+
+  using serializer::value;
 
   bool value(std::byte) override {
     return state_;
@@ -162,7 +163,6 @@ public:
   };
 
 private:
-  detail::default_actor_handle_codec codec_;
   bool state_ = false;
   error err_;
 };
@@ -170,23 +170,23 @@ private:
 } // namespace
 
 TEST("base serializer") {
-  auto cfg = actor_system_config{};
-  auto sys = actor_system{cfg};
   SECTION("failing serializer") {
-    auto serializer = test_serializer{sys, false};
-    check(!serializer.begin_associative_array(3));
-    check(!serializer.end_associative_array());
-    check(!serializer.begin_key_value_pair());
-    check(!serializer.end_key_value_pair());
-    check(!serializer.list(std::vector<bool>{true, false}));
+    auto uut = test_serializer{false};
+    check(!uut.begin_associative_array(3));
+    check(!uut.end_associative_array());
+    check(!uut.begin_key_value_pair());
+    check(!uut.end_key_value_pair());
+    check(!uut.value(std::vector<bool>{true, false}));
   }
   SECTION("successful serializer") {
-    auto serializer = test_serializer{sys, true};
-    check(serializer.begin_associative_array(4));
-    check(serializer.end_associative_array());
-    check(serializer.begin_key_value_pair());
-    check(serializer.end_key_value_pair());
-    check(!serializer.list(std::vector<bool>{true, false, true}));
-    check(serializer.list(std::vector<bool>{true, false}));
+    auto uut = test_serializer{true};
+    check(uut.begin_associative_array(4));
+    check(uut.end_associative_array());
+    check(uut.begin_key_value_pair());
+    check(uut.end_key_value_pair());
+    // odd number of elements fails
+    check(!uut.value(std::vector<bool>{true, false, true}));
+    // even number of elements succeeds
+    check(uut.value(std::vector<bool>{true, false}));
   }
 }

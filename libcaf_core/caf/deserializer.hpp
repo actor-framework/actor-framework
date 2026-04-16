@@ -67,8 +67,8 @@ public:
   /// @param type 16-bit ID for known types, @ref invalid_type_id otherwise.
   /// @param pretty_class_name Either the output of @ref type_name_or_anonymous
   ///                          or the optionally defined pretty name.
-  virtual bool begin_object(type_id_t type, std::string_view pretty_class_name)
-    = 0;
+  virtual bool begin_object(type_id_t type,
+                            std::string_view pretty_class_name) = 0;
 
   /// Ends processing of an object.
   virtual bool end_object() = 0;
@@ -78,12 +78,10 @@ public:
   virtual bool begin_field(std::string_view, bool& is_present) = 0;
 
   virtual bool begin_field(std::string_view name,
-                           std::span<const type_id_t> types, size_t& index)
-    = 0;
+                           std::span<const type_id_t> types, size_t& index) = 0;
 
   virtual bool begin_field(std::string_view name, bool& is_present,
-                           std::span<const type_id_t> types, size_t& index)
-    = 0;
+                           std::span<const type_id_t> types, size_t& index) = 0;
 
   virtual bool end_field() = 0;
 
@@ -182,18 +180,19 @@ public:
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
   virtual bool value(byte_span x) = 0;
 
+  /// Reads the vector of booleans from the input.
+  virtual bool value(std::vector<bool>& x);
+
+  // Announce special handling of `vector<bool>` to the inspection API.
+  bool builtin_inspect(std::vector<bool>& x) {
+    return value(x);
+  }
+
   /// @copydoc value
   bool value(strong_actor_ptr& ptr);
 
   /// @copydoc value
   bool value(weak_actor_ptr& ptr);
-
-  using super::list;
-
-  /// Adds each boolean in `xs` to the output. Derived classes can override this
-  /// member function to pack the booleans, for example to avoid using one
-  /// byte for each value in a binary output format.
-  virtual bool list(std::vector<bool>& xs);
 
   virtual caf::actor_handle_codec* actor_handle_codec() = 0;
 

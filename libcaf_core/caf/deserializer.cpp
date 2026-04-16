@@ -82,7 +82,7 @@ bool deserializer::value(weak_actor_ptr& ptr) {
   return true;
 }
 
-bool deserializer::list(std::vector<bool>& x) {
+bool deserializer::value(std::vector<bool>& x) {
   x.clear();
   size_t size = 0;
   if (!begin_sequence(size))

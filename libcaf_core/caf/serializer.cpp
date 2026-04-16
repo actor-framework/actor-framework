@@ -6,7 +6,6 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_handle_codec.hpp"
-#include "caf/error_code.hpp"
 
 namespace caf {
 
@@ -42,7 +41,7 @@ bool serializer::value(const weak_actor_ptr& ptr) {
   return value(tmp);
 }
 
-bool serializer::list(const std::vector<bool>& xs) {
+bool serializer::value(const std::vector<bool>& xs) {
   if (!begin_sequence(xs.size()))
     return false;
   for (bool x : xs)
