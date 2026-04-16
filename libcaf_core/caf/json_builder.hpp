@@ -6,17 +6,19 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/placement_ptr.hpp"
+#include "caf/save_inspector_base.hpp"
 #include "caf/serializer.hpp"
 
 #include <cstddef>
+#include <string_view>
 
 namespace caf {
 
 /// Serializes an inspectable object to a @ref json_value.
-class CAF_CORE_EXPORT json_builder final : public serializer {
+class CAF_CORE_EXPORT json_builder final
+  : public save_inspector_base<json_builder, serializer> {
 public:
-  // -- constructors, destructors, and assignment operators --------------------
+  using super = save_inspector_base<json_builder, serializer>;
 
   explicit json_builder(caf::actor_handle_codec* codec = nullptr);
 
@@ -24,7 +26,7 @@ public:
 
   json_builder& operator=(const json_builder&) = delete;
 
-  ~json_builder() override;
+  ~json_builder() noexcept override;
 
   // -- properties -------------------------------------------------------------
 
@@ -60,92 +62,8 @@ public:
   /// destroy this instance.
   json_value seal();
 
-  // -- overrides --------------------------------------------------------------
-
-  void set_error(error stop_reason) override;
-
-  error& get_error() noexcept override;
-
-  bool has_human_readable_format() const noexcept override;
-
-  bool begin_object(type_id_t type, std::string_view name) override;
-
-  bool end_object() override;
-
-  bool begin_field(std::string_view) override;
-
-  bool begin_field(std::string_view name, bool is_present) override;
-
-  bool begin_field(std::string_view name, std::span<const type_id_t> types,
-                   size_t index) override;
-
-  bool begin_field(std::string_view name, bool is_present,
-                   std::span<const type_id_t> types, size_t index) override;
-
-  bool end_field() override;
-
-  bool begin_tuple(size_t size) override;
-
-  bool end_tuple() override;
-
-  bool begin_key_value_pair() override;
-
-  bool end_key_value_pair() override;
-
-  bool begin_sequence(size_t size) override;
-
-  bool end_sequence() override;
-
-  bool begin_associative_array(size_t size) override;
-
-  bool end_associative_array() override;
-
-  bool value(std::byte x) override;
-
-  bool value(bool x) override;
-
-  bool value(int8_t x) override;
-
-  bool value(uint8_t x) override;
-
-  bool value(int16_t x) override;
-
-  bool value(uint16_t x) override;
-
-  bool value(int32_t x) override;
-
-  bool value(uint32_t x) override;
-
-  bool value(int64_t x) override;
-
-  bool value(uint64_t x) override;
-
-  bool value(float x) override;
-
-  bool value(double x) override;
-
-  bool value(long double x) override;
-
-  bool value(std::string_view x) override;
-
-  bool value(const std::u16string& x) override;
-
-  bool value(const std::u32string& x) override;
-
-  bool value(const_byte_span x) override;
-
-  using serializer::value;
-
-  caf::actor_handle_codec* actor_handle_codec() override;
-
 private:
   static constexpr size_t impl_storage_size = 96;
-
-  /// Opaque implementation class.
-  class impl;
-
-  /// Pointer to the implementation object.
-  placement_ptr<impl> impl_;
 
   /// Storage for the implementation object.
   alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];

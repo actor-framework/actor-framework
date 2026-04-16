@@ -34,7 +34,7 @@ static constexpr const char class_name[] = "caf::json_builder";
 
 namespace caf {
 
-class json_builder::impl : public serializer {
+class json_builder_impl : public serializer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -42,13 +42,13 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit impl(caf::actor_handle_codec* codec) : codec_(codec) {
+  explicit json_builder_impl(caf::actor_handle_codec* codec) : codec_(codec) {
     init();
   }
 
-  impl(const impl&) = delete;
+  json_builder_impl(const json_builder_impl&) = delete;
 
-  impl& operator=(const impl&) = delete;
+  json_builder_impl& operator=(const json_builder_impl&) = delete;
 
   // -- properties -------------------------------------------------------------
 
@@ -426,6 +426,14 @@ public:
     return codec_;
   }
 
+  static json_builder_impl& downcast(serializer& ptr) {
+    return static_cast<json_builder_impl&>(ptr);
+  }
+
+  static const json_builder_impl& downcast(const serializer& ptr) {
+    return static_cast<const json_builder_impl&>(ptr);
+  }
+
 private:
   template <class T>
   bool number(T x) {
@@ -505,7 +513,7 @@ private:
     auto i = std::find_if(stack_.rbegin(), stack_.rend(), is_obj);
     if (i != stack_.rend())
       return &std::get<detail::json::object>(i->val_ptr->data);
-    CAF_RAISE_ERROR("json_builder::top_obj was unable to find an object");
+    CAF_RAISE_ERROR("json_builder_impl::top_obj was unable to find an object");
   }
 
   // Enters a new level of nesting.
@@ -624,197 +632,49 @@ private:
   caf::actor_handle_codec* codec_ = nullptr;
 };
 
-json_builder::json_builder(caf::actor_handle_codec* codec) {
-  static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(codec));
+json_builder::json_builder(caf::actor_handle_codec* codec)
+  : super(new(impl_storage_) json_builder_impl(codec)) {
+  static_assert(sizeof(json_builder_impl) <= impl_storage_size);
 }
 
-json_builder::~json_builder() {
+json_builder::~json_builder() noexcept {
   // nop
 }
 
 // -- modifiers ----------------------------------------------------------------
 
 void json_builder::reset() {
-  impl_->reset();
+  json_builder_impl::downcast(*impl_).reset();
 }
 
 json_value json_builder::seal() {
-  return impl_->seal();
+  return json_builder_impl::downcast(*impl_).seal();
 }
 
 // -- properties -------------------------------------------------------------
 
 bool json_builder::skip_empty_fields() const noexcept {
-  return impl_->skip_empty_fields();
+  return json_builder_impl::downcast(*impl_).skip_empty_fields();
 }
 
 void json_builder::skip_empty_fields(bool value) noexcept {
-  impl_->skip_empty_fields(value);
+  json_builder_impl::downcast(*impl_).skip_empty_fields(value);
 }
 
 bool json_builder::skip_object_type_annotation() const noexcept {
-  return impl_->skip_object_type_annotation();
+  return json_builder_impl::downcast(*impl_).skip_object_type_annotation();
 }
 
 void json_builder::skip_object_type_annotation(bool value) noexcept {
-  impl_->skip_object_type_annotation(value);
+  json_builder_impl::downcast(*impl_).skip_object_type_annotation(value);
 }
 
 std::string_view json_builder::field_type_suffix() const noexcept {
-  return impl_->field_type_suffix();
+  return json_builder_impl::downcast(*impl_).field_type_suffix();
 }
 
 void json_builder::field_type_suffix(std::string_view suffix) noexcept {
-  impl_->field_type_suffix(suffix);
-}
-
-// -- overrides ----------------------------------------------------------------
-
-void json_builder::set_error(error stop_reason) {
-  impl_->set_error(std::move(stop_reason));
-}
-
-error& json_builder::get_error() noexcept {
-  return impl_->get_error();
-}
-
-bool json_builder::has_human_readable_format() const noexcept {
-  return impl_->has_human_readable_format();
-}
-
-bool json_builder::begin_object(type_id_t id, std::string_view name) {
-  return impl_->begin_object(id, name);
-}
-
-bool json_builder::end_object() {
-  return impl_->end_object();
-}
-
-bool json_builder::begin_field(std::string_view name) {
-  return impl_->begin_field(name);
-}
-
-bool json_builder::begin_field(std::string_view name, bool is_present) {
-  return impl_->begin_field(name, is_present);
-}
-
-bool json_builder::begin_field(std::string_view name,
-                               std::span<const type_id_t> types, size_t index) {
-  return impl_->begin_field(name, types, index);
-}
-
-bool json_builder::begin_field(std::string_view name, bool is_present,
-                               std::span<const type_id_t> types, size_t index) {
-  return impl_->begin_field(name, is_present, types, index);
-}
-
-bool json_builder::end_field() {
-  return impl_->end_field();
-}
-
-bool json_builder::begin_tuple(size_t size) {
-  return impl_->begin_tuple(size);
-}
-
-bool json_builder::end_tuple() {
-  return impl_->end_tuple();
-}
-
-bool json_builder::begin_key_value_pair() {
-  return impl_->begin_key_value_pair();
-}
-
-bool json_builder::end_key_value_pair() {
-  return impl_->end_key_value_pair();
-}
-
-bool json_builder::begin_sequence(size_t size) {
-  return impl_->begin_sequence(size);
-}
-
-bool json_builder::end_sequence() {
-  return impl_->end_sequence();
-}
-
-bool json_builder::begin_associative_array(size_t size) {
-  return impl_->begin_associative_array(size);
-}
-
-bool json_builder::end_associative_array() {
-  return impl_->end_associative_array();
-}
-
-bool json_builder::value(std::byte x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(bool x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(int8_t x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(uint8_t x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(int16_t x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(uint16_t x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(int32_t x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(uint32_t x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(int64_t x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(uint64_t x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(float x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(double x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(long double x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(std::string_view x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(const std::u16string& x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(const std::u32string& x) {
-  return impl_->value(x);
-}
-
-bool json_builder::value(const_byte_span x) {
-  return impl_->value(x);
-}
-
-caf::actor_handle_codec* json_builder::actor_handle_codec() {
-  return impl_->actor_handle_codec();
+  json_builder_impl::downcast(*impl_).field_type_suffix(suffix);
 }
 
 } // namespace caf
