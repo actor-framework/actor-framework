@@ -71,7 +71,7 @@ bool batch::data::save(Inspector& sink) const {
     return false;
   auto len = size_;
   do {
-    if (!do_save(*meta, sink, ptr))
+    if (!do_save(*meta, sink.as_serializer(), ptr))
       return false;
     ptr += item_size_;
     --len;
@@ -187,7 +187,7 @@ bool batch::load(deserializer& f) {
 }
 
 bool batch::load(binary_deserializer& f) {
-  return load_impl(f);
+  return load_impl(f.as_deserializer());
 }
 
 } // namespace caf::async

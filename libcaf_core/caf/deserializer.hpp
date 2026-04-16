@@ -196,6 +196,13 @@ public:
   virtual bool list(std::vector<bool>& xs);
 
   virtual caf::actor_handle_codec* actor_handle_codec() = 0;
+
+  /// Returns a reference to the deserializer. Convenience member function for
+  /// compatibility with other deserializer types that expose the implementation
+  /// object via this getter.
+  deserializer& as_deserializer() noexcept {
+    return *this;
+  }
 };
 
 } // namespace caf

@@ -22,15 +22,19 @@ constexpr size_t max_value = static_cast<size_t>(std::numeric_limits<T>::max());
 
 namespace caf {
 
-class binary_deserializer::impl : public load_inspector_base<impl> {
+class binary_deserializer_impl : public byte_reader {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl(const std::byte* buf, size_t size,
-       caf::actor_handle_codec* codec) noexcept
+  binary_deserializer_impl(const std::byte* buf, size_t size,
+                           caf::actor_handle_codec* codec) noexcept
     : current_(buf), end_(buf + size), codec_(codec) {
     // nop
   }
+
+  binary_deserializer_impl(const binary_deserializer_impl&) = delete;
+
+  binary_deserializer_impl& operator=(const binary_deserializer_impl&) = delete;
 
   // -- properties -------------------------------------------------------------
 
@@ -44,7 +48,7 @@ public:
     current_ += num_bytes;
   }
 
-  bool load_bytes(const_byte_span bytes) noexcept {
+  bool load_bytes(const_byte_span bytes) noexcept override {
     current_ = bytes.data();
     end_ = current_ + bytes.size();
     return true;
@@ -58,7 +62,7 @@ public:
     return end_;
   }
 
-  bool has_human_readable_format() const noexcept {
+  bool has_human_readable_format() const noexcept override {
     return false;
   }
 
@@ -72,30 +76,30 @@ public:
     return err_;
   }
 
-  caf::actor_handle_codec* actor_handle_codec() noexcept {
+  caf::actor_handle_codec* actor_handle_codec() noexcept override {
     return codec_;
   }
 
-  bool fetch_next_object_type(type_id_t& type) noexcept {
+  bool fetch_next_object_type(type_id_t& type) noexcept override {
     type = invalid_type_id;
     emplace_error(sec::unsupported_operation,
                   "the default binary format does not embed type information");
     return false;
   }
 
-  constexpr bool begin_object(type_id_t, std::string_view) noexcept {
+  constexpr bool begin_object(type_id_t, std::string_view) noexcept override {
     return true;
   }
 
-  constexpr bool end_object() noexcept {
+  constexpr bool end_object() noexcept override {
     return true;
   }
 
-  constexpr bool begin_field(std::string_view) noexcept {
+  constexpr bool begin_field(std::string_view) noexcept override {
     return true;
   }
 
-  bool begin_field(std::string_view, bool& is_present) noexcept {
+  bool begin_field(std::string_view, bool& is_present) noexcept override {
     auto tmp = uint8_t{0};
     if (!value(tmp))
       return false;
@@ -104,7 +108,7 @@ public:
   }
 
   bool begin_field(std::string_view, std::span<const type_id_t> types,
-                   size_t& index) noexcept {
+                   size_t& index) noexcept override {
     auto f = [&](auto tmp) {
       if (!value(tmp))
         return false;
@@ -128,7 +132,8 @@ public:
   }
 
   bool begin_field(std::string_view, bool& is_present,
-                   std::span<const type_id_t> types, size_t& index) noexcept {
+                   std::span<const type_id_t> types,
+                   size_t& index) noexcept override {
     auto f = [&](auto tmp) {
       if (!value(tmp))
         return false;
@@ -155,27 +160,27 @@ public:
       return f(int64_t{0});
     }
   }
-  constexpr bool end_field() {
+  constexpr bool end_field() override {
     return true;
   }
 
-  constexpr bool begin_tuple(size_t) noexcept {
+  constexpr bool begin_tuple(size_t) noexcept override {
     return true;
   }
 
-  constexpr bool end_tuple() noexcept {
+  constexpr bool end_tuple() noexcept override {
     return true;
   }
 
-  constexpr bool begin_key_value_pair() noexcept {
+  constexpr bool begin_key_value_pair() noexcept override {
     return true;
   }
 
-  constexpr bool end_key_value_pair() noexcept {
+  constexpr bool end_key_value_pair() noexcept override {
     return true;
   }
 
-  bool begin_sequence(size_t& list_size) noexcept {
+  bool begin_sequence(size_t& list_size) noexcept override {
     // Use varbyte encoding to compress sequence size on the wire.
     uint32_t x = 0;
     int n = 0;
@@ -190,19 +195,19 @@ public:
     return true;
   }
 
-  constexpr bool end_sequence() noexcept {
+  constexpr bool end_sequence() noexcept override {
     return true;
   }
 
-  bool begin_associative_array(size_t& size) noexcept {
+  bool begin_associative_array(size_t& size) noexcept override {
     return begin_sequence(size);
   }
 
-  bool end_associative_array() noexcept {
+  bool end_associative_array() noexcept override {
     return end_sequence();
   }
 
-  bool value(bool& x) noexcept {
+  bool value(bool& x) noexcept override {
     int8_t tmp = 0;
     if (!value(tmp))
       return false;
@@ -210,7 +215,7 @@ public:
     return true;
   }
 
-  bool value(std::byte& x) noexcept {
+  bool value(std::byte& x) noexcept override {
     if (range_check(1)) {
       x = *current_++;
       return true;
@@ -219,7 +224,7 @@ public:
     return false;
   }
 
-  bool value(int8_t& x) noexcept {
+  bool value(int8_t& x) noexcept override {
     if (range_check(1)) {
       x = static_cast<int8_t>(*current_++);
       return true;
@@ -228,7 +233,7 @@ public:
     return false;
   }
 
-  bool value(uint8_t& x) noexcept {
+  bool value(uint8_t& x) noexcept override {
     if (range_check(1)) {
       x = static_cast<uint8_t>(*current_++);
       return true;
@@ -237,39 +242,39 @@ public:
     return false;
   }
 
-  bool value(int16_t& x) noexcept {
+  bool value(int16_t& x) noexcept override {
     return int_value(x);
   }
 
-  bool value(uint16_t& x) noexcept {
+  bool value(uint16_t& x) noexcept override {
     return int_value(x);
   }
 
-  bool value(int32_t& x) noexcept {
+  bool value(int32_t& x) noexcept override {
     return int_value(x);
   }
 
-  bool value(uint32_t& x) noexcept {
+  bool value(uint32_t& x) noexcept override {
     return int_value(x);
   }
 
-  bool value(int64_t& x) noexcept {
+  bool value(int64_t& x) noexcept override {
     return int_value(x);
   }
 
-  bool value(uint64_t& x) noexcept {
+  bool value(uint64_t& x) noexcept override {
     return int_value(x);
   }
 
-  bool value(float& x) noexcept {
+  bool value(float& x) noexcept override {
     return float_value(x);
   }
 
-  bool value(double& x) noexcept {
+  bool value(double& x) noexcept override {
     return float_value(x);
   }
 
-  bool value(long double& x) {
+  bool value(long double& x) override {
     // TODO: Our IEEE-754 conversion currently does not work for long double.
     // The
     //       standard does not guarantee a fixed representation for this type,
@@ -285,7 +290,7 @@ public:
     return false;
   }
 
-  bool value(byte_span x) noexcept {
+  bool value(byte_span x) noexcept override {
     if (!range_check(x.size())) {
       emplace_error(sec::end_of_stream);
       return false;
@@ -295,7 +300,7 @@ public:
     return true;
   }
 
-  bool value(std::string& x) {
+  bool value(std::string& x) override {
     x.clear();
     size_t str_size = 0;
     if (!begin_sequence(str_size))
@@ -309,7 +314,7 @@ public:
     return end_sequence();
   }
 
-  bool value(std::u16string& x) {
+  bool value(std::u16string& x) override {
     x.clear();
     size_t str_size = 0;
     if (!begin_sequence(str_size))
@@ -327,7 +332,7 @@ public:
     return end_sequence();
   }
 
-  bool value(std::u32string& x) {
+  bool value(std::u32string& x) override {
     x.clear();
     size_t str_size = 0;
     if (!begin_sequence(str_size))
@@ -341,61 +346,6 @@ public:
       uint32_t tmp;
       unsafe_int_value(tmp);
       x.push_back(static_cast<char32_t>(tmp));
-    }
-    return end_sequence();
-  }
-
-  bool value(std::vector<bool>& x) {
-    x.clear();
-    size_t len = 0;
-    if (!begin_sequence(len))
-      return false;
-    if (len == 0)
-      return end_sequence();
-    size_t blocks = len / 8;
-    for (size_t block = 0; block < blocks; ++block) {
-      uint8_t tmp = 0;
-      if (!value(tmp))
-        return false;
-      x.emplace_back((tmp & 0b1000'0000) != 0);
-      x.emplace_back((tmp & 0b0100'0000) != 0);
-      x.emplace_back((tmp & 0b0010'0000) != 0);
-      x.emplace_back((tmp & 0b0001'0000) != 0);
-      x.emplace_back((tmp & 0b0000'1000) != 0);
-      x.emplace_back((tmp & 0b0000'0100) != 0);
-      x.emplace_back((tmp & 0b0000'0010) != 0);
-      x.emplace_back((tmp & 0b0000'0001) != 0);
-    }
-    auto trailing_block_size = len % 8;
-    if (trailing_block_size > 0) {
-      uint8_t tmp = 0;
-      if (!value(tmp))
-        return false;
-      switch (trailing_block_size) {
-        case 7:
-          x.emplace_back((tmp & 0b0100'0000) != 0);
-          [[fallthrough]];
-        case 6:
-          x.emplace_back((tmp & 0b0010'0000) != 0);
-          [[fallthrough]];
-        case 5:
-          x.emplace_back((tmp & 0b0001'0000) != 0);
-          [[fallthrough]];
-        case 4:
-          x.emplace_back((tmp & 0b0000'1000) != 0);
-          [[fallthrough]];
-        case 3:
-          x.emplace_back((tmp & 0b0000'0100) != 0);
-          [[fallthrough]];
-        case 2:
-          x.emplace_back((tmp & 0b0000'0010) != 0);
-          [[fallthrough]];
-        case 1:
-          x.emplace_back((tmp & 0b0000'0001) != 0);
-          [[fallthrough]];
-        default:
-          break;
-      }
     }
     return end_sequence();
   }
@@ -452,33 +402,24 @@ private:
 // -- constructors, destructors, and assignment operators --------------------
 
 binary_deserializer::binary_deserializer(
-  const_byte_span input, caf::actor_handle_codec* codec) noexcept {
-  static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(input.data(), input.size(), codec));
+  const_byte_span input, caf::actor_handle_codec* codec) noexcept
+  : impl_(new(impl_storage_)
+            binary_deserializer_impl(input.data(), input.size(), codec)) {
+  static_assert(sizeof(binary_deserializer_impl) <= impl_storage_size);
 }
 
 binary_deserializer::binary_deserializer(
-  const void* buf, size_t size, caf::actor_handle_codec* codec) noexcept {
-  static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_)
-                impl(reinterpret_cast<const std::byte*>(buf), size, codec));
+  const void* buf, size_t size, caf::actor_handle_codec* codec) noexcept
+  : impl_(new(impl_storage_) binary_deserializer_impl(
+      reinterpret_cast<const std::byte*>(buf), size, codec)) {
+  static_assert(sizeof(binary_deserializer_impl) <= impl_storage_size);
 }
 
-binary_deserializer::~binary_deserializer() {
+binary_deserializer::~binary_deserializer() noexcept {
   // nop
 }
 
-// -- properties -------------------------------------------------------------
-
-bool binary_deserializer::load_bytes(const_byte_span bytes) {
-  return impl_->load_bytes(bytes);
-}
-
-bool binary_deserializer::has_human_readable_format() const noexcept {
-  return impl_->has_human_readable_format();
-}
-
-// -- overridden member functions --------------------------------------------
+// -- interface functions ----------------------------------------------------
 
 void binary_deserializer::set_error(error stop_reason) {
   impl_->set_error(std::move(stop_reason));
@@ -488,151 +429,59 @@ error& binary_deserializer::get_error() noexcept {
   return impl_->get_error();
 }
 
-bool binary_deserializer::fetch_next_object_type(type_id_t& type) noexcept {
-  return impl_->fetch_next_object_type(type);
-}
-
-bool binary_deserializer::begin_object(type_id_t type,
-                                       std::string_view type_name) noexcept {
-  return impl_->begin_object(type, type_name);
-}
-
-bool binary_deserializer::end_object() noexcept {
-  return impl_->end_object();
-}
-
-bool binary_deserializer::begin_field(std::string_view type_name) noexcept {
-  return impl_->begin_field(type_name);
-}
-
-bool binary_deserializer::begin_field(std::string_view type_name,
-                                      bool& is_present) noexcept {
-  return impl_->begin_field(type_name, is_present);
-}
-
-bool binary_deserializer::begin_field(std::string_view type_name,
-                                      std::span<const type_id_t> types,
-                                      size_t& index) noexcept {
-  return impl_->begin_field(type_name, types, index);
-}
-
-bool binary_deserializer::begin_field(std::string_view type_name,
-                                      bool& is_present,
-                                      std::span<const type_id_t> types,
-                                      size_t& index) noexcept {
-  return impl_->begin_field(type_name, is_present, types, index);
-}
-
-bool binary_deserializer::end_field() {
-  return impl_->end_field();
-}
-
-bool binary_deserializer::begin_tuple(size_t size) noexcept {
-  return impl_->begin_tuple(size);
-}
-
-bool binary_deserializer::end_tuple() noexcept {
-  return impl_->end_tuple();
-}
-
-bool binary_deserializer::begin_key_value_pair() noexcept {
-  return impl_->begin_key_value_pair();
-}
-
-bool binary_deserializer::end_key_value_pair() noexcept {
-  return impl_->end_key_value_pair();
-}
-
-bool binary_deserializer::begin_sequence(size_t& list_size) noexcept {
-  return impl_->begin_sequence(list_size);
-}
-
-bool binary_deserializer::end_sequence() noexcept {
-  return impl_->end_sequence();
-}
-
-bool binary_deserializer::begin_associative_array(size_t& size) noexcept {
-  return impl_->begin_associative_array(size);
-}
-
-bool binary_deserializer::end_associative_array() noexcept {
-  return impl_->end_associative_array();
-}
-
-bool binary_deserializer::value(bool& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(std::byte& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(int8_t& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(uint8_t& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(int16_t& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(uint16_t& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(int32_t& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(uint32_t& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(int64_t& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(uint64_t& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(float& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(double& x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(long double& x) {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(byte_span x) noexcept {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(std::string& x) {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(std::u16string& x) {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(std::u32string& x) {
-  return impl_->value(x);
-}
-
-bool binary_deserializer::value(std::vector<bool>& x) {
-  return impl_->value(x);
-}
-
-caf::actor_handle_codec* binary_deserializer::actor_handle_codec() {
-  return impl_->actor_handle_codec();
+bool binary_deserializer::value(std::vector<bool>& what) {
+  what.clear();
+  size_t len = 0;
+  if (!begin_sequence(len))
+    return false;
+  if (len == 0)
+    return end_sequence();
+  size_t blocks = len / 8;
+  for (size_t block = 0; block < blocks; ++block) {
+    uint8_t tmp = 0;
+    if (!value(tmp))
+      return false;
+    what.emplace_back((tmp & 0b1000'0000) != 0);
+    what.emplace_back((tmp & 0b0100'0000) != 0);
+    what.emplace_back((tmp & 0b0010'0000) != 0);
+    what.emplace_back((tmp & 0b0001'0000) != 0);
+    what.emplace_back((tmp & 0b0000'1000) != 0);
+    what.emplace_back((tmp & 0b0000'0100) != 0);
+    what.emplace_back((tmp & 0b0000'0010) != 0);
+    what.emplace_back((tmp & 0b0000'0001) != 0);
+  }
+  auto trailing_block_size = len % 8;
+  if (trailing_block_size > 0) {
+    uint8_t tmp = 0;
+    if (!value(tmp))
+      return false;
+    switch (trailing_block_size) {
+      case 7:
+        what.emplace_back((tmp & 0b0100'0000) != 0);
+        [[fallthrough]];
+      case 6:
+        what.emplace_back((tmp & 0b0010'0000) != 0);
+        [[fallthrough]];
+      case 5:
+        what.emplace_back((tmp & 0b0001'0000) != 0);
+        [[fallthrough]];
+      case 4:
+        what.emplace_back((tmp & 0b0000'1000) != 0);
+        [[fallthrough]];
+      case 3:
+        what.emplace_back((tmp & 0b0000'0100) != 0);
+        [[fallthrough]];
+      case 2:
+        what.emplace_back((tmp & 0b0000'0010) != 0);
+        [[fallthrough]];
+      case 1:
+        what.emplace_back((tmp & 0b0000'0001) != 0);
+        [[fallthrough]];
+      default:
+        break;
+    }
+  }
+  return end_sequence();
 }
 
 } // namespace caf
