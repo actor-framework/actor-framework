@@ -4,7 +4,7 @@
 
 #include "caf/binary_deserializer.hpp"
 
-#include "caf/actor_system.hpp"
+#include "caf/actor_handle_codec.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
@@ -26,8 +26,9 @@ class binary_deserializer::impl : public load_inspector_base<impl> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl(const std::byte* buf, size_t size, actor_system* sys = nullptr) noexcept
-    : current_(buf), end_(buf + size), context_(sys) {
+  impl(const std::byte* buf, size_t size,
+       caf::actor_handle_codec* codec) noexcept
+    : current_(buf), end_(buf + size), codec_(codec) {
     // nop
   }
 
@@ -35,14 +36,6 @@ public:
 
   size_t remaining() const noexcept {
     return static_cast<size_t>(end_ - current_);
-  }
-
-  actor_system* context() const noexcept {
-    return context_;
-  }
-
-  caf::actor_system* sys() const noexcept {
-    return context_;
   }
 
   void skip(size_t num_bytes) {
@@ -77,6 +70,10 @@ public:
 
   error& get_error() noexcept override {
     return err_;
+  }
+
+  caf::actor_handle_codec* actor_handle_codec() noexcept {
+    return codec_;
   }
 
   bool fetch_next_object_type(type_id_t& type) noexcept {
@@ -403,33 +400,6 @@ public:
     return end_sequence();
   }
 
-  bool value(strong_actor_ptr& ptr) {
-    auto aid = actor_id{0};
-    auto nid = node_id{};
-    if (!value(aid)) {
-      return false;
-    }
-    if (!inspect(*this, nid)) {
-      return false;
-    }
-    if (aid == 0) {
-      ptr = nullptr;
-    } else if (auto err = load_actor(ptr, context_, aid, nid); err.valid()) {
-      set_error(error{err.value()});
-      return false;
-    }
-    return true;
-  }
-
-  bool value(weak_actor_ptr& ptr) {
-    strong_actor_ptr tmp;
-    if (!value(tmp)) {
-      return false;
-    }
-    ptr = tmp;
-    return true;
-  }
-
 private:
   /// Checks whether we can read `read_size` more bytes.
   bool range_check(size_t read_size) const noexcept {
@@ -473,8 +443,7 @@ private:
   /// Points to the end of the assigned memory block.
   const std::byte* end_;
 
-  /// Provides access to the ::proxy_registry and to the ::actor_system.
-  actor_system* context_;
+  caf::actor_handle_codec* codec_ = nullptr;
 
   /// The last occurred error.
   error err_;
@@ -482,26 +451,17 @@ private:
 
 // -- constructors, destructors, and assignment operators --------------------
 
-binary_deserializer::binary_deserializer(const_byte_span input) noexcept {
+binary_deserializer::binary_deserializer(
+  const_byte_span input, caf::actor_handle_codec* codec) noexcept {
   static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(input.data(), input.size()));
+  impl_.reset(new (impl_storage_) impl(input.data(), input.size(), codec));
 }
 
-binary_deserializer::binary_deserializer(actor_system& sys,
-                                         const_byte_span input) noexcept {
-  impl_.reset(new (impl_storage_) impl(input.data(), input.size(), &sys));
-}
-
-binary_deserializer::binary_deserializer(const void* buf,
-                                         size_t size) noexcept {
+binary_deserializer::binary_deserializer(
+  const void* buf, size_t size, caf::actor_handle_codec* codec) noexcept {
+  static_assert(sizeof(impl) <= impl_storage_size);
   impl_.reset(new (impl_storage_)
-                impl(reinterpret_cast<const std::byte*>(buf), size));
-}
-
-binary_deserializer::binary_deserializer(actor_system& sys, const void* buf,
-                                         size_t size) noexcept {
-  impl_.reset(new (impl_storage_)
-                impl(reinterpret_cast<const std::byte*>(buf), size, &sys));
+                impl(reinterpret_cast<const std::byte*>(buf), size, codec));
 }
 
 binary_deserializer::~binary_deserializer() {
@@ -510,16 +470,8 @@ binary_deserializer::~binary_deserializer() {
 
 // -- properties -------------------------------------------------------------
 
-actor_system* binary_deserializer::context() const noexcept {
-  return impl_->context();
-}
-
 bool binary_deserializer::load_bytes(const_byte_span bytes) {
   return impl_->load_bytes(bytes);
-}
-
-actor_system* binary_deserializer::sys() const noexcept {
-  return impl_->sys();
 }
 
 bool binary_deserializer::has_human_readable_format() const noexcept {
@@ -679,12 +631,8 @@ bool binary_deserializer::value(std::vector<bool>& x) {
   return impl_->value(x);
 }
 
-bool binary_deserializer::value(strong_actor_ptr& ptr) {
-  return impl_->value(ptr);
-}
-
-bool binary_deserializer::value(weak_actor_ptr& ptr) {
-  return impl_->value(ptr);
+caf::actor_handle_codec* binary_deserializer::actor_handle_codec() {
+  return impl_->actor_handle_codec();
 }
 
 } // namespace caf

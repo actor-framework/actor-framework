@@ -18,6 +18,7 @@ using namespace std::literals;
 
 TEST("system error codes are convertible to strings") {
   check_eq(to_string(sec::none), "none");
+  check_eq(to_string(sec::no_actor_handle_codec), "no_actor_handle_codec");
   check_eq(to_string(sec::invalid_argument), "invalid_argument");
   check_eq(to_string(sec::no_such_key), "no_such_key");
 }
@@ -30,6 +31,7 @@ TEST("system error codes are convertible from strings") {
     return std::nullopt;
   };
   check_eq(to_sec("none"), sec::none);
+  check_eq(to_sec("no_actor_handle_codec"), sec::no_actor_handle_codec);
   check_eq(to_sec("invalid_argument"), sec::invalid_argument);
   check_eq(to_sec("no_such_key"), sec::no_such_key);
 }

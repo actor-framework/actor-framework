@@ -18,7 +18,7 @@ class CAF_CORE_EXPORT json_builder final : public serializer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  json_builder();
+  explicit json_builder(caf::actor_handle_codec* codec = nullptr);
 
   json_builder(const json_builder&) = delete;
 
@@ -65,8 +65,6 @@ public:
   void set_error(error stop_reason) override;
 
   error& get_error() noexcept override;
-
-  caf::actor_system* sys() const noexcept override;
 
   bool has_human_readable_format() const noexcept override;
 
@@ -135,6 +133,10 @@ public:
   bool value(const std::u32string& x) override;
 
   bool value(const_byte_span x) override;
+
+  using serializer::value;
+
+  caf::actor_handle_codec* actor_handle_codec() override;
 
 private:
   static constexpr size_t impl_storage_size = 96;

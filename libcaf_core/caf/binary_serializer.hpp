@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/actor_handle_codec.hpp"
 #include "caf/byte_writer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -22,9 +23,8 @@ class CAF_CORE_EXPORT binary_serializer final : public byte_writer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit binary_serializer(byte_buffer& buf) noexcept;
-
-  binary_serializer(actor_system& sys, byte_buffer& buf) noexcept;
+  explicit binary_serializer(byte_buffer& buf,
+                             caf::actor_handle_codec* codec = nullptr) noexcept;
 
   ~binary_serializer() override;
 
@@ -34,18 +34,11 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the current execution unit.
-  actor_system* context() const noexcept;
-
-  // -- modifiers --------------------------------------------------------------
-
   void reset() final;
 
   // -- byte_writer overrides --------------------------------------------------
 
   [[nodiscard]] const_byte_span bytes() const noexcept final;
-
-  [[nodiscard]] caf::actor_system* sys() const noexcept final;
 
   [[nodiscard]] bool has_human_readable_format() const noexcept final;
 
@@ -100,6 +93,8 @@ public:
 
   bool end_associative_array() final;
 
+  using byte_writer::value;
+
   bool value(std::byte x) final;
 
   bool value(bool x) final;
@@ -141,9 +136,7 @@ public:
 
   bool value(const std::vector<bool>& x);
 
-  bool value(const strong_actor_ptr& ptr) final;
-
-  bool value(const weak_actor_ptr& ptr) final;
+  caf::actor_handle_codec* actor_handle_codec() final;
 
 private:
   static constexpr size_t impl_storage_size = 40;

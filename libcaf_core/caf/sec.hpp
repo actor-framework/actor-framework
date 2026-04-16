@@ -194,6 +194,8 @@ enum class sec : uint8_t {
   mail_cache_closed,
   /// Signals that a resource has been destroyed without opening it.
   resource_destroyed,
+  /// Serialization failed because no actor handle codec is available.
+  no_actor_handle_codec,
 };
 // --(rst-sec-end)--
 

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/actor_handle_codec.hpp"
 #include "caf/byte_reader.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -21,13 +22,12 @@ class CAF_CORE_EXPORT binary_deserializer final : public byte_reader {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit binary_deserializer(const_byte_span input) noexcept;
+  explicit binary_deserializer(const_byte_span input,
+                               caf::actor_handle_codec* codec
+                               = nullptr) noexcept;
 
-  binary_deserializer(actor_system& sys, const_byte_span input) noexcept;
-
-  binary_deserializer(const void* buf, size_t size) noexcept;
-
-  binary_deserializer(actor_system& sys, const void* buf, size_t size) noexcept;
+  binary_deserializer(const void* buf, size_t size,
+                      caf::actor_handle_codec* codec = nullptr) noexcept;
 
   ~binary_deserializer() override;
 
@@ -35,16 +35,9 @@ public:
 
   binary_deserializer& operator=(const binary_deserializer&) = delete;
 
-  // -- properties -------------------------------------------------------------
-
-  /// Returns the current execution unit.
-  actor_system* context() const noexcept;
-
   // -- byte_reader overrides --------------------------------------------------
 
   [[nodiscard]] bool load_bytes(const_byte_span bytes) final;
-
-  [[nodiscard]] caf::actor_system* sys() const noexcept final;
 
   [[nodiscard]] bool has_human_readable_format() const noexcept final;
 
@@ -88,6 +81,8 @@ public:
   bool begin_associative_array(size_t& size) noexcept final;
 
   bool end_associative_array() noexcept final;
+
+  using byte_reader::value;
 
   bool value(bool& x) noexcept final;
 
@@ -136,9 +131,7 @@ public:
 
   bool value(std::vector<bool>& x);
 
-  bool value(strong_actor_ptr& ptr) final;
-
-  bool value(weak_actor_ptr& ptr) final;
+  caf::actor_handle_codec* actor_handle_codec() final;
 
 private:
   static constexpr size_t impl_storage_size = 48;

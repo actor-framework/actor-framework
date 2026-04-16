@@ -4,12 +4,14 @@
 
 #include "caf/binary_serializer.hpp"
 
-#include "caf/actor_system.hpp"
+#include "caf/actor_handle_codec.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/squashed_int.hpp"
+#include "caf/sec.hpp"
+#include "caf/serializer.hpp"
 
 #include <iomanip>
 #include <span>
@@ -35,8 +37,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl(byte_buffer& buf, actor_system* sys) noexcept
-    : buf_(buf), write_pos_(buf.size()), context_(sys) {
+  explicit impl(byte_buffer& buf, caf::actor_handle_codec* codec) noexcept
+    : buf_(buf), write_pos_(buf.size()), codec_(codec) {
     // nop
   }
 
@@ -46,21 +48,8 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the current execution unit.
-  actor_system* context() const noexcept {
-    return context_;
-  }
-
   byte_buffer& buf() noexcept {
     return buf_;
-  }
-
-  const byte_buffer& buf() const noexcept {
-    return buf_;
-  }
-
-  caf::actor_system* sys() const noexcept {
-    return context_;
   }
 
   bool has_human_readable_format() const noexcept {
@@ -102,6 +91,10 @@ public:
 
   error& get_error() noexcept override {
     return err_;
+  }
+
+  caf::actor_handle_codec* actor_handle_codec() noexcept {
+    return codec_;
   }
 
   constexpr bool begin_object(type_id_t, std::string_view) noexcept {
@@ -381,33 +374,6 @@ public:
     return end_sequence();
   }
 
-  virtual bool value(const strong_actor_ptr& ptr) {
-    actor_id aid = 0;
-    node_id nid;
-    if (ptr != nullptr) {
-      aid = ptr->id();
-      nid = ptr->node();
-    }
-    if (!value(aid)) {
-      return false;
-    }
-    if (!inspect(*this, nid)) {
-      return false;
-    }
-    if (ptr != nullptr) {
-      if (auto err = save_actor(ptr, aid, nid); err.valid()) {
-        set_error(error{err.value()});
-        return false;
-      }
-    }
-    return true;
-  }
-
-  virtual bool value(const weak_actor_ptr& ptr) {
-    auto tmp = ptr.lock();
-    return value(tmp);
-  }
-
 private:
   template <class T>
   bool int_value(T x) {
@@ -422,33 +388,22 @@ private:
   /// Stores the current offset for writing.
   size_t write_pos_ = 0;
 
-  /// Provides access to the ::proxy_registry and to the ::actor_system.
-  actor_system* context_ = nullptr;
+  caf::actor_handle_codec* codec_ = nullptr;
 
   error err_;
 };
 
 // -- constructors, destructors, and assignment operators --------------------
 
-binary_serializer::binary_serializer(byte_buffer& buf) noexcept {
+binary_serializer::binary_serializer(byte_buffer& buf,
+                                     caf::actor_handle_codec* codec) noexcept
+  : impl_(new(impl_storage_) impl(buf, codec)) {
   static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(buf, nullptr));
 }
 
-binary_serializer::binary_serializer(actor_system& sys,
-                                     byte_buffer& buf) noexcept {
-  impl_.reset(new (impl_storage_) impl(buf, &sys));
-}
-
-binary_serializer::~binary_serializer() {
-  // nop
-}
+binary_serializer::~binary_serializer() noexcept = default;
 
 // -- properties -------------------------------------------------------------
-
-actor_system* binary_serializer::context() const noexcept {
-  return impl_->context();
-}
 
 void binary_serializer::reset() {
   impl_->reset();
@@ -456,10 +411,6 @@ void binary_serializer::reset() {
 
 const_byte_span binary_serializer::bytes() const noexcept {
   return impl_->buf();
-}
-
-caf::actor_system* binary_serializer::sys() const noexcept {
-  return impl_->sys();
 }
 
 bool binary_serializer::has_human_readable_format() const noexcept {
@@ -625,12 +576,8 @@ bool binary_serializer::value(const std::vector<bool>& x) {
   return impl_->value(x);
 }
 
-bool binary_serializer::value(const strong_actor_ptr& ptr) {
-  return impl_->value(ptr);
-}
-
-bool binary_serializer::value(const weak_actor_ptr& ptr) {
-  return impl_->value(ptr);
+caf::actor_handle_codec* binary_serializer::actor_handle_codec() {
+  return impl_->actor_handle_codec();
 }
 
 } // namespace caf

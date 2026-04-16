@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/actor_handle_codec.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
@@ -34,9 +35,6 @@ public:
   ~serializer() override;
 
   // -- properties -------------------------------------------------------------
-
-  /// Returns the actor system associated with this serializer if available.
-  virtual caf::actor_system* sys() const noexcept = 0;
 
   /// Returns whether the serialization format is human-readable.
   virtual bool has_human_readable_format() const noexcept = 0;
@@ -155,9 +153,9 @@ public:
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
   virtual bool value(const_byte_span x) = 0;
 
-  virtual bool value(const strong_actor_ptr& ptr);
+  bool value(const strong_actor_ptr& ptr);
 
-  virtual bool value(const weak_actor_ptr& ptr);
+  bool value(const weak_actor_ptr& ptr);
 
   using super::list;
 
@@ -165,6 +163,8 @@ public:
   /// member function to pack the booleans, for example to avoid using one
   /// byte for each value in a binary output format.
   virtual bool list(const std::vector<bool>& xs);
+
+  virtual caf::actor_handle_codec* actor_handle_codec() = 0;
 };
 
 } // namespace caf

@@ -18,9 +18,7 @@ class CAF_CORE_EXPORT json_writer : public text_writer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  json_writer();
-
-  explicit json_writer(actor_system& sys);
+  explicit json_writer(caf::actor_handle_codec* codec = nullptr);
 
   ~json_writer() override;
 
@@ -62,8 +60,6 @@ public:
   void set_error(error stop_reason) final;
 
   error& get_error() noexcept final;
-
-  caf::actor_system* sys() const noexcept final;
 
   bool has_human_readable_format() const noexcept final;
 
@@ -134,6 +130,8 @@ public:
   bool value(const std::u32string& x) final;
 
   bool value(const_byte_span x) final;
+
+  caf::actor_handle_codec* actor_handle_codec() override;
 
 private:
   static constexpr size_t impl_storage_size = 196;

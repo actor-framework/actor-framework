@@ -4,6 +4,7 @@
 
 #include "caf/config_value_reader.hpp"
 
+#include "caf/actor_handle_codec.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/overload.hpp"
@@ -122,7 +123,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl(const config_value* input, actor_system* sys) : sys_(sys) {
+  impl(const config_value* input, caf::actor_handle_codec* codec)
+    : codec_(codec) {
     st_.push(input);
   }
 
@@ -146,10 +148,6 @@ public:
 
   error& get_error() noexcept override {
     return err_;
-  }
-
-  caf::actor_system* sys() const noexcept override {
-    return sys_;
   }
 
   bool has_human_readable_format() const noexcept override {
@@ -631,6 +629,10 @@ public:
     return true;
   }
 
+  caf::actor_handle_codec* actor_handle_codec() override {
+    return codec_;
+  }
+
 private:
   // Sets `type` according to the `@type` field in `obj` or to the type ID of
   // `settings` as fallback if no such field exists.
@@ -648,26 +650,22 @@ private:
     }
   }
 
-  actor_system* sys_ = nullptr;
-
   stack_type st_;
 
   // Stores on-the-fly converted values.
   std::vector<std::unique_ptr<config_value>> scratch_space_;
 
   error err_;
+
+  caf::actor_handle_codec* codec_ = nullptr;
 };
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-config_value_reader::config_value_reader(const config_value* input) {
-  static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(input, nullptr));
-}
-
 config_value_reader::config_value_reader(const config_value* input,
-                                         actor_system& sys) {
-  impl_.reset(new (impl_storage_) impl(input, &sys));
+                                         caf::actor_handle_codec* codec) {
+  static_assert(sizeof(impl) <= impl_storage_size);
+  impl_.reset(new (impl_storage_) impl(input, codec));
 }
 
 config_value_reader::~config_value_reader() {
@@ -682,10 +680,6 @@ void config_value_reader::set_error(error stop_reason) {
 
 error& config_value_reader::get_error() noexcept {
   return impl_->get_error();
-}
-
-caf::actor_system* config_value_reader::sys() const noexcept {
-  return impl_->sys();
 }
 
 bool config_value_reader::has_human_readable_format() const noexcept {
@@ -826,6 +820,10 @@ bool config_value_reader::value(std::u32string& x) {
 
 bool config_value_reader::value(byte_span bytes) {
   return impl_->value(bytes);
+}
+
+caf::actor_handle_codec* config_value_reader::actor_handle_codec() {
+  return impl_->actor_handle_codec();
 }
 
 } // namespace caf

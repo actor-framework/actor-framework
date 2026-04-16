@@ -18,9 +18,7 @@ class CAF_CORE_EXPORT json_reader : public text_reader {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  json_reader();
-
-  explicit json_reader(actor_system& sys);
+  explicit json_reader(caf::actor_handle_codec* codec = nullptr);
 
   json_reader(const json_reader&) = delete;
 
@@ -79,8 +77,6 @@ public:
   void reset();
 
   // -- finals --------------------------------------------------------------
-
-  caf::actor_system* sys() const noexcept final;
 
   bool has_human_readable_format() const noexcept final;
 
@@ -155,6 +151,8 @@ public:
   bool value(std::u32string& x) final;
 
   bool value(byte_span x) final;
+
+  caf::actor_handle_codec* actor_handle_codec() final;
 
 private:
   static constexpr size_t impl_storage_size = 196;

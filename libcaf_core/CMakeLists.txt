@@ -74,6 +74,7 @@ caf_add_component(
     caf/abstract_mailbox.cpp
     caf/abstract_ref_counted.cpp
     caf/abstract_scheduled_actor.cpp
+    caf/actor_handle_codec.cpp
     caf/action.cpp
     caf/action.test.cpp
     caf/actor.cpp
@@ -176,6 +177,7 @@ caf_add_component(
     caf/detail/current_actor.cpp
     caf/detail/daemons.cpp
     caf/detail/default_mailbox.cpp
+    caf/detail/default_actor_handle_codec.cpp
     caf/detail/default_mailbox.test.cpp
     caf/detail/default_thread_count.cpp
     caf/detail/format.test.cpp

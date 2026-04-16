@@ -8,6 +8,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/actor_registry.hpp"
+#include "caf/detail/default_actor_handle_codec.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/scheduled_actor/flow.hpp"
@@ -27,14 +28,15 @@ struct fixture : test::fixture::deterministic {
   template <class T>
   caf::expected<T> deep_copy(const T& obj) {
     caf::byte_buffer buf;
+    auto codec = caf::detail::default_actor_handle_codec{sys};
     {
-      caf::binary_serializer sink{sys, buf};
+      caf::binary_serializer sink{buf, &codec};
       if (!sink.apply(obj))
         return caf::unexpected{std::move(sink.get_error())};
     }
     auto result = T{};
     {
-      caf::binary_deserializer source{sys, buf};
+      caf::binary_deserializer source{buf, &codec};
       if (!source.apply(result))
         return caf::unexpected{std::move(source.get_error())};
     }

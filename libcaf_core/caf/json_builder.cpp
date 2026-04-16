@@ -4,6 +4,7 @@
 
 #include "caf/json_builder.hpp"
 
+#include "caf/actor_handle_codec.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
@@ -41,7 +42,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl() {
+  explicit impl(caf::actor_handle_codec* codec) : codec_(codec) {
     init();
   }
 
@@ -100,10 +101,6 @@ public:
 
   error& get_error() noexcept override {
     return err_;
-  }
-
-  caf::actor_system* sys() const noexcept override {
-    return sys_;
   }
 
   bool has_human_readable_format() const noexcept override {
@@ -425,6 +422,10 @@ public:
     }
   }
 
+  caf::actor_handle_codec* actor_handle_codec() override {
+    return codec_;
+  }
+
 private:
   template <class T>
   bool number(T x) {
@@ -571,9 +572,6 @@ private:
 
   // -- member variables -------------------------------------------------------
 
-  /// The actor system associated with this builder.
-  actor_system* sys_ = nullptr;
-
   // Our output.
   detail::json::value* val_;
 
@@ -622,11 +620,13 @@ private:
   std::string_view field_type_suffix_ = field_type_suffix_default;
 
   error err_;
+
+  caf::actor_handle_codec* codec_ = nullptr;
 };
 
-json_builder::json_builder() {
+json_builder::json_builder(caf::actor_handle_codec* codec) {
   static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl());
+  impl_.reset(new (impl_storage_) impl(codec));
 }
 
 json_builder::~json_builder() {
@@ -677,10 +677,6 @@ void json_builder::set_error(error stop_reason) {
 
 error& json_builder::get_error() noexcept {
   return impl_->get_error();
-}
-
-caf::actor_system* json_builder::sys() const noexcept {
-  return impl_->sys();
 }
 
 bool json_builder::has_human_readable_format() const noexcept {
@@ -815,6 +811,10 @@ bool json_builder::value(const std::u32string& x) {
 
 bool json_builder::value(const_byte_span x) {
   return impl_->value(x);
+}
+
+caf::actor_handle_codec* json_builder::actor_handle_codec() {
+  return impl_->actor_handle_codec();
 }
 
 } // namespace caf
