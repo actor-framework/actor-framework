@@ -54,10 +54,12 @@ public:
   virtual bool begin_field(std::string_view name, bool is_present) = 0;
 
   virtual bool begin_field(std::string_view name,
-                           std::span<const type_id_t> types, size_t index) = 0;
+                           std::span<const type_id_t> types, size_t index)
+    = 0;
 
   virtual bool begin_field(std::string_view name, bool is_present,
-                           std::span<const type_id_t> types, size_t index) = 0;
+                           std::span<const type_id_t> types, size_t index)
+    = 0;
 
   virtual bool end_field() = 0;
 

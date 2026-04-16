@@ -401,7 +401,7 @@ private:
 
 binary_serializer::binary_serializer(byte_buffer& buf,
                                      caf::actor_handle_codec* codec) noexcept
-  : super(new (impl_storage_) binary_serializer_impl(buf, codec)) {
+  : super(new(impl_storage_) binary_serializer_impl(buf, codec)) {
   static_assert(sizeof(binary_serializer_impl) <= impl_storage_size);
 }
 

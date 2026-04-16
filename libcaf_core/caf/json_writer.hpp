@@ -19,8 +19,6 @@ class CAF_CORE_EXPORT json_writer final
 public:
   using super = save_inspector_base<json_writer, text_writer>;
 
-  // -- constructors, destructors, and assignment operators --------------------
-
   explicit json_writer(caf::actor_handle_codec* codec = nullptr);
 
   ~json_writer() noexcept override;
@@ -29,38 +27,60 @@ public:
 
   json_writer& operator=(const json_writer&) = delete;
 
-  // -- properties -------------------------------------------------------------
+  [[nodiscard]] std::string_view str() const noexcept {
+    return impl_->str();
+  }
 
-  [[nodiscard]] std::string_view str() const noexcept;
+  [[nodiscard]] size_t indentation() const noexcept {
+    return impl_->indentation();
+  }
 
-  [[nodiscard]] size_t indentation() const noexcept;
+  void indentation(size_t factor) noexcept {
+    impl_->indentation(factor);
+  }
 
-  void indentation(size_t factor) noexcept;
+  [[nodiscard]] bool compact() const noexcept {
+    return impl_->compact();
+  }
 
-  [[nodiscard]] bool compact() const noexcept;
+  [[nodiscard]] bool skip_empty_fields() const noexcept {
+    return impl_->skip_empty_fields();
+  }
 
-  [[nodiscard]] bool skip_empty_fields() const noexcept;
+  void skip_empty_fields(bool value) noexcept {
+    impl_->skip_empty_fields(value);
+  }
 
-  void skip_empty_fields(bool value) noexcept;
+  [[nodiscard]] bool skip_object_type_annotation() const noexcept {
+    return impl_->skip_object_type_annotation();
+  }
 
-  [[nodiscard]] bool skip_object_type_annotation() const noexcept;
+  void skip_object_type_annotation(bool value) noexcept {
+    impl_->skip_object_type_annotation(value);
+  }
 
-  void skip_object_type_annotation(bool value) noexcept;
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
+    return impl_->field_type_suffix();
+  }
 
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept;
+  void field_type_suffix(std::string_view suffix) noexcept {
+    impl_->field_type_suffix(suffix);
+  }
 
-  void field_type_suffix(std::string_view suffix) noexcept;
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+    return impl_->mapper();
+  }
 
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
-
-  void mapper(const type_id_mapper* ptr) noexcept;
-
-  // -- modifiers --------------------------------------------------------------
+  void mapper(const type_id_mapper* ptr) noexcept {
+    impl_->mapper(ptr);
+  }
 
   /// Removes all characters from the buffer and restores the writer to its
   /// initial state.
   /// @warning Invalidates all string views into the buffer.
-  void reset();
+  void reset() {
+    impl_->reset();
+  }
 
   [[nodiscard]] bool has_human_readable_format() const noexcept {
     return true;

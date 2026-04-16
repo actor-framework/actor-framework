@@ -705,68 +705,12 @@ private:
 // -- constructors, destructors, and assignment operators ----------------------
 
 json_writer::json_writer(caf::actor_handle_codec* codec)
-  : super(new (impl_storage_) json_writer_impl(codec)) {
+  : super(new(impl_storage_) json_writer_impl(codec)) {
   static_assert(sizeof(json_writer_impl) <= impl_storage_size);
 }
 
 json_writer::~json_writer() noexcept {
   // nop
-}
-
-// -- properties ---------------------------------------------------------------
-
-std::string_view json_writer::str() const noexcept {
-  return impl_->str();
-}
-
-size_t json_writer::indentation() const noexcept {
-  return impl_->indentation();
-}
-
-void json_writer::indentation(size_t factor) noexcept {
-  impl_->indentation(factor);
-}
-
-bool json_writer::compact() const noexcept {
-  return impl_->compact();
-}
-
-bool json_writer::skip_empty_fields() const noexcept {
-  return impl_->skip_empty_fields();
-}
-
-void json_writer::skip_empty_fields(bool value) noexcept {
-  impl_->skip_empty_fields(value);
-}
-
-bool json_writer::skip_object_type_annotation() const noexcept {
-  return impl_->skip_object_type_annotation();
-}
-
-void json_writer::skip_object_type_annotation(bool value) noexcept {
-  impl_->skip_object_type_annotation(value);
-}
-
-std::string_view json_writer::field_type_suffix() const noexcept {
-  return impl_->field_type_suffix();
-}
-
-void json_writer::field_type_suffix(std::string_view suffix) noexcept {
-  impl_->field_type_suffix(suffix);
-}
-
-const type_id_mapper* json_writer::mapper() const noexcept {
-  return impl_->mapper();
-}
-
-void json_writer::mapper(const type_id_mapper* ptr) noexcept {
-  impl_->mapper(ptr);
-}
-
-// -- modifiers ----------------------------------------------------------------
-
-void json_writer::reset() {
-  impl_->reset();
 }
 
 } // namespace caf

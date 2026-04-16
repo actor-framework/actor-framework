@@ -67,8 +67,8 @@ public:
   /// @param type 16-bit ID for known types, @ref invalid_type_id otherwise.
   /// @param pretty_class_name Either the output of @ref type_name_or_anonymous
   ///                          or the optionally defined pretty name.
-  virtual bool begin_object(type_id_t type,
-                            std::string_view pretty_class_name) = 0;
+  virtual bool begin_object(type_id_t type, std::string_view pretty_class_name)
+    = 0;
 
   /// Ends processing of an object.
   virtual bool end_object() = 0;
@@ -78,10 +78,12 @@ public:
   virtual bool begin_field(std::string_view, bool& is_present) = 0;
 
   virtual bool begin_field(std::string_view name,
-                           std::span<const type_id_t> types, size_t& index) = 0;
+                           std::span<const type_id_t> types, size_t& index)
+    = 0;
 
   virtual bool begin_field(std::string_view name, bool& is_present,
-                           std::span<const type_id_t> types, size_t& index) = 0;
+                           std::span<const type_id_t> types, size_t& index)
+    = 0;
 
   virtual bool end_field() = 0;
 

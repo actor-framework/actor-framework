@@ -457,14 +457,14 @@ private:
 
 binary_deserializer::binary_deserializer(
   const_byte_span input, caf::actor_handle_codec* codec) noexcept
-  : super(new (impl_storage_)
+  : super(new(impl_storage_)
             binary_deserializer_impl(input.data(), input.size(), codec)) {
   static_assert(sizeof(binary_deserializer_impl) <= impl_storage_size);
 }
 
 binary_deserializer::binary_deserializer(
   const void* buf, size_t size, caf::actor_handle_codec* codec) noexcept
-  : super(new (impl_storage_) binary_deserializer_impl(
+  : super(new(impl_storage_) binary_deserializer_impl(
       reinterpret_cast<const std::byte*>(buf), size, codec)) {
   // nop
 }

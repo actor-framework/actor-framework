@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/load_inspector_base.hpp"
@@ -31,13 +32,21 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept;
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
+    return impl_->field_type_suffix();
+  }
 
-  void field_type_suffix(std::string_view suffix) noexcept;
+  void field_type_suffix(std::string_view suffix) noexcept {
+    impl_->field_type_suffix(suffix);
+  }
 
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+    return impl_->mapper();
+  }
 
-  void mapper(const type_id_mapper* ptr) noexcept;
+  void mapper(const type_id_mapper* ptr) noexcept {
+    impl_->mapper(ptr);
+  }
 
   /// Parses @p json_text into an internal representation. After loading the
   /// JSON input, the reader is ready for attempting to deserialize inspectable
@@ -46,7 +55,14 @@ public:
   ///          Hence, the buffer pointed to by the string view must remain valid
   ///          until either destroying this reader or calling `reset`.
   /// @note Implicitly calls `reset`.
-  bool load(std::string_view json_text);
+  bool load_text(std::string_view json_text) {
+    return impl_->load_text(json_text);
+  }
+
+  CAF_DEPRECATED("use load_text instead")
+  bool load(std::string_view json_text) {
+    return load_text(json_text);
+  }
 
   bool load_bytes(const_byte_span bytes);
 
@@ -68,10 +84,14 @@ public:
   /// Reverts the state of the reader back to where it was after calling `load`.
   /// @post The reader is ready for attempting to deserialize another
   ///       inspectable object.
-  void revert();
+  void revert() {
+    impl_->revert();
+  }
 
   /// Removes any loaded JSON data and reclaims memory resources.
-  void reset();
+  void reset() {
+    impl_->reset();
+  }
 
   bool fetch_next_object_name(std::string_view& type_name) {
     return impl_->fetch_next_object_name(type_name);

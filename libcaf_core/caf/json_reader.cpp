@@ -224,14 +224,7 @@ public:
     return err_;
   }
 
-  /// Parses @p json_text into an internal representation. After loading the
-  /// JSON input, the reader is ready for attempting to deserialize inspectable
-  /// objects.
-  /// @warning The internal data structure keeps pointers into @p json_text.
-  ///          Hence, the buffer pointed to by the string view must remain valid
-  ///          until either destroying this reader or calling `reset`.
-  /// @note Implicitly calls `reset`.
-  bool load(std::string_view json_text) {
+  bool load_text(std::string_view json_text) override {
     reset();
     string_parser_state ps{json_text.begin(), json_text.end()};
     root_ = detail::json::parse_shallow(ps, &buf_);
@@ -249,8 +242,7 @@ public:
   }
 
   bool load_bytes(const_byte_span bytes) override {
-    auto utf8 = to_string_view(bytes);
-    return load(utf8);
+    return load_text(to_string_view(bytes));
   }
 
   /// Reads the input stream @p input and parses the content into an internal
@@ -296,7 +288,7 @@ public:
   /// Reverts the state of the reader back to where it was after calling `load`.
   /// @post The reader is ready for attempting to deserialize another
   ///       inspectable object.
-  void revert() {
+  void revert() override {
     if (st_) {
       CAF_ASSERT(root_ != nullptr);
       err_.reset();
@@ -307,7 +299,7 @@ public:
   }
 
   /// Removes any loaded JSON data and reclaims memory resources.
-  void reset() {
+  void reset() override {
     buf_.release();
     st_ = nullptr;
     err_.reset();
@@ -740,6 +732,10 @@ public:
     return codec_;
   }
 
+  static json_reader_impl& downcast(text_reader& ptr) {
+    return static_cast<json_reader_impl&>(ptr);
+  }
+
 private:
   [[nodiscard]] position pos() const noexcept {
     if (st_ == nullptr)
@@ -893,10 +889,6 @@ private:
   caf::actor_handle_codec* codec_ = nullptr;
 };
 
-json_reader_impl* json_reader_impl_ptr(text_reader& ptr) {
-  return static_cast<json_reader_impl*>(std::addressof(ptr));
-}
-
 // -- constructors, destructors, and assignment operators ----------------------
 
 json_reader::json_reader(caf::actor_handle_codec* codec) : super(nullptr) {
@@ -908,51 +900,16 @@ json_reader::~json_reader() noexcept {
   // nop
 }
 
-// -- properties -------------------------------------------------------------
-
-[[nodiscard]] std::string_view json_reader::field_type_suffix() const noexcept {
-  return impl_->field_type_suffix();
-}
-
-void json_reader::field_type_suffix(std::string_view suffix) noexcept {
-  impl_->field_type_suffix(suffix);
-}
-
-[[nodiscard]] const type_id_mapper* json_reader::mapper() const noexcept {
-  return impl_->mapper();
-}
-
-/// Changes the type ID mapper for the writer.
-void json_reader::mapper(const type_id_mapper* ptr) noexcept {
-  impl_->mapper(ptr);
-}
-
-bool json_reader::load(std::string_view json_text) {
-  return json_reader_impl_ptr(*impl_)->load(json_text);
-}
-
-bool json_reader::load_bytes(const_byte_span bytes) {
-  return impl_->load_bytes(bytes);
-}
-
 bool json_reader::load_from(std::istream& input) {
-  return json_reader_impl_ptr(*impl_)->load_from(input);
+  return json_reader_impl::downcast(*impl_).load_from(input);
 }
 
 bool json_reader::load_file(const char* path) {
-  return json_reader_impl_ptr(*impl_)->load_file(path);
+  return json_reader_impl::downcast(*impl_).load_file(path);
 }
 
 bool json_reader::load_file(const std::string& path) {
-  return json_reader_impl_ptr(*impl_)->load_file(path);
-}
-
-void json_reader::revert() {
-  json_reader_impl_ptr(*impl_)->revert();
-}
-
-void json_reader::reset() {
-  json_reader_impl_ptr(*impl_)->reset();
+  return json_reader_impl::downcast(*impl_).load_file(path);
 }
 
 } // namespace caf
