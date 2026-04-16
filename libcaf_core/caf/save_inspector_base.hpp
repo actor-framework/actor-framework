@@ -201,7 +201,12 @@ public:
     return impl_->value(what);
   }
 
+  bool value(bool what) {
+    return impl_->value(what);
+  }
+
   template <std::integral T>
+    requires(!std::same_as<T, bool>)
   bool value(T what) {
     return impl_->value(static_cast<detail::squashed_int_t<T>>(what));
   }

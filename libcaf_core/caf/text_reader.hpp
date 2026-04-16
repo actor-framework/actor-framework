@@ -20,7 +20,7 @@ public:
   virtual bool load_bytes(const_byte_span bytes) = 0;
 
   /// Resets the reader and loads a string to deserialize from.
-  virtual bool load_text(std::string_view text) = 0;
+  virtual bool load(std::string_view text) = 0;
 
   /// Reverts the state of the reader back to where it was after calling
   /// `load_bytes`.

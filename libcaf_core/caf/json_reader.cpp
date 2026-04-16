@@ -224,7 +224,7 @@ public:
     return err_;
   }
 
-  bool load_text(std::string_view json_text) override {
+  bool load(std::string_view json_text) override {
     reset();
     string_parser_state ps{json_text.begin(), json_text.end()};
     root_ = detail::json::parse_shallow(ps, &buf_);
@@ -242,7 +242,7 @@ public:
   }
 
   bool load_bytes(const_byte_span bytes) override {
-    return load_text(to_string_view(bytes));
+    return load(to_string_view(bytes));
   }
 
   /// Reads the input stream @p input and parses the content into an internal

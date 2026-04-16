@@ -254,46 +254,20 @@ public:
     return impl_->value(what);
   }
 
-  bool value(uint8_t& what) noexcept {
-    return impl_->value(what);
-  }
-
-  bool value(int8_t& what) noexcept {
-    return impl_->value(what);
-  }
-
-  bool value(int16_t& what) noexcept {
-    return impl_->value(what);
-  }
-
-  bool value(uint16_t& what) noexcept {
-    return impl_->value(what);
-  }
-
-  bool value(int32_t& what) noexcept {
-    return impl_->value(what);
-  }
-
-  bool value(uint32_t& what) noexcept {
-    return impl_->value(what);
-  }
-
-  bool value(int64_t& what) noexcept {
-    return impl_->value(what);
-  }
-
-  bool value(uint64_t& what) noexcept {
-    return impl_->value(what);
-  }
-
   template <std::integral T>
+    requires(!std::same_as<T, bool> && !std::is_const_v<T>)
   bool value(T& what) noexcept {
-    auto tmp = detail::squashed_int_t<T>{0};
-    if (impl_->value(tmp)) {
-      what = static_cast<T>(tmp);
-      return true;
+    using squashed_t = detail::squashed_int_t<T>;
+    if constexpr (std::same_as<T, squashed_t>) {
+      return impl_->value(what);
     } else {
-      return false;
+      auto tmp = squashed_t{0};
+      if (impl_->value(tmp)) {
+        what = static_cast<T>(tmp);
+        return true;
+      } else {
+        return false;
+      }
     }
   }
 
