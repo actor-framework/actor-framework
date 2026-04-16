@@ -39,7 +39,7 @@
 
 namespace caf {
 
-class config_value_writer::impl : public save_inspector_base<impl> {
+class config_value_writer_impl : public serializer {
 public:
   // -- member types------------------------------------------------------------
 
@@ -58,10 +58,15 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit impl(config_value* dst, caf::actor_handle_codec* codec)
+  explicit config_value_writer_impl(config_value* dst,
+                                    caf::actor_handle_codec* codec)
     : codec_(codec) {
     st_.push(dst);
   }
+
+  config_value_writer_impl(const config_value_writer_impl&) = delete;
+
+  config_value_writer_impl& operator=(const config_value_writer_impl&) = delete;
 
   // -- interface functions ----------------------------------------------------
 
@@ -73,7 +78,11 @@ public:
     return err_;
   }
 
-  bool begin_object(type_id_t, std::string_view) {
+  bool has_human_readable_format() const noexcept override {
+    return true;
+  }
+
+  bool begin_object(type_id_t, std::string_view) override {
     CHECK_NOT_EMPTY();
     auto f = detail::make_overload(
       [this](config_value* x) {
@@ -117,19 +126,19 @@ public:
     return true;
   }
 
-  bool end_object() {
+  bool end_object() override {
     SCOPE(settings*);
     st_.pop();
     return true;
   }
 
-  bool begin_field(std::string_view name) {
+  bool begin_field(std::string_view name) override {
     SCOPE(settings*);
     st_.push(present_field{top, name, std::string_view{}});
     return true;
   }
 
-  bool begin_field(std::string_view name, bool is_present) {
+  bool begin_field(std::string_view name, bool is_present) override {
     SCOPE(settings*);
     if (is_present)
       st_.push(present_field{top, name, std::string_view{}});
@@ -139,7 +148,7 @@ public:
   }
 
   bool begin_field(std::string_view name, std::span<const type_id_t> types,
-                   size_t index) {
+                   size_t index) override {
     SCOPE(settings*);
     if (index >= types.size()) {
       emplace_error(sec::invalid_argument,
@@ -158,14 +167,14 @@ public:
   }
 
   bool begin_field(std::string_view name, bool is_present,
-                   std::span<const type_id_t> types, size_t index) {
+                   std::span<const type_id_t> types, size_t index) override {
     if (is_present)
       return begin_field(name, types, index);
     else
       return begin_field(name, false);
   }
 
-  bool end_field() {
+  bool end_field() override {
     CHECK_NOT_EMPTY();
     if (!holds_alternative<present_field>(st_.top())
         && !holds_alternative<absent_field>(st_.top())) {
@@ -176,15 +185,15 @@ public:
     return true;
   }
 
-  bool begin_tuple(size_t size) {
+  bool begin_tuple(size_t size) override {
     return begin_sequence(size);
   }
 
-  bool end_tuple() {
+  bool end_tuple() override {
     return end_sequence();
   }
 
-  bool begin_key_value_pair() {
+  bool begin_key_value_pair() override {
     SCOPE(settings*);
     auto [iter, added] = top->emplace("@tmp", config_value::list{});
     if (!added) {
@@ -195,7 +204,7 @@ public:
     return true;
   }
 
-  bool end_key_value_pair() {
+  bool end_key_value_pair() override {
     config_value::list tmp;
     /* lifetime scope of the list */ {
       SCOPE(config_value::list*);
@@ -222,7 +231,7 @@ public:
     return true;
   }
 
-  bool begin_sequence(size_t) {
+  bool begin_sequence(size_t) override {
     CHECK_NOT_EMPTY();
     auto f = detail::make_overload(
       [this](config_value* val) {
@@ -262,13 +271,13 @@ public:
     return visit(f, st_.top());
   }
 
-  bool end_sequence() {
+  bool end_sequence() override {
     SCOPE(config_value::list*);
     st_.pop();
     return true;
   }
 
-  bool begin_associative_array(size_t) {
+  bool begin_associative_array(size_t) override {
     CHECK_NOT_EMPTY();
     settings* inner = nullptr;
     auto f = detail::make_overload(
@@ -325,19 +334,19 @@ public:
     return false;
   }
 
-  bool end_associative_array() {
+  bool end_associative_array() override {
     SCOPE(settings*);
     st_.pop();
     return true;
   }
 
-  bool value(std::byte x) {
+  bool value(std::byte x) override {
     return push(config_value{static_cast<config_value::integer>(x)});
   }
 
   template <class T>
     requires std::is_integral_v<T>
-  bool value(T x) {
+  bool integral_value(T x) {
     if constexpr (std::is_same_v<T, bool>) {
       return push(config_value{x});
     } else if constexpr (std::is_same_v<T, uint64_t>) {
@@ -352,39 +361,75 @@ public:
     }
   }
 
-  bool value(float x) {
+  bool value(bool x) override {
+    return integral_value(x);
+  }
+
+  bool value(int8_t x) override {
+    return integral_value(x);
+  }
+
+  bool value(uint8_t x) override {
+    return integral_value(x);
+  }
+
+  bool value(int16_t x) override {
+    return integral_value(x);
+  }
+
+  bool value(uint16_t x) override {
+    return integral_value(x);
+  }
+
+  bool value(int32_t x) override {
+    return integral_value(x);
+  }
+
+  bool value(uint32_t x) override {
+    return integral_value(x);
+  }
+
+  bool value(int64_t x) override {
+    return integral_value(x);
+  }
+
+  bool value(uint64_t x) override {
+    return integral_value(x);
+  }
+
+  bool value(float x) override {
     return push(config_value{double{x}});
   }
 
-  bool value(double x) {
+  bool value(double x) override {
     return push(config_value{x});
   }
 
-  bool value(long double x) {
+  bool value(long double x) override {
     return push(config_value{std::to_string(x)});
   }
 
-  bool value(std::string_view x) {
+  bool value(std::string_view x) override {
     return push(config_value{std::string{x}});
   }
 
-  bool value(const std::u16string&) {
+  bool value(const std::u16string&) override {
     emplace_error(sec::runtime_error, "u16string support not implemented yet");
     return false;
   }
 
-  bool value(const std::u32string&) {
+  bool value(const std::u32string&) override {
     emplace_error(sec::runtime_error, "u32string support not implemented yet");
     return false;
   }
 
-  bool value(const_byte_span x) {
+  bool value(const_byte_span x) override {
     std::string str;
     detail::append_hex(str, x.data(), x.size());
     return push(config_value{std::move(str)});
   }
 
-  caf::actor_handle_codec* actor_handle_codec() {
+  caf::actor_handle_codec* actor_handle_codec() override {
     return codec_;
   }
 
@@ -443,163 +488,13 @@ private:
 // -- constructors, destructors, and assignment operators ----------------------
 
 config_value_writer::config_value_writer(config_value* dst,
-                                         caf::actor_handle_codec* codec) {
-  static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(dst, codec));
+                                         caf::actor_handle_codec* codec)
+  : super(new(impl_storage_) config_value_writer_impl(dst, codec)) {
+  static_assert(sizeof(config_value_writer_impl) <= impl_storage_size);
 }
 
-config_value_writer::~config_value_writer() {
+config_value_writer::~config_value_writer() noexcept {
   // nop
-}
-
-// -- interface functions ------------------------------------------------------
-
-void config_value_writer::set_error(error stop_reason) {
-  impl_->set_error(std::move(stop_reason));
-}
-
-error& config_value_writer::get_error() noexcept {
-  return impl_->get_error();
-}
-
-bool config_value_writer::has_human_readable_format() const noexcept {
-  return true;
-}
-
-bool config_value_writer::begin_object(type_id_t type, std::string_view name) {
-  return impl_->begin_object(type, name);
-}
-
-bool config_value_writer::end_object() {
-  return impl_->end_object();
-}
-
-bool config_value_writer::begin_field(std::string_view name) {
-  return impl_->begin_field(name);
-}
-
-bool config_value_writer::begin_field(std::string_view name, bool is_present) {
-  return impl_->begin_field(name, is_present);
-}
-
-bool config_value_writer::begin_field(std::string_view name,
-                                      std::span<const type_id_t> types,
-                                      size_t index) {
-  return impl_->begin_field(name, types, index);
-}
-
-bool config_value_writer::begin_field(std::string_view name, bool is_present,
-                                      std::span<const type_id_t> types,
-                                      size_t index) {
-  return impl_->begin_field(name, is_present, types, index);
-}
-
-bool config_value_writer::end_field() {
-  return impl_->end_field();
-}
-
-bool config_value_writer::begin_tuple(size_t size) {
-  return impl_->begin_tuple(size);
-}
-
-bool config_value_writer::end_tuple() {
-  return impl_->end_tuple();
-}
-
-bool config_value_writer::begin_key_value_pair() {
-  return impl_->begin_key_value_pair();
-}
-
-bool config_value_writer::end_key_value_pair() {
-  return impl_->end_key_value_pair();
-}
-
-bool config_value_writer::begin_sequence(size_t size) {
-  return impl_->begin_sequence(size);
-}
-
-bool config_value_writer::end_sequence() {
-  return impl_->end_sequence();
-}
-
-bool config_value_writer::begin_associative_array(size_t size) {
-  return impl_->begin_associative_array(size);
-}
-
-bool config_value_writer::end_associative_array() {
-  return impl_->end_associative_array();
-}
-
-bool config_value_writer::value(std::byte x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(bool x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(int8_t x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(uint8_t x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(int16_t x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(uint16_t x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(int32_t x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(uint32_t x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(int64_t x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(uint64_t x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(float x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(double x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(long double x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(std::string_view x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(const std::u16string& x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(const std::u32string& x) {
-  return impl_->value(x);
-}
-
-bool config_value_writer::value(const_byte_span x) {
-  return impl_->value(x);
-}
-
-caf::actor_handle_codec* config_value_writer::actor_handle_codec() {
-  return impl_->actor_handle_codec();
 }
 
 } // namespace caf

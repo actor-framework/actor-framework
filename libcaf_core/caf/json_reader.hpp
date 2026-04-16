@@ -55,13 +55,8 @@ public:
   ///          Hence, the buffer pointed to by the string view must remain valid
   ///          until either destroying this reader or calling `reset`.
   /// @note Implicitly calls `reset`.
-  bool load_text(std::string_view json_text) {
-    return impl_->load_text(json_text);
-  }
-
-  CAF_DEPRECATED("use load_text instead")
   bool load(std::string_view json_text) {
-    return load_text(json_text);
+    return impl_->load(json_text);
   }
 
   bool load_bytes(const_byte_span bytes);

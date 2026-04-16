@@ -208,7 +208,7 @@ error_code<sec> config_value::default_construct(type_id_t id) {
         auto destroy_guard
           = detail::scope_guard{[=]() noexcept { meta->destroy(ptr); }};
         config_value_writer writer{this};
-        if (meta->save(writer, ptr)) {
+        if (meta->save(writer.as_serializer(), ptr)) {
           return {};
         } else {
           const auto& err = writer.get_error();
@@ -495,7 +495,7 @@ config_value::parse_msg_impl(std::string_view str,
         auto& meta = detail::global_meta_object(type);
         meta.default_construct(pos);
         ptr->inc_constructed_elements();
-        if (!meta.load(reader, pos))
+        if (!meta.load(reader.as_deserializer(), pos))
           return false;
         pos += meta.padded_size;
       }

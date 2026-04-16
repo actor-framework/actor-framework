@@ -224,7 +224,7 @@ public:
   expected<T> convert_to(Token token) const {
     auto tmp = T{};
     config_value_reader reader{this};
-    if (detail::load(reader, tmp, token))
+    if (detail::load(reader.as_deserializer(), tmp, token))
       return {std::move(tmp)};
     else
       return expected<T>{unexpect, std::move(reader.get_error())};
