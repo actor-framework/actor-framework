@@ -9,6 +9,7 @@
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/detail/default_actor_handle_codec.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/log/test.hpp"
 #include "caf/scoped_actor.hpp"
@@ -46,13 +47,14 @@ TEST("erase") {
 TEST("serialization roundtrips go through the registry") {
   auto hdl = sys.spawn(dummy);
   log::test::debug("hdl.id: {}", hdl->id());
+  auto codec = detail::default_actor_handle_codec{sys};
   byte_buffer buf;
-  binary_serializer sink{sys, buf};
+  binary_serializer sink{buf, &codec};
   if (!sink.apply(hdl))
     fail("serialization failed: {}", sink.get_error());
   log::test::debug("buf: {}", buf);
   actor hdl2;
-  binary_deserializer source{sys, buf};
+  binary_deserializer source{buf, &codec};
   if (!source.apply(hdl2))
     fail("deserialization failed: {}", source.get_error());
   check_eq(hdl, hdl2);

@@ -5,6 +5,7 @@
 #include "caf/json_writer.hpp"
 
 #include "caf/actor_control_block.hpp"
+#include "caf/actor_handle_codec.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
@@ -47,7 +48,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl(actor_system* sys, serializer* parent) : sys_(sys), parent_(parent) {
+  explicit impl(caf::actor_handle_codec* codec) : codec_(codec) {
     // Reserve some reasonable storage for the character buffer. JSON grows
     // quickly, so we can start at 1kb to avoid a couple of small allocations in
     // the beginning.
@@ -124,10 +125,6 @@ public:
 
   error& get_error() noexcept override {
     return err_;
-  }
-
-  caf::actor_system* sys() const noexcept override {
-    return sys_;
   }
 
   bool has_human_readable_format() const noexcept override {
@@ -498,16 +495,8 @@ public:
     }
   }
 
-  bool value(const strong_actor_ptr& ptr) override {
-    // These are customization points for the deserializer. Client code may
-    // inherit from json_writer and override these member functions. Hence, we
-    // need to dispatch to the parent class.
-    return parent_->value(ptr);
-  }
-
-  bool value(const weak_actor_ptr& ptr) override {
-    // Same as above.
-    return parent_->value(ptr);
+  caf::actor_handle_codec* actor_handle_codec() override {
+    return codec_;
   }
 
 private:
@@ -671,9 +660,6 @@ private:
 
   // -- member variables -------------------------------------------------------
 
-  // The actor system this writer belongs to.
-  actor_system* sys_ = nullptr;
-
   // The current level of indentation.
   size_t indentation_level_ = 0;
 
@@ -713,18 +699,14 @@ private:
   /// The last error that occurred.
   error err_;
 
-  serializer* parent_;
+  caf::actor_handle_codec* codec_ = nullptr;
 };
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-json_writer::json_writer() {
+json_writer::json_writer(caf::actor_handle_codec* codec) {
   static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(nullptr, this));
-}
-
-json_writer::json_writer(actor_system& sys) {
-  impl_.reset(new (impl_storage_) impl(&sys, this));
+  impl_.reset(new (impl_storage_) impl(codec));
 }
 
 json_writer::~json_writer() {
@@ -795,10 +777,6 @@ void json_writer::set_error(error stop_reason) {
 
 error& json_writer::get_error() noexcept {
   return impl_->get_error();
-}
-
-caf::actor_system* json_writer::sys() const noexcept {
-  return impl_->sys();
 }
 
 bool json_writer::has_human_readable_format() const noexcept {
@@ -933,6 +911,10 @@ bool json_writer::value(const std::u32string& x) {
 
 bool json_writer::value(const_byte_span x) {
   return impl_->value(x);
+}
+
+caf::actor_handle_codec* json_writer::actor_handle_codec() {
+  return impl_->actor_handle_codec();
 }
 
 } // namespace caf

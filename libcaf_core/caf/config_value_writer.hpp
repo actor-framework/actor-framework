@@ -18,9 +18,8 @@ class CAF_CORE_EXPORT config_value_writer final : public serializer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit config_value_writer(config_value* dst);
-
-  config_value_writer(config_value* dst, actor_system& sys);
+  explicit config_value_writer(config_value* dst,
+                               caf::actor_handle_codec* codec = nullptr);
 
   ~config_value_writer() override;
 
@@ -29,8 +28,6 @@ public:
   void set_error(error stop_reason) override;
 
   error& get_error() noexcept override;
-
-  caf::actor_system* sys() const noexcept override;
 
   bool has_human_readable_format() const noexcept override;
 
@@ -66,6 +63,8 @@ public:
 
   bool end_associative_array() override;
 
+  using serializer::value;
+
   bool value(std::byte x) override;
 
   bool value(bool x) override;
@@ -99,6 +98,8 @@ public:
   bool value(const std::u32string& x) override;
 
   bool value(const_byte_span x) override;
+
+  caf::actor_handle_codec* actor_handle_codec() override;
 
 private:
   static constexpr size_t impl_storage_size = 64;

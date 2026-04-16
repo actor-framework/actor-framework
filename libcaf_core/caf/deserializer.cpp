@@ -4,8 +4,10 @@
 
 #include "caf/deserializer.hpp"
 
-#include "caf/actor_system.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/actor_handle_codec.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/sec.hpp"
 
 namespace caf {
 
@@ -64,20 +66,11 @@ bool deserializer::end_associative_array() {
 }
 
 bool deserializer::value(strong_actor_ptr& ptr) {
-  auto aid = actor_id{0};
-  auto nid = node_id{};
-  auto ok = object(ptr).pretty_name("actor").fields(field("id", aid),
-                                                    field("node", nid));
-  if (!ok) {
-    return false;
+  if (auto* codec = actor_handle_codec()) {
+    return codec->load(*this, ptr);
   }
-  if (aid == 0 || !nid) {
-    ptr = nullptr;
-  } else if (auto err = load_actor(ptr, sys(), aid, nid); err.valid()) {
-    set_error(error{err.value()});
-    return false;
-  }
-  return true;
+  set_error(make_error(sec::no_actor_handle_codec));
+  return false;
 }
 
 bool deserializer::value(weak_actor_ptr& ptr) {

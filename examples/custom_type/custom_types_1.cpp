@@ -99,13 +99,13 @@ void caf_main(actor_system& sys) {
   // byte buffer
   byte_buffer buf;
   // write f1 to buffer
-  binary_serializer sink{sys, buf};
+  binary_serializer sink{buf};
   if (!sink.apply(f1)) {
     sys.println("*** failed to serialize foo2: {}", sink.get_error());
     return;
   }
   // read f2 back from buffer
-  binary_deserializer source{sys, buf};
+  binary_deserializer source{buf};
   if (!source.apply(f2)) {
     sys.println("*** failed to deserialize foo2: {}", source.get_error());
     return;

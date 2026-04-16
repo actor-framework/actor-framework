@@ -8,6 +8,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/default_actor_handle_codec.hpp"
 
 #include <vector>
 
@@ -20,7 +21,7 @@ class test_serializer : public serializer {
 public:
   using super = serializer;
 
-  test_serializer(actor_system& sys, bool state) : sys_(&sys), state_(state) {
+  test_serializer(actor_system& sys, bool state) : codec_(sys), state_(state) {
     // nop
   }
 
@@ -38,8 +39,8 @@ public:
     return err_;
   }
 
-  caf::actor_system* sys() const noexcept override {
-    return sys_;
+  caf::actor_handle_codec* actor_handle_codec() override {
+    return &codec_;
   }
 
   bool has_human_readable_format() const noexcept override {
@@ -161,7 +162,7 @@ public:
   };
 
 private:
-  actor_system* sys_ = nullptr;
+  detail::default_actor_handle_codec codec_;
   bool state_ = false;
   error err_;
 };

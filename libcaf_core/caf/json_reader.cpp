@@ -5,6 +5,7 @@
 #include "caf/json_reader.hpp"
 
 #include "caf/actor_control_block.hpp"
+#include "caf/actor_handle_codec.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/assert.hpp"
@@ -177,7 +178,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl(actor_system* sys, deserializer* parent) : sys_(sys), parent_(parent) {
+  explicit impl(caf::actor_handle_codec* codec) : codec_(codec) {
     field_.reserve(8);
   }
 
@@ -314,10 +315,6 @@ public:
   }
 
   // -- overrides --------------------------------------------------------------
-
-  caf::actor_system* sys() const noexcept override {
-    return sys_;
-  }
 
   bool has_human_readable_format() const noexcept override {
     return true;
@@ -739,16 +736,8 @@ public:
     return false;
   }
 
-  bool value(strong_actor_ptr& ptr) override {
-    // These are customization points for the deserializer. Client code may
-    // inherit from json_reader and override these member functions. Hence, we
-    // need to dispatch to the parent class.
-    return parent_->value(ptr);
-  }
-
-  bool value(weak_actor_ptr& ptr) override {
-    // Same as above.
-    return parent_->value(ptr);
+  caf::actor_handle_codec* actor_handle_codec() override {
+    return codec_;
   }
 
 private:
@@ -882,8 +871,6 @@ private:
     }
   }
 
-  actor_system* sys_ = nullptr;
-
   std::pmr::monotonic_buffer_resource buf_;
 
   stack_type* st_ = nullptr;
@@ -903,18 +890,14 @@ private:
 
   error err_;
 
-  deserializer* parent_;
+  caf::actor_handle_codec* codec_ = nullptr;
 };
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-json_reader::json_reader() {
+json_reader::json_reader(caf::actor_handle_codec* codec) {
   static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(nullptr, this));
-}
-
-json_reader::json_reader(actor_system& sys) {
-  impl_.reset(new (impl_storage_) impl(&sys, this));
+  impl_.reset(new (impl_storage_) impl(codec));
 }
 
 json_reader::~json_reader() {
@@ -979,10 +962,6 @@ void json_reader::reset() {
 }
 
 // -- interface functions ------------------------------------------------------
-
-caf::actor_system* json_reader::sys() const noexcept {
-  return impl_->sys();
-}
 
 bool json_reader::has_human_readable_format() const noexcept {
   return impl_->has_human_readable_format();
@@ -1124,6 +1103,10 @@ bool json_reader::value(std::u32string& x) {
 
 bool json_reader::value(byte_span x) {
   return impl_->value(x);
+}
+
+caf::actor_handle_codec* json_reader::actor_handle_codec() {
+  return impl_->actor_handle_codec();
 }
 
 } // namespace caf

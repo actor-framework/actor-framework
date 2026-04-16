@@ -6,8 +6,6 @@
 
 #include "caf/test/test.hpp"
 
-#include "caf/actor_system.hpp"
-#include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 
@@ -16,22 +14,22 @@ using namespace caf;
 namespace {
 
 struct fixture {
-  actor_system_config cfg;
-  actor_system sys{cfg};
-
   template <class T>
-  T roundtrip(T x) {
+  T roundtrip(T input) {
     byte_buffer buf;
-    binary_serializer sink(sys, buf);
-    if (!sink.apply(x))
-      test::runnable::current().fail("serialization failed: {}",
-                                     sink.get_error());
-    binary_deserializer source(sys, std::span{buf});
-    T y;
-    if (!source.apply(y))
+    {
+      binary_serializer sink{buf};
+      if (!sink.apply(input)) {
+        test::runnable::current().fail("serialization failed: {}",
+                                       sink.get_error());
+      }
+    }
+    binary_deserializer source{buf};
+    T output;
+    if (!source.apply(output))
       test::runnable::current().fail("deserialization failed: {}",
                                      source.get_error());
-    return y;
+    return output;
   }
 };
 

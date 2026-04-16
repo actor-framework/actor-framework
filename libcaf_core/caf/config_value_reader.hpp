@@ -18,9 +18,8 @@ class CAF_CORE_EXPORT config_value_reader final : public deserializer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit config_value_reader(const config_value* input);
-
-  config_value_reader(const config_value* input, actor_system& sys);
+  explicit config_value_reader(const config_value* input,
+                               caf::actor_handle_codec* codec = nullptr);
 
   ~config_value_reader() override;
 
@@ -33,8 +32,6 @@ public:
   void set_error(error stop_reason) override;
 
   error& get_error() noexcept override;
-
-  caf::actor_system* sys() const noexcept override;
 
   bool has_human_readable_format() const noexcept override;
 
@@ -72,6 +69,8 @@ public:
 
   bool end_associative_array() override;
 
+  using deserializer::value;
+
   bool value(std::byte& x) override;
 
   bool value(bool& x) override;
@@ -105,6 +104,8 @@ public:
   bool value(std::u32string& x) override;
 
   bool value(byte_span x) override;
+
+  caf::actor_handle_codec* actor_handle_codec() override;
 
 private:
   static constexpr size_t impl_storage_size = 88;

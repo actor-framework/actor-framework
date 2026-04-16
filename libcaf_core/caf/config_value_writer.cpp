@@ -4,6 +4,7 @@
 
 #include "caf/config_value_writer.hpp"
 
+#include "caf/actor_handle_codec.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
@@ -57,7 +58,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  impl(config_value* dst, actor_system* sys) : sys_(sys) {
+  explicit impl(config_value* dst, caf::actor_handle_codec* codec)
+    : codec_(codec) {
     st_.push(dst);
   }
 
@@ -69,10 +71,6 @@ public:
 
   error& get_error() noexcept override {
     return err_;
-  }
-
-  caf::actor_system* sys() const noexcept {
-    return sys_;
   }
 
   bool begin_object(type_id_t, std::string_view) {
@@ -386,6 +384,10 @@ public:
     return push(config_value{std::move(str)});
   }
 
+  caf::actor_handle_codec* actor_handle_codec() {
+    return codec_;
+  }
+
 private:
   bool push(config_value&& x) {
     CHECK_NOT_EMPTY();
@@ -431,22 +433,19 @@ private:
     return visit(f, st_.top());
   }
 
-  caf::actor_system* sys_;
-
   stack_type st_;
 
   error err_;
+
+  caf::actor_handle_codec* codec_ = nullptr;
 };
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-config_value_writer::config_value_writer(config_value* dst) {
+config_value_writer::config_value_writer(config_value* dst,
+                                         caf::actor_handle_codec* codec) {
   static_assert(sizeof(impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) impl(dst, nullptr));
-}
-
-config_value_writer::config_value_writer(config_value* dst, actor_system& sys) {
-  impl_.reset(new (impl_storage_) impl(dst, &sys));
+  impl_.reset(new (impl_storage_) impl(dst, codec));
 }
 
 config_value_writer::~config_value_writer() {
@@ -461,10 +460,6 @@ void config_value_writer::set_error(error stop_reason) {
 
 error& config_value_writer::get_error() noexcept {
   return impl_->get_error();
-}
-
-caf::actor_system* config_value_writer::sys() const noexcept {
-  return impl_->sys();
 }
 
 bool config_value_writer::has_human_readable_format() const noexcept {
@@ -601,6 +596,10 @@ bool config_value_writer::value(const std::u32string& x) {
 
 bool config_value_writer::value(const_byte_span x) {
   return impl_->value(x);
+}
+
+caf::actor_handle_codec* config_value_writer::actor_handle_codec() {
+  return impl_->actor_handle_codec();
 }
 
 } // namespace caf

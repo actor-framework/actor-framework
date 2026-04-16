@@ -13,6 +13,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/concepts.hpp"
+#include "caf/detail/default_actor_handle_codec.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
@@ -613,14 +614,15 @@ public:
   template <class T>
   expected<T> serialization_roundtrip(const T& value) {
     byte_buffer buf;
+    auto codec = detail::default_actor_handle_codec{sys};
     {
-      binary_serializer sink{sys, buf};
+      binary_serializer sink{buf, &codec};
       if (!sink.apply(value))
         return unexpected<error>{std::in_place, sink.get_error()};
     }
     T result;
     {
-      binary_deserializer source{sys, buf};
+      binary_deserializer source{buf, &codec};
       if (!source.apply(result))
         return unexpected<error>{std::in_place, source.get_error()};
     }
