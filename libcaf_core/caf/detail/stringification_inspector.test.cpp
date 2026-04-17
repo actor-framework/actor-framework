@@ -6,6 +6,7 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/deep_to_string.hpp"
 #include "caf/expected.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/sec.hpp"
@@ -208,6 +209,11 @@ TEST("stringification of pointers") {
   check_eq(do_render(&value), "*42"s);
   void* ptr = nullptr;
   check_eq(do_render(ptr), "null"s);
+  const void* cptr = nullptr;
+  check_eq(do_render(cptr), "null"s);
+  cptr = &value;
+  check_matches(do_render(cptr), R"(^\*<\d+>$)");
+  check_matches(deep_to_string(cptr), R"(^\*<\d+>$)");
 }
 
 TEST("stringification of various integer types") {

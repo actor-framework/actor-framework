@@ -126,18 +126,11 @@ bool load(Inspector& f, T& x, inspector_access_type::list) {
 }
 
 template <class Inspector, class T>
-  requires accepts_opaque_value<Inspector, T>
 bool load(Inspector& f, T& x, inspector_access_type::none) {
+  static_assert(accepts_opaque_value<Inspector, T>,
+                "please provide an inspect overload for T or "
+                "specialize inspector_access");
   return f.opaque_value(x);
-}
-
-template <class Inspector, class T>
-  requires(!accepts_opaque_value<Inspector, T>)
-bool load(Inspector&, T&, inspector_access_type::none) {
-  static_assert(
-    detail::assertion_failed_v<T>,
-    "please provide an inspect overload for T or specialize inspector_access");
-  return false;
 }
 
 template <class Inspector, class T>

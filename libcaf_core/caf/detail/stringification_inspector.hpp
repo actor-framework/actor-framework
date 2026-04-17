@@ -4,107 +4,47 @@
 
 #pragma once
 
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/expected.hpp"
 #include "caf/fwd.hpp"
-#include "caf/placement_ptr.hpp"
 #include "caf/save_inspector_base.hpp"
+#include "caf/serializer.hpp"
 
+#include <chrono>
 #include <concepts>
 #include <cstddef>
+#include <cstring>
+#include <optional>
+#include <string_view>
 
 namespace caf::detail {
 
-class CAF_CORE_EXPORT stringification_inspector
-  : public save_inspector_base<stringification_inspector> {
+class CAF_CORE_EXPORT stringification_inspector final
+  : public save_inspector_base<stringification_inspector, serializer> {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = save_inspector_base<stringification_inspector>;
-
-  // -- constructors, destructors, and assignment operators --------------------
+  using super = save_inspector_base<stringification_inspector, serializer>;
 
   explicit stringification_inspector(std::string& result);
 
-  ~stringification_inspector() override;
+  stringification_inspector(const stringification_inspector&) = delete;
+
+  stringification_inspector& operator=(const stringification_inspector&)
+    = delete;
+
+  ~stringification_inspector() noexcept override;
 
   // -- properties -------------------------------------------------------------
 
-  bool has_human_readable_format() const noexcept;
-
-  // -- serializer interface ---------------------------------------------------
-
-  void set_error(error stop_reason) override;
-
-  error& get_error() noexcept override;
-
-  bool begin_object(type_id_t, std::string_view name);
-
-  bool end_object();
-
-  bool begin_field(std::string_view);
-
-  bool begin_field(std::string_view name, bool is_present);
-
-  bool begin_field(std::string_view name, std::span<const type_id_t>, size_t);
-
-  bool begin_field(std::string_view name, bool, std::span<const type_id_t>,
-                   size_t);
-
-  bool end_field();
-
-  bool begin_tuple(size_t size);
-
-  bool end_tuple();
-
-  bool begin_key_value_pair();
-
-  bool end_key_value_pair();
-
-  bool begin_sequence(size_t size);
-
-  bool end_sequence();
-
-  bool begin_associative_array(size_t size);
-
-  bool end_associative_array();
-
-  bool value(std::byte x);
-
-  bool value(bool x);
-
-  template <std::integral Integral>
-  bool value(Integral x) {
-    if constexpr (std::is_signed_v<Integral>)
-      return int_value(static_cast<int64_t>(x));
-    else
-      return int_value(static_cast<uint64_t>(x));
+  [[nodiscard]] bool has_human_readable_format() const noexcept {
+    return true;
   }
 
-  bool value(float x);
+  using super::value;
 
-  bool value(double x);
+  bool value(const void* ptr);
 
-  bool value(long double x);
-
-  bool value(std::string_view x);
-
-  bool value(void* x);
-
-  bool value(const std::u16string& x);
-
-  bool value(const std::u32string& x);
-
-  bool value(const_byte_span x);
-
-  bool value(const strong_actor_ptr& ptr);
-
-  bool value(const weak_actor_ptr& ptr);
-
-  using super::list;
-
-  bool list(const std::vector<bool>& xs);
-
-  // -- builtin inspection to pick up to_string or provide nicer formatting ----
+  // -- builtin inspection to pick up to_string or provide nicer formatting ---
 
   template <class Rep, class Period>
   bool builtin_inspect(const std::chrono::duration<Rep, Period> x) {
@@ -182,7 +122,7 @@ public:
 
   template <class T>
   bool opaque_value(T& val) {
-    if constexpr (detail::iterable<T>) {
+    if constexpr (detail::iterable<std::remove_const_t<T>>) {
       begin_sequence(val.size());
       for (const auto& elem : val) {
         save(*this, elem);
@@ -196,20 +136,9 @@ public:
 
   void append(std::string_view str);
 
-  bool int_value(int64_t x);
-
-  bool int_value(uint64_t x);
-
 private:
-  static constexpr size_t impl_storage_size = 64;
+  static constexpr size_t impl_storage_size = 96;
 
-  /// Opaque implementation class.
-  class impl;
-
-  /// Pointer to the implementation object.
-  placement_ptr<impl> impl_;
-
-  /// Storage for the implementation object.
   alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
 };
 
