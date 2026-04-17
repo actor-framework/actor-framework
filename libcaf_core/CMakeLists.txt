@@ -165,7 +165,6 @@ caf_add_component(
     caf/detail/beacon.test.cpp
     caf/detail/behavior_impl.cpp
     caf/detail/behavior_stack.cpp
-    caf/detail/blocking_behavior.cpp
     caf/detail/bounds_checker.test.cpp
     caf/detail/cleanup_and_release.cpp
     caf/detail/cleanup_and_release.test.cpp

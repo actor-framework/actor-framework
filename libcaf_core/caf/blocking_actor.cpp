@@ -7,6 +7,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/adopt_ref.hpp"
 #include "caf/anon_mail.hpp"
+#include "caf/callback.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/current_actor.hpp"
@@ -14,10 +15,9 @@
 #include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/private_thread.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/fwd.hpp"
-#include "caf/invoke_message_result.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
@@ -161,6 +161,22 @@ bool blocking_actor::initialize(scheduler*) {
   return true;
 }
 
+local_actor::consume_result blocking_actor::consume(mailbox_element_ptr& what) {
+  CAF_ASSERT(what != nullptr);
+  CAF_ASSERT(current_behavior_ != nullptr);
+  // Blocking actors can nest receives => push/pop `current_element_`
+  auto prev_element = current_element_;
+  current_element_ = what.get();
+  auto g = detail::scope_guard{[this, prev_element]() noexcept { //
+    current_element_ = prev_element;
+  }};
+  detail::default_invoke_result_visitor<blocking_actor> visitor{this};
+  if ((*current_behavior_)(visitor, what->payload)) {
+    return consume_result::consumed;
+  }
+  return consume_result::skipped;
+}
+
 bool blocking_actor::launch_delayed() {
   return false;
 }
@@ -197,54 +213,26 @@ void blocking_actor::fail_state(error err) {
 }
 
 void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
-                                  detail::blocking_behavior& bhvr) {
+                                  behavior& bhvr, timespan timeout,
+                                  callback<void()>& on_timeout) {
+  detail::current_actor_guard ctx_guard{this};
   auto lg = log::core::trace("mid = {}", mid);
   unstash();
-  // Convenience function for trying to consume a message.
-  auto consume = [this, mid, &bhvr] {
-    detail::default_invoke_result_visitor<blocking_actor> visitor{this};
-    if (bhvr.nested(visitor, current_element_->content()))
-      return true;
-    auto sres = bhvr.fallback(current_element_->payload);
-    auto f = detail::make_overload(
-      [this, mid, &bhvr](skip_t&) {
-        // Response handlers must get re-invoked with an error when
-        // receiving an unexpected message.
-        if (mid.is_response()) {
-          auto& x = *current_element_;
-          auto err = make_error(sec::unexpected_response, std::move(x.payload));
-          mailbox_element tmp{std::move(x.sender), x.mid,
-                              make_message(std::move(err))};
-          current_element_ = &tmp;
-          bhvr.nested(tmp.content());
-          return true;
-        }
-        return false;
-      },
-      [&visitor](auto& res) {
-        visitor(res);
-        return true;
-      });
-    return visit(f, sres);
-  };
-  // Check pre-condition once before entering the message consumption loop. The
-  // consumer performs any future check on pre and post conditions via
-  // check_if_done.
+  // Check pre-condition once before entering the message consumption loop.
   if (!rcc.pre())
     return;
   // Read incoming messages for as long as the user's receive loop accepts more
   // messages.
   for (;;) {
     // Reset the timeout each iteration.
-    auto rel_tout = bhvr.timeout();
-    if (rel_tout == infinite) {
+    if (timeout == infinite) {
       await_data();
     } else {
       auto abs_tout = std::chrono::high_resolution_clock::now();
-      abs_tout += rel_tout;
+      abs_tout += timeout;
       if (!await_data(abs_tout)) {
         // Short-circuit "loop body".
-        bhvr.handle_timeout();
+        on_timeout();
         if (rcc.post() && rcc.pre())
           continue;
         else
@@ -273,30 +261,51 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
     if (auto view = make_const_typed_message_view<down_msg>(ptr->content())) {
       clear_incoming_edges(get<0>(view).source);
     }
-    // Blocking actors can nest receives => push/pop `current_element_`
-    auto prev_element = current_element_;
-    current_element_ = ptr.get();
-    auto g = detail::scope_guard{
-      [&]() noexcept { current_element_ = prev_element; }};
-    // Dispatch on the current mailbox element.
-    if (consume()) {
-      unstash();
-      CAF_LOG_FINALIZE_EVENT();
-      if (getf(abstract_actor::collects_metrics_flag)) {
-        auto& builtins = builtin_metrics();
-        telemetry::timer::observe(builtins.processing_time, t0);
-        builtins.mailbox_time->observe(mbox_time);
-        builtins.mailbox_size->dec();
-      }
-      // Check whether we are done.
-      if (!rcc.post() || !rcc.pre()) {
+    // Always set `current_behavior_` and `current_message_id_` before consuming
+    // the message, since `consume` may call `receive` again.
+    current_behavior_ = &bhvr;
+    current_message_id_ = mid;
+    bool consumed_msg = false;
+    switch (consume(ptr)) {
+      case consume_result::consumed:
+        unstash();
+        consumed_msg = true;
+        break;
+      case consume_result::terminated:
         return;
-      }
-      continue;
+      case consume_result::skipped:
+        if (mid.is_response()) {
+          // Default fallback is skip: deliver unexpected_response to handler.
+          detail::default_invoke_result_visitor<blocking_actor> visitor{this};
+          auto err = make_error(sec::unexpected_response,
+                                std::move(ptr->payload));
+          mailbox_element tmp{ptr->sender, ptr->mid,
+                              make_message(std::move(err))};
+          auto prev = current_element_;
+          current_element_ = &tmp;
+          auto g = detail::scope_guard{
+            [this, prev]() noexcept { current_element_ = prev; }};
+          bhvr(visitor, tmp.content());
+          unstash();
+          consumed_msg = true;
+          break;
+        }
+        CAF_LOG_SKIP_EVENT();
+        stash_.push(ptr.release());
+        break;
     }
-    // Message was skipped.
-    CAF_LOG_SKIP_EVENT();
-    stash_.push(ptr.release());
+    if (consumed_msg && getf(abstract_actor::collects_metrics_flag)) {
+      auto& builtins = builtin_metrics();
+      telemetry::timer::observe(builtins.processing_time, t0);
+      builtins.mailbox_time->observe(mbox_time);
+      builtins.mailbox_size->dec();
+    }
+    // `accept_one_cond::post()` returns false after one *accepted* message. A
+    // skipped message must not end the loop, or we exit before later mail (e.g.
+    // a request after an unrelated prior message) is ever handled.
+    if (consumed_msg && (!rcc.post() || !rcc.pre())) {
+      return;
+    }
   }
 }
 
@@ -331,15 +340,13 @@ mailbox_element_ptr blocking_actor::dequeue() {
 
 void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
                                          std::tuple<behavior&>& tup) {
-  using namespace detail;
   auto& bhvr = std::get<0>(tup);
   if (bhvr.timeout() == infinite) {
-    auto fun = make_blocking_behavior(&bhvr);
-    receive_impl(rcc, mid, fun);
+    detail::nop_callback<void()> on_timeout;
+    receive_impl(rcc, mid, bhvr, infinite, on_timeout);
   } else {
-    auto tmp = after(bhvr.timeout()) >> [&] { bhvr.handle_timeout(); };
-    auto fun = make_blocking_behavior(&bhvr, std::move(tmp));
-    receive_impl(rcc, mid, fun);
+    auto on_timeout_cb = make_callback([&bhvr] { bhvr.handle_timeout(); });
+    receive_impl(rcc, mid, bhvr, bhvr.timeout(), on_timeout_cb);
   }
 }
 
@@ -402,15 +409,14 @@ void blocking_actor::do_unstash(mailbox_element_ptr ptr) {
   mailbox().push_front(std::move(ptr));
 }
 
-void blocking_actor::do_receive(message_id mid, behavior& bhvr,
-                                timespan timeout) {
+void blocking_actor::receive_impl(message_id mid, behavior& bhvr,
+                                  timespan timeout) {
   accept_one_cond cond;
-  auto tmp = after(timeout) >> [&] {
+  auto on_timeout_cb = make_callback([&bhvr] {
     auto err = make_message(make_error(sec::request_timeout));
     bhvr(err);
-  };
-  auto fun = detail::make_blocking_behavior(&bhvr, std::move(tmp));
-  receive_impl(cond, mid, fun);
+  });
+  receive_impl(cond, mid, bhvr, timeout, on_timeout_cb);
 }
 
 } // namespace caf

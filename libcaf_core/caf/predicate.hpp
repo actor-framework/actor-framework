@@ -9,8 +9,7 @@
 namespace caf {
 
 /// Describes a simple predicate, usually implemented via lambda expression.
-/// Unlike a `callback`, a `predicate` always returns a `bool` value and may not
-/// have side effects.
+/// Unlike a `callback`, a `predicate` always returns a `bool` value.
 template <class... Args>
 class predicate {
 public:
@@ -43,6 +42,29 @@ public:
 
 private:
   const F* f_;
+};
+
+/// Utility class for wrapping a function object of type `F` by value.
+template <class F, class... Args>
+class predicate_wrapper_impl final : public predicate<Args...> {
+public:
+  template <class... CtorArgs>
+    requires std::is_constructible_v<F, CtorArgs...>
+  explicit predicate_wrapper_impl(CtorArgs&&... args)
+    : f_(std::forward<CtorArgs>(args)...) {
+    // nop
+  }
+
+  predicate_wrapper_impl(const predicate_wrapper_impl&) = delete;
+
+  predicate_wrapper_impl& operator=(const predicate_wrapper_impl&) = delete;
+
+  bool operator()(Args... args) const override {
+    return f_(std::forward<Args>(args)...);
+  }
+
+private:
+  F f_;
 };
 
 } // namespace caf::detail

@@ -60,7 +60,7 @@ public:
   void receive(OnValue on_value, OnError on_error) && {
     detail::response_type_check<OnValue, OnError, Results...>();
     auto bhvr = behavior{std::move(on_value), std::move(on_error)};
-    state_.self->do_receive(state_.mid, bhvr, state_.timeout);
+    state_.self->receive_impl(state_.mid, bhvr, state_.timeout);
   }
 
   auto receive() &&

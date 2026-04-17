@@ -37,11 +37,12 @@ bool datagram_servant::consume(scheduler* ctx, datagram_handle hdl,
   // to avoid UB when becoming detached during invocation
   auto guard = parent_;
   msg().handle = hdl;
-  auto& msg_buf = msg().buf;
-  msg_buf.swap(buf);
+  msg().buf.swap(buf);
   auto result = invoke_mailbox_element(ctx);
   // swap buffer back to stream and implicitly flush wr_buf()
-  msg_buf.swap(buf);
+  if (has_msg()) {
+    msg().buf.swap(buf);
+  }
   flush();
   return result;
 }
@@ -52,9 +53,11 @@ void datagram_servant::datagram_sent(scheduler* ctx, datagram_handle hdl,
   if (detached())
     return;
   using sent_t = datagram_sent_msg;
-  mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
-                      make_message(sent_t{hdl, written, std::move(buffer)})};
-  invoke_mailbox_element_impl(ctx, tmp);
+  parent()->context(ctx);
+  auto tmp = make_mailbox_element(strong_actor_ptr{}, make_message_id(),
+                                  make_message(
+                                    sent_t{hdl, written, std::move(buffer)}));
+  invoke_mailbox_element_impl(tmp);
 }
 
 } // namespace caf::io

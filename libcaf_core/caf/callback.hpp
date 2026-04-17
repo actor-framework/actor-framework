@@ -114,3 +114,18 @@ auto make_shared_type_erased_callback(F fun) {
 }
 
 } // namespace caf
+
+namespace caf::detail {
+
+template <class Signature>
+class nop_callback;
+
+template <class... Ts>
+class nop_callback<void(Ts...)> : public callback<void(Ts...)> {
+public:
+  void operator()(Ts...) override {
+    // nop
+  }
+};
+
+} // namespace caf::detail

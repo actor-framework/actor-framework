@@ -63,12 +63,6 @@ public:
     detail::current_actor_guard guard{this};
     super::remove_link(other);
   }
-
-  void receive_impl(receive_cond& rcc, message_id mid,
-                    detail::blocking_behavior& bhvr) override {
-    detail::current_actor_guard guard{this};
-    super::receive_impl(rcc, mid, bhvr);
-  }
 };
 
 } // namespace

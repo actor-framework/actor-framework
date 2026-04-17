@@ -29,6 +29,8 @@ struct CAF_CORE_EXPORT sync_request_bouncer {
 
   void operator()(const mailbox_element& e) const;
 
+  void operator()(const mailbox_element_ptr& ptr) const;
+
   // -- member variables -------------------------------------------------------
 
   error rsn;

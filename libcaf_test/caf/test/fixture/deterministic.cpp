@@ -11,24 +11,21 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/actor_system_module.hpp"
-#include "caf/config.hpp"
 #include "caf/console_printer.hpp"
 #include "caf/detail/actor_system_config_access.hpp"
 #include "caf/detail/actor_system_impl.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/critical.hpp"
-#include "caf/detail/daemons.hpp"
 #include "caf/detail/default_mailbox.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/print.hpp"
-#include "caf/detail/private_thread_pool.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/fwd.hpp"
 #include "caf/log/test.hpp"
 #include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/scheduled_actor.hpp"
 #include "caf/scheduler.hpp"
 #include "caf/telemetry/actor_metrics.hpp"
 #include "caf/telemetry/metric_registry.hpp"
@@ -37,13 +34,17 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <concepts>
 #include <condition_variable>
+#include <deque>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <numeric>
 #include <source_location>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -53,71 +54,212 @@ namespace caf::test::fixture {
 
 namespace {
 
-using events_list_ptr = deterministic::events_list_ptr;
+template <class T>
+concept receiver_arg
+  = detail::one_of<std::remove_reference_t<T>, local_actor*, const local_actor*,
+                   strong_actor_ptr, const strong_actor_ptr>;
 
-size_t mail_count(const deterministic::events_list& events) {
-  auto pred = [](const auto& event) { return event->target && event->item; };
-  return std::count_if(events.begin(), events.end(), pred);
-}
-
-size_t mail_count(const deterministic::events_list& events,
-                  local_actor* receiver) {
-  if (receiver == nullptr)
-    return 0;
-  auto pred = [&](const auto& event) {
-    return event->target == receiver->as_resumable();
+/// A mailbox for storing all messages for all actors.
+class global_mailbox {
+public:
+  struct entry {
+    intrusive_ptr<local_actor> receiver;
+    mailbox_element_ptr element;
   };
-  return std::ranges::count_if(events, pred);
-}
 
-size_t mail_count(const deterministic::events_list& events,
-                  const strong_actor_ptr& receiver) {
-  if (!receiver) {
-    return 0;
-  }
-  auto* raw_ptr = actor_cast<abstract_actor*>(receiver);
-  if (!raw_ptr->is_local_actor()) {
-    CAF_RAISE_ERROR(std::invalid_argument,
-                    "mail_count: receiver is not a local actor");
-  }
-  return mail_count(events, static_cast<local_actor*>(raw_ptr));
-}
+  /// Note: while a `vector` is usually faster, we use a linked list here
+  /// because we are inserting at both ends and remove at arbitrary positions.
+  using entry_list = std::list<entry>;
 
-/// Removes the next message for `receiver` from the queue and returns it.
-mailbox_element_ptr next_msg(deterministic::events_list& events,
-                             local_actor* receiver) {
-  auto pred = [&](const auto& event) {
-    return event->target == receiver->as_resumable();
-  };
-  auto first = events.begin();
-  auto last = events.end();
-  auto i = std::find_if(first, last, pred);
-  if (i == last)
+  /// Stores the entries of the global mailbox.
+  entry_list entries;
+
+  static auto by_receiver(const local_actor* receiver) {
+    return [receiver](const auto& entry) { return entry.receiver == receiver; };
+  }
+
+  static auto by_receiver(const strong_actor_ptr& receiver) {
+    return [ptr = receiver.get()](const auto& entry) {
+      return entry.receiver->ctrl() == ptr;
+    };
+  }
+
+  template <receiver_arg Receiver>
+  auto find_entry(Receiver&& receiver) noexcept {
+    return std::ranges::find_if(entries, by_receiver(receiver));
+  }
+
+  template <receiver_arg Receiver>
+  size_t mail_count(Receiver&& receiver) const noexcept {
+    return std::ranges::count_if(entries, by_receiver(receiver));
+  }
+
+  template <receiver_arg Receiver>
+  mailbox_element* peek_next(Receiver&& receiver) noexcept {
+    if (auto i = find_entry(receiver); i != entries.end()) {
+      return i->element.get();
+    }
     return nullptr;
-  auto result = std::move((*i)->item);
-  events.erase(i);
-  return result;
-}
-
-void drop_events(deterministic::events_list& events) {
-  // Note: We cannot just call `events_.clear()`, because that would potentially
-  //       cause an actor to become unreachable and close its mailbox. This
-  //       could modify the events list in turn, which then tries to alter the
-  //       list while we're clearing it.
-  while (!events.empty()) {
-    deterministic::events_list tmp;
-    tmp.splice(tmp.end(), events);
   }
-}
+
+  template <receiver_arg Receiver>
+  mailbox_element_ptr take_next(Receiver&& receiver) noexcept {
+    if (auto i = find_entry(receiver); i != entries.end()) {
+      auto result = std::move(i->element);
+      entries.erase(i);
+      return result;
+    }
+    return nullptr;
+  }
+
+  template <receiver_arg Receiver, class Predicate>
+  mailbox_element_ptr
+  take_next_if(Receiver&& receiver, Predicate&& pred) noexcept {
+    auto p1 = by_receiver(receiver);
+    auto p2 = [&p1, &pred](const auto& entry) {
+      return p1(entry) && pred(entry.element);
+    };
+    if (auto i = std::ranges::find_if(entries, p2); i != entries.end()) {
+      auto result = std::move(i->element);
+      entries.erase(i);
+      return result;
+    }
+    return nullptr;
+  }
+
+  template <receiver_arg Receiver, class ActorPredicate, class MessagePredicate>
+  std::optional<entry> take_entry(Receiver&& receiver,
+                                  ActorPredicate&& sender_pred,
+                                  MessagePredicate&& payload_pred) {
+    auto receiver_pred = by_receiver(receiver);
+    auto pred = [&](const entry& entry) {
+      return receiver_pred(entry) && sender_pred(entry.element->sender)
+             && payload_pred(entry.element->payload);
+    };
+    if (auto i = std::ranges::find_if(entries, pred); i != entries.end()) {
+      auto result = std::move(*i);
+      entries.erase(i);
+      return result;
+    }
+    return {};
+  }
+
+  template <std::invocable<const mailbox_element_ptr&> Visitor>
+  size_t for_each(Visitor&& visitor) {
+    auto result = size_t{0};
+    for (const auto& entry : entries) {
+      visitor(entry.element);
+      ++result;
+    }
+    return result;
+  }
+
+  template <receiver_arg Receiver,
+            std::invocable<const mailbox_element_ptr&> Visitor>
+  size_t for_each(Receiver&& receiver, Visitor&& visitor) {
+    auto pred = by_receiver(receiver);
+    auto result = size_t{0};
+    for (const auto& entry : entries) {
+      if (pred(entry)) {
+        visitor(entry.element);
+        ++result;
+      }
+    }
+    return result;
+  }
+
+  template <class Consumer>
+  size_t consume_all(Consumer&& consumer) {
+    auto result = size_t{0};
+    auto i = entries.begin();
+    while (i != entries.end()) {
+      consumer(i->element);
+      ++result;
+      i = entries.erase(i);
+    }
+    return result;
+  }
+
+  template <receiver_arg Receiver, class Consumer>
+  size_t consume_all(Receiver&& receiver, Consumer&& consumer) {
+    auto result = size_t{0};
+    auto pred = [receiver](const auto& entry) {
+      return entry.receiver != receiver;
+    };
+    auto i = std::stable_partition(entries.begin(), entries.end(), pred);
+    while (i != entries.end()) {
+      consumer(i->element);
+      ++result;
+      i = entries.erase(i);
+    }
+    return result;
+  }
+
+  void take_all(std::vector<mailbox_element_ptr>& result) {
+    consume_all([&result](auto& entry) { //
+      result.emplace_back(std::move(entry));
+    });
+  }
+
+  std::vector<mailbox_element_ptr> take_all() {
+    auto result = std::vector<mailbox_element_ptr>{};
+    take_all(result);
+    return result;
+  }
+
+  /// Tries find a message that matches the given predicates and moves it to
+  /// the front of the mailbox.
+  template <receiver_arg Receiver, class ActorPredicate, class MessagePredicate>
+  bool prepone(Receiver&& receiver, ActorPredicate&& sender_pred,
+               MessagePredicate&& payload_pred) {
+    if (entries.empty() || !receiver) {
+      return false;
+    }
+    if (auto entry = take_entry(receiver, sender_pred, payload_pred)) {
+      entries.emplace_front(std::move(*entry));
+      return true;
+    }
+    return false;
+  }
+};
+
+using global_mailbox_ptr = std::shared_ptr<global_mailbox>;
+
+/// A central queue for storing all scheduled events for resumables.
+class global_event_queue {
+public:
+  struct entry {
+    intrusive_ptr<resumable> target;
+    uint64_t event_id;
+  };
+
+  std::deque<entry> entries;
+};
+
+using global_event_queue_ptr = std::shared_ptr<global_event_queue>;
+
+} // namespace
+
+struct deterministic::private_data {
+  global_mailbox_ptr messages = std::make_shared<global_mailbox>();
+  global_event_queue_ptr events = std::make_shared<global_event_queue>();
+};
+
+namespace {
 
 class deterministic_mailbox final : public abstract_mailbox {
 public:
-  deterministic_mailbox(events_list_ptr events, local_actor* owner)
-    : events_(std::move(events)), owner_(owner) {
+  deterministic_mailbox(global_mailbox_ptr global, local_actor* owner)
+    : global_(std::move(global)), owner_(owner) {
+    CAF_ASSERT(owner_ != nullptr);
     if (owner->getf(local_actor::is_blocking_flag)) {
       detail::critical("deterministic_mailbox cannot be used "
                        "with blocking actors");
     }
+  }
+
+  auto strong_owner_ptr() const noexcept {
+    return intrusive_ptr<local_actor>{owner_, add_ref};
   }
 
   intrusive::inbox_result push_back(mailbox_element_ptr ptr) override {
@@ -126,28 +268,19 @@ public:
       bouncer(*ptr);
       return intrusive::inbox_result::queue_closed;
     }
+    global_->entries.emplace_back(strong_owner_ptr(), std::move(ptr));
     // Note: returning unblocked_reader would cause the actor to call
     //       `schedule`. Hence, we always return success here to make sure the
     //       actor never touches the scheduler.
-    using event_t = deterministic::scheduling_event;
-    auto event = std::make_unique<event_t>(
-      resumable_ptr{owner_->as_resumable(), add_ref}, std::move(ptr));
-    events_->push_back(std::move(event));
-    // Never return unblocked_reader: the fixture drives execution by
-    // dispatching from the events list. If we reported unblocked_reader, the
-    // actor would call schedule(this), breaking the invariant.
     return intrusive::inbox_result::success;
   }
 
   void push_front(mailbox_element_ptr ptr) override {
-    using event_t = deterministic::scheduling_event;
-    auto event = std::make_unique<event_t>(
-      resumable_ptr{owner_->as_resumable(), add_ref}, std::move(ptr));
-    events_->emplace_front(std::move(event));
+    global_->entries.emplace_front(strong_owner_ptr(), std::move(ptr));
   }
 
   mailbox_element_ptr pop_front() override {
-    return next_msg(*events_, owner_);
+    return global_->take_next(owner_);
   }
 
   bool closed() const noexcept override {
@@ -177,19 +310,12 @@ public:
 
   size_t close() override {
     closed_ = true;
-    auto result = size_t{0};
     auto bounce = detail::sync_request_bouncer{};
-    auto envelope = next_msg(*events_, owner_);
-    while (envelope != nullptr) {
-      ++result;
-      bounce(*envelope);
-      envelope = next_msg(*events_, owner_);
-    }
-    return result;
+    return global_->consume_all(owner_, bounce);
   }
 
   size_t size() override {
-    return mail_count(*events_, owner_);
+    return global_->mail_count(owner_);
   }
 
   void ref() const noexcept final {
@@ -204,14 +330,14 @@ private:
   mutable detail::atomic_ref_count ref_count_;
   bool blocked_ = false;
   bool closed_ = false;
-  deterministic::events_list_ptr events_;
+  global_mailbox_ptr global_;
   local_actor* owner_;
 };
 
 class deterministic_mailbox_factory final : public detail::mailbox_factory {
 public:
-  explicit deterministic_mailbox_factory(deterministic::events_list_ptr events)
-    : events_(events) {
+  explicit deterministic_mailbox_factory(global_mailbox_ptr global)
+    : global_(global) {
     // nop
   }
 
@@ -225,11 +351,11 @@ public:
       detail::critical("deterministic_mailbox_factory: "
                        "actor does not implement the resumable interface");
     }
-    return new deterministic_mailbox(events_, owner);
+    return new deterministic_mailbox(global_, owner);
   }
 
 private:
-  deterministic::events_list_ptr events_;
+  global_mailbox_ptr global_;
 };
 
 class deterministic_registry final : public actor_registry {
@@ -477,13 +603,13 @@ class deterministic_scheduler final : public scheduler {
 public:
   using super = caf::scheduler;
 
-  explicit deterministic_scheduler(events_list_ptr events) : events_(events) {
+  explicit deterministic_scheduler(global_event_queue_ptr global)
+    : global_(std::move(global)) {
     // nop
   }
 
-  void schedule(resumable_ptr job, uint64_t) override {
-    using event_t = deterministic::scheduling_event;
-    events_->push_back(std::make_unique<event_t>(std::move(job), nullptr));
+  void schedule(resumable_ptr ptr, uint64_t event_id) override {
+    global_->entries.emplace_back(std::move(ptr), event_id);
   }
 
   void delay(resumable_ptr what, uint64_t event_id) override {
@@ -495,7 +621,7 @@ public:
   }
 
   void stop() override {
-    drop_events(*events_);
+    // nop
   }
 
   bool is_system_scheduler() const noexcept override {
@@ -504,13 +630,16 @@ public:
 
 private:
   /// The events list that this scheduler is attached to.
-  events_list_ptr events_;
+  global_event_queue_ptr global_;
 };
 
 class deterministic_actor_system final : public detail::actor_system_impl {
 public:
-  deterministic_actor_system(actor_system_config& cfg, events_list_ptr events)
-    : cfg_(&cfg), events_(events), mailbox_factory_(events) {
+  deterministic_actor_system(actor_system_config& cfg,
+                             deterministic::private_data* private_data)
+    : cfg_(&cfg),
+      private_data_(private_data),
+      mailbox_factory_(private_data->messages) {
     meta_objects_guard_ = detail::global_meta_objects_guard();
     if (!meta_objects_guard_)
       detail::critical("unable to obtain the global meta objects guard");
@@ -523,8 +652,10 @@ public:
     logger_ = reporter::make_logger();
     CAF_SET_LOGGER_SYS(&owner);
     clock_ = std::make_unique<deterministic_actor_clock>();
-    scheduler_ = std::make_unique<deterministic_scheduler>(events_);
-    modules_[actor_system_module::daemons].reset(new detail::daemons(owner));
+    scheduler_
+      = std::make_unique<deterministic_scheduler>(private_data_->events);
+    // Note: not loading the daemons module here on purpose because it is not
+    //       supported in deterministic test mode.
     for (auto& mod : modules_)
       if (mod)
         mod->init(*cfg_);
@@ -537,7 +668,7 @@ public:
 
   void stop() override {
     clock_->drop_actions();
-    drop_events(*events_);
+    private_data_->events->entries.clear();
     for (auto i = modules_.rbegin(); i != modules_.rend(); ++i) {
       if (*i)
         (*i)->stop();
@@ -723,7 +854,7 @@ public:
 
 private:
   actor_system_config* cfg_;
-  events_list_ptr events_;
+  deterministic::private_data* private_data_;
   std::atomic<size_t> ids_{0};
   telemetry::metric_registry metrics_;
   node_id node_;
@@ -744,10 +875,63 @@ private:
 
 } // namespace
 
-// -- abstract_message_predicate -----------------------------------------------
+// -- nested classes -----------------------------------------------------------
 
-deterministic::abstract_message_predicate::~abstract_message_predicate() {
+deterministic::evaluator_base::~evaluator_base() noexcept {
   // nop
+}
+
+bool deterministic::evaluator_base::eval_dispatch(const strong_actor_ptr& dst,
+                                                  bool fail_on_mismatch) {
+  auto& ctx = runnable::current();
+  // Check if the next message in the mailbox for the target actor
+  // matches.
+  auto* peek = fix_->private_data_->messages->peek_next(dst);
+  if (!peek) {
+    if (fail_on_mismatch)
+      ctx.fail({"no message found for the receiver", loc_});
+    return false;
+  }
+  if (!from_(peek->sender) || !with_(peek->payload)) {
+    if (fail_on_mismatch)
+      ctx.fail({"no matching message found, next message is: {}", loc_},
+               peek->payload);
+    return false;
+  }
+  if (priority_) {
+    if (peek->mid.priority() != *priority_) {
+      if (fail_on_mismatch)
+        ctx.fail({"message priority does not match for message: {}", loc_},
+                 peek->payload);
+      return false;
+    }
+  }
+  // This cast is safe, because we know that `dst` must be a local actor
+  // at this point. Otherwise, peek would have failed to find a message.
+  auto* self = actor_cast<local_actor*>(dst);
+  if (self->is_terminated()) {
+    ctx.fail({"actor has already terminated", loc_});
+  }
+  self->context(std::addressof(fix_->sys.scheduler()));
+  // Remove the message from the mailbox and consume it.
+  auto msg = fix_->private_data_->messages->take_next(dst);
+  CAF_ASSERT(msg.get() == peek);
+  if (self->consume(msg) == local_actor::consume_result::skipped) {
+    ctx.fail({"actor skipped message: {}", loc_}, msg->payload);
+  }
+  reporter::instance().pass(loc_);
+  return true;
+}
+
+bool deterministic::evaluator_base::dry_run(const strong_actor_ptr& dst) {
+  if (auto* msg = fix_->private_data_->messages->peek_next(dst)) {
+    return from_(msg->sender) && !with_(msg->payload);
+  }
+  return false;
+}
+
+bool deterministic::evaluator_base::eval_prepone(const strong_actor_ptr& dst) {
+  return fix_->private_data_->messages->prepone(dst, from_, with_);
 }
 
 // -- constructors, destructors, and assignment operators ----------------------
@@ -756,20 +940,16 @@ namespace {
 
 std::unique_ptr<detail::actor_system_impl>
 make_deterministic_actor_system(actor_system_config& cfg,
-                                events_list_ptr events) {
+                                deterministic::private_data* private_data) {
   cfg.set("caf.scheduler.max-throughput", 1);
-  return std::make_unique<deterministic_actor_system>(cfg, events);
+  return std::make_unique<deterministic_actor_system>(cfg, private_data);
 }
 
 } // namespace
 
 deterministic::deterministic()
-  : deterministic(std::make_shared<events_list>()) {
-  // nop
-}
-
-deterministic::deterministic(events_list_ptr events)
-  : sys(make_deterministic_actor_system(cfg, events)), events_(events) {
+  : private_data_(new private_data),
+    sys(make_deterministic_actor_system(cfg, private_data_.get())) {
   caf::test::runnable::current().current_metric_registry(&sys.metrics());
 }
 
@@ -777,87 +957,32 @@ deterministic::~deterministic() {
   // Note: we need clean up all remaining messages manually. This in turn may
   //       clean up actors as unreachable if the test did not consume all
   //       messages. Otherwise, the destructor of `sys` will wait for all
-  //       actors, potentially waiting forever. The same holds true for pending
-  //       timeouts.
+  //       actors, potentially waiting forever.
   static_cast<deterministic_actor_clock&>(sys.clock()).drop_actions();
-  drop_events(*events_);
-}
-
-// -- private utilities --------------------------------------------------------
-
-bool deterministic::prepone_event_impl(const strong_actor_ptr& receiver) {
-  actor_predicate any_sender{std::ignore};
-  message_predicate any_payload{std::ignore};
-  return prepone_event_impl(receiver, any_sender, any_payload);
-}
-
-bool deterministic::prepone_event_impl(
-  const strong_actor_ptr& receiver, actor_predicate& sender_pred,
-  abstract_message_predicate& payload_pred) {
-  if (events_->empty() || !receiver)
-    return false;
-  auto* raw_ptr = actor_cast<abstract_actor*>(receiver);
-  if (!raw_ptr->is_local_actor()) {
-    CAF_RAISE_ERROR(std::invalid_argument,
-                    "prepone_event_impl: receiver is not a local actor");
+  auto messages = private_data_->messages->take_all();
+  while (!messages.empty()) {
+    messages.clear(); // may trigger new messages such as exit_msg or down_msg
+    static_cast<deterministic_actor_clock&>(sys.clock()).drop_actions();
+    private_data_->messages->take_all(messages);
   }
-  auto* target = static_cast<local_actor*>(raw_ptr)->as_resumable();
-  if (target == nullptr) {
-    CAF_RAISE_ERROR(std::invalid_argument,
-                    "prepone_event_impl: receiver is not a resumable");
-  }
-  auto first = events_->begin();
-  auto last = events_->end();
-  auto pred = [target, &sender_pred, &payload_pred](const auto& event) {
-    return event->target == target && sender_pred(event->item->sender)
-           && payload_pred(event->item->payload);
-  };
-  auto i = std::find_if(first, last, pred);
-  if (i == last)
-    return false;
-  if (i != first) {
-    auto ptr = std::move(*i);
-    events_->erase(i);
-    events_->insert(events_->begin(), std::move(ptr));
-  }
-  return true;
-}
-
-deterministic::scheduling_event*
-deterministic::find_event_impl(const strong_actor_ptr& receiver) {
-  if (events_->empty() || !receiver) {
-    return nullptr;
-  }
-  auto* raw_ptr = actor_cast<abstract_actor*>(receiver);
-  if (!raw_ptr->is_local_actor()) {
-    return nullptr;
-  }
-  auto* target = static_cast<local_actor*>(raw_ptr)->as_resumable();
-  if (target == nullptr) {
-    return nullptr;
-  }
-  auto last = events_->end();
-  auto i = std::find_if(events_->begin(), last, [target](const auto& event) {
-    return event->target == target;
-  });
-  if (i != last) {
-    return i->get();
-  }
-  return nullptr;
 }
 
 // -- properties ---------------------------------------------------------------
 
+size_t deterministic::pending_jobs() {
+  return private_data_->events->entries.size();
+}
+
 size_t deterministic::mail_count() {
-  return fixture::mail_count(*events_);
+  return private_data_->messages->entries.size();
 }
 
 size_t deterministic::mail_count(local_actor* receiver) {
-  return fixture::mail_count(*events_, receiver);
+  return private_data_->messages->mail_count(receiver);
 }
 
 size_t deterministic::mail_count(const strong_actor_ptr& receiver) {
-  return fixture::mail_count(*events_, receiver);
+  return private_data_->messages->mail_count(receiver);
 }
 
 // -- control flow -------------------------------------------------------------
@@ -874,27 +999,100 @@ bool deterministic::terminated(const strong_actor_ptr& hdl) {
   return raw_ptr->getf(abstract_actor::is_terminated_flag);
 }
 
-bool deterministic::dispatch_message() {
-  if (events_->empty())
+bool deterministic::dispatch_job(const std::source_location&) {
+  auto& jobs = private_data_->events->entries;
+  if (jobs.empty()) {
     return false;
-  if (events_->front()->item == nullptr) {
-    // Regular resumable.
-    auto ev = std::move(events_->front());
-    events_->pop_front();
-    auto hdl = ev->target;
-    hdl->resume(&sys.scheduler(), resumable::default_event_id);
-    return true;
   }
-  // Actor: we simply resume the next actor and it will pick up its message.
-  auto next = events_->front()->target;
-  next->resume(&sys.scheduler(), resumable::default_event_id);
+  auto event = std::move(jobs.front());
+  jobs.pop_front();
+  event.target->resume(std::addressof(sys.scheduler()), event.event_id);
   return true;
 }
 
-size_t deterministic::dispatch_messages() {
-  size_t result = 0;
-  while (dispatch_message())
+size_t deterministic::dispatch_jobs(const std::source_location&) {
+  auto result = size_t{0};
+  while (dispatch_job()) {
     ++result;
+  }
+  return result;
+}
+
+namespace {
+
+template <class Filter>
+bool dispatch_message_impl(deterministic& fix, global_mailbox& mbox,
+                           Filter&& filter, const std::source_location& loc) {
+  // Get all entries from the mailbox. Since processing a message may modify
+  // the mailbox, we move the entries to a local list first.
+  global_mailbox::entry_list entries;
+  entries.swap(mbox.entries);
+  // Utility for putting the entries back to the global mailbox.
+  auto restore = [&mbox, &entries]() {
+    mbox.entries.splice(mbox.entries.begin(), entries);
+  };
+  // Utility for dropping entries for a given receiver.
+  auto drop_messages = [&entries](const intrusive_ptr<local_actor>& receiver) {
+    auto bounce = detail::sync_request_bouncer{};
+    auto pred = global_mailbox::by_receiver(receiver.get());
+    for (auto i = entries.begin(); i != entries.end();) {
+      if (!pred(*i)) {
+        ++i;
+        continue;
+      }
+      bounce(i->element);
+      i = entries.erase(i);
+    }
+  };
+  // Try to consume a single message.
+  auto i = entries.begin();
+  while (i != entries.end()) {
+    if (!filter(*i)) {
+      ++i;
+      continue;
+    }
+    auto receiver = i->receiver;
+    receiver->context(std::addressof(fix.sys.scheduler()));
+    switch (receiver->consume(i->element)) {
+      case local_actor::consume_result::consumed:
+        entries.erase(i);
+        restore();
+        return true;
+      case local_actor::consume_result::terminated:
+        entries.erase(i);
+        drop_messages(receiver);
+        restore();
+        return true;
+      default:
+        log::test::debug({"actor skipped message: {}", loc},
+                         i->element->payload);
+        ++i;
+    }
+  };
+  restore();
+  return false;
+}
+
+} // namespace
+
+bool deterministic::dispatch_message(const std::source_location& loc) {
+  auto pred = [](const auto&) { return true; };
+  return dispatch_message_impl(*this, *private_data_->messages, pred, loc);
+}
+
+bool deterministic::dispatch_message(const strong_actor_ptr& hdl,
+                                     const std::source_location& loc) {
+  auto pred = [&hdl](const auto& entry) {
+    return entry.receiver->ctrl() == hdl;
+  };
+  return dispatch_message_impl(*this, *private_data_->messages, pred, loc);
+}
+
+size_t deterministic::dispatch_messages(const std::source_location& loc) {
+  size_t result = 0;
+  while (dispatch_message(loc)) {
+    ++result;
+  }
   return result;
 }
 
@@ -907,11 +1105,12 @@ void deterministic::inject_exit(const strong_actor_ptr& hdl, error reason) {
     // Nothing to do here. The actor already terminated.
     return;
   }
-  actor_predicate is_anon{nullptr};
-  message_predicate<exit_msg> is_kill_msg{emsg};
-  [[maybe_unused]] auto preponed = prepone_event_impl(hdl, is_anon,
-                                                      is_kill_msg);
-  assert(preponed);
+  auto is_anon = rebindable_predicate<strong_actor_ptr>::from(nullptr);
+  auto is_exit_msg = rebindable_predicate<const message&>{
+    [emsg](const message& msg) { return msg.matches(emsg); }};
+  [[maybe_unused]] auto ok = private_data_->messages->prepone(hdl, is_anon,
+                                                              is_exit_msg);
+  CAF_ASSERT(ok);
   dispatch_message();
 }
 
@@ -954,6 +1153,21 @@ actor_clock::time_point
 deterministic::last_timeout(const std::source_location& loc) {
   auto& clock = static_cast<deterministic_actor_clock&>(sys.clock());
   return clock.last_timeout(loc);
+}
+
+void deterministic::do_for_each_message(callback<void(const message&)>& fn) {
+  auto dispatch = [&fn](const mailbox_element_ptr& element) {
+    fn(element->payload);
+  };
+  private_data_->messages->for_each(dispatch);
+}
+
+void deterministic::do_for_each_message(const strong_actor_ptr& hdl,
+                                        callback<void(const message&)>& fn) {
+  auto dispatch = [&fn](const mailbox_element_ptr& element) {
+    fn(element->payload);
+  };
+  private_data_->messages->for_each(hdl, dispatch);
 }
 
 } // namespace caf::test::fixture

@@ -25,7 +25,8 @@ public:
   ~abstract_blocking_actor() override;
 
 private:
-  virtual void do_receive(message_id mid, behavior& bhvr, timespan timeout) = 0;
+  virtual void receive_impl(message_id mid, behavior& bhvr, timespan timeout)
+    = 0;
 };
 
 } // namespace caf

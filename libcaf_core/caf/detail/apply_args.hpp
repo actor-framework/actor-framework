@@ -33,9 +33,9 @@ decltype(auto) apply_args(F& f, Tuple& tup) {
   return apply_args(f, token, tup);
 }
 
-template <class F, long... Is, class Tuple>
-auto apply_moved_args(F& f, detail::int_list<Is...>, Tuple& tup)
-  -> decltype(f(std::move(get<Is>(tup))...)) {
+// Like std::apply, but moves the arguments from the tuple.
+template <class F, size_t... Is, class Tuple>
+decltype(auto) apply_moved_args(F& f, std::index_sequence<Is...>, Tuple& tup) {
   return f(std::move(get<Is>(tup))...);
 }
 
