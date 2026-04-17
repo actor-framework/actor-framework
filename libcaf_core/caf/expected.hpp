@@ -6,20 +6,15 @@
 
 // NOLINTBEGIN(bugprone-unchecked-optional-access)
 
-#include "caf/config.hpp"
-#include "caf/deep_to_string.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code_enum.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/unit.hpp"
 
-#include <concepts>
 #include <memory>
 #include <new>
-#include <ostream>
 #include <type_traits>
 #include <utility>
 
