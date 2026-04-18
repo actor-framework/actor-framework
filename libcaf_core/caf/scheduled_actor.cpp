@@ -141,10 +141,8 @@ scheduled_actor::batch_forwarder::~batch_forwarder() {
 scheduled_actor::scheduled_actor(actor_config& cfg)
   : super(cfg.add_flag(is_scheduled_actor_flag)),
     default_handler_(print_and_drop),
-    error_handler_(default_error_handler),
     down_handler_(default_down_handler),
     node_down_handler_(default_node_down_handler),
-    exit_handler_(default_exit_handler),
     private_thread_(nullptr)
 #ifdef CAF_ENABLE_EXCEPTIONS
     ,
@@ -429,10 +427,8 @@ void scheduled_actor::quit(error x) {
   bhvr_stack_.clear();
   awaited_responses_.clear();
   multiplexed_responses_.clear();
-  // Ignore future exit, down and error messages.
-  exit_handler_ = silently_ignore<exit_msg>;
+  // Ignore future down messages.
   down_handler_ = silently_ignore<down_msg>;
-  error_handler_ = silently_ignore<error>;
   // Drop future messages and produce sec::request_receiver_down for requests.
   default_handler_ = drop_after_quit;
   // Make sure we're not waiting for flows or stream anymore.
@@ -911,7 +907,7 @@ scheduled_actor::consume(mailbox_element_ptr& what) {
               break;
             case type_id_v<exit_msg>: {
               auto& em = x.payload.get_mutable_as<exit_msg>(0);
-              call_handler(exit_handler_, this, em);
+              default_exit_handler(this, em);
               return true;
             }
             case type_id_v<down_msg>: {
@@ -926,7 +922,7 @@ scheduled_actor::consume(mailbox_element_ptr& what) {
             }
             case type_id_v<error>: {
               auto& err = x.payload.get_mutable_as<error>(0);
-              call_handler(error_handler_, this, err);
+              default_error_handler(this, err);
               return true;
             }
           }
@@ -1028,7 +1024,7 @@ void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
 }
 
 void scheduled_actor::call_error_handler(error& err) {
-  call_handler(error_handler_, this, err);
+  default_error_handler(this, err);
 }
 
 disposable scheduled_actor::run_scheduled(timestamp when, action what) {

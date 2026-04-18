@@ -38,9 +38,6 @@ public:
   }
 
   behavior make_behavior() override {
-    auto nested = exit_handler_;
-    set_exit_handler(
-      [=](scheduled_actor* self, exit_msg& em) { nested(self, em); });
     return {
       [](int32_t x, int32_t y) { return x + y; },
     };
