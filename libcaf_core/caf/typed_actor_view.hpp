@@ -150,12 +150,6 @@ public:
     self_->set_error_handler(std::forward<Fun>(fun));
   }
 
-  /// @copydoc scheduled_actor::set_down_handler
-  template <class Fun>
-  void set_down_handler(Fun&& fun) {
-    self_->set_down_handler(std::forward<Fun>(fun));
-  }
-
   /// @copydoc scheduled_actor::set_node_down_handler
   template <class Fun>
   void set_node_down_handler(Fun&& fun) {
@@ -197,21 +191,15 @@ public:
     self_->monitor(node);
   }
 
-  /// @copydoc local_actor::monitor
-  template <message_priority P = message_priority::normal, class Handle>
-  void monitor(const Handle& whom) {
-    self_->monitor(whom);
+  /// @copydoc scheduled_actor::monitor
+  template <class Handle, class Fn>
+  disposable monitor(Handle whom, Fn func) {
+    return self_->monitor(std::move(whom), std::move(func));
   }
 
   /// @copydoc local_actor::demonitor
   void demonitor(const node_id& node) {
     self_->demonitor(node);
-  }
-
-  /// @copydoc local_actor::demonitor
-  template <class Handle>
-  void demonitor(const Handle& whom) {
-    self_->demonitor(whom);
   }
 
   // -- messaging --------------------------------------------------------------

@@ -168,6 +168,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Removed
 
+- For event-based actors (`scheduled_actor`), removed `set_down_handler` and the
+  single-argument `monitor` / `demonitor` overloads for actor handles. Use
+  `monitor(handle, callback)` and the returned `disposable` instead (#1873).
 - Removed the with DSL building base classes form `caf/net/dsl/` (#2026).
 - Removed the deprecated `actor_ostream` class and the `aout` utility. They have
   been deprecated since CAF 1.0.0. Users should now use `println` instead, which
