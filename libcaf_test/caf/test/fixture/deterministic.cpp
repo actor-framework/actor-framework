@@ -953,7 +953,7 @@ deterministic::deterministic()
   caf::test::runnable::current().current_metric_registry(&sys.metrics());
 }
 
-deterministic::~deterministic() {
+deterministic::~deterministic() noexcept {
   // Note: we need clean up all remaining messages manually. This in turn may
   //       clean up actors as unreachable if the test did not consume all
   //       messages. Otherwise, the destructor of `sys` will wait for all
