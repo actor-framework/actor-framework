@@ -108,34 +108,6 @@ TEST("multiple awaited requests") {
 }
 
 SCENARIO("actors clean up incoming edges when they terminate") {
-  GIVEN("a client that monitors a server using the legacy API") {
-    auto server = sys.spawn([] {
-      return behavior{
-        [](int value) { return value + 1; },
-      };
-    });
-    auto client = sys.spawn([server](event_based_actor* self) {
-      self->monitor(server);
-      return behavior{
-        [self, server](int value) {
-          return self->mail(value).delegate(server);
-        },
-      };
-    });
-    auto wptr = actor_cast<weak_actor_ptr>(client);
-    // only the `client` variable holds a strong reference to the client actor
-    check_eq(client->ctrl()->strong_reference_count(), 1u);
-    // implicit ref (from the strong refs) + the ref from the monitor + `wptr`
-    check_eq(client->ctrl()->weak_reference_count(), 3u);
-    WHEN("the client terminates") {
-      client = nullptr; // will be cleaned up as unreachable
-      check_eq(mail_count(), 0u);
-      THEN("the server no longer holds a weak reference to the client") {
-        check_eq(wptr.ctrl()->strong_reference_count(), 0u);
-        check_eq(wptr.ctrl()->weak_reference_count(), 1u);
-      }
-    }
-  }
   GIVEN("a client that monitors a server using the callback API") {
     auto server = sys.spawn([] {
       return behavior{

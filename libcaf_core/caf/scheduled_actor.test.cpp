@@ -70,26 +70,6 @@ struct const_error_fn {
 ASSERT_COMPILES(set_error_handler(const_error_fn{}),
                 "set_error_handler must accept const function objects");
 
-// -- compile-time checks for set_down_handler ---------------------------------
-
-struct mutable_down_fn {
-  void operator()(down_msg&) {
-    // nop
-  }
-};
-
-ASSERT_COMPILES(set_down_handler(mutable_down_fn{}),
-                "set_down_handler must accept mutable function objects");
-
-struct const_down_fn {
-  void operator()(down_msg&) const {
-    // nop
-  }
-};
-
-ASSERT_COMPILES(set_down_handler(const_down_fn{}),
-                "set_down_handler must accept const function objects");
-
 // -- compile-time checks for set_node_down_handler ----------------------------
 
 struct mutable_node_down_fn {

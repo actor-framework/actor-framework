@@ -286,23 +286,6 @@ public:
     };
   }
 
-  /// Sets a custom handler for down messages.
-  CAF_DEPRECATED("use monitor with callback instead")
-  void set_down_handler(down_handler fun) {
-    if (fun)
-      down_handler_ = std::move(fun);
-    else
-      down_handler_ = default_down_handler;
-  }
-
-  /// Sets a custom handler for down messages.
-  template <std::invocable<down_msg&> F>
-  CAF_DEPRECATED("use monitor with callback instead")
-  void set_down_handler(F fun) {
-    down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
-                                         down_msg& x) mutable { fn(x); };
-  }
-
   /// Sets a custom handler for node down messages.
   CAF_DEPRECATED("use a handler for 'node_down_msg' instead")
   void set_node_down_handler(node_down_handler fun) {
@@ -603,18 +586,6 @@ public:
   using super::monitor;
 
   using super::demonitor;
-
-  template <message_priority P = message_priority::normal, class Handle>
-  CAF_DEPRECATED("use the monitor() overload with a callback instead")
-  void monitor(const Handle& whom) {
-    do_monitor(actor_cast<abstract_actor*>(whom), P);
-  }
-
-  template <class Handle>
-  CAF_DEPRECATED("use the monitor() overload with a callback instead")
-  void demonitor(const Handle& whom) {
-    do_demonitor(actor_cast<strong_actor_ptr>(whom));
-  }
 
   /// Adds a unidirectional `monitor` to `whom` with custom callback.
   /// @returns a disposable object for canceling the monitoring of `whom`.
