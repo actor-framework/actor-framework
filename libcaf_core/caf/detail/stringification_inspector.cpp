@@ -5,9 +5,12 @@
 #include "caf/detail/stringification_inspector.hpp"
 
 #include "caf/actor_control_block.hpp"
+#include "caf/actor_handle_codec.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/internal/stringification_inspector_node.hpp"
+#include "caf/sec.hpp"
 
 #include <algorithm>
 #include <ctime>
@@ -15,6 +18,21 @@
 namespace caf::detail {
 
 namespace {
+
+class stringification_actor_handle_decoder final : public actor_handle_codec {
+public:
+  bool save(serializer& sink, const strong_actor_ptr& ptr) override {
+    auto str = to_string(ptr);
+    return sink.apply(str);
+  }
+
+  bool load(deserializer& source, strong_actor_ptr&) override {
+    source.set_error(make_error(sec::unsupported_operation,
+                                "actor handles are not loadable when "
+                                "stringifying"));
+    return false;
+  }
+};
 
 class stringification_inspector_impl final : public serializer {
 public:
@@ -252,7 +270,7 @@ public:
   }
 
   caf::actor_handle_codec* actor_handle_codec() override {
-    return nullptr;
+    return &codec_;
   }
 
   // -- stringification_inspector extensions -----------------------------------
@@ -362,6 +380,8 @@ private:
   std::string& result_;
 
   bool in_string_object_ = false;
+
+  stringification_actor_handle_decoder codec_;
 
   error err_;
 };
