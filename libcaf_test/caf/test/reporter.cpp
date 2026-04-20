@@ -297,6 +297,14 @@ public:
     current_ctx_ = std::move(state);
   }
 
+  void begin_section() override {
+    // nop
+  }
+
+  void end_section() override {
+    // nop
+  }
+
   void end_test() override {
     if (test_stats_.failed > 0)
       failed_tests_.push_back(current_test_);

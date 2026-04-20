@@ -55,6 +55,10 @@ public:
 
   virtual void end_test() = 0;
 
+  virtual void begin_section() = 0;
+
+  virtual void end_section() = 0;
+
   virtual void begin_step(block* ptr) = 0;
 
   virtual void end_step(block* ptr) = 0;
