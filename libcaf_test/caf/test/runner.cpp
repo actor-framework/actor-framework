@@ -203,7 +203,7 @@ public:
           try {
             do_run(*def);
           } catch (const nesting_error& ex) {
-            reporter_->unhandled_exception(ex.message(), ex.location());
+            reporter_->fail(ex.message(), ex.location());
           } catch (const requirement_failed& ex) {
             auto event
               = log::event::make(log::level::error, "caf.test", ex.location(),

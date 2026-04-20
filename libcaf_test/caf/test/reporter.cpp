@@ -412,19 +412,6 @@ public:
     }
   }
 
-  void unhandled_exception(std::string_view msg,
-                           const std::source_location& location) override {
-    test_stats_.failed++;
-    if (level_ < log::level::error)
-      return;
-    set_live();
-    detail::format_to(colored(),
-                      "{0:{1}}$R(unhandled exception): abort test run\n"
-                      "{0:{1}}  loc: $C({2}):$Y({3})$0\n"
-                      "{0:{1}}  msg: {4}\n",
-                      ' ', indent_, location.file_name(), location.line(), msg);
-  }
-
   void print(const log::event& event) override {
     if (level_ < event.level())
       return;
