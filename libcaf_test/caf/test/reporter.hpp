@@ -76,10 +76,6 @@ public:
 
   virtual void unhandled_exception(std::string_view msg) = 0;
 
-  virtual void unhandled_exception(std::string_view msg,
-                                   const std::source_location& location)
-    = 0;
-
   /// Prints a message to the output stream when the reporter's verbosity allows
   /// `level`.
   virtual void println(unsigned level, std::string_view msg) = 0;
