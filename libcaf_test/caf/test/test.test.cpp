@@ -4,6 +4,7 @@
 #include "caf/test/test.hpp"
 
 #include "caf/test/approx.hpp"
+#include "caf/test/quiet_reporter_scope_guard.hpp"
 #include "caf/test/requirement_failed.hpp"
 
 #include "caf/log/test.hpp"
@@ -447,12 +448,9 @@ TEST("require_metric_* throw requirement_failed on a mismatch") {
 
 TEST("failed checks increment the failed counter") {
   auto& rep = caf::test::reporter::instance();
-  auto lvl = rep.verbosity(caf::log::level::quiet);
   auto before = rep.test_stats();
   {
-    caf::detail::scope_guard lvl_guard([&rep, lvl]() noexcept { //
-      rep.verbosity(lvl);
-    });
+    caf::test::quiet_reporter_scope_guard reporter_guard;
     check_eq(1, 2);
   }
   auto after = rep.test_stats();

@@ -21,6 +21,8 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <memory>
+#include <vector>
 
 namespace caf::test {
 
@@ -430,7 +432,7 @@ public:
       do_print(field);
   }
 
-  /// Prints a message to the output stream if `verbosity() >= level`.
+  /// Prints a message to the output stream when `level_` allows `level`.
   void println(unsigned level, std::string_view msg) override {
     if (level_ < level) {
       return;
@@ -452,22 +454,8 @@ public:
                       self->name(), self->id(), msg);
   }
 
-  unsigned verbosity() const noexcept override {
-    return level_;
-  }
-
-  unsigned verbosity(unsigned level) noexcept override {
-    auto result = level_;
+  void verbosity(unsigned level) noexcept override {
     level_ = level;
-    return result;
-  }
-
-  std::vector<std::string> log_component_filter() const override {
-    return log_component_filter_;
-  }
-
-  void log_component_filter(std::vector<std::string> new_filter) override {
-    log_component_filter_ = std::move(new_filter);
   }
 
   void no_colors(bool new_value) override {
@@ -579,9 +567,6 @@ private:
 
   /// Maps log levels to their names.
   detail::log_level_map log_level_names_;
-
-  /// Stores the current log component filter.
-  std::vector<std::string> log_component_filter_;
 };
 
 reporter* global_instance;
@@ -602,11 +587,22 @@ std::unique_ptr<reporter> reporter::make_default() {
   return std::make_unique<default_reporter>();
 }
 
+std::unique_ptr<reporter> reporter::make_quiet() {
+  auto result = make_default();
+  result->verbosity(log::level::quiet);
+  return result;
+}
+
 namespace {
 
 /// A logger implementation that delegates to the test reporter.
 class reporter_logger : public detail::asynchronous_logger {
 public:
+  reporter_logger(unsigned level, std::vector<std::string> component_filter)
+    : level_(level), component_filter_(std::move(component_filter)) {
+    // nop
+  }
+
   /// Increases the reference count of the coordinated.
   void ref() const noexcept final {
     ref_count_.inc();
@@ -616,12 +612,6 @@ public:
   /// if necessary.
   void deref() const noexcept final {
     ref_count_.dec(this);
-  }
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  reporter_logger() {
-    filter_ = reporter::instance().log_component_filter();
   }
 
   // -- logging ----------------------------------------------------------------
@@ -637,17 +627,17 @@ public:
                                      logger::thread_local_aid(),
                                      event->message());
       auto enriched_event = event->with_message(enriched, log::keep_timestamp);
-      reporter::instance().print(enriched_event);
+      reporter::instance().print(*enriched_event);
       return;
     }
-    reporter::instance().print(event);
+    reporter::instance().print(*event);
   }
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
   bool accepts(unsigned level, std::string_view component) override {
-    return level <= reporter::instance().verbosity()
-           && !std::ranges::any_of(filter_,
+    return level <= level_
+           && !std::ranges::any_of(component_filter_,
                                    [component](const std::string& excluded) {
                                      return component == excluded;
                                    });
@@ -662,14 +652,17 @@ public:
   }
 
 private:
+  unsigned level_;
+  std::vector<std::string> component_filter_;
   mutable detail::atomic_ref_count ref_count_;
-  std::vector<std::string> filter_;
 };
 
 } // namespace
 
-intrusive_ptr<detail::asynchronous_logger> reporter::make_logger() {
-  return make_counted<reporter_logger>();
+intrusive_ptr<logger>
+reporter::make_logger(unsigned level,
+                      std::vector<std::string> components_filter) {
+  return make_counted<reporter_logger>(level, std::move(components_filter));
 }
 
 } // namespace caf::test
