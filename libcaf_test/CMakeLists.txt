@@ -30,6 +30,7 @@ caf_add_component(
     caf/test/nesting_error.cpp
     caf/test/outline.cpp
     caf/test/outline.test.cpp
+    caf/test/quiet_reporter_scope_guard.cpp
     caf/test/registry.cpp
     caf/test/reporter.cpp
     caf/test/requirement_failed.cpp

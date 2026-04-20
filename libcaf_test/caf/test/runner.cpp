@@ -185,9 +185,9 @@ public:
       return EXIT_FAILURE;
     }
     reporter_->no_colors(get_or(cfg_, "no-colors", false));
-    reporter_->log_component_filter(
+    auto default_logger = reporter::make_logger(
+      verbosity_,
       get_or(cfg_, "log-component-filter", default_log_component_filter()));
-    auto default_logger = reporter::make_logger();
     reporter_->start();
     watchdog runtime_guard{get_or(cfg_, "max-runtime", 0)};
     for (auto& [suite_name, suite] : suites) {
@@ -215,7 +215,7 @@ public:
           auto event = log::event::make(log::level::error, "caf.test",
                                         ex.location(), 0,
                                         "requirement failed: {}", ex.message());
-          reporter_->print(event);
+          reporter_->print(*event);
           reporter_->end_test();
         } catch (const std::exception& ex) {
           reporter_->unhandled_exception(ex.what());
@@ -226,6 +226,7 @@ public:
         }
 #else
         do {
+          logger::current_logger(default_logger.get());
           reporter_->begin_test(state, test_name);
           auto def = factory_instance->make(state);
           do_run(*def);
@@ -286,12 +287,14 @@ public:
                    *verbosity);
         return {false, true};
       }
+      verbosity_ = *level;
       reporter::instance().verbosity(*level);
     }
     return {true, false};
   }
 
   caf::settings cfg_;
+  unsigned verbosity_ = log::level::info;
   std::unique_ptr<reporter> reporter_;
 };
 

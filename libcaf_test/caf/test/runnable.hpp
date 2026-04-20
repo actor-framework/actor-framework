@@ -10,6 +10,7 @@
 #include "caf/test/block_type.hpp"
 #include "caf/test/context.hpp"
 #include "caf/test/fwd.hpp"
+#include "caf/test/quiet_reporter_scope_guard.hpp"
 #include "caf/test/reporter.hpp"
 #include "caf/test/requirement_failed.hpp"
 
@@ -791,12 +792,9 @@ public:
   void should_fail(Expr&& expr, const std::source_location& location
                                 = std::source_location::current()) {
     auto& rep = reporter::instance();
-    auto lvl = rep.verbosity(log::level::quiet);
     auto before = rep.test_stats();
     {
-      detail::scope_guard lvl_guard([&rep, lvl]() noexcept { //
-        rep.verbosity(lvl);
-      });
+      quiet_reporter_scope_guard reporter_guard;
       expr();
     }
     auto after = rep.test_stats();
@@ -875,24 +873,25 @@ public:
                                           = std::source_location::current()) {
     auto& rep = reporter::instance();
     auto before = rep.test_stats();
-    auto lvl = rep.verbosity(log::level::quiet);
     auto caught = false;
-    if constexpr (std::is_same_v<Exception, void>) {
-      try {
-        expr();
-      } catch (...) {
-        caught = true;
-      }
-    } else {
-      try {
-        expr();
-      } catch (const Exception&) {
-        caught = true;
-      } catch (...) {
-        // TODO: print error message
+    {
+      quiet_reporter_scope_guard reporter_guard;
+      if constexpr (std::is_same_v<Exception, void>) {
+        try {
+          expr();
+        } catch (...) {
+          caught = true;
+        }
+      } else {
+        try {
+          expr();
+        } catch (const Exception&) {
+          caught = true;
+        } catch (...) {
+          // TODO: print error message
+        }
       }
     }
-    rep.verbosity(lvl);
     auto after = rep.test_stats();
     auto passed_count_ok = before.passed == after.passed;
     auto failed_count_ok = before.failed + 1 == after.failed;
