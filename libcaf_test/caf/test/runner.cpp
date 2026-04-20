@@ -194,46 +194,34 @@ public:
       reporter_->begin_suite(suite_name);
       for (auto [test_name, factory_instance] : suite) {
         auto state = std::make_shared<context>();
-#ifdef CAF_ENABLE_EXCEPTIONS
-        // Must be outside of the try block to make sure the object still exists
-        // in the catch block.
-        std::unique_ptr<runnable> def;
-        try {
-          do {
-            logger::current_logger(default_logger.get());
-            reporter_->begin_test(state, test_name);
-            def = factory_instance->make(state);
-            do_run(*def);
-            reporter_->end_test();
-            state->clear_stacks();
-            def.reset();
-          } while (state->can_run());
-        } catch (const nesting_error& ex) {
-          reporter_->unhandled_exception(ex.message(), ex.location());
-          reporter_->end_test();
-        } catch (const requirement_failed& ex) {
-          auto event = log::event::make(log::level::error, "caf.test",
-                                        ex.location(), 0,
-                                        "requirement failed: {}", ex.message());
-          reporter_->print(*event);
-          reporter_->end_test();
-        } catch (const std::exception& ex) {
-          reporter_->unhandled_exception(ex.what());
-          reporter_->end_test();
-        } catch (...) {
-          reporter_->unhandled_exception("unknown exception type");
-          reporter_->end_test();
-        }
-#else
+        reporter_->begin_test(state, test_name);
         do {
           logger::current_logger(default_logger.get());
-          reporter_->begin_test(state, test_name);
+          reporter_->begin_section();
           auto def = factory_instance->make(state);
+#ifdef CAF_ENABLE_EXCEPTIONS
+          try {
+            do_run(*def);
+          } catch (const nesting_error& ex) {
+            reporter_->unhandled_exception(ex.message(), ex.location());
+          } catch (const requirement_failed& ex) {
+            auto event
+              = log::event::make(log::level::error, "caf.test", ex.location(),
+                                 0, "requirement failed: {}", ex.message());
+            reporter_->print(*event);
+          } catch (const std::exception& ex) {
+            reporter_->unhandled_exception(ex.what());
+          } catch (...) {
+            reporter_->unhandled_exception("unknown exception type");
+          }
+#else
           do_run(*def);
-          reporter_->end_test();
-          state->clear_stacks();
-        } while (state->can_run());
 #endif
+          state->clear_stacks();
+          def.reset();
+          reporter_->end_section();
+        } while (state->can_run());
+        reporter_->end_test();
       }
       reporter_->end_suite(suite_name);
     }
