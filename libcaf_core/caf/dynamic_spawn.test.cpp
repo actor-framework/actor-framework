@@ -211,11 +211,11 @@ behavior master(event_based_actor* self) {
 
 behavior observer_impl_1(event_based_actor* self, const actor& master) {
   self->link_to(master);
-  self->set_exit_handler([self](exit_msg& msg) {
-    log::test::debug("observer received the exit message");
-    self->quit(msg.reason);
-  });
   return {
+    [self](exit_msg& msg) {
+      log::test::debug("observer received the exit message");
+      self->quit(msg.reason);
+    },
     [] {
       // nop
     },
@@ -446,8 +446,6 @@ TEST("constructor attach") {
         if (++downs_ == 2)
           quit(reason);
       });
-      set_exit_handler(
-        [this](exit_msg& msg) { send_exit(testee_, std::move(msg.reason)); });
     }
 
     behavior make_behavior() override {
@@ -458,6 +456,7 @@ TEST("constructor attach") {
           if (++downs_ == 2)
             quit(reason);
         },
+        [this](exit_msg& msg) { send_exit(testee_, std::move(msg.reason)); },
       };
     }
 
@@ -474,11 +473,11 @@ TEST("constructor attach") {
 }
 
 TEST("kill the immortal") {
-  auto wannabe_immortal = system.spawn([](event_based_actor* self) -> behavior {
-    self->set_exit_handler([](local_actor*, exit_msg&) {
-      // nop
-    });
+  auto wannabe_immortal = system.spawn([](event_based_actor*) -> behavior {
     return {
+      [](exit_msg&) {
+        // nop
+      },
       [] {
         // nop
       },

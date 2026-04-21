@@ -144,22 +144,10 @@ public:
     self_->set_default_handler(std::forward<Fun>(fun));
   }
 
-  /// @copydoc scheduled_actor::set_error_handler
-  template <class Fun>
-  void set_error_handler(Fun&& fun) {
-    self_->set_error_handler(std::forward<Fun>(fun));
-  }
-
   /// @copydoc scheduled_actor::set_node_down_handler
   template <class Fun>
   void set_node_down_handler(Fun&& fun) {
     self_->set_node_down_handler(std::forward<Fun>(fun));
-  }
-
-  /// @copydoc scheduled_actor::set_exit_handler
-  template <class Fun>
-  void set_exit_handler(Fun&& fun) {
-    self_->set_exit_handler(std::forward<Fun>(fun));
   }
 
 #ifdef CAF_ENABLE_EXCEPTIONS

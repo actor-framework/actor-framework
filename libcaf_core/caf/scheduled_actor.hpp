@@ -123,17 +123,11 @@ public:
   /// Function object for handling unmatched messages.
   using default_handler = std::function<skippable_result(pointer, message&)>;
 
-  /// Function object for handling error messages.
-  using error_handler = std::function<void(pointer, error&)>;
-
   /// Function object for handling down messages.
   using down_handler = std::function<void(pointer, down_msg&)>;
 
   /// Function object for handling node down messages.
   using node_down_handler = std::function<void(pointer, node_down_msg&)>;
-
-  /// Function object for handling exit messages.
-  using exit_handler = std::function<void(pointer, exit_msg&)>;
 
   /// Function object for handling timeouts.
   using idle_handler = std::function<void()>;
@@ -268,24 +262,6 @@ public:
     };
   }
 
-  /// Sets a custom handler for error messages.
-  CAF_DEPRECATED("use a handler for 'error' instead")
-  void set_error_handler(error_handler fun) {
-    if (fun)
-      error_handler_ = std::move(fun);
-    else
-      error_handler_ = default_error_handler;
-  }
-
-  /// Sets a custom handler for error messages.
-  template <std::invocable<error&> F>
-  CAF_DEPRECATED("use a handler for 'error' instead")
-  void set_error_handler(F fun) {
-    error_handler_ = [fn{std::move(fun)}](scheduled_actor*, error& x) mutable {
-      fn(x);
-    };
-  }
-
   /// Sets a custom handler for node down messages.
   CAF_DEPRECATED("use a handler for 'node_down_msg' instead")
   void set_node_down_handler(node_down_handler fun) {
@@ -303,23 +279,6 @@ public:
                                               node_down_msg& x) mutable {
       fn(x);
     };
-  }
-
-  /// Sets a custom handler for error messages.
-  CAF_DEPRECATED("use a handler for 'exit_msg' instead")
-  void set_exit_handler(exit_handler fun) {
-    if (fun)
-      exit_handler_ = std::move(fun);
-    else
-      exit_handler_ = default_exit_handler;
-  }
-
-  /// Sets a custom handler for exit messages.
-  template <std::invocable<exit_msg&> F>
-  CAF_DEPRECATED("use a handler for 'exit_msg' instead")
-  void set_exit_handler(F fun) {
-    exit_handler_ = [fn{std::move(fun)}](scheduled_actor*,
-                                         exit_msg& x) mutable { fn(x); };
   }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -652,17 +611,11 @@ protected:
   /// Customization point for setting a default `message` callback.
   default_handler default_handler_;
 
-  /// Customization point for setting a default `error` callback.
-  error_handler error_handler_;
-
   /// Customization point for setting a default `down_msg` callback.
   down_handler down_handler_;
 
   /// Customization point for setting a default `down_msg` callback.
   node_down_handler node_down_handler_;
-
-  /// Customization point for setting a default `exit_msg` callback.
-  exit_handler exit_handler_;
 
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;
