@@ -149,6 +149,36 @@ TEST("invalid actor references are formatted as 'null'") {
   check_eq(to_string(hdl), "null");
 }
 
+namespace caf::detail {
+
+struct test_escaper {
+  std::string_view value;
+};
+
+template <>
+struct simple_formatter<test_escaper> {
+  template <class OutputIt>
+  OutputIt format(const test_escaper& x, OutputIt out) const {
+    return std::copy(x.value.begin(), x.value.end(), out);
+  }
+};
+
+} // namespace caf::detail
+
+namespace {
+
+auto make_by_value_formatted(std::string_view sv) {
+  return detail::formatted{detail::test_escaper{sv}, policy::by_value};
+}
+
+} // namespace
+
+TEST("formatted with by_value stores wrapper by value") {
+  std::string storage = "hello";
+  auto f = make_by_value_formatted(std::string_view{storage});
+  check_eq(detail::format("{}", f), "hello");
+}
+
 #if defined(CAF_ENABLE_EXCEPTIONS) && !defined(CAF_USE_STD_FORMAT)
 
 // Note: the standard version as well as libfmt (should) raise a compile-time
