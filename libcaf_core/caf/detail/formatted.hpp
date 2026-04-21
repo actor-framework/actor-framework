@@ -82,9 +82,12 @@ private:
 };
 
 template <class T>
-formatted(const T& value)
-  -> formatted<std::remove_cv_t<std::remove_pointer_t<std::decay_t<T>>>,
-               policy::by_reference_t>;
+formatted(const T&, policy::by_reference_t)
+  -> formatted<std::decay_t<T>, policy::by_reference_t>;
+
+template <class T>
+formatted(const T*, policy::by_reference_t)
+  -> formatted<T, policy::by_reference_t>;
 
 template <class T>
 formatted(T, policy::by_value_t)

@@ -114,20 +114,23 @@ TEST("formatting a node_id yields the same output as to_string") {
   SECTION("default-constructed node ID") {
     auto nid = node_id{};
     auto str = to_string(nid);
-    check_eq(detail::format("{}", detail::formatted{nid}), str);
+    check_eq(detail::format("{}", detail::formatted{nid, policy::by_reference}),
+             str);
     check_eq(str, "caf:local");
   }
   SECTION("URI-based node ID") {
     auto nid = make_node_id(unbox(make_uri("foo:bar")));
     auto str = to_string(nid);
-    check_eq(detail::format("{}", detail::formatted{nid}), to_string(nid));
+    check_eq(detail::format("{}", detail::formatted{nid, policy::by_reference}),
+             to_string(nid));
     check_eq(str, "foo:bar");
   }
   SECTION("hash-based node ID") {
     auto nid_opt = make_node_id(42, "0102030405060708090a0b0c0d0e0f1011121314");
     auto nid = unbox(nid_opt);
     auto str = to_string(nid);
-    check_eq(detail::format("{}", detail::formatted{nid}), str);
+    check_eq(detail::format("{}", detail::formatted{nid, policy::by_reference}),
+             str);
     check_eq(str, "caf:io:0102030405060708090a0b0c0d0e0f1011121314:42");
   }
 }
@@ -137,15 +140,17 @@ TEST("valid actor references are formatted as '<node>/actor/id/<id>'") {
   caf::actor_system sys{cfg};
   const auto hdl = sys.spawn([] { return behavior{[](int) {}}; });
   const auto* ctrl = actor_cast<actor_control_block*>(hdl);
-  check_eq(detail::format("{}", detail::formatted{ctrl}),
+  check_eq(detail::format("{}", detail::formatted{ctrl, policy::by_reference}),
            detail::format("caf:local/actor/id/{}", ctrl->id()));
-  check_eq(to_string(hdl), detail::format("{}", detail::formatted{ctrl}));
+  check_eq(to_string(hdl),
+           detail::format("{}", detail::formatted{ctrl, policy::by_reference}));
 }
 
 TEST("invalid actor references are formatted as 'null'") {
   const auto hdl = actor{};
   const auto* ctrl = actor_cast<actor_control_block*>(hdl);
-  check_eq(detail::format("{}", detail::formatted{ctrl}), "null");
+  check_eq(detail::format("{}", detail::formatted{ctrl, policy::by_reference}),
+           "null");
   check_eq(to_string(hdl), "null");
 }
 
