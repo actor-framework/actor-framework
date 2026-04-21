@@ -114,20 +114,23 @@ TEST("formatting a node_id yields the same output as to_string") {
   SECTION("default-constructed node ID") {
     auto nid = node_id{};
     auto str = to_string(nid);
-    check_eq(detail::format("{}", detail::formatted{nid}), str);
+    check_eq(detail::format("{}", detail::formatted{nid, policy::by_reference}),
+             str);
     check_eq(str, "caf:local");
   }
   SECTION("URI-based node ID") {
     auto nid = make_node_id(unbox(make_uri("foo:bar")));
     auto str = to_string(nid);
-    check_eq(detail::format("{}", detail::formatted{nid}), to_string(nid));
+    check_eq(detail::format("{}", detail::formatted{nid, policy::by_reference}),
+             to_string(nid));
     check_eq(str, "foo:bar");
   }
   SECTION("hash-based node ID") {
     auto nid_opt = make_node_id(42, "0102030405060708090a0b0c0d0e0f1011121314");
     auto nid = unbox(nid_opt);
     auto str = to_string(nid);
-    check_eq(detail::format("{}", detail::formatted{nid}), str);
+    check_eq(detail::format("{}", detail::formatted{nid, policy::by_reference}),
+             str);
     check_eq(str, "caf:io:0102030405060708090a0b0c0d0e0f1011121314:42");
   }
 }
@@ -137,16 +140,48 @@ TEST("valid actor references are formatted as '<node>/actor/id/<id>'") {
   caf::actor_system sys{cfg};
   const auto hdl = sys.spawn([] { return behavior{[](int) {}}; });
   const auto* ctrl = actor_cast<actor_control_block*>(hdl);
-  check_eq(detail::format("{}", detail::formatted{ctrl}),
+  check_eq(detail::format("{}", detail::formatted{ctrl, policy::by_reference}),
            detail::format("caf:local/actor/id/{}", ctrl->id()));
-  check_eq(to_string(hdl), detail::format("{}", detail::formatted{ctrl}));
+  check_eq(to_string(hdl),
+           detail::format("{}", detail::formatted{ctrl, policy::by_reference}));
 }
 
 TEST("invalid actor references are formatted as 'null'") {
   const auto hdl = actor{};
   const auto* ctrl = actor_cast<actor_control_block*>(hdl);
-  check_eq(detail::format("{}", detail::formatted{ctrl}), "null");
+  check_eq(detail::format("{}", detail::formatted{ctrl, policy::by_reference}),
+           "null");
   check_eq(to_string(hdl), "null");
+}
+
+namespace caf::detail {
+
+struct test_escaper {
+  std::string_view value;
+};
+
+template <>
+struct simple_formatter<test_escaper> {
+  template <class OutputIt>
+  OutputIt format(const test_escaper& x, OutputIt out) const {
+    return std::copy(x.value.begin(), x.value.end(), out);
+  }
+};
+
+} // namespace caf::detail
+
+namespace {
+
+auto make_by_value_formatted(std::string_view sv) {
+  return detail::formatted{detail::test_escaper{sv}, policy::by_value};
+}
+
+} // namespace
+
+TEST("formatted with by_value stores wrapper by value") {
+  std::string storage = "hello";
+  auto f = make_by_value_formatted(std::string_view{storage});
+  check_eq(detail::format("{}", f), "hello");
 }
 
 #if defined(CAF_ENABLE_EXCEPTIONS) && !defined(CAF_USE_STD_FORMAT)
