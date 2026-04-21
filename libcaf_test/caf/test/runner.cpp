@@ -26,6 +26,7 @@
 #include <optional>
 #include <regex>
 #include <string>
+#include <string_view>
 #include <thread>
 
 namespace caf::test {
@@ -234,8 +235,15 @@ public:
     auto options = make_option_set();
     auto res = options.parse(cfg_, args_copy);
     if (res.first != caf::pec::success) {
-      println_to(stderr, "error while parsing argument '{}': {}\n\n{}",
-                 *res.second, to_string(res.first), options.help_text());
+      std::string_view bad_arg;
+      if (res.second == args_copy.end()) {
+        bad_arg = args_copy.empty() ? std::string_view{"<eof>"}
+                                    : std::string_view{args_copy.back()};
+      } else {
+        bad_arg = *res.second;
+      }
+      println_to(stderr, "error while parsing argument '{}': {}\n\n{}", bad_arg,
+                 to_string(res.first), options.help_text());
       return {false, true};
     }
     if (get_or(cfg_, "help", false)) {

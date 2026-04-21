@@ -165,6 +165,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   duration of the application, those stale weak pointers effectively caused
   memory leaks since memory can only be freed fully once all strong and weak
   references have expired.
+- Fix a heap-buffer-overflow in the test runner on missing CLI arguments. For
+  example, running `caf-core-test -s` previously crashed (`-s` requires an
+  argument, #2384).
 
 ### Removed
 
