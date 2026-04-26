@@ -157,7 +157,7 @@ class nasty {
 public:
   using optional_type = std::optional<int32_t>;
 
-  using variant_type = std::variant<std::string, int32_t>;
+  using variant_type = std::variant<std::monostate, std::string, int32_t>;
 
   using tuple_type = std::tuple<std::string, int32_t>;
 
@@ -818,6 +818,7 @@ OUTLINE("serializing and then deserializing the 'nasty' type") {
       val.field_07 = 7;
       val.field_09 = "hello"s;
       val.field_10 = 10;
+      val.field_11 = std::monostate{};
       val.field_13 = std::tuple{"world"s, 13};
       val.field_17(17);
       val.field_21(21);

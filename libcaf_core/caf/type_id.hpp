@@ -18,6 +18,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 namespace caf {
 
@@ -430,6 +431,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (std::u16string))
   CAF_ADD_TYPE_ID(core_module, (std::u32string))
   CAF_ADD_TYPE_ID(core_module, (std::set<std::string>) )
+  CAF_ADD_TYPE_ID(core_module, (std::monostate))
 
   // -- CAF types --------------------------------------------------------------
 
