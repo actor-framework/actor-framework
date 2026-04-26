@@ -147,6 +147,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the new CMake option `CAF_ENABLE_RTTI` to `OFF` will now disable all
   uses of `typeid` and `dynamic_cast` in CAF. This enables users to build CAF
   with compiler options such as `-fno-rtti`.
+- Added support for `std::monostate` in the inspection API (#2388).
 
 ### Fixed
 
