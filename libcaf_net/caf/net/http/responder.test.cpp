@@ -231,7 +231,7 @@ TEST("promise responding with custom header fields with payload") {
     auto hello = "Hello, world!"sv;
     auto bytes = as_bytes(std::span{hello});
     auto prom = std::move(res).to_promise();
-    prom.respond(http::status::ok, headers, bytes);
+    prom.respond(http::status::ok, headers.container(), bytes);
   });
   launch();
   send_request(http::method::get, "/test");
