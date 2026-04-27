@@ -81,7 +81,8 @@ public:
 
     /// Sends an HTTP response message to the client. Automatically sets the
     /// the `Content-Length` header fields.
-    void respond(status code, std::span<const std::pair<std::string, std::string>> headers,
+    void respond(status code,
+                 std::span<const std::pair<std::string, std::string>> headers,
                  const_byte_span content) {
       impl_->down()->send_response(code, headers, content);
       impl_->set_completed();
