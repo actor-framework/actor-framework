@@ -8,6 +8,7 @@
 
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/byte_span.hpp"
+#include "caf/chunk.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"

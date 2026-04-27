@@ -52,7 +52,7 @@ public:
     // nop
   }
 
-  void on_consumer_demand(size_t) override {
+  void on_consumer_demand(size_t, bool) override {
     // nop
   }
 
