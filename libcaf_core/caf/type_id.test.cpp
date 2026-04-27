@@ -10,6 +10,8 @@
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/system_messages.hpp"
 
+#include <variant>
+
 using namespace caf;
 using namespace std::literals;
 
@@ -51,6 +53,7 @@ TEST("query_type_name returns type names for valid type IDs") {
     check_eq(query_type_name(type_id_v<bool>), "bool"sv);
     check_eq(query_type_name(type_id_v<int32_t>), "int32_t"sv);
     check_eq(query_type_name(type_id_v<std::string>), "std::string"sv);
+    check_eq(query_type_name(type_id_v<std::monostate>), "std::monostate"sv);
   }
   SECTION("custom types") {
     check_eq(query_type_name(type_id_v<test_type_1>), "test_type_1"sv);
@@ -69,6 +72,7 @@ TEST("query_type_id returns type IDs for valid type names") {
     check_eq(query_type_id("bool"sv), type_id_v<bool>);
     check_eq(query_type_id("int32_t"sv), type_id_v<int32_t>);
     check_eq(query_type_id("std::string"sv), type_id_v<std::string>);
+    check_eq(query_type_id("std::monostate"sv), type_id_v<std::monostate>);
   }
   SECTION("custom types") {
     check_eq(query_type_id("test_type_1"sv), type_id_v<test_type_1>);
@@ -150,6 +154,7 @@ TEST("type_name_or_anonymous returns type name or anonymous") {
 TEST("has_type_id_v checks if type has registered ID") {
   check(has_type_id_v<bool>);
   check(has_type_id_v<test_type_1>);
+  check(has_type_id_v<std::monostate>);
   struct unregistered_type {};
   check(!has_type_id_v<unregistered_type>);
 }

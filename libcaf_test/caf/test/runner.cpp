@@ -26,6 +26,7 @@
 #include <optional>
 #include <regex>
 #include <string>
+#include <string_view>
 #include <thread>
 
 namespace caf::test {
@@ -185,54 +186,43 @@ public:
       return EXIT_FAILURE;
     }
     reporter_->no_colors(get_or(cfg_, "no-colors", false));
-    reporter_->log_component_filter(
+    auto default_logger = reporter::make_logger(
+      verbosity_,
       get_or(cfg_, "log-component-filter", default_log_component_filter()));
-    auto default_logger = reporter::make_logger();
     reporter_->start();
     watchdog runtime_guard{get_or(cfg_, "max-runtime", 0)};
     for (auto& [suite_name, suite] : suites) {
       reporter_->begin_suite(suite_name);
       for (auto [test_name, factory_instance] : suite) {
         auto state = std::make_shared<context>();
-#ifdef CAF_ENABLE_EXCEPTIONS
-        // Must be outside of the try block to make sure the object still exists
-        // in the catch block.
-        std::unique_ptr<runnable> def;
-        try {
-          do {
-            logger::current_logger(default_logger.get());
-            reporter_->begin_test(state, test_name);
-            def = factory_instance->make(state);
-            do_run(*def);
-            reporter_->end_test();
-            state->clear_stacks();
-            def.reset();
-          } while (state->can_run());
-        } catch (const nesting_error& ex) {
-          reporter_->unhandled_exception(ex.message(), ex.location());
-          reporter_->end_test();
-        } catch (const requirement_failed& ex) {
-          auto event = log::event::make(log::level::error, "caf.test",
-                                        ex.location(), 0,
-                                        "requirement failed: {}", ex.message());
-          reporter_->print(event);
-          reporter_->end_test();
-        } catch (const std::exception& ex) {
-          reporter_->unhandled_exception(ex.what());
-          reporter_->end_test();
-        } catch (...) {
-          reporter_->unhandled_exception("unknown exception type");
-          reporter_->end_test();
-        }
-#else
+        reporter_->begin_test(state, test_name);
         do {
-          reporter_->begin_test(state, test_name);
+          logger::current_logger(default_logger.get());
+          reporter_->begin_section();
           auto def = factory_instance->make(state);
+#ifdef CAF_ENABLE_EXCEPTIONS
+          try {
+            do_run(*def);
+          } catch (const nesting_error& ex) {
+            reporter_->fail(ex.message(), ex.location());
+          } catch (const requirement_failed& ex) {
+            auto event
+              = log::event::make(log::level::error, "caf.test", ex.location(),
+                                 0, "requirement failed: {}", ex.message());
+            reporter_->print(*event);
+          } catch (const std::exception& ex) {
+            reporter_->unhandled_exception(ex.what());
+          } catch (...) {
+            reporter_->unhandled_exception("unknown exception type");
+          }
+#else
           do_run(*def);
-          reporter_->end_test();
-          state->clear_stacks();
-        } while (state->can_run());
 #endif
+          state->clear_stacks();
+          def.reset();
+          reporter_->end_section();
+        } while (state->can_run());
+        reporter_->end_test();
       }
       reporter_->end_suite(suite_name);
     }
@@ -245,8 +235,15 @@ public:
     auto options = make_option_set();
     auto res = options.parse(cfg_, args_copy);
     if (res.first != caf::pec::success) {
-      println_to(stderr, "error while parsing argument '{}': {}\n\n{}",
-                 *res.second, to_string(res.first), options.help_text());
+      std::string_view bad_arg;
+      if (res.second == args_copy.end()) {
+        bad_arg = args_copy.empty() ? std::string_view{"<eof>"}
+                                    : std::string_view{args_copy.back()};
+      } else {
+        bad_arg = *res.second;
+      }
+      println_to(stderr, "error while parsing argument '{}': {}\n\n{}", bad_arg,
+                 to_string(res.first), options.help_text());
       return {false, true};
     }
     if (get_or(cfg_, "help", false)) {
@@ -286,12 +283,14 @@ public:
                    *verbosity);
         return {false, true};
       }
+      verbosity_ = *level;
       reporter::instance().verbosity(*level);
     }
     return {true, false};
   }
 
   caf::settings cfg_;
+  unsigned verbosity_ = log::level::info;
   std::unique_ptr<reporter> reporter_;
 };
 

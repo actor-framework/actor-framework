@@ -649,8 +649,6 @@ public:
     detail::actor_system_config_access cfg_access{*cfg_};
     for (auto& hook : cfg_access.thread_hooks())
       hook->init(owner);
-    logger_ = reporter::make_logger();
-    CAF_SET_LOGGER_SYS(&owner);
     clock_ = std::make_unique<deterministic_actor_clock>();
     scheduler_
       = std::make_unique<deterministic_scheduler>(private_data_->events);
@@ -663,7 +661,6 @@ public:
     for (auto& mod : modules_)
       if (mod)
         mod->start();
-    logger_->start();
   }
 
   void stop() override {
@@ -677,11 +674,6 @@ public:
       scheduler_->stop();
     registry_.stop();
     clock_ = nullptr;
-    CAF_SET_LOGGER_SYS(nullptr);
-    if (logger_) {
-      logger_->stop();
-      logger_ = nullptr;
-    }
   }
 
   telemetry::actor_metrics make_actor_metrics(std::string_view) override {
@@ -768,7 +760,12 @@ public:
   }
 
   caf::logger& logger() override {
-    return *logger_;
+    auto* current = caf::logger::current_logger();
+    if (current == nullptr) {
+      detail::critical(
+        "deterministic fixture: test runner failed to provide a logger");
+    }
+    return *current;
   }
 
   actor_registry& registry() override {
@@ -863,7 +860,6 @@ private:
   std::atomic<size_t> running_actors_count_{0};
   mutable std::mutex running_actors_mtx_;
   mutable std::condition_variable running_actors_cv_;
-  intrusive_ptr<detail::asynchronous_logger> logger_;
   std::unique_ptr<deterministic_actor_clock> clock_;
   std::unique_ptr<caf::scheduler> scheduler_;
   std::array<std::unique_ptr<actor_system_module>, actor_system_module::num_ids>
@@ -953,7 +949,7 @@ deterministic::deterministic()
   caf::test::runnable::current().current_metric_registry(&sys.metrics());
 }
 
-deterministic::~deterministic() {
+deterministic::~deterministic() noexcept {
   // Note: we need clean up all remaining messages manually. This in turn may
   //       clean up actors as unreachable if the test did not consume all
   //       messages. Otherwise, the destructor of `sys` will wait for all

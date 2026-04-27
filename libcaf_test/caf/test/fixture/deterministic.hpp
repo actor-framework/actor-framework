@@ -304,7 +304,7 @@ public:
 
   deterministic();
 
-  ~deterministic();
+  virtual ~deterministic() noexcept;
 
   // -- properties -------------------------------------------------------------
 

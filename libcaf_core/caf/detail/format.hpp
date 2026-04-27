@@ -27,25 +27,25 @@
 
 namespace std {
 
-template <class T>
-struct formatter<caf::detail::formatted<T>, char> {
+template <class T, class Policy>
+struct formatter<caf::detail::formatted<T, Policy>, char> {
   template <class ParseContext>
   constexpr auto parse(ParseContext& ctx) const noexcept {
     return ctx.begin();
   }
 
   template <class FmtContext>
-  auto format(formatted<T> what, FmtContext& ctx) const {
-    if (what.value != nullptr) {
-      caf::detail::simple_formatter<T> formatter;
-      return formatter.format(*what.value_, ctx.out());
+  auto format(const formatted<T, Policy>& what, FmtContext& ctx) const {
+    if (!what.has_value()) {
+      auto out = ctx.out();
+      const char* str = "null";
+      for (auto c = *str; c != '\0'; c = *++str) {
+        *out++ = c;
+      }
+      return out;
     }
-    auto out = ctx.out();
-    const char* str = "null";
-    for (auto c = *str; c != '\0'; c = *++str) {
-      *out++ = c;
-    }
-    return out;
+    caf::detail::simple_formatter<T> formatter;
+    return formatter.format(what.value(), ctx.out());
   }
 };
 
@@ -117,11 +117,11 @@ template <class T>
 format_arg make_format_arg(const T& arg) {
   if constexpr (is_formatted_wrapper<T>::value) {
     std::string result;
-    if (arg.value_ != nullptr) {
-      simple_formatter<typename T::value_type> formatter;
-      formatter.format(*arg.value_, std::back_inserter(result));
-    } else {
+    if (!arg.has_value()) {
       result = "null";
+    } else {
+      simple_formatter<typename T::value_type> formatter;
+      formatter.format(arg.value(), std::back_inserter(result));
     }
     return {std::move(result)};
   } else if constexpr (one_of<T, bool, char, const char*, std::string_view>) {

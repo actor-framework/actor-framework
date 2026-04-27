@@ -6,7 +6,6 @@
 
 #include "caf/test/fwd.hpp"
 
-#include "caf/detail/asynchronous_logger.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/test_export.hpp"
@@ -15,8 +14,10 @@
 #include "caf/logger.hpp"
 
 #include <cstddef>
+#include <memory>
 #include <source_location>
 #include <string_view>
+#include <vector>
 
 namespace caf::test {
 
@@ -54,6 +55,10 @@ public:
 
   virtual void end_test() = 0;
 
+  virtual void begin_section() = 0;
+
+  virtual void end_section() = 0;
+
   virtual void begin_step(block* ptr) = 0;
 
   virtual void end_step(block* ptr) = 0;
@@ -71,14 +76,12 @@ public:
 
   virtual void unhandled_exception(std::string_view msg) = 0;
 
-  virtual void unhandled_exception(std::string_view msg,
-                                   const std::source_location& location)
-    = 0;
-
-  /// Prints a message to the output stream if `verbosity() >= level`.
+  /// Prints a message to the output stream when the reporter's verbosity allows
+  /// `level`.
   virtual void println(unsigned level, std::string_view msg) = 0;
 
-  /// Prints a message to the output stream if `verbosity() >= level`.
+  /// Prints a message to the output stream when the reporter's verbosity
+  /// allows `level`.
   template <class... Args>
     requires(sizeof...(Args) > 0)
   void println(unsigned level, std::string_view fst, Args&&... args) {
@@ -86,28 +89,13 @@ public:
     println(level, msg);
   }
 
-  /// Prints a message to the output stream if `verbosity() >= level`.
+  /// Prints a message to the output stream when the reporter's verbosity
+  /// allows the event's level.
   virtual void print(const log::event& event) = 0;
-
-  /// Prints a message to the output stream if `verbosity() >= level`.
-  virtual void print(const log::event_ptr& event) {
-    if (event != nullptr)
-      print(*event);
-  }
 
   virtual void print_actor_output(local_actor* self, std::string_view msg) = 0;
 
-  /// Returns the current verbosity level.
-  virtual unsigned verbosity() const noexcept = 0;
-
-  /// Sets the verbosity level of the reporter and returns the previous value.
-  virtual unsigned verbosity(unsigned level) noexcept = 0;
-
-  /// Returns the current filter for log messages.
-  virtual std::vector<std::string> log_component_filter() const = 0;
-
-  /// Sets the filter for log messages.
-  virtual void log_component_filter(std::vector<std::string> new_filter) = 0;
+  virtual void verbosity(unsigned level) noexcept = 0;
 
   /// Sets whether the reporter disables colored output even when writing to a
   /// TTY.
@@ -134,8 +122,12 @@ public:
   /// Creates a default reporter that writes to the standard output.
   static std::unique_ptr<reporter> make_default();
 
+  /// Creates a default reporter with quiet verbosity.
+  static std::unique_ptr<reporter> make_quiet();
+
   /// Creates a logger that forwards events to the current reporter.
-  static intrusive_ptr<detail::asynchronous_logger> make_logger();
+  static intrusive_ptr<logger>
+  make_logger(unsigned level, std::vector<std::string> components_filter);
 };
 
 } // namespace caf::test

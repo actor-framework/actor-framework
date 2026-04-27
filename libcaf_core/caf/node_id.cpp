@@ -131,7 +131,8 @@ void node_id::swap(node_id& x) noexcept {
 }
 
 void append_to_string(std::string& str, const node_id& x) {
-  detail::format_to(std::back_inserter(str), "{}", detail::formatted{x});
+  detail::format_to(std::back_inserter(str), "{}",
+                    detail::formatted{x, policy::by_reference});
 }
 
 std::string to_string(const node_id& x) {

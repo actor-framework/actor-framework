@@ -111,8 +111,22 @@ public:
           return false;
         }
         auto obj = std::addressof(get<settings>(iter->second));
-        if (!fld.type.empty())
+        if (!fld.type.empty()) {
+          // Variant fields require `@<name>-type` on the parent (see `push` and
+          // `begin_associative_array`). Empty alternatives only call
+          // `begin_object`/`end_object` and would otherwise omit that key.
+          std::string type_key;
+          type_key += '@';
+          type_key.insert(type_key.end(), fld.name.begin(), fld.name.end());
+          type_key += "-type";
+          if (fld.parent->contains(type_key)) {
+            emplace_error(sec::runtime_error,
+                          "type of variant field already defined.");
+            return false;
+          }
+          put(*fld.parent, type_key, fld.type);
           put(*obj, "@type", fld.type);
+        }
         st_.push(obj);
         return true;
       },

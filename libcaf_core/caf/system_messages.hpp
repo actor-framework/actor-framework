@@ -17,8 +17,8 @@
 namespace caf {
 
 /// Sent to all links when an actor is terminated.
-/// @note Actors can override the default handler by calling
-///       `self->set_exit_handler(...)`.
+/// @note Actors should handle `exit_msg` in their regular behavior when they
+///       need non-default handling.
 struct exit_msg {
   /// The source of this message, i.e., the terminated actor.
   actor_addr source;

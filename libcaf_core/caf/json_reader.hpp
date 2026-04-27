@@ -59,7 +59,9 @@ public:
     return impl_->load(json_text);
   }
 
-  bool load_bytes(const_byte_span bytes);
+  bool load_bytes(const_byte_span bytes) {
+    return impl_->load_bytes(bytes);
+  }
 
   /// Reads the input stream @p input and parses the content into an internal
   /// representation. After loading the JSON input, the reader is ready for
