@@ -69,6 +69,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - When running an HTTP server, CAF now recognizes the `Expect: 100-continue`
   HTTP header field and responds to it accordingly.
 - Fix integer encoding of the `CAF_VERSION` macro (#2350).
+- Fix a rare crash when creating a flow from an SPSC buffer via
+  `from_resource()` and then connecting an observable that may cancel the flow
+  mid-flow, e.g., by using `take()` (#2395).
 
 ## [1.1.0] - 2025-07-25
 
