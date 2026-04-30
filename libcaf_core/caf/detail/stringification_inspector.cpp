@@ -32,6 +32,18 @@ public:
                                 "stringifying"));
     return false;
   }
+
+  bool save(serializer& sink, const weak_actor_ptr& ptr) override {
+    auto str = to_string(ptr);
+    return sink.apply(str);
+  }
+
+  bool load(deserializer& source, weak_actor_ptr&) override {
+    source.set_error(make_error(sec::unsupported_operation,
+                                "actor handles are not loadable when "
+                                "stringifying"));
+    return false;
+  }
 };
 
 class stringification_inspector_impl final : public serializer {

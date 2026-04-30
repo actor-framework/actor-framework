@@ -19,6 +19,10 @@ public:
 
   bool load(deserializer& source, strong_actor_ptr& ptr) override;
 
+  bool save(serializer& sink, const weak_actor_ptr& ptr) override;
+
+  bool load(deserializer& source, weak_actor_ptr& ptr) override;
+
 private:
   actor_system* sys_;
 };
