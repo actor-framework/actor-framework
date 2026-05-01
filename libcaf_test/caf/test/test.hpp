@@ -34,10 +34,12 @@ public:
 } // namespace caf::test
 
 #define SECTION(description)                                                   \
+  CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
   for (auto CAF_PP_UNIFYN(scope_) = this->current_block()                      \
                                       .get_section(__COUNTER__, description)   \
                                       ->commit();                              \
-       CAF_PP_UNIFYN(scope_); CAF_PP_UNIFYN(scope_).leave())
+       CAF_PP_UNIFYN(scope_); CAF_PP_UNIFYN(scope_).leave())                   \
+  CAF_POP_C2Y_EXTENSIONS_WARNING
 
 #define TEST(description)                                                      \
   namespace {                                                                  \

@@ -47,40 +47,52 @@ public:
 } // namespace caf::test
 
 #define GIVEN(description)                                                     \
+  CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
   for (auto given_scope                                                        \
        = this->current_block().get_given(__COUNTER__, description)->commit();  \
-       given_scope; given_scope.leave())
+       given_scope; given_scope.leave())                                       \
+  CAF_POP_C2Y_EXTENSIONS_WARNING
 
 #define AND_GIVEN(description)                                                 \
   static_cast<void>(0);                                                        \
+  CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
   for (auto and_given_scope = this->current_block()                            \
                                 .get_and_given(__COUNTER__, description)       \
                                 ->commit();                                    \
-       and_given_scope.leave())
+       and_given_scope.leave())                                                \
+  CAF_POP_C2Y_EXTENSIONS_WARNING
 
 #define WHEN(description)                                                      \
+  CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
   for (auto when_scope                                                         \
        = this->current_block().get_when(__COUNTER__, description)->commit();   \
-       when_scope; when_scope.leave())
+       when_scope; when_scope.leave())                                         \
+  CAF_POP_C2Y_EXTENSIONS_WARNING
 
 #define AND_WHEN(description)                                                  \
   static_cast<void>(0);                                                        \
+  CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
   for (auto and_when_scope = this->current_block()                             \
                                .get_and_when(__COUNTER__, description)         \
                                ->commit();                                     \
-       and_when_scope; and_when_scope.leave())
+       and_when_scope; and_when_scope.leave())                                 \
+  CAF_POP_C2Y_EXTENSIONS_WARNING
 
 #define THEN(description)                                                      \
+  CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
   for (auto then_scope                                                         \
        = this->current_block().get_then(__COUNTER__, description)->commit();   \
-       then_scope; then_scope.leave())
+       then_scope; then_scope.leave())                                         \
+  CAF_POP_C2Y_EXTENSIONS_WARNING
 
 #define AND_THEN(description)                                                  \
   static_cast<void>(0);                                                        \
+  CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
   for (auto and_then_scope = this->current_block()                             \
                                .get_and_then(__COUNTER__, description)         \
                                ->commit();                                     \
-       and_then_scope; and_then_scope.leave())
+       and_then_scope; and_then_scope.leave())                                 \
+  CAF_POP_C2Y_EXTENSIONS_WARNING
 
 #define SCENARIO(description)                                                  \
   namespace {                                                                  \
