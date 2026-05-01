@@ -7,6 +7,7 @@
 #   - the project builds (via CMake)
 #   - the tests pass (via CTest)
 #   - the code formatting is correct (via clang-format)
+#   - text files use UNIX line endings and end with a trailing newline (POSIX-style)
 #   - no forbidden includes are found in the code base
 #   - type-id block offsets in unit tests do not overlap
 
@@ -52,6 +53,10 @@ clang_format_check() {
   find libcaf* -name '*.[ch]pp' | xargs "$clang_format_bin" --dry-run --Werror
 }
 
+posix_text_files_check() {
+  python3 scripts/check-posix-text-files.py "$(pwd)"
+}
+
 forbidden_includes_check() {
   find libcaf_* -name '*hpp' -type f | grep -v 'caf/internal/' | xargs python3 scripts/forbidden-includes-check.py
 }
@@ -63,6 +68,7 @@ type_id_block_offsets_check() {
 run_check "build project" cmake_check
 run_check "run tests" ctest_check
 run_check "check code formatting" clang_format_check
+run_check "check POSIX text files" posix_text_files_check
 run_check "check for forbidden includes" forbidden_includes_check
 run_check "check type-id block offsets" type_id_block_offsets_check
 
