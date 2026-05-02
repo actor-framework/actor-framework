@@ -63,13 +63,12 @@ using push_resource_t = async::producer_resource<pull_val_t>;
 using pull_resource_t = async::consumer_resource<pull_val_t>;
 
 void do_push(sync_t* sync, push_val_t push, int begin, int end) {
-  auto buf = push.try_open();
-  if (!buf) {
-    CAF_RAISE_ERROR("push.try_open failed");
+  auto out = async::make_blocking_producer(std::move(push));
+  if (!out) {
+    CAF_RAISE_ERROR("make_blocking_producer");
   }
-  async::blocking_producer out{std::move(buf)};
   for (auto i = begin; i != end; ++i)
-    out.push(i);
+    out->push(i);
   sync->release();
 }
 
@@ -81,17 +80,16 @@ std::pair<std::thread, pull_val_t> start_worker(sync_t* sync, int begin,
 }
 
 void run(push_resource_t push) {
-  auto buf = push.try_open();
-  if (!buf) {
-    CAF_RAISE_ERROR("push.try_open failed");
+  auto out = async::make_blocking_producer(std::move(push));
+  if (!out) {
+    CAF_RAISE_ERROR("make_blocking_producer");
   }
-  async::blocking_producer out{std::move(buf)};
   sync_t sync;
   std::vector<std::thread> threads;
   auto add_worker = [&](int begin, int end) {
     auto [hdl, pull] = start_worker(&sync, begin, end);
     threads.push_back(std::move(hdl));
-    out.push(std::move(pull));
+    out->push(std::move(pull));
   };
   std::vector<std::pair<int, int>> ranges{{0, 1337},    {1337, 1338},
                                           {1338, 1338}, {1338, 2777},
