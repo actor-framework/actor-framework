@@ -8,6 +8,7 @@
 #include "caf/async/read_result.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
+#include "caf/expected.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
 
@@ -191,7 +192,7 @@ make_blocking_consumer(consumer_resource<T> res) {
     using impl_t = typename blocking_consumer<T>::impl;
     return {blocking_consumer<T>{make_counted<impl_t>(std::move(buf))}};
   } else {
-    return {make_error(sec::cannot_open_resource)};
+    return unexpected{make_error(sec::cannot_open_resource)};
   }
 }
 

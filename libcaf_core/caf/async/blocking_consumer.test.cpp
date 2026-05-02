@@ -29,12 +29,6 @@ struct fixture {
   }
 };
 
-void produce(async::producer_resource<int> push) {
-  async::blocking_producer out{push.try_open()};
-  for (int i = 0; i < 5000; ++i)
-    out.push(i);
-}
-
 } // namespace
 
 WITH_FIXTURE(fixture) {
@@ -43,14 +37,24 @@ SCENARIO("blocking consumers allow threads to receive data") {
   GIVEN("a producers running in a separate thread") {
     WHEN("consuming the generated value with a blocking consumer") {
       THEN("the consumer receives all values in order") {
+        auto produce = [this](async::producer_resource<int> push) {
+          auto out = async::make_blocking_producer(std::move(push));
+          if (!out)
+            fail("make_blocking_producer failed");
+          async::blocking_producer<int> blocking_out = std::move(*out);
+          for (int i = 0; i < 5000; ++i)
+            blocking_out.push(i);
+        };
         auto [pull, push] = async::make_spsc_buffer_resource<int>();
         std::thread producer{produce, push};
-        async::blocking_consumer<int> in{pull.try_open()};
+        auto in = async::make_blocking_consumer(std::move(pull));
+        require(in.has_value());
+        async::blocking_consumer<int> blocking_in = std::move(*in);
         std::vector<int> got;
         bool done = false;
         while (!done) {
           int tmp = 0;
-          switch (in.pull(async::delay_errors, tmp)) {
+          switch (blocking_in.pull(async::delay_errors, tmp)) {
             case async::read_result::ok:
               got.push_back(tmp);
               break;
