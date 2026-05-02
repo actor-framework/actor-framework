@@ -101,6 +101,7 @@ caf_add_component(
     caf/actor_system_module.cpp
     caf/actor_termination.test.cpp
     caf/anon_mail.test.cpp
+    caf/any_view.test.cpp
     caf/async/batch.cpp
     caf/async/batch.test.cpp
     caf/async/blocking_consumer.test.cpp
@@ -143,6 +144,7 @@ caf_add_component(
     caf/config_value_reader.cpp
     caf/config_value_writer.cpp
     caf/console_printer.cpp
+    caf/const_any_view.test.cpp
     caf/const_typed_message_view.test.cpp
     caf/constructor_attach.test.cpp
     caf/cow_string.test.cpp
@@ -155,6 +157,7 @@ caf_add_component(
     caf/detail/abstract_worker_hub.cpp
     caf/detail/actor_system_impl.cpp
     caf/detail/aligned_alloc.cpp
+    caf/detail/any_ref.cpp
     caf/detail/assert.cpp
     caf/detail/asynchronous_actor_clock.cpp
     caf/detail/asynchronous_actor_clock.test.cpp
