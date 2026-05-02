@@ -1070,7 +1070,8 @@ TEST("send event-based request message") {
       check_eq(*result, make_error(sec::request_timeout));
       check_eq(mail_count(), 0u);
       check_eq(num_timeouts(), 0u);
-      self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
+      self->mail(exit_msg{actor_addr{}, exit_reason::user_shutdown})
+        .send(dummy);
       expect<exit_msg>().to(dummy);
     }
   }
@@ -1175,7 +1176,8 @@ TEST("send event-based request message") {
       trigger_timeout();
       expect<error>().with(make_error(sec::request_timeout)).to(self_hdl);
       check_eq(*result, make_error(sec::request_timeout));
-      self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
+      self->mail(exit_msg{actor_addr{}, exit_reason::user_shutdown})
+        .send(dummy);
       expect<exit_msg>().to(dummy);
     }
   }
@@ -1371,7 +1373,7 @@ TEST("send event-based delayed request message with no response") {
   advance_time(1s);
   expect<error>().with(make_error(sec::request_timeout)).to(self_hdl);
   check_eq(*result, make_error(sec::request_timeout));
-  self->mail(exit_msg{nullptr, exit_reason::user_shutdown}).send(dummy);
+  self->mail(exit_msg{actor_addr{}, exit_reason::user_shutdown}).send(dummy);
   expect<exit_msg>().to(dummy);
 }
 

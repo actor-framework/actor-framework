@@ -168,6 +168,7 @@ caf_add_component(
     caf/detail/bounds_checker.test.cpp
     caf/detail/cleanup_and_release.cpp
     caf/detail/cleanup_and_release.test.cpp
+    caf/detail/compare.cpp
     caf/detail/config_consumer.cpp
     caf/detail/config_consumer.test.cpp
     caf/detail/counted_disposable.cpp
@@ -175,8 +176,8 @@ caf_add_component(
     caf/detail/critical.cpp
     caf/detail/current_actor.cpp
     caf/detail/daemons.cpp
-    caf/detail/default_mailbox.cpp
     caf/detail/default_actor_handle_codec.cpp
+    caf/detail/default_mailbox.cpp
     caf/detail/default_mailbox.test.cpp
     caf/detail/default_thread_count.cpp
     caf/detail/format.test.cpp

@@ -137,7 +137,7 @@ public:
 
   /// Keeps track of actors that wish to receive a `node_down_msg` if a
   /// particular node fails.
-  std::unordered_map<node_id, std::vector<actor_addr>> node_observers;
+  std::unordered_map<node_id, std::vector<weak_actor_ptr>> node_observers;
 
   /// Configures whether BASP automatically open new connections to optimize
   /// routing paths by forming a mesh between all nodes.

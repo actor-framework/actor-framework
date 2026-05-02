@@ -163,8 +163,6 @@ public:
 
   bool value(const strong_actor_ptr& ptr);
 
-  bool value(const weak_actor_ptr& ptr);
-
   virtual caf::actor_handle_codec* actor_handle_codec() = 0;
 
   /// Returns a reference to the serializer. Convenience member function for

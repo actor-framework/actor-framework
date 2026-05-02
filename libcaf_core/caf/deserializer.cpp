@@ -73,15 +73,6 @@ bool deserializer::value(strong_actor_ptr& ptr) {
   return false;
 }
 
-bool deserializer::value(weak_actor_ptr& ptr) {
-  strong_actor_ptr tmp;
-  if (!value(tmp)) {
-    return false;
-  }
-  ptr = tmp;
-  return true;
-}
-
 bool deserializer::value(std::vector<bool>& x) {
   x.clear();
   size_t size = 0;

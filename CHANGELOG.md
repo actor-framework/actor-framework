@@ -62,6 +62,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `abstract_actor* self` parameter. This allows us to remove weak pointers in
   the attachable implementations to avoid unnecessary increment and decrement
   operations on the reference count.
+- The class `actor_addr` has been redesigned from scratch. Prior to CAF 2.0, an
+  `actor_addr` held a weak pointer to an actor. This made it fundamentally
+  unsafe to send across the network. Since the only use case for `actor_addr` in
+  CAF is to identify an actor from an `exit_msg` or `down_msg`, we have
+  re-implemented it as a simple pair of `actor_id` and `node_id`. With this
+  change, `actor_addr` is now safe to send across the network. This change
+  should be (mostly) transparent to users with the exception of `actor_cast`,
+  which no longer can convert `actor_addr` to other actor handles.
 
 ### Deprecated
 
@@ -194,6 +202,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   points for the same functionality only adds redundancy.
 - Removed the `node_id::can_parse` method and the `parse` function for node IDs.
   Both are leftovers from older versions of CAF and no longer serve any purpose.
+- Related to the `actor_addr` change, we have removed the type ID for
+  `weak_actor_ptr` and inspectors no longer support `weak_actor_ptr` values.
+  This means that CAF messages may no longer contain a `weak_actor_ptr`. While
+  this is technically a breaking API change, we consider it a bug fix since
+  sending a `weak_actor_ptr` silently failed in earlier CAF versions.
 
 ## [1.1.0] - 2025-07-25
 

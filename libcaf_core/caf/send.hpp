@@ -36,14 +36,13 @@ namespace caf {
 /// Anonymously sends `dest` an exit message.
 template <message_priority Priority = message_priority::normal, class Handle>
 void anon_send_exit(const Handle& receiver, exit_reason reason) {
-  if constexpr (std::is_same_v<Handle, actor_addr>) {
-    anon_send_exit<Priority>(actor_cast<strong_actor_ptr>(receiver), reason);
-  } else {
-    if (receiver) {
-      auto ptr = make_mailbox_element(nullptr, make_message_id(),
-                                      exit_msg{receiver->address(), reason});
-      receiver->enqueue(std::move(ptr), nullptr);
-    }
+  static_assert(!std::is_same_v<Handle, actor_addr>,
+                "anon_send_exit no longer supports actor_addr; "
+                "use a live actor handle instead");
+  if (receiver) {
+    auto ptr = make_mailbox_element(nullptr, make_message_id(),
+                                    exit_msg{receiver->address(), reason});
+    receiver->enqueue(std::move(ptr), nullptr);
   }
 }
 

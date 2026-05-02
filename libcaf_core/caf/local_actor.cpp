@@ -57,7 +57,7 @@ disposable local_actor::request_response_timeout(timespan timeout,
 }
 
 void local_actor::monitor(const node_id& node) {
-  system().monitor(node, address());
+  system().monitor(node, strong_actor_ptr{ctrl(), add_ref});
 }
 
 void local_actor::demonitor(const node_id& node) {
@@ -68,7 +68,8 @@ void local_actor::do_monitor(abstract_actor* ptr, message_priority priority) {
   if (ptr == nullptr)
     return;
   using factory = internal::attachable_factory;
-  add_monitor(ptr, factory::make_monitor(address(), priority));
+  add_monitor(ptr,
+              factory::make_monitor(weak_actor_ptr{ctrl(), add_ref}, priority));
 }
 
 void local_actor::do_demonitor(const strong_actor_ptr& whom) {
@@ -91,10 +92,6 @@ message_id local_actor::new_request_id(message_priority mp) noexcept {
 uint64_t local_actor::new_u64_id() noexcept {
   auto result = ++last_request_id_;
   return result.integer_value();
-}
-
-void local_actor::send_exit(const actor_addr& whom, error reason) {
-  send_exit(actor_cast<strong_actor_ptr>(whom), std::move(reason));
 }
 
 void local_actor::send_exit(const strong_actor_ptr& receiver, error reason) {

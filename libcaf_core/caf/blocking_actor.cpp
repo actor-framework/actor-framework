@@ -354,10 +354,6 @@ size_t blocking_actor::attach_functor(const actor& x) {
   return attach_functor(actor_cast<strong_actor_ptr>(x));
 }
 
-size_t blocking_actor::attach_functor(const actor_addr& x) {
-  return attach_functor(actor_cast<strong_actor_ptr>(x));
-}
-
 size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
   if (!ptr)
     return 0;
