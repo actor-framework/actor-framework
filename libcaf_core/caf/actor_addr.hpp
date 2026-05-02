@@ -4,163 +4,126 @@
 
 #pragma once
 
-#include "caf/abstract_actor.hpp"
-#include "caf/actor_control_block.hpp"
-#include "caf/add_ref.hpp"
-#include "caf/adopt_ref.hpp"
-#include "caf/caf_deprecated.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/hash/fnv.hpp"
+#include "caf/node_id.hpp"
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <type_traits>
+#include <string>
+#include <utility>
 
 namespace caf {
 
-/// Stores the address of typed as well as untyped actors.
+/// Identifies an actor by its ID and the node it lives on. An `actor_addr`
+/// neither keeps the actor alive nor allows resolving it back to an actor
+/// handle. It is used as a lightweight token, e.g., in @ref down_msg and
+/// @ref exit_msg, to identify the source of the message.
 class CAF_CORE_EXPORT actor_addr
   : detail::comparable<actor_addr>,
-    detail::comparable<actor_addr, weak_actor_ptr>,
     detail::comparable<actor_addr, strong_actor_ptr>,
+    detail::comparable<actor_addr, weak_actor_ptr>,
     detail::comparable<actor_addr, abstract_actor*>,
     detail::comparable<actor_addr, actor_control_block*> {
 public:
-  // -- friend types that need access to private ctors
+  // -- constructors, destructors, and assignment operators --------------------
 
-  friend class abstract_actor;
+  actor_addr() noexcept = default;
 
-  // allow conversion via actor_cast
-  template <class, class, int>
-  friend class actor_cast_access;
+  actor_addr(actor_addr&&) noexcept = default;
 
-  // tell actor_cast which semantic this type uses
-  static constexpr bool has_weak_ptr_semantics = true;
+  actor_addr(const actor_addr&) noexcept = default;
 
-  actor_addr() = default;
-  actor_addr(actor_addr&&) = default;
-  actor_addr(const actor_addr&) = default;
-  actor_addr& operator=(actor_addr&&) = default;
-  actor_addr& operator=(const actor_addr&) = default;
+  actor_addr& operator=(actor_addr&&) noexcept = default;
 
-  actor_addr(std::nullptr_t);
+  actor_addr& operator=(const actor_addr&) noexcept = default;
 
-  actor_addr& operator=(std::nullptr_t);
+  /// Constructs an address that identifies an actor with the given ID and
+  /// node.
+  actor_addr(actor_id id, node_id node) noexcept : id_(id) {
+    // Leave the node_id default-constructed if this is the null address. This
+    // canonicalizes the representation and makes sure that there is only one
+    // representation for the null address.
+    if (id != 0 && node) {
+      node_ = std::move(node);
+    }
+  }
 
-  /// Returns the ID of this actor.
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the ID of the identified actor.
   actor_id id() const noexcept {
-    return ptr_.ctrl()->id();
+    return id_;
   }
 
-  /// Returns the origin node of this actor.
-  node_id node() const noexcept {
-    return ptr_.ctrl()->node();
-  }
-
-  /// Returns the hosting actor system.
-  actor_system& home_system() const noexcept {
-    return ptr_.ctrl()->system();
+  /// Returns the origin node of the identified actor.
+  const node_id& node() const noexcept {
+    return node_;
   }
 
   /// Exchange content of `*this` and `other`.
   void swap(actor_addr& other) noexcept;
 
-  explicit operator bool() const {
-    return static_cast<bool>(ptr_);
+  CAF_DEPRECATED("an actor_addr is always valid")
+  explicit operator bool() const noexcept {
+    return id_ != 0;
   }
 
-  /// @cond
-
-  static intptr_t compare(const actor_control_block* lhs,
-                          const actor_control_block* rhs);
+  // -- comparison -------------------------------------------------------------
 
   intptr_t compare(const actor_addr& other) const noexcept;
+
+  intptr_t compare(const strong_actor_ptr& other) const noexcept;
+
+  intptr_t compare(const weak_actor_ptr& other) const noexcept;
 
   intptr_t compare(const abstract_actor* other) const noexcept;
 
   intptr_t compare(const actor_control_block* other) const noexcept;
 
-  intptr_t compare(const weak_actor_ptr& other) const noexcept {
-    return compare(other.ctrl());
-  }
-
-  intptr_t compare(const strong_actor_ptr& other) const noexcept {
-    return compare(other.get());
-  }
-
-  friend std::string to_string(const actor_addr& x) {
-    return to_string(x.ptr_);
-  }
-
-  friend void append_to_string(std::string& x, const actor_addr& y) {
-    return append_to_string(x, y.ptr_);
-  }
+  // -- friend functions -------------------------------------------------------
 
   template <class Inspector>
   friend bool inspect(Inspector& f, actor_addr& x) {
-    return f.value(x.ptr_);
+    auto canonicalize = [&x] {
+      if (x.id_ == 0 && x.node_) {
+        x.node_ = node_id{};
+      }
+      return true;
+    };
+    return f.object(x)
+      .on_load(canonicalize)
+      .fields(f.field("id", x.id_), f.field("node", x.node_));
   }
-
-  /// Releases the reference held by handle `x`. Using the
-  /// handle after invalidating it is undefined behavior.
-  friend void destroy(actor_addr& x) {
-    x.ptr_.reset();
-  }
-
-  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
-  actor_addr(actor_control_block*, bool);
-
-  actor_addr(actor_control_block*, add_ref_t);
-
-  actor_addr(actor_control_block*, adopt_ref_t);
-
-  actor_control_block* get() const noexcept {
-    return ptr_.ctrl();
-  }
-
-  const weak_actor_ptr& ptr() const noexcept {
-    return ptr_;
-  }
-
-  /// @endcond
 
 private:
-  strong_actor_ptr lock() const noexcept {
-    return ptr_.lock();
-  }
+  explicit actor_addr(actor_control_block* ptr) noexcept;
 
-  CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
-  actor_addr(actor_control_block*);
-
-  weak_actor_ptr ptr_;
+  actor_id id_ = 0;
+  node_id node_;
 };
 
-inline bool operator==(const actor_addr& x, std::nullptr_t) {
-  return x.get() == nullptr;
-}
+/// @relates actor_addr
+CAF_CORE_EXPORT std::string to_string(const actor_addr& x);
 
-inline bool operator==(std::nullptr_t, const actor_addr& x) {
-  return x.get() == nullptr;
-}
-
-inline bool operator!=(const actor_addr& x, std::nullptr_t) {
-  return x.get() != nullptr;
-}
-
-inline bool operator!=(std::nullptr_t, const actor_addr& x) {
-  return x.get() != nullptr;
-}
+/// @relates actor_addr
+CAF_CORE_EXPORT void append_to_string(std::string& dst, const actor_addr& x);
 
 } // namespace caf
 
-// allow actor_addr to be used in hash maps
 namespace std {
+
 template <>
 struct hash<caf::actor_addr> {
-  size_t operator()(const caf::actor_addr& ref) const {
-    return static_cast<size_t>(ref.id());
+  size_t operator()(const caf::actor_addr& ref) const noexcept {
+    auto aid = ref.id();
+    if (aid == 0) {
+      return 0;
+    }
+    return caf::hash::fnv<size_t>::compute(aid, ref.node());
   }
 };
+
 } // namespace std
