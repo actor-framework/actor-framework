@@ -71,8 +71,9 @@ public:
                      const_byte_span content);
 
   /// @copydoc send_response
-  bool send_response(status code, std::string_view content_type,
-                     std::string_view content);
+  bool send_response(status code,
+                     std::span<const std::pair<std::string, std::string>> headers,
+                     const_byte_span content);
 
   /// @copydoc send_response
   bool send_response(status code, const error& err);

@@ -222,4 +222,28 @@ TEST("responding with custom header fields with payload") {
   check_eq(ascii(payload), hello);
 }
 
+TEST("promise responding with custom header fields with payload") {
+  route("/test", [](http::responder& res) {
+    caf::unordered_flat_map<std::string, std::string> headers = {
+      {"Content-Type", "text/plain"},
+      {"X-Custom-Header", "custom-value"},
+    };
+    auto hello = "Hello, world!"sv;
+    auto bytes = as_bytes(std::span{hello});
+    auto prom = std::move(res).to_promise();
+    prom.respond(http::status::ok, headers.container(), bytes);
+  });
+  launch();
+  send_request(http::method::get, "/test");
+  auto hello = "Hello, world!"sv;
+  auto [code, fields, payload] = receive_response();
+  check_eq(code, http::status::ok);
+  check_eq(fields.size(), 3u);
+  check_eq(fields["Content-Length"], std::to_string(hello.size()));
+  check_eq(fields["Content-Type"], "text/plain");
+  check_eq(fields["X-Custom-Header"], "custom-value");
+  check_eq(payload.size(), hello.size());
+  check_eq(ascii(payload), hello);
+}
+
 } // WITH_FIXTURE(fixture)
