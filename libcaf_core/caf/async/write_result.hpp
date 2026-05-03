@@ -12,17 +12,15 @@
 
 namespace caf::async {
 
-/// Encodes the result of an asynchronous write operation.
+/// Encodes the result of a write into an asynchronous data sink.
 enum class write_result {
-  /// Signals that the write operation succeeded.
+  /// The sink accepted all data.
   ok,
-  /// Signals that the item must be dropped because the write operation failed
-  /// with an unrecoverable error. Retries will fail with the same result. When
-  /// writing to a @ref producer_resource, this usually means the consumer
-  /// closed its end of the buffer.
-  drop,
-  /// Signals that the write operation timed out.
-  timeout,
+  /// The sink rejected some or all of the data but may accept more in the
+  /// future.
+  try_again_later,
+  /// The sink no longer accepts any data.
+  canceled,
 };
 
 /// @relates write_result

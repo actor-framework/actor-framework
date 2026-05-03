@@ -12,6 +12,7 @@
 #include "caf/async/mock_producer.test.hpp"
 
 #include "caf/actor_from_state.hpp"
+#include "caf/async/write_result.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/event_based_actor.hpp"
@@ -68,8 +69,10 @@ public:
     consumer_cancel = true;
   }
 
-  void on_consumer_demand(size_t new_demand) override {
+  void on_consumer_demand(size_t new_demand, bool unblocked) override {
     demand += new_demand;
+    if (unblocked)
+      ++unblocked_count;
   }
 
   void ref() const noexcept final {
@@ -84,6 +87,7 @@ public:
   bool consumer_ready = false;
   bool consumer_cancel = false;
   size_t demand = 0;
+  size_t unblocked_count = 0;
 };
 
 class dummy_consumer : public async::consumer {
@@ -220,6 +224,55 @@ SCENARIO("SPSC buffers may go past their capacity") {
       }
     }
   }
+}
+
+TEST("try_push enforces hard capacity and signals unblocked demand") {
+  auto prod = make_counted<dummy_producer>();
+  auto cons = make_counted<dummy_consumer>();
+  auto buf = make_counted<async::spsc_buffer<int>>(3, 2);
+  buf->set_producer(prod);
+  buf->set_consumer(cons);
+  check_eq(prod->demand, 3u);
+  check_eq(prod->unblocked_count, 0u);
+  check_eq(buf->try_push(1), async::write_result::ok);
+  check_eq(buf->try_push(2), async::write_result::ok);
+  check_eq(buf->try_push(3), async::write_result::ok);
+  check_eq(buf->try_push(4), async::write_result::try_again_later);
+  dummy_observer obs;
+  auto [ok, c] = buf->pull(async::delay_errors, 1, obs);
+  check_eq(ok, true);
+  check_eq(c, 1u);
+  check_eq(prod->unblocked_count, 1u);
+  check_eq(buf->try_push(4), async::write_result::ok);
+}
+
+TEST("try_push batch may partially fill the buffer under hard capacity") {
+  auto prod = make_counted<dummy_producer>();
+  auto cons = make_counted<dummy_consumer>();
+  auto buf = make_counted<async::spsc_buffer<int>>(3, 1);
+  buf->set_producer(prod);
+  buf->set_consumer(cons);
+  auto v = std::vector<int>{1, 2, 3, 4, 5};
+  auto [n, wr] = buf->try_push(std::span{v});
+  check_eq(n, 3u);
+  check_eq(wr, async::write_result::try_again_later);
+  dummy_observer obs;
+  std::ignore = buf->pull(async::delay_errors, 2, obs);
+  auto [n2, wr2] = buf->try_push(std::span{v}.subspan(3));
+  check_eq(n2, 2u);
+  check_eq(wr2, async::write_result::ok);
+}
+
+TEST("try_push returns canceled after cancel") {
+  auto prod = make_counted<dummy_producer>();
+  auto cons = make_counted<dummy_consumer>();
+  auto buf = make_counted<async::spsc_buffer<int>>(4, 1);
+  buf->set_producer(prod);
+  buf->set_consumer(cons);
+  buf->cancel();
+  check_eq(buf->try_push(1), async::write_result::canceled);
+  auto v = std::vector<int>{1, 2};
+  check_eq(buf->try_push(std::span{v}).second, async::write_result::canceled);
 }
 
 SCENARIO("the prioritize_errors policy skips processing of pending items") {

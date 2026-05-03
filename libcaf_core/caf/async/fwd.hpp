@@ -10,6 +10,7 @@ namespace caf::async {
 
 // -- classes ------------------------------------------------------------------
 
+class abstract_spsc_buffer;
 class batch;
 class consumer;
 class execution_context;
@@ -40,6 +41,7 @@ class blocking_producer;
 
 // -- smart pointer aliases ----------------------------------------------------
 
+using abstract_spsc_buffer_ptr = intrusive_ptr<abstract_spsc_buffer>;
 using execution_context_ptr = intrusive_ptr<execution_context>;
 
 } // namespace caf::async

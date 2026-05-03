@@ -8,6 +8,7 @@
 #include "caf/async/consumer.hpp"
 #include "caf/async/policy.hpp"
 #include "caf/async/producer.hpp"
+#include "caf/async/write_result.hpp"
 #include "caf/callback.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
@@ -25,24 +26,46 @@
 
 #include <condition_variable>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 #include <mutex>
 #include <span>
 
 namespace caf::async {
 
-/// A Single Producer Single Consumer buffer. The buffer uses a "soft bound",
-/// which means that the producer announces a desired maximum for in-flight
-/// items that the buffer uses for its bookkeeping, but the producer may add
-/// more than that number of items. Allowing producers to go "beyond the limit"
-/// is intended for producer that transform inputs into outputs where one input
-/// event can produce multiple output items.
+/// Base class for SPSC buffers.
+class abstract_spsc_buffer : public ref_counted {
+public:
+  /// Closes the buffer by request of the producer.
+  virtual void close() = 0;
+
+  /// Closes the buffer by request of the producer and signals an error to the
+  /// consumer.
+  virtual void abort(error reason) = 0;
+
+  /// Closes the buffer by request of the consumer.
+  virtual void cancel() = 0;
+
+  /// Consumer callback for the initial handshake between producer and consumer.
+  virtual void set_consumer(consumer_ptr consumer) = 0;
+
+  /// Producer callback for the initial handshake between producer and consumer.
+  virtual void set_producer(producer_ptr producer) = 0;
+};
+
+/// A Single Producer Single Consumer buffer. The buffer uses a "soft bound"
+/// for @ref push, which means the producer may add more in-flight items than
+/// the configured capacity. Hard-capacity writers use @ref try_push: when the
+/// buffer is full, they return @ref write_result::try_again_later, set
+/// @ref flags::producer_blocked, and the next successful @ref pull / demand
+/// signals the producer with @ref producer::on_consumer_demand where the
+/// second parameter (`unblocked`) is `true`. Soft @ref push ignores that flag.
 ///
 /// Aside from providing storage, this buffer also resumes the consumer if data
 /// is available and signals demand to the producer whenever the consumer takes
 /// data out of the buffer.
 template <class T>
-class spsc_buffer : public ref_counted {
+class spsc_buffer final : public abstract_spsc_buffer {
 public:
   using value_type = T;
 
@@ -54,6 +77,9 @@ public:
     bool closed : 1;
     /// Stores whether `cancel` has been called.
     bool canceled : 1;
+    /// Set by @ref try_push when the hard capacity is reached; cleared by
+    /// @ref signal_demand when the consumer frees space and wakes the producer.
+    bool producer_blocked : 1;
   };
 
   spsc_buffer(size_t capacity, size_t min_pull_size)
@@ -89,6 +115,48 @@ public:
   /// @returns the remaining capacity after inserting the items.
   size_t push(const T& item) {
     return push(std::span{&item, 1});
+  }
+
+  /// Tries to append a span of items without exceeding the capacity.
+  /// @returns `{items.size(), write_result::ok}` if all items were appended,
+  ///          `{n, write_result::try_again_later}` if only a subset of items
+  ///          could be appended before running out of capacity, or
+  ///          `{0, write_result::canceled}` if the subscription was canceled.
+  std::pair<size_t, write_result> try_push(std::span<const T> items) {
+    if (items.empty()) {
+      return {0, write_result::ok};
+    }
+    lock_type guard{mtx_};
+    CAF_ASSERT(producer_ != nullptr);
+    CAF_ASSERT(!flags_.closed);
+    if (flags_.canceled) {
+      return {0, write_result::canceled};
+    }
+    if (capacity_ <= buf_.size()) {
+      flags_.producer_blocked = true;
+      return {0, write_result::try_again_later};
+    }
+    const auto was_empty = buf_.empty();
+    const auto available = capacity_ - buf_.size();
+    if (available >= items.size()) {
+      buf_.insert(buf_.end(), items.begin(), items.end());
+      if (was_empty && consumer_) {
+        consumer_->on_producer_wakeup();
+      }
+      return {items.size(), write_result::ok};
+    }
+    buf_.insert(buf_.end(), items.begin(), items.begin() + available);
+    flags_.producer_blocked = true;
+    if (was_empty && consumer_) {
+      consumer_->on_producer_wakeup();
+    }
+    return {available, write_result::try_again_later};
+  }
+
+  /// Tries to append a single item without exceeding the configured @ref
+  /// capacity. Unlike @ref push, this never grows past `capacity_`.
+  write_result try_push(const T& item) {
+    return try_push(std::span{&item, 1}).second;
   }
 
   /// Consumes up to `demand` items from the buffer.
@@ -131,14 +199,11 @@ public:
     return err_;
   }
 
-  /// Closes the buffer by request of the producer.
-  void close() {
+  void close() override {
     abort(error{});
   }
 
-  /// Closes the buffer by request of the producer and signals an error to the
-  /// consumer.
-  void abort(error reason) {
+  void abort(error reason) override {
     lock_type guard{mtx_};
     if (!flags_.closed) {
       flags_.closed = true;
@@ -149,8 +214,7 @@ public:
     }
   }
 
-  /// Closes the buffer by request of the consumer.
-  void cancel() {
+  void cancel() override {
     lock_type guard{mtx_};
     if (!flags_.canceled) {
       flags_.canceled = true;
@@ -160,8 +224,7 @@ public:
     }
   }
 
-  /// Consumer callback for the initial handshake between producer and consumer.
-  void set_consumer(consumer_ptr consumer) {
+  void set_consumer(consumer_ptr consumer) override {
     CAF_ASSERT(consumer != nullptr);
     lock_type guard{mtx_};
     if (consumer_)
@@ -173,8 +236,7 @@ public:
       consumer_->on_producer_wakeup();
   }
 
-  /// Producer callback for the initial handshake between producer and consumer.
-  void set_producer(producer_ptr producer) {
+  void set_producer(producer_ptr producer) override {
     CAF_ASSERT(producer != nullptr);
     lock_type guard{mtx_};
     if (producer_)
@@ -291,9 +353,19 @@ private:
   }
 
   void signal_demand(size_t new_demand) {
+    CAF_ASSERT(new_demand > 0);
     demand_ += new_demand;
-    if (demand_ >= min_pull_size_ && producer_) {
-      producer_->on_consumer_demand(demand_);
+    if (!producer_) {
+      return;
+    }
+    if (flags_.producer_blocked) {
+      flags_.producer_blocked = false;
+      producer_->on_consumer_demand(demand_, true);
+      demand_ = 0;
+      return;
+    }
+    if (demand_ >= min_pull_size_) {
+      producer_->on_consumer_demand(demand_, false);
       demand_ = 0;
     }
   }
@@ -681,7 +753,7 @@ public:
     }
   }
 
-  void on_consumer_demand(size_t demand) override {
+  void on_consumer_demand(size_t demand, bool) override {
     std::unique_lock guard{mtx_};
     if (owner_ && pending_demand_ >= 0) {
       pending_demand_ += static_cast<ptrdiff_t>(demand);

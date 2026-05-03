@@ -6,6 +6,7 @@
 
 #include "caf/async/producer.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/async/write_result.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
@@ -13,7 +14,6 @@
 #include <condition_variable>
 #include <optional>
 #include <span>
-#include <type_traits>
 
 namespace caf::async {
 
@@ -32,19 +32,43 @@ public:
     }
 
     bool push(std::span<const T> items) {
-      std::unique_lock guard{mtx_};
-      while (items.size() > 0) {
-        while (demand_ == 0)
-          cv_.wait(guard);
-        if (demand_ < 0) {
-          return false;
-        } else {
-          auto n = std::min(static_cast<size_t>(demand_), items.size());
-          guard.unlock();
-          buf_->push(items.subspan(0, n));
-          guard.lock();
-          demand_ -= static_cast<ptrdiff_t>(n);
-          items = items.subspan(n);
+      // Only one thread can push at a time. The reason for this limitation is
+      // that `try_push` can return `try_again_later`, which requires a matching
+      // call to `on_consumer_demand` (or `on_consumer_cancel`) before we can
+      // call `try_push` again.
+      std::unique_lock push_guard{push_mtx_};
+      if (!buf_) {
+        return false;
+      }
+      while (!items.empty()) {
+        const auto [n, wr] = buf_->try_push(items);
+        switch (wr) {
+          case write_result::ok:
+            CAF_ASSERT(n == items.size());
+            return true;
+          case write_result::canceled:
+            return false;
+          default: { // write_result::try_again_later:
+            CAF_ASSERT(wr == write_result::try_again_later);
+            CAF_ASSERT(n < items.size());
+            if (n > 0) {
+              items = items.subspan(n);
+            }
+            // Wait until `on_consumer_cancel` changes the state to `canceled`
+            // or `on_consumer_demand` changes the state to `notified`.
+            // Note: if `try_push` returns `try_again_later`, then
+            //       `on_consumer_demand` will be called with `unblocked = true`
+            //       *once* (except when the consumer cancels).
+            std::unique_lock guard{state_mtx_};
+            while (state_ == state::idle) {
+              state_cv_.wait(guard);
+            }
+            if (state_ == state::canceled) {
+              return false;
+            }
+            CAF_ASSERT(state_ == state::notified);
+            state_ = state::idle;
+          }
         }
       }
       return true;
@@ -55,6 +79,7 @@ public:
     }
 
     void close() {
+      std::unique_lock guard{push_mtx_};
       if (buf_) {
         buf_->close();
         buf_ = nullptr;
@@ -62,6 +87,7 @@ public:
     }
 
     void abort(error reason) {
+      std::unique_lock guard{push_mtx_};
       if (buf_) {
         buf_->abort(std::move(reason));
         buf_ = nullptr;
@@ -69,8 +95,8 @@ public:
     }
 
     bool canceled() const {
-      std::unique_lock<std::mutex> guard{mtx_};
-      return demand_ == -1;
+      std::unique_lock guard{state_mtx_};
+      return state_ == state::canceled;
     }
 
     void on_consumer_ready() override {
@@ -78,18 +104,17 @@ public:
     }
 
     void on_consumer_cancel() override {
-      std::unique_lock<std::mutex> guard{mtx_};
-      demand_ = -1;
-      cv_.notify_all();
+      std::unique_lock guard{state_mtx_};
+      state_ = state::canceled;
+      state_cv_.notify_one();
     }
 
-    void on_consumer_demand(size_t demand) override {
-      std::unique_lock<std::mutex> guard{mtx_};
-      if (demand_ == 0) {
-        demand_ += static_cast<ptrdiff_t>(demand);
-        cv_.notify_all();
-      } else if (demand_ > 0) {
-        demand_ += static_cast<ptrdiff_t>(demand);
+    void on_consumer_demand(size_t, bool unblocked) override {
+      if (unblocked) {
+        std::unique_lock guard{state_mtx_};
+        CAF_ASSERT(state_ == state::idle);
+        state_ = state::notified;
+        state_cv_.notify_one();
       }
     }
 
@@ -102,11 +127,14 @@ public:
     }
 
   private:
+    enum class state { idle, notified, canceled };
+
     mutable detail::atomic_ref_count ref_count_;
     spsc_buffer_ptr<T> buf_;
-    mutable std::mutex mtx_;
-    std::condition_variable cv_;
-    ptrdiff_t demand_ = 0;
+    mutable std::mutex push_mtx_;
+    mutable std::mutex state_mtx_;
+    std::condition_variable state_cv_;
+    state state_ = state::idle;
   };
 
   using impl_ptr = intrusive_ptr<impl>;
@@ -134,19 +162,19 @@ public:
       impl_->close();
   }
 
-  /// Pushes an item to the consumer. If there is no demand by the consumer to
-  /// deliver the item, this functions blocks unconditionally.
-  /// @returns `true` if the item was delivered to the consumer or `false` if
+  /// Pushes an item to the consumer. If there is no room under the hard
+  /// buffer limit, this function blocks until space is available or the
+  /// consumer cancels.
+  /// @returns `true` if the item was delivered to the buffer or `false` if
   ///          the consumer no longer receives any additional item.
   bool push(const T& item) {
     return impl_->push(item);
   }
 
-  /// Pushes multiple items to the consumer. If there is no demand by the
-  /// consumer to deliver all items, this functions blocks unconditionally until
-  /// all items have been delivered.
-  /// @returns `true` if all items were delivered to the consumer or `false` if
-  ///          the consumer no longer receives any additional item.
+  /// Pushes multiple items to the consumer, blocking on the hard buffer limit
+  /// as needed.
+  /// @returns `true` if all items were enqueued or `false` if the consumer
+  ///          no longer receives any additional item.
   bool push(std::span<const T> items) {
     return impl_->push(items);
   }

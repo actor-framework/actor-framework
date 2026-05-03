@@ -6,9 +6,9 @@
 
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_manager.hpp"
+#include "caf/net/web_socket/frame.hpp"
 
 #include "caf/async/spsc_buffer.hpp"
-#include "caf/callback.hpp"
 #include "caf/cow_tuple.hpp"
 #include "caf/error.hpp"
 

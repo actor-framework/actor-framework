@@ -73,7 +73,7 @@ public:
       ctx_->schedule(do_cancel_);
     }
 
-    void on_consumer_demand(size_t) override {
+    void on_consumer_demand(size_t, bool) override {
       ctx_->schedule(do_resume_);
     }
 
