@@ -36,11 +36,6 @@ bool serializer::value(const strong_actor_ptr& ptr) {
   return false;
 }
 
-bool serializer::value(const weak_actor_ptr& ptr) {
-  auto tmp = ptr.lock();
-  return value(tmp);
-}
-
 bool serializer::value(const std::vector<bool>& xs) {
   if (!begin_sequence(xs.size()))
     return false;

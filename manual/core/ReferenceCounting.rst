@@ -113,24 +113,21 @@ track of how many references to the control block exist. The control block is
 destroyed if there are *zero* weak references to an actor (which cannot occur
 before ``strong refs`` reached *zero* as well). No cycle occurs if two actors
 keep weak references to each other, because the actor objects themselves can get
-destroyed independently from their control block.  A weak reference is only
-formed by ``actor_addr`` (see :ref:`actor-address`).
+destroyed independently from their control block. Weak references are formed by
+``weak_actor_ptr``.
 
 .. _actor-cast:
 
 Converting Actor References with ``actor_cast``
 -----------------------------------------------
 
-The function ``actor_cast`` converts between actor pointers and
-handles. The first common use case is to convert a ``strong_actor_ptr``
-to either ``actor`` or ``typed_actor<...>`` before being able
-to send messages to an actor. The second common use case is to convert
-``actor_addr`` to ``strong_actor_ptr`` to upgrade a weak
-reference to a strong reference. Note that casting ``actor_addr`` to a
-strong actor pointer or handle can result in invalid handles. The syntax for
-``actor_cast`` resembles builtin C++ casts. For example,
-``actor_cast<actor>(x)`` converts ``x`` to an handle of type
-``actor``.
+The function ``actor_cast`` converts between actor pointers and handles. The
+most common use case is to convert a ``strong_actor_ptr`` to either ``actor``
+or ``typed_actor<...>`` before being able to send messages to an actor.
+``actor_cast`` also converts to and from ``weak_actor_ptr`` when temporary weak
+references are needed. The syntax for ``actor_cast`` resembles builtin C++
+casts. For example, ``actor_cast<actor>(x)`` converts ``x`` to a handle of
+type ``actor``.
 
 .. _breaking-cycles:
 

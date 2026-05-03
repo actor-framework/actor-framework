@@ -193,9 +193,6 @@ public:
   /// @copydoc value
   bool value(strong_actor_ptr& ptr);
 
-  /// @copydoc value
-  bool value(weak_actor_ptr& ptr);
-
   virtual caf::actor_handle_codec* actor_handle_codec() = 0;
 
   /// Returns a reference to the deserializer. Convenience member function for

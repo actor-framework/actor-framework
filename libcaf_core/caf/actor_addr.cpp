@@ -4,78 +4,68 @@
 
 #include "caf/actor_addr.hpp"
 
-#include "caf/actor.hpp"
-#include "caf/config.hpp"
-#include "caf/deserializer.hpp"
-#include "caf/local_actor.hpp"
+#include "caf/abstract_actor.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/detail/compare.hpp"
+#include "caf/detail/print.hpp"
 #include "caf/node_id.hpp"
-#include "caf/proxy_registry.hpp"
-#include "caf/serializer.hpp"
 
 namespace caf {
 
-actor_addr::actor_addr(std::nullptr_t) {
-  // nop
+actor_addr::actor_addr(actor_control_block* ptr) noexcept {
+  if (ptr != nullptr) {
+    id_ = ptr->id();
+    node_ = ptr->node();
+  }
 }
-
-actor_addr& actor_addr::operator=(std::nullptr_t) {
-  ptr_.reset();
-  return *this;
-}
-
-actor_addr::actor_addr(actor_control_block* ptr) : ptr_(ptr, add_ref) {
-  // nop
-}
-
-CAF_PUSH_DEPRECATED_WARNING
-actor_addr::actor_addr(actor_control_block* ptr, bool increase_ref_count)
-  : ptr_(ptr, increase_ref_count) {
-  // nop
-}
-CAF_POP_WARNINGS
-
-actor_addr::actor_addr(actor_control_block* ptr, add_ref_t)
-  : ptr_(ptr, add_ref) {
-  // nop
-}
-
-actor_addr::actor_addr(actor_control_block* ptr, adopt_ref_t)
-  : ptr_(ptr, adopt_ref) {
-  // nop
-}
-
-intptr_t actor_addr::compare(const actor_control_block* lhs,
-                             const actor_control_block* rhs) {
-  // invalid actors are always "less" than valid actors
-  if (lhs == nullptr)
-    return rhs != nullptr ? -1 : 0;
-  if (rhs == nullptr)
-    return 1;
-  // check for identity
-  if (lhs == rhs)
-    return 0;
-  // check for equality (a decorator is equal to the actor it represents)
-  auto x = lhs->id();
-  auto y = rhs->id();
-  if (x == y)
-    return lhs->node().compare(rhs->node());
-  return static_cast<intptr_t>(x) - static_cast<intptr_t>(y);
-}
-
 intptr_t actor_addr::compare(const actor_addr& other) const noexcept {
-  return compare(ptr_.ctrl(), other.ptr_.ctrl());
+  return detail::compare(*this, other);
+}
+
+intptr_t actor_addr::compare(const strong_actor_ptr& other) const noexcept {
+  return detail::compare(*this, other.get());
+}
+
+intptr_t actor_addr::compare(const weak_actor_ptr& other) const noexcept {
+  return detail::compare(*this, other.ctrl());
 }
 
 intptr_t actor_addr::compare(const abstract_actor* other) const noexcept {
-  return compare(ptr_.ctrl(), actor_control_block::from(other));
+  if (other) {
+    return detail::compare(*this, other->ctrl());
+  }
+  return detail::compare(*this, nullptr);
 }
 
 intptr_t actor_addr::compare(const actor_control_block* other) const noexcept {
-  return compare(ptr_.ctrl(), other);
+  return detail::compare(*this, other);
 }
 
 void actor_addr::swap(actor_addr& other) noexcept {
-  ptr_.swap(other.ptr_);
+  using std::swap;
+  swap(id_, other.id_);
+  swap(node_, other.node_);
+}
+
+std::string to_string(const actor_addr& x) {
+  std::string result;
+  append_to_string(result, x);
+  return result;
+}
+
+void append_to_string(std::string& dst, const actor_addr& addr) {
+  if (addr.id() == 0) {
+    dst += "null";
+    return;
+  }
+  using namespace std::literals;
+  auto out = std::back_inserter(dst);
+  const detail::simple_formatter<node_id> prefix;
+  out = prefix.format(addr.node(), out);
+  const auto infix = "/actor/id/"sv;
+  detail::print_iterator_adapter buf{out};
+  buf.insert(buf.end(), infix.begin(), infix.end());
+  print(buf, addr.id());
 }
 
 } // namespace caf

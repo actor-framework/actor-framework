@@ -139,9 +139,6 @@ public:
   // -- sending asynchronous messages ------------------------------------------
 
   /// Sends an exit message to `receiver`.
-  void send_exit(const actor_addr& receiver, error reason);
-
-  /// Sends an exit message to `receiver`.
   void send_exit(const strong_actor_ptr& receiver, error reason);
 
   /// Sends an exit message to `receiver`.
@@ -311,7 +308,7 @@ public:
   template <class ActorHandle>
   ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
     if (has_link_flag(opts)) {
-      link_to(res->address());
+      link_to(res);
     }
     return res;
   }

@@ -192,7 +192,7 @@ public:
 
   void* subtype_ptr() override;
 
-  void monitor(const node_id& node, const actor_addr& observer) override;
+  void monitor(const node_id& node, const strong_actor_ptr& observer) override;
 
   void demonitor(const node_id& node, const actor_addr& observer) override;
 

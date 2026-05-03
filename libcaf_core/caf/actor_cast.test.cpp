@@ -32,201 +32,64 @@ dummy_actor::behavior_type typed_dummy_impl() {
   };
 }
 
-struct access_tag {};
-
 } // namespace
-
-namespace caf {
-
-// Abuse the fact that `actor_cast_access` has friend access to the handles.
-template <>
-class actor_cast_access<access_tag, access_tag, -1> {
-public:
-  static auto& unbox(actor& x) {
-    return x.ptr_;
-  }
-
-  template <class... Ts>
-  static auto& unbox(typed_actor<Ts...>& x) {
-    return x.ptr_;
-  }
-
-  static auto& unbox(actor_addr& x) {
-    return x.ptr_;
-  }
-};
-
-using access_t = actor_cast_access<access_tag, access_tag, -1>;
-
-} // namespace caf
 
 WITH_FIXTURE(test::fixture::deterministic) {
 
-TEST("actor_cast converts a strong pointer to a weak pointer") {
+TEST("actor_cast converts between strong and weak pointers") {
   SECTION("valid handle") {
     SECTION("actor") {
       auto hdl = sys.spawn(dummy_impl);
       auto ptr = actor_cast<weak_actor_ptr>(hdl);
-      check_eq(access_t::unbox(hdl).get(), ptr.get());
+      check_eq(hdl.compare(ptr.ctrl()), 0);
     }
     SECTION("typed_actor") {
       auto hdl = sys.spawn(typed_dummy_impl);
       auto ptr = actor_cast<weak_actor_ptr>(hdl);
-      check_eq(access_t::unbox(hdl).get(), ptr.get());
+      check_eq(hdl.compare(ptr.ctrl()), 0);
     }
   }
   SECTION("invalid handle") {
     SECTION("actor") {
       auto hdl = actor{};
       auto ptr = actor_cast<weak_actor_ptr>(hdl);
-      check_eq(ptr, nullptr);
+      check_eq(ptr.compare(nullptr), 0);
     }
     SECTION("typed_actor") {
       auto hdl = dummy_actor{};
       auto ptr = actor_cast<weak_actor_ptr>(hdl);
-      check_eq(ptr, nullptr);
+      check_eq(ptr.compare(nullptr), 0);
     }
   }
 }
 
-TEST("actor_cast converts a weak pointer to a strong pointer") {
+TEST("actor_cast converts a weak pointer back to a handle") {
   SECTION("valid handle") {
     SECTION("actor") {
       auto hdl = sys.spawn(dummy_impl);
-      auto addr = hdl.address();
-      auto hdl2 = actor_cast<actor>(addr);
-      check_eq(access_t::unbox(addr).get(), access_t::unbox(hdl2));
+      auto wptr = actor_cast<weak_actor_ptr>(hdl);
+      auto hdl2 = actor_cast<actor>(wptr);
+      check_eq(hdl.compare(wptr.ctrl()), 0);
+      check_eq(hdl2.compare(hdl), 0);
     }
     SECTION("typed_actor") {
       auto hdl = sys.spawn(typed_dummy_impl);
-      auto addr = hdl.address();
-      auto hdl2 = actor_cast<dummy_actor>(addr);
-      check_eq(access_t::unbox(addr).get(), access_t::unbox(hdl2));
+      auto wptr = actor_cast<weak_actor_ptr>(hdl);
+      auto hdl2 = actor_cast<dummy_actor>(wptr);
+      check_eq(hdl.compare(wptr.ctrl()), 0);
+      check_eq(hdl2.compare(hdl), 0);
     }
   }
   SECTION("expired handle") {
     SECTION("actor") {
-      auto addr = sys.spawn(dummy_impl).address();
-      auto hdl2 = actor_cast<actor>(addr);
-      check_eq(access_t::unbox(hdl2).get(), nullptr);
+      auto wptr = actor_cast<weak_actor_ptr>(sys.spawn(dummy_impl));
+      auto hdl2 = actor_cast<actor>(wptr);
+      check_eq(hdl2.compare(nullptr), 0);
     }
     SECTION("typed_actor") {
-      auto addr = sys.spawn(typed_dummy_impl).address();
-      auto hdl2 = actor_cast<dummy_actor>(addr);
-      check_eq(access_t::unbox(hdl2).get(), nullptr);
-    }
-  }
-  SECTION("invalid handle") {
-    SECTION("actor") {
-      auto addr = actor_addr{};
-      auto hdl2 = actor_cast<actor>(addr);
-      check_eq(access_t::unbox(hdl2).get(), nullptr);
-    }
-    SECTION("typed_actor") {
-      auto addr = actor_addr{};
-      auto hdl2 = actor_cast<dummy_actor>(addr);
-      check_eq(access_t::unbox(hdl2).get(), nullptr);
-    }
-  }
-}
-
-TEST("actor_cast converts a strong pointer to an actor_control_block*") {
-  SECTION("valid handle") {
-    SECTION("actor") {
-      auto hdl = sys.spawn(dummy_impl);
-      auto addr = hdl.address();
-      auto ptr = actor_cast<actor_control_block*>(addr);
-      check_eq(access_t::unbox(addr).get(), ptr);
-    }
-    SECTION("typed_actor") {
-      auto hdl = sys.spawn(typed_dummy_impl);
-      auto addr = hdl.address();
-      auto ptr = actor_cast<actor_control_block*>(addr);
-      check_eq(access_t::unbox(addr).get(), ptr);
-    }
-  }
-  SECTION("invalid handle") {
-    SECTION("actor") {
-      auto hdl = actor{};
-      auto addr = hdl.address();
-      auto ptr = actor_cast<actor_control_block*>(addr);
-      check_eq(ptr, nullptr);
-    }
-    SECTION("typed_actor") {
-      auto hdl = dummy_actor{};
-      auto addr = hdl.address();
-      auto ptr = actor_cast<actor_control_block*>(addr);
-      check_eq(ptr, nullptr);
-    }
-  }
-}
-
-TEST("actor_cast converts a strong pointer to an abstract_actor*") {
-  SECTION("valid handle") {
-    SECTION("actor") {
-      auto hdl = sys.spawn(dummy_impl);
-      auto addr = hdl.address();
-      auto ptr = actor_cast<abstract_actor*>(addr);
-      if (check_ne(ptr, nullptr)) {
-        check_eq(access_t::unbox(addr).get(), ptr->ctrl());
-      }
-    }
-    SECTION("typed_actor") {
-      auto hdl = sys.spawn(typed_dummy_impl);
-      auto addr = hdl.address();
-      auto ptr = actor_cast<abstract_actor*>(addr);
-      if (check_ne(ptr, nullptr)) {
-        check_eq(access_t::unbox(addr).get(), ptr->ctrl());
-      }
-    }
-  }
-  SECTION("invalid handle") {
-    SECTION("actor") {
-      auto hdl = actor{};
-      auto addr = hdl.address();
-      auto ptr = actor_cast<abstract_actor*>(addr);
-      check_eq(ptr, nullptr);
-    }
-    SECTION("typed_actor") {
-      auto hdl = dummy_actor{};
-      auto addr = hdl.address();
-      auto ptr = actor_cast<abstract_actor*>(addr);
-      check_eq(ptr, nullptr);
-    }
-  }
-}
-
-TEST("actor_cast converts a strong pointer to a local_actor*") {
-  SECTION("valid handle") {
-    SECTION("actor") {
-      auto hdl = sys.spawn(dummy_impl);
-      auto addr = hdl.address();
-      auto ptr = actor_cast<local_actor*>(addr);
-      if (check_ne(ptr, nullptr)) {
-        check_eq(access_t::unbox(addr).get(), ptr->ctrl());
-      }
-    }
-    SECTION("typed_actor") {
-      auto hdl = sys.spawn(typed_dummy_impl);
-      auto addr = hdl.address();
-      auto ptr = actor_cast<local_actor*>(addr);
-      if (check_ne(ptr, nullptr)) {
-        check_eq(access_t::unbox(addr).get(), ptr->ctrl());
-      }
-    }
-  }
-  SECTION("invalid handle") {
-    SECTION("actor") {
-      auto hdl = actor{};
-      auto addr = hdl.address();
-      auto ptr = actor_cast<local_actor*>(addr);
-      check_eq(ptr, nullptr);
-    }
-    SECTION("typed_actor") {
-      auto hdl = dummy_actor{};
-      auto addr = hdl.address();
-      auto ptr = actor_cast<local_actor*>(addr);
-      check_eq(ptr, nullptr);
+      auto wptr = actor_cast<weak_actor_ptr>(sys.spawn(typed_dummy_impl));
+      auto hdl2 = actor_cast<dummy_actor>(wptr);
+      check_eq(hdl2.compare(nullptr), 0);
     }
   }
 }
@@ -235,23 +98,23 @@ TEST("actor_cast converts a self pointer to a handle type") {
   SECTION("actor") {
     sys.spawn([this](event_based_actor* self) {
       auto hdl = actor_cast<actor>(self);
-      check_eq(self->ctrl(), access_t::unbox(hdl));
+      check_eq(hdl.compare(self->ctrl()), 0);
     });
     auto* ptr = static_cast<event_based_actor*>(nullptr);
     auto hdl = actor_cast<actor>(ptr);
-    check_eq(access_t::unbox(hdl), nullptr);
+    check_eq(hdl.compare(nullptr), 0);
   }
   SECTION("typed_actor") {
     sys.spawn([this](dummy_actor::pointer self) {
       auto hdl = actor_cast<dummy_actor>(self);
-      check_eq(self->ctrl(), access_t::unbox(hdl));
+      check_eq(hdl.compare(self->ctrl()), 0);
       return dummy_actor::behavior_type{
         [](int x) { return x; },
       };
     });
     auto* ptr = static_cast<dummy_actor::pointer>(nullptr);
     auto hdl = actor_cast<actor>(ptr);
-    check_eq(access_t::unbox(hdl), nullptr);
+    check_eq(hdl.compare(nullptr), 0);
   }
 }
 

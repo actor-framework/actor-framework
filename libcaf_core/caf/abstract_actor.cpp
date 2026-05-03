@@ -114,25 +114,33 @@ void abstract_actor::del_monitor(abstract_actor* observed,
 
 // -- linking ------------------------------------------------------------------
 
-void abstract_actor::link_to(const actor_addr& other) {
-  auto lg = log::core::trace("other = {}", other);
-  link_to(actor_cast<strong_actor_ptr>(other));
-}
-
 void abstract_actor::unlink_from(const actor_addr& other) {
   auto lg = log::core::trace("other = {}", other);
-  if (!other)
+  if (other.id() == invalid_actor_id)
     return;
-  if (auto hdl = actor_cast<strong_actor_ptr>(other)) {
-    unlink_from(hdl);
+  // Try to resolve `other` to a weak pointer.
+  weak_actor_ptr other_ptr;
+  exclusive_critical_section([this, &other, &other_ptr] { //
+    internal::attachable_predicate::extractor extractor{&other, &other_ptr};
+    auto pred = internal::attachable_predicate::linked_to(&extractor);
+    std::ignore = this->attachables_.any_of(pred);
+  });
+  // If there's no link attachable for `other`, we're done.
+  if (!other_ptr) {
+    return;
+  }
+  // If `other` is still alive, unlink by calling remove_link.
+  if (auto hdl = other_ptr.lock()) {
+    CAF_ASSERT(hdl.get() != ctrl());
+    remove_link(hdl->get());
     return;
   }
   // Promoting weak to strong reference fails if-and-only-if the strong
   // reference count is already at 0 which means the other actor must have
-  // terminated. However, we call this overload automatically after receiving an
-  // exit message to clean up leftover state.
-  auto pred = internal::attachable_predicate::linked_to(other.ptr().ctrl());
-  exclusive_critical_section([this, &pred] { //
+  // terminated already. Clean up leftover state.
+  exclusive_critical_section([this, &other] { //
+    internal::attachable_predicate::extractor extractor{&other, nullptr};
+    auto pred = internal::attachable_predicate::linked_to(&extractor);
     attachables_.erase_first_if(pred);
   });
 }
@@ -161,7 +169,7 @@ actor_control_block* abstract_actor::ctrl() const {
 }
 
 actor_addr abstract_actor::address() const noexcept {
-  return actor_addr{actor_control_block::from(this), add_ref};
+  return {id(), node()};
 }
 
 abstract_actor* abstract_actor::current() noexcept {
@@ -236,7 +244,8 @@ void abstract_actor::add_link(abstract_actor* x) {
   CAF_ASSERT(x != nullptr);
   error fail_state;
   bool send_exit_immediately = false;
-  auto tmp = internal::attachable_factory::make_link(x->address());
+  auto tmp = internal::attachable_factory::make_link(
+    weak_actor_ptr{x->ctrl(), add_ref});
   joined_exclusive_critical_section(this, x, [&] {
     if (getf(is_terminated_flag)) {
       fail_state = fail_state_;
@@ -273,7 +282,8 @@ bool abstract_actor::add_backlink(abstract_actor* x) {
   }
   auto pred = internal::attachable_predicate::linked_to(x->ctrl());
   if (!attachables_.any_of(pred)) {
-    auto tmp = internal::attachable_factory::make_link(x->address());
+    auto tmp = internal::attachable_factory::make_link(
+      weak_actor_ptr{x->ctrl(), add_ref});
     attachables_.push(std::move(tmp));
     return true;
   }
@@ -290,7 +300,7 @@ bool abstract_actor::remove_backlink(abstract_actor* x) {
 void abstract_actor::clear_incoming_edges(const actor_addr& other) {
   auto lg = log::core::trace("other = {}", other);
   exclusive_critical_section([this, &other] { //
-    auto iter = incoming_edges_.find(other.ptr().ctrl());
+    auto iter = incoming_edges_.find(other);
     if (iter != incoming_edges_.end()) {
       incoming_edges_.erase(iter);
     }

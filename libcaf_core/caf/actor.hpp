@@ -10,18 +10,16 @@
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
 #include "caf/caf_deprecated.hpp"
-#include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/comparable.hpp"
-#include "caf/detail/concepts.hpp"
+#include "caf/detail/compare.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/message.hpp"
+#include "caf/hash/fnv.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <type_traits>
 #include <utility>
 
 namespace caf {
@@ -120,11 +118,21 @@ public:
     return ptr_->get();
   }
 
-  intptr_t compare(const actor&) const noexcept;
+  intptr_t compare(const actor_control_block* other) const noexcept {
+    return detail::compare(get(), other);
+  }
 
-  intptr_t compare(const actor_addr&) const noexcept;
+  intptr_t compare(const actor& other) const noexcept {
+    return detail::compare(get(), other.get());
+  }
 
-  intptr_t compare(const strong_actor_ptr&) const noexcept;
+  intptr_t compare(const actor_addr& other) const noexcept {
+    return detail::compare(get(), other);
+  }
+
+  intptr_t compare(const strong_actor_ptr& other) const noexcept {
+    return detail::compare(get(), other.get());
+  }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   actor(actor_control_block*, bool);
@@ -183,12 +191,16 @@ CAF_CORE_EXPORT bool operator!=(abstract_actor* lhs, const actor& rhs);
 
 } // namespace caf
 
-// allow actor to be used in hash maps
 namespace std {
+
 template <>
 struct hash<caf::actor> {
   size_t operator()(const caf::actor& ref) const noexcept {
-    return static_cast<size_t>(ref ? ref->id() : 0);
+    if (!ref) {
+      return 0;
+    }
+    return caf::hash::fnv<size_t>::compute(ref.id(), ref.node());
   }
 };
+
 } // namespace std

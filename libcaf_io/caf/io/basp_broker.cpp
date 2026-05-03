@@ -9,6 +9,7 @@
 #include "caf/io/middleman.hpp"
 #include "caf/io/network/interfaces.hpp"
 
+#include "caf/actor_addr.hpp"
 #include "caf/actor_from_state.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
@@ -213,7 +214,8 @@ behavior basp_broker::make_behavior() {
     },
     // received from the middleman whenever a node becomes observed by a local
     // actor
-    [this](monitor_atom, const node_id& node, const actor_addr& observer) {
+    [this](monitor_atom, const node_id& node,
+           const strong_actor_ptr& observer) {
       // Sanity checks.
       if (!observer || !node)
         return;
@@ -235,17 +237,21 @@ behavior basp_broker::make_behavior() {
         }
         return;
       }
-      std::vector<actor_addr> xs{observer};
+      std::vector<weak_actor_ptr> xs{actor_cast<weak_actor_ptr>(observer)};
       node_observers.emplace(node, std::move(xs));
     },
     // received from the middleman whenever a node becomes observed by a local
     // actor
     [this](demonitor_atom, const node_id& node, const actor_addr& observer) {
+      if (!node)
+        return;
       auto i = node_observers.find(node);
       if (i == node_observers.end())
         return;
       auto& observers = i->second;
-      auto j = std::ranges::find(observers, observer);
+      auto j = std::ranges::find_if(observers, [&](const weak_actor_ptr& w) {
+        return observer == w;
+      });
       if (j != observers.end()) {
         observers.erase(j);
         if (observers.empty())

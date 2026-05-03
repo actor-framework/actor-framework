@@ -157,7 +157,8 @@ public:
 
     /// Causes the module to send a `node_down_msg` to `observer` if this system
     /// loses connection to `node`.
-    virtual void monitor(const node_id& node, const actor_addr& observer) = 0;
+    virtual void monitor(const node_id& node, const strong_actor_ptr& observer)
+      = 0;
 
     /// Causes the module remove one entry for `observer` from the list of
     /// actors that receive a `node_down_msg` if this system loses connection to
@@ -304,7 +305,7 @@ public:
   /// @note Calling this function *n* times causes the system to send
   ///       `node_down_msg` *n* times to the observer. In order to not receive
   ///       the messages, the observer must call `demonitor` *n* times.
-  void monitor(const node_id& node, const actor_addr& observer);
+  void monitor(const node_id& node, const strong_actor_ptr& observer);
 
   /// Removes `observer` from the list of actors that receive a `node_down_msg`
   /// if this system loses connection to `node`.

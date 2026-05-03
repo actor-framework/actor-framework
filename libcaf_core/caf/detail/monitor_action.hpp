@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/action.hpp"
-#include "caf/actor_addr.hpp"
+#include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 
@@ -15,7 +15,7 @@ namespace caf::detail {
 
 class CAF_CORE_EXPORT abstract_monitor_action : public action::impl {
 public:
-  abstract_monitor_action(actor_addr observer, actor_addr observed)
+  abstract_monitor_action(weak_actor_ptr observer, weak_actor_ptr observed)
     : observer_(std::move(observer)), observed_(std::move(observed)) {
     // nop
   }
@@ -28,11 +28,11 @@ public:
 
   void deref() const noexcept final;
 
-  const actor_addr& observer() const noexcept {
+  const weak_actor_ptr& observer() const noexcept {
     return observer_;
   }
 
-  const actor_addr& observed() const noexcept {
+  const weak_actor_ptr& observed() const noexcept {
     return observed_;
   }
 
@@ -41,8 +41,8 @@ protected:
 
 private:
   mutable detail::atomic_ref_count ref_count_;
-  actor_addr observer_;
-  actor_addr observed_;
+  weak_actor_ptr observer_;
+  weak_actor_ptr observed_;
 };
 
 using abstract_monitor_action_ptr = intrusive_ptr<abstract_monitor_action>;
@@ -54,7 +54,8 @@ class monitor_action : public abstract_monitor_action {
 public:
   using super = abstract_monitor_action;
 
-  explicit monitor_action(actor_addr observer, actor_addr observed, F fn)
+  explicit monitor_action(weak_actor_ptr observer, weak_actor_ptr observed,
+                          F fn)
     : super(std::move(observer), std::move(observed)),
       state_(action::state::scheduled),
       f_(function_wrapper{std::move(fn), error{}}) {

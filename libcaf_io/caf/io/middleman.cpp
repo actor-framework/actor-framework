@@ -9,6 +9,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/actor_addr.hpp"
 #include "caf/actor_from_state.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_system_config.hpp"
@@ -473,7 +474,7 @@ void* middleman::subtype_ptr() {
   return this;
 }
 
-void middleman::monitor(const node_id& node, const actor_addr& observer) {
+void middleman::monitor(const node_id& node, const strong_actor_ptr& observer) {
   auto basp = named_broker<basp_broker>("BASP");
   anon_mail(monitor_atom_v, node, observer).send(basp);
 }

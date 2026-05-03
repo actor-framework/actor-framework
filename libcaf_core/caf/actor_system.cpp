@@ -5,6 +5,7 @@
 #include "caf/actor_system.hpp"
 
 #include "caf/actor.hpp"
+#include "caf/actor_addr.hpp"
 #include "caf/actor_companion.hpp"
 #include "caf/actor_factory.hpp"
 #include "caf/actor_registry.hpp"
@@ -860,7 +861,8 @@ void actor_system::await_running_actors_count_equal(size_t expected,
   impl_->await_running_actors_count_equal(expected, timeout);
 }
 
-void actor_system::monitor(const node_id& node, const actor_addr& observer) {
+void actor_system::monitor(const node_id& node,
+                           const strong_actor_ptr& observer) {
   // TODO: Currently does not work with other modules, in particular caf_net.
   auto mm = impl_->modules()[actor_system_module::middleman].get();
   if (mm == nullptr)

@@ -23,8 +23,8 @@ void abstract_monitor_action::deref() const noexcept {
 }
 
 void abstract_monitor_action::on_dispose() {
-  if (auto observer = actor_cast<strong_actor_ptr>(observer_)) {
-    if (auto observed = actor_cast<strong_actor_ptr>(observed_)) {
+  if (auto observer = observer_.lock()) {
+    if (auto observed = observed_.lock()) {
       auto* self = actor_cast<abstract_actor*>(observer);
       auto pred = internal::attachable_predicate::monitored_with_callback(this);
       self->del_monitor(actor_cast<abstract_actor*>(observed), pred);

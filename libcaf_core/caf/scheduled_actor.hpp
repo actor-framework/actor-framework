@@ -558,7 +558,8 @@ public:
     }
     using impl_t = detail::monitor_action<Fn>;
     auto* observed = actor_cast<abstract_actor*>(whom);
-    auto impl = make_counted<impl_t>(address(), observed->address(),
+    auto impl = make_counted<impl_t>(weak_actor_ptr{ctrl(), add_ref},
+                                     weak_actor_ptr{observed->ctrl(), add_ref},
                                      std::move(func));
     return do_monitor(observed, std::move(impl));
   }

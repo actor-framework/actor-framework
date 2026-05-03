@@ -404,8 +404,6 @@ private:
 
   size_t attach_functor(const actor&);
 
-  size_t attach_functor(const actor_addr&);
-
   size_t attach_functor(const strong_actor_ptr&);
 
   void unstash();
