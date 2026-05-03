@@ -76,6 +76,45 @@ public:
       }
     };
 
+    /// Configuration for a server that handles a single connected stream
+    /// socket, for example one end of a connected socket pair.
+    class stream {
+    public:
+      explicit stream(net::stream_socket fd) : fd(fd) {
+        // nop
+      }
+
+      stream(const stream&) = delete;
+
+      stream& operator=(const stream&) = delete;
+
+      stream(stream&& other) noexcept : fd(other.fd) {
+        other.fd.id = net::invalid_socket_id;
+      }
+
+      stream& operator=(stream&& other) noexcept {
+        using std::swap;
+        swap(fd, other.fd);
+        return *this;
+      }
+
+      ~stream() {
+        if (fd != net::invalid_socket) {
+          net::close(fd);
+        }
+      }
+
+      /// The connected stream socket.
+      net::stream_socket fd;
+
+      /// Takes ownership of the file descriptor.
+      net::stream_socket take_fd() noexcept {
+        auto result = fd;
+        fd.id = net::invalid_socket_id;
+        return result;
+      }
+    };
+
     void assign(uint16_t port, std::string&& bind_address, bool reuse_addr) {
       value.emplace<lazy>(port, std::move(bind_address), reuse_addr);
     }
@@ -84,7 +123,11 @@ public:
       value.emplace<socket>(fd);
     }
 
-    using value_t = std::variant<none_t, lazy, socket>;
+    void assign(net::stream_socket fd) {
+      value.emplace<stream>(std::move(fd));
+    }
+
+    using value_t = std::variant<none_t, lazy, socket, stream>;
 
     value_t value;
   };
@@ -185,12 +228,58 @@ public:
       net::ssl::connection state;
     };
 
+    /// Uses @p endpoint for request path and `Host`, and @p fd for the byte
+    /// stream (e.g. the other end of a connected socket pair).
+    class uri_and_socket {
+    public:
+      uri_and_socket(uri endpoint, net::stream_socket fd)
+        : endpoint(std::move(endpoint)), fd(fd) {
+        // nop
+      }
+
+      uri_and_socket(const uri_and_socket&) = delete;
+
+      uri_and_socket& operator=(const uri_and_socket&) = delete;
+
+      uri_and_socket(uri_and_socket&& other) noexcept
+        : endpoint(std::move(other.endpoint)), fd(other.fd) {
+        other.fd.id = net::invalid_socket_id;
+      }
+
+      uri_and_socket& operator=(uri_and_socket&& other) noexcept {
+        using std::swap;
+        swap(endpoint, other.endpoint);
+        swap(fd, other.fd);
+        return *this;
+      }
+
+      ~uri_and_socket() {
+        if (fd != net::invalid_socket) {
+          net::close(fd);
+        }
+      }
+
+      uri endpoint;
+
+      net::stream_socket fd;
+
+      net::stream_socket take_fd() noexcept {
+        auto result = fd;
+        fd.id = net::invalid_socket_id;
+        return result;
+      }
+    };
+
     void assign(std::string&& host, uint16_t port) {
       value.emplace<lazy>(std::move(host), port);
     }
 
     void assign(uri&& endpoint) {
       value.emplace<lazy>(std::move(endpoint));
+    }
+
+    void assign(uri&& endpoint, net::stream_socket fd) {
+      value.emplace<uri_and_socket>(std::move(endpoint), std::move(fd));
     }
 
     void assign(net::stream_socket fd) {
@@ -201,7 +290,7 @@ public:
       value.emplace<conn>(std::move(hdl));
     }
 
-    using value_t = std::variant<none_t, lazy, socket, conn>;
+    using value_t = std::variant<none_t, lazy, uri_and_socket, socket, conn>;
 
     value_t value;
   };
@@ -252,6 +341,8 @@ public:
 
   virtual expected<disposable> start_server_impl(net::tcp_accept_socket) = 0;
 
+  virtual expected<disposable> start_server_impl(net::stream_socket) = 0;
+
   expected<disposable> start_server(none_t) {
     return expected<disposable>{unexpect, caf::sec::logic_error,
                                 "invalid WebSocket server configuration"};
@@ -275,6 +366,17 @@ public:
     }
     server_config::socket sub_cfg{*maybe_fd};
     return start_server(sub_cfg);
+  }
+
+  expected<disposable> start_server(server_config::stream& cfg) {
+    if (ctx) {
+      return expected<disposable>{
+        unexpect, sec::invalid_argument,
+        "cannot combine an SSL context with serving on a pre-connected stream "
+        "socket"};
+    }
+    auto fd = cfg.take_fd();
+    return start_server_impl(std::move(fd));
   }
 
   expected<disposable> start_server() {
@@ -350,6 +452,14 @@ public:
   }
 
   virtual expected<disposable> start_client_impl(uri& endpoint) = 0;
+
+  expected<disposable> start_client(client_config::uri_and_socket& cfg) {
+    const auto& auth = cfg.endpoint.authority();
+    hostname = auth.host_str();
+    auto fd = cfg.take_fd();
+    client_config::socket sub_cfg{std::move(fd)};
+    return start_client(sub_cfg);
+  }
 
   expected<disposable> start_client(client_config::lazy& cfg) {
     auto fn = [this](auto& val) {
