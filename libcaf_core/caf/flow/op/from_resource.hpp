@@ -95,7 +95,7 @@ public:
     auto lg = log::core::trace("");
     parent_->schedule_fn([ptr = strong_this()] {
       auto lg = log::core::trace("");
-      if (!ptr->disposed_) {
+      if (!ptr->disposed_ && !ptr->running_) {
         ptr->running_ = true;
         ptr->do_run();
       }

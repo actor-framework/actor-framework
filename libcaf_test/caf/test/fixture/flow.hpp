@@ -151,8 +151,11 @@ public:
   class canceling_observer : public caf::flow::observer_impl_base<T> {
   public:
     explicit canceling_observer(caf::flow::coordinator* parent,
-                                bool accept_subscription)
-      : accept_subscription(accept_subscription), parent_(parent) {
+                                bool accept_subscription,
+                                bool auto_request = true)
+      : accept_subscription(accept_subscription),
+        auto_request(auto_request),
+        parent_(parent) {
       // nop
     }
 
@@ -179,7 +182,9 @@ public:
     void on_subscribe(caf::flow::subscription sub) override {
       if (accept_subscription) {
         accept_subscription = false;
-        sub.request(128);
+        if (auto_request) {
+          sub.request(128);
+        }
         this->sub = std::move(sub);
         return;
       }
@@ -190,6 +195,7 @@ public:
     int on_error_calls = 0;
     int on_complete_calls = 0;
     bool accept_subscription = false;
+    bool auto_request = false;
     caf::flow::subscription sub;
     std::vector<T> buf;
 
@@ -263,11 +269,13 @@ public:
 
   /// Returns a new canceling observer. The subscriber will either call `cancel`
   /// on its subscription immediately in `on_subscribe` or wait until the first
-  /// call to `on_next` when setting `accept_first_subscription` to `true`.
+  /// call to `on_next` when setting `accept_first` to `true`. If `auto_request`
+  /// is `true`, the observer will call `request` immediately in `on_subscribe`.
   template <class T>
-  auto make_canceling_observer(bool accept_first = false) {
+  auto
+  make_canceling_observer(bool accept_first = false, bool auto_request = true) {
     return coordinator()->add_child(std::in_place_type<canceling_observer<T>>,
-                                    accept_first);
+                                    accept_first, auto_request);
   }
 
   /// Shortcut for creating an observable error via
