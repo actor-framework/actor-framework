@@ -104,16 +104,19 @@ public:
 
   /// @pre `valid()`
   void on_subscribe(subscription sub) {
+    CAF_ASSERT(pimpl_ != nullptr);
     pimpl_->on_subscribe(std::move(sub));
   }
 
   /// @pre `valid()`
   void on_batch(const async::batch& buf) {
+    CAF_ASSERT(pimpl_ != nullptr);
     pimpl_->on_batch(buf);
   }
 
   /// @pre `valid()`
   void on_next(const T& item) {
+    CAF_ASSERT(pimpl_ != nullptr);
     pimpl_->on_next(item);
   }
 
