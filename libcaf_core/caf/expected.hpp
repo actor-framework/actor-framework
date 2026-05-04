@@ -865,13 +865,10 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  expected() noexcept = default;
-
-  template <class U = error_type>
-    requires(!std::is_same_v<error_type, caf::error>)
-  explicit expected(error_type err) noexcept(
-    std::is_nothrow_move_constructible_v<error_type>)
-    : error_(std::move(err)) {
+  expected() noexcept
+    requires(std::is_void_v<value_type>
+             || std::is_default_constructible_v<value_type>)
+    : error_{} {
     // nop
   }
 
@@ -882,11 +879,10 @@ public:
     // nop
   }
 
-  template <class U = error_type>
-    requires std::is_same_v<U, caf::error>
-             && std::is_same_v<error_type, caf::error>
   CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
-  expected(caf::error err) noexcept : error_(std::move(err)) {
+  expected(caf::error err) noexcept
+    requires std::is_same_v<error_type, caf::error>
+    : error_(std::move(err)) {
     // nop
   }
 
@@ -913,11 +909,10 @@ public:
 
   expected& operator=(expected&& other) noexcept = default;
 
-  template <class U = error_type>
-    requires std::is_same_v<U, caf::error>
-             && std::is_same_v<error_type, caf::error>
   CAF_DEPRECATED("use assignment with caf::unexpected instead")
-  expected& operator=(caf::error err) noexcept {
+  expected& operator=(caf::error err) noexcept
+    requires std::is_same_v<error_type, caf::error>
+  {
     error_ = std::move(err);
     return *this;
   }
