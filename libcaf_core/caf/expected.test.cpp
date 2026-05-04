@@ -980,19 +980,21 @@ TEST("expected propagates sec as unexpected type independent of caf::error") {
       require(uut.has_value());
       auto doubled
         = uut.and_then([](int v) { return expected<long, sec>{v * 2L}; });
-      check_eq(static_cast<long>(*doubled), 84L);
+      require(doubled.has_value());
+      check_eq(*doubled, 84L);
     }
     SECTION("transform_error") {
       expected<int, sec> uut{caf::unexpected<sec>{sec::invalid_argument}};
       check(!uut.has_value());
-      auto err_mapped
+      auto transformed
         = uut.transform_error([](sec) -> sec { return sec::runtime_error; });
-      check_eq(err_mapped.error(), sec::runtime_error);
+      require(!transformed.has_value());
+      check_eq(transformed.error(), sec::runtime_error);
     }
     SECTION("transform propagates error when input has no value") {
       expected<int, sec> uut{unexpect, sec::invalid_argument};
       auto num = uut.transform([](int i) { return i + 1; });
-      check(!num.has_value());
+      require(!num.has_value());
       check_eq(num.error(), sec::invalid_argument);
     }
   }
@@ -1010,6 +1012,7 @@ TEST("expected propagates sec as unexpected type independent of caf::error") {
       expected<void, sec> uut{};
       require(uut.has_value());
       auto step = uut.and_then([] { return expected<int, sec>{7}; });
+      require(step.has_value());
       check_eq(*step, 7);
     }
     SECTION("transform_error from error") {
