@@ -960,46 +960,72 @@ TEST("transform_error does nothing when called with a value") {
 
 TEST("expected propagates sec as unexpected type independent of caf::error") {
   SECTION("non-void value type") {
-    expected<int, sec> x{42};
-    check_eq(*x, 42);
-    expected<int, sec> y{unexpect, sec::runtime_error};
-    check(!y.has_value());
-    check_eq(y.error(), sec::runtime_error);
-    auto z = expected<int, sec>{caf::unexpected<sec>{sec::invalid_argument}};
-    check(!z.has_value());
-    check_eq(z.error(), sec::invalid_argument);
-
-    auto doubled
-      = x.and_then([](int v) { return expected<long, sec>{v * 2L}; });
-    check_eq(static_cast<long>(*doubled), 84L);
-
-    auto err_mapped
-      = z.transform_error([](sec) -> sec { return sec::runtime_error; });
-    check_eq(err_mapped.error(), sec::runtime_error);
-
-    auto bad_for_transform = expected<int, sec>{unexpect,
-                                                sec::invalid_argument};
-    auto num = bad_for_transform.transform([](int i) { return i + 1; });
-    check(!num.has_value());
-    check_eq(num.error(), sec::invalid_argument);
+    SECTION("constructing from value") {
+      expected<int, sec> uut{42};
+      require(uut.has_value());
+      check_eq(*uut, 42);
+    }
+    SECTION("constructing from unexpect") {
+      expected<int, sec> uut{unexpect, sec::runtime_error};
+      check(!uut.has_value());
+      check_eq(uut.error(), sec::runtime_error);
+    }
+    SECTION("constructing from unexpected") {
+      expected<int, sec> uut{caf::unexpected<sec>{sec::invalid_argument}};
+      check(!uut.has_value());
+      check_eq(uut.error(), sec::invalid_argument);
+    }
+    SECTION("and_then") {
+      expected<int, sec> uut{42};
+      require(uut.has_value());
+      auto doubled
+        = uut.and_then([](int v) { return expected<long, sec>{v * 2L}; });
+      check_eq(static_cast<long>(*doubled), 84L);
+    }
+    SECTION("transform_error") {
+      expected<int, sec> uut{caf::unexpected<sec>{sec::invalid_argument}};
+      check(!uut.has_value());
+      auto err_mapped
+        = uut.transform_error([](sec) -> sec { return sec::runtime_error; });
+      check_eq(err_mapped.error(), sec::runtime_error);
+    }
+    SECTION("transform propagates error when input has no value") {
+      expected<int, sec> uut{unexpect, sec::invalid_argument};
+      auto num = uut.transform([](int i) { return i + 1; });
+      check(!num.has_value());
+      check_eq(num.error(), sec::invalid_argument);
+    }
   }
   SECTION("void value type") {
-    expected<void, sec> ok{};
-    check(ok.has_value());
-    expected<void, sec> bad{unexpect, sec::invalid_argument};
-    check(!bad.has_value());
-    check_eq(bad.error(), sec::invalid_argument);
-
-    auto step = ok.and_then([] { return expected<int, sec>{7}; });
-    check_eq(*step, 7);
-
-    auto repl = bad.transform_error([](sec s) -> sec {
-      return s == sec::invalid_argument ? sec::runtime_error : s;
-    });
-    check(!repl.has_value());
-    check_eq(repl.error(), sec::runtime_error);
-
-    auto noop = ok.transform([] { return std::byte{1}; });
-    check(noop.has_value());
+    SECTION("default construction has value") {
+      expected<void, sec> uut{};
+      require(uut.has_value());
+    }
+    SECTION("construction from unexpect") {
+      expected<void, sec> uut{unexpect, sec::invalid_argument};
+      check(!uut.has_value());
+      check_eq(uut.error(), sec::invalid_argument);
+    }
+    SECTION("and_then from value") {
+      expected<void, sec> uut{};
+      require(uut.has_value());
+      auto step = uut.and_then([] { return expected<int, sec>{7}; });
+      check_eq(*step, 7);
+    }
+    SECTION("transform_error from error") {
+      expected<void, sec> uut{unexpect, sec::invalid_argument};
+      check(!uut.has_value());
+      auto repl = uut.transform_error([](sec s) -> sec {
+        return s == sec::invalid_argument ? sec::runtime_error : s;
+      });
+      check(!repl.has_value());
+      check_eq(repl.error(), sec::runtime_error);
+    }
+    SECTION("transform from value") {
+      expected<void, sec> uut{};
+      require(uut.has_value());
+      auto noop = uut.transform([] { return std::byte{1}; });
+      check(noop.has_value());
+    }
   }
 }
