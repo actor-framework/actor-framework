@@ -261,10 +261,10 @@ public:
   }
 
   /// Checks whether `what` holds a value.
-  template <class T>
-  bool
-  check_has_value(const expected<T>& what, const std::source_location& location
-                                           = std::source_location::current()) {
+  template <class T, class E>
+  bool check_has_value(const expected<T, E>& what,
+                       const std::source_location& location
+                       = std::source_location::current()) {
     if (what.has_value()) {
       reporter::instance().pass(location);
       return true;
@@ -558,8 +558,8 @@ public:
   }
 
   /// Requires that `what` holds a value. Fails otherwise.
-  template <class T>
-  void require_has_value(const expected<T>& what,
+  template <class T, class E>
+  void require_has_value(const expected<T, E>& what,
                          const std::source_location& location
                          = std::source_location::current()) {
     if (!check_has_value(what, location)) {
@@ -769,9 +769,9 @@ public:
       requirement_failed::raise(location);
   }
 
-  template <class T>
-  T unbox(const expected<T>& what, const std::source_location& location
-                                   = std::source_location::current()) {
+  template <class T, class E>
+  T unbox(const expected<T, E>& what, const std::source_location& location
+                                      = std::source_location::current()) {
     require_has_value(what, location);
     return *what;
   }

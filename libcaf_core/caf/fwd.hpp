@@ -48,9 +48,11 @@ template <class> struct type_id;
 template <uint16_t> struct type_by_id;
 template <uint16_t> struct type_name_by_id;
 
+class [[nodiscard]] error;
+
 #ifndef CAF_USE_STD_EXPECTED
-template <class> class unexpected;
-template <class> class expected;
+template <class E> class unexpected;
+template <class T, class E = error> class expected;
 #endif
 
 // -- 2 param templates --------------------------------------------------------
@@ -91,7 +93,6 @@ template <class... Ts> requires typed_actor_pack<Ts...> class typed_event_based_
 
 // -- classes ------------------------------------------------------------------
 
-class [[nodiscard]] error;
 class abstract_actor;
 class abstract_blocking_actor;
 class abstract_mailbox;
@@ -226,8 +227,8 @@ using type_id_t = uint16_t;
 template <class E>
 using unexpected = std::unexpected<E>;
 
-template <class T>
-using expected = std::expected<T, error>;
+template <class T, class E = error>
+using expected = std::expected<T, E>;
 #endif
 
 // -- functions ----------------------------------------------------------------
