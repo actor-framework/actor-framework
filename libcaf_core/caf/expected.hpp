@@ -15,19 +15,21 @@
 
 #include <memory>
 #include <new>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
 namespace caf::detail {
 
-template <class F, class... Ts>
+/// Invokes `f` and wraps the result in `expected` with unexpected type `E`.
+template <class E = error, class F, class... Ts>
 auto expected_from_fn(F&& f, Ts&&... xs) {
   using res_t = decltype(f(std::forward<Ts>(xs)...));
   if constexpr (std::is_void_v<res_t>) {
     f(std::forward<Ts>(xs)...);
-    return expected<res_t>{};
+    return expected<void, E>{};
   } else {
-    return expected<res_t>{f(std::forward<Ts>(xs)...)};
+    return expected<res_t, E>{f(std::forward<Ts>(xs)...)};
   }
 }
 
@@ -38,12 +40,6 @@ auto expected_from_fn(F&& f, Ts&&... xs) {
 #  include <expected>
 
 namespace caf {
-
-template <class T>
-using unexpected = std::unexpected<T>;
-
-template <class T>
-using expected = std::expected<T, error>;
 
 using unexpect_t = std::unexpect_t;
 
@@ -119,34 +115,44 @@ operator==(const unexpected<E1>& lhs, const unexpected<E2>& rhs) noexcept {
 }
 
 /// Represents the result of a computation which can either complete
-/// successfully with an instance of type `T` or fail with an `error`.
+/// successfully with an instance of type `T` or fail with an instance of type
+/// `E` (defaulting to `caf::error`).
 /// @tparam T The type of the result.
-template <class T>
+/// @tparam E The type of the unexpected / error value.
+template <class T, class E>
 class expected {
 public:
   // -- member types -----------------------------------------------------------
 
   using value_type = T;
 
-  using error_type = caf::error;
+  using error_type = E;
 
-  using unexpected_type = unexpected<caf::error>;
+  using unexpected_type = unexpected<error_type>;
 
   template <class U>
-  using rebind = expected<U>;
+  using rebind = expected<U, error_type>;
 
   // -- static member variables ------------------------------------------------
 
   /// Stores whether move construct and move assign never throw.
-  static constexpr bool nothrow_move = std::is_nothrow_move_constructible_v<T>
-                                       && std::is_nothrow_move_assignable_v<T>;
+  static constexpr bool nothrow_move
+    = std::is_nothrow_move_constructible_v<value_type>
+      && std::is_nothrow_move_assignable_v<value_type>
+      && std::is_nothrow_move_constructible_v<error_type>
+      && std::is_nothrow_move_assignable_v<error_type>;
 
   /// Stores whether copy construct and copy assign never throw.
-  static constexpr bool nothrow_copy = std::is_nothrow_copy_constructible_v<T>
-                                       && std::is_nothrow_copy_assignable_v<T>;
+  static constexpr bool nothrow_copy
+    = std::is_nothrow_copy_constructible_v<value_type>
+      && std::is_nothrow_copy_assignable_v<value_type>
+      && std::is_nothrow_copy_constructible_v<error_type>
+      && std::is_nothrow_copy_assignable_v<error_type>;
 
   /// Stores whether swap() never throws.
-  static constexpr bool nothrow_swap = std::is_nothrow_swappable_v<T>;
+  static constexpr bool nothrow_swap
+    = std::is_nothrow_swappable_v<value_type>
+      && std::is_nothrow_swappable_v<error_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -157,6 +163,7 @@ public:
   }
 
   template <error_code_enum U>
+    requires std::is_same_v<error_type, caf::error>
   CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
   expected(U x) : has_value_{false} {
     new (std::addressof(error_)) caf::error(x);
@@ -171,12 +178,14 @@ public:
   }
 
   CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
-  expected(caf::error e) noexcept : has_value_(false) {
+  expected(caf::error e) noexcept
+    requires std::is_same_v<error_type, caf::error>
+    : has_value_(false) {
     new (std::addressof(error_)) caf::error{std::move(e)};
   }
 
   expected(unexpected_type x) : has_value_(false) {
-    new (std::addressof(error_)) caf::error(std::move(x.error()));
+    new (std::addressof(error_)) error_type(std::move(x.error()));
   }
 
   expected(const expected& other) noexcept(nothrow_copy) {
@@ -194,7 +203,7 @@ public:
 
   template <class... Ts>
   explicit expected(caf::unexpect_t, Ts&&... xs) : has_value_(false) {
-    new (std::addressof(error_)) caf::error(std::forward<Ts>(xs)...);
+    new (std::addressof(error_)) error_type(std::forward<Ts>(xs)...);
   }
 
   ~expected() {
@@ -254,7 +263,9 @@ public:
   }
 
   CAF_DEPRECATED("use assignment with caf::unexpected instead")
-  expected& operator=(caf::error e) noexcept {
+  expected& operator=(caf::error e) noexcept
+    requires std::is_same_v<error_type, caf::error>
+  {
     if (!has_value())
       error_ = std::move(e);
     else {
@@ -266,18 +277,20 @@ public:
   }
 
   template <error_code_enum Enum>
+    requires std::is_same_v<error_type, caf::error>
   CAF_DEPRECATED("use assignment with caf::unexpected instead")
   expected& operator=(Enum code) {
     return *this = make_error(code);
   }
 
-  expected& operator=(unexpected_type e) noexcept {
+  expected& operator=(unexpected_type e) noexcept(
+    std::is_nothrow_move_assignable_v<error_type>) {
     if (!has_value())
       error_ = std::move(e.error());
     else {
       destroy();
       has_value_ = false;
-      new (std::addressof(error_)) caf::error(std::move(e.error()));
+      new (std::addressof(error_)) error_type(std::move(e.error()));
     }
     return *this;
   }
@@ -393,25 +406,25 @@ public:
 
   /// Returns the contained error.
   /// @pre `has_value() == false`.
-  caf::error& error() & noexcept {
+  error_type& error() & noexcept {
     CAF_ASSERT(!has_value_);
     return error_;
   }
 
   /// @copydoc error
-  const caf::error& error() const& noexcept {
+  const error_type& error() const& noexcept {
     CAF_ASSERT(!has_value_);
     return error_;
   }
 
   /// @copydoc error
-  caf::error&& error() && noexcept {
+  error_type&& error() && noexcept {
     CAF_ASSERT(!has_value_);
     return std::move(error_);
   }
 
   /// @copydoc error
-  const caf::error&& error() const&& noexcept {
+  const error_type&& error() const&& noexcept {
     CAF_ASSERT(!has_value_);
     return std::move(error_);
   }
@@ -422,6 +435,10 @@ public:
   auto and_then(F&& f) & {
     using res_t = decltype(f(value_));
     static_assert(detail::is_expected<res_t>, "F must return an expected");
+    static_assert(
+      std::is_same_v<error_type,
+                     typename std::remove_cvref_t<res_t>::error_type>,
+      "unexpected type must match");
     if (has_value())
       return f(value_);
     else
@@ -432,6 +449,10 @@ public:
   auto and_then(F&& f) && {
     using res_t = decltype(f(std::move(value_)));
     static_assert(detail::is_expected<res_t>, "F must return an expected");
+    static_assert(
+      std::is_same_v<error_type,
+                     typename std::remove_cvref_t<res_t>::error_type>,
+      "unexpected type must match");
     if (has_value())
       return f(std::move(value_));
     else
@@ -442,6 +463,10 @@ public:
   auto and_then(F&& f) const& {
     using res_t = decltype(f(value_));
     static_assert(detail::is_expected<res_t>, "F must return an expected");
+    static_assert(
+      std::is_same_v<error_type,
+                     typename std::remove_cvref_t<res_t>::error_type>,
+      "unexpected type must match");
     if (has_value())
       return f(value_);
     else
@@ -452,6 +477,10 @@ public:
   auto and_then(F&& f) const&& {
     using res_t = decltype(f(std::move(value_)));
     static_assert(detail::is_expected<res_t>, "F must return an expected");
+    static_assert(
+      std::is_same_v<error_type,
+                     typename std::remove_cvref_t<res_t>::error_type>,
+      "unexpected type must match");
     if (has_value())
       return f(std::move(value_));
     else
@@ -459,8 +488,9 @@ public:
   }
 
   template <class F>
-    requires std::is_void_v<
-      decltype(std::declval<F&>()(std::declval<caf::error>()))>
+    requires(std::is_same_v<error_type, caf::error>
+             && std::is_void_v<
+               decltype(std::declval<F&>()(std::declval<caf::error&>()))>)
   CAF_DEPRECATED("use or_else with expected return type instead")
   expected or_else(F&& f) & {
     if (!has_value())
@@ -470,7 +500,8 @@ public:
 
   template <class F>
     requires std::is_same_v<
-      expected, decltype(std::declval<F&>()(std::declval<caf::error>()))>
+      expected<value_type, error_type>,
+      decltype(std::declval<F&>()(std::declval<error_type&>()))>
   expected or_else(F&& f) & {
     if (has_value())
       return expected{std::in_place, value_};
@@ -479,8 +510,9 @@ public:
   }
 
   template <class F>
-    requires std::is_void_v<
-      decltype(std::declval<F&>()(std::declval<caf::error>()))>
+    requires(std::is_same_v<error_type, caf::error>
+             && std::is_void_v<
+               decltype(std::declval<F&>()(std::declval<caf::error &&>()))>)
   CAF_DEPRECATED("use or_else with expected return type instead")
   expected or_else(F&& f) && {
     if (!has_value())
@@ -490,7 +522,8 @@ public:
 
   template <class F>
     requires std::is_same_v<
-      expected, decltype(std::declval<F&>()(std::declval<caf::error>()))>
+      expected<value_type, error_type>,
+      decltype(std::declval<F&>()(std::declval<error_type&&>()))>
   expected or_else(F&& f) && {
     if (has_value())
       return expected{std::in_place, std::move(value_)};
@@ -499,8 +532,9 @@ public:
   }
 
   template <class F>
-    requires std::is_void_v<
-      decltype(std::declval<F&>()(std::declval<caf::error>()))>
+    requires(std::is_same_v<error_type, caf::error>
+             && std::is_void_v<
+               decltype(std::declval<F&>()(std::declval<const caf::error&>()))>)
   CAF_DEPRECATED("use or_else with expected return type instead")
   expected or_else(F&& f) const& {
     if (!has_value())
@@ -510,7 +544,8 @@ public:
 
   template <class F>
     requires std::is_same_v<
-      expected, decltype(std::declval<F&>()(std::declval<caf::error>()))>
+      expected<value_type, error_type>,
+      decltype(std::declval<F&>()(std::declval<const error_type&>()))>
   expected or_else(F&& f) const& {
     if (has_value())
       return expected{std::in_place, value_};
@@ -519,8 +554,9 @@ public:
   }
 
   template <class F>
-    requires std::is_void_v<
-      decltype(std::declval<F&>()(std::declval<caf::error>()))>
+    requires(std::is_same_v<error_type, caf::error>
+             && std::is_void_v<decltype(std::declval<F&>()(
+               std::declval<const caf::error &&>()))>)
   CAF_DEPRECATED("use or_else with expected return type instead")
   expected or_else(F&& f) const&& {
     if (!has_value())
@@ -530,7 +566,8 @@ public:
 
   template <class F>
     requires std::is_same_v<
-      expected, decltype(std::declval<F&>()(std::declval<caf::error>()))>
+      expected<value_type, error_type>,
+      decltype(std::declval<F&>()(std::declval<const error_type&&>()))>
   expected or_else(F&& f) const&& {
     if (has_value())
       return expected{std::in_place, std::move(value_)};
@@ -543,9 +580,9 @@ public:
     using res_t = decltype(f(value_));
     static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
-      return detail::expected_from_fn(std::forward<F>(f), value_);
+      return detail::expected_from_fn<error_type>(std::forward<F>(f), value_);
     else
-      return expected<res_t>{unexpect, error_};
+      return expected<res_t, error_type>{unexpect, error_};
   }
 
   template <class F>
@@ -553,9 +590,10 @@ public:
     using res_t = decltype(f(std::move(value_)));
     static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
-      return detail::expected_from_fn(std::forward<F>(f), std::move(value_));
+      return detail::expected_from_fn<error_type>(std::forward<F>(f),
+                                                  std::move(value_));
     else
-      return expected<res_t>{unexpect, std::move(error_)};
+      return expected<res_t, error_type>{unexpect, std::move(error_)};
   }
 
   template <class F>
@@ -563,9 +601,9 @@ public:
     using res_t = decltype(f(value_));
     static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
-      return detail::expected_from_fn(std::forward<F>(f), value_);
+      return detail::expected_from_fn<error_type>(std::forward<F>(f), value_);
     else
-      return expected<res_t>{unexpect, error_};
+      return expected<res_t, error_type>{unexpect, error_};
   }
 
   template <class F>
@@ -573,9 +611,10 @@ public:
     using res_t = decltype(f(std::move(value_)));
     static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
-      return detail::expected_from_fn(std::forward<F>(f), std::move(value_));
+      return detail::expected_from_fn<error_type>(std::forward<F>(f),
+                                                  std::move(value_));
     else
-      return expected<res_t>{unexpect, std::move(error_)};
+      return expected<res_t, error_type>{unexpect, std::move(error_)};
   }
 
   template <class F>
@@ -605,7 +644,8 @@ public:
   template <class F>
   expected transform_error(F&& f) & {
     using res_t = decltype(f(error_));
-    static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
+    static_assert(std::is_same_v<error_type, res_t>,
+                  "F must return an error_type value");
     if (has_value())
       return {std::in_place, value_};
     else
@@ -614,8 +654,9 @@ public:
 
   template <class F>
   expected transform_error(F&& f) && {
-    using res_t = decltype(f(error_));
-    static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
+    using res_t = decltype(f(std::move(error_)));
+    static_assert(std::is_same_v<error_type, res_t>,
+                  "F must return an error_type value");
     if (has_value())
       return {std::in_place, std::move(value_)};
     else
@@ -625,7 +666,8 @@ public:
   template <class F>
   expected transform_error(F&& f) const& {
     using res_t = decltype(f(error_));
-    static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
+    static_assert(std::is_same_v<error_type, res_t>,
+                  "F must return an error_type value");
     if (has_value())
       return {std::in_place, value_};
     else
@@ -634,8 +676,9 @@ public:
 
   template <class F>
   expected transform_error(F&& f) const&& {
-    using res_t = decltype(f(error_));
-    static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
+    using res_t = decltype(f(std::move(error_)));
+    static_assert(std::is_same_v<error_type, res_t>,
+                  "F must return an error_type value");
     if (has_value())
       return {std::in_place, std::move(value_)};
     else
@@ -647,7 +690,7 @@ private:
     if (other.has_value_)
       new (std::addressof(value_)) T(std::move(other.value_));
     else
-      new (std::addressof(error_)) caf::error(std::move(other.error_));
+      new (std::addressof(error_)) error_type(std::move(other.error_));
     has_value_ = other.has_value_;
   }
 
@@ -655,15 +698,15 @@ private:
     if (other.has_value_)
       new (std::addressof(value_)) T(other.value_);
     else
-      new (std::addressof(error_)) caf::error(other.error_);
+      new (std::addressof(error_)) error_type(other.error_);
     has_value_ = other.has_value_;
   }
 
   void destroy() {
     if (has_value())
-      value_.~T();
+      std::destroy_at(std::addressof(value_));
     else
-      error_.~error();
+      std::destroy_at(std::addressof(error_));
   }
 
   /// Denotes whether `value_` may be accessed. When false, error_ may be
@@ -675,159 +718,181 @@ private:
     T value_;
 
     /// Stores an error in case there is no value.
-    caf::error error_;
+    error_type error_;
   };
 };
 
 /// @relates expected
-template <class T>
-auto operator==(const expected<T>& x, const expected<T>& y)
+template <class T, class E>
+auto operator==(const expected<T, E>& x, const expected<T, E>& y)
   -> decltype(*x == *y) {
   return x && y ? *x == *y : (!x && !y ? x.error() == y.error() : false);
 }
 
 /// @relates expected
-template <class T, class U>
-auto operator==(const expected<T>& x, const U& y) -> decltype(*x == y) {
+template <class T, class E, class U>
+auto operator==(const expected<T, E>& x, const U& y) -> decltype(*x == y) {
   return x ? *x == y : false;
 }
 
 /// @relates expected
-template <class T, class U>
-auto operator==(const T& x, const expected<U>& y) -> decltype(x == *y) {
+template <class U, class T, class E>
+auto operator==(const U& x, const expected<T, E>& y) -> decltype(x == *y) {
   return y == x;
 }
 
 /// @relates expected
-template <class T>
+template <class T, class E>
+  requires std::is_same_v<E, caf::error>
 CAF_DEPRECATED("Compare with caf::unexpected{error} instead")
-bool operator==(const expected<T>& x, const error& y) {
+bool operator==(const expected<T, E>& x, const error& y) {
   return x ? false : x.error() == y;
 }
 
 /// @relates expected
-template <class T>
+template <class T, class E>
+  requires std::is_same_v<E, caf::error>
 CAF_DEPRECATED("Compare with caf::unexpected{error} instead")
-bool operator==(const error& x, const expected<T>& y) {
+bool operator==(const error& x, const expected<T, E>& y) {
   return y == x;
 }
 
 /// @relates expected
-template <class T, error_code_enum Enum>
+template <class T, class E, error_code_enum Enum>
+  requires std::is_same_v<E, caf::error>
 CAF_DEPRECATED("Compare with caf::unexpected{error{enum}} instead")
-bool operator==(const expected<T>& x, Enum y) {
+bool operator==(const expected<T, E>& x, Enum y) {
   return x == make_error(y);
 }
 
 /// @relates expected
-template <error_code_enum Enum, class T>
+template <error_code_enum Enum, class T, class E>
+  requires std::is_same_v<E, caf::error>
 CAF_DEPRECATED("Compare with caf::unexpected{error{enum}} instead")
-bool operator==(Enum x, const expected<T>& y) {
+bool operator==(Enum x, const expected<T, E>& y) {
   return y == make_error(x);
 }
 
 template <class T, class E>
-bool operator==(const expected<T>& x, const unexpected<E>& y) {
+bool operator==(const expected<T, E>& x, const unexpected<E>& y) {
   return x ? false : x.error() == y.error();
 }
 
 /// @relates expected
 template <class E, class T>
-bool operator==(const unexpected<E>& x, const expected<T>& y) {
+bool operator==(const unexpected<E>& x, const expected<T, E>& y) {
   return y == x;
 }
 
 /// @relates expected
-template <class T>
-auto operator!=(const expected<T>& x, const expected<T>& y)
+template <class T, class E>
+auto operator!=(const expected<T, E>& x, const expected<T, E>& y)
   -> decltype(*x == *y) {
   return !(x == y);
 }
 
 /// @relates expected
-template <class T, class U>
-auto operator!=(const expected<T>& x, const U& y) -> decltype(*x == y) {
+template <class T, class E, class U>
+auto operator!=(const expected<T, E>& x, const U& y) -> decltype(*x == y) {
   return !(x == y);
 }
 
 /// @relates expected
-template <class T, class U>
-auto operator!=(const T& x, const expected<U>& y) -> decltype(x == *y) {
-  return !(x == y);
-}
-
-/// @relates expected
-template <class T>
-CAF_DEPRECATED("Compare with caf::unexpected{error} instead")
-bool operator!=(const expected<T>& x, const error& y) {
-  return !(x == y);
-}
-
-/// @relates expected
-template <class T>
-CAF_DEPRECATED("Compare with caf::unexpected{error} instead")
-bool operator!=(const error& x, const expected<T>& y) {
-  return !(x == y);
-}
-
-/// @relates expected
-template <class T, error_code_enum Enum>
-CAF_DEPRECATED("Compare with caf::unexpected{error{enum}} instead")
-bool operator!=(const expected<T>& x, Enum y) {
-  return !(x == y);
-}
-
-/// @relates expected
-template <error_code_enum Enum, class T>
-CAF_DEPRECATED("Compare with caf::unexpected{error{enum}} instead")
-bool operator!=(Enum x, const expected<T>& y) {
+template <class U, class T, class E>
+auto operator!=(const U& x, const expected<T, E>& y) -> decltype(x == *y) {
   return !(x == y);
 }
 
 /// @relates expected
 template <class T, class E>
-bool operator!=(const expected<T>& x, const unexpected<E>& y) {
+  requires std::is_same_v<E, caf::error>
+CAF_DEPRECATED("Compare with caf::unexpected{error} instead")
+bool operator!=(const expected<T, E>& x, const error& y) {
+  return !(x == y);
+}
+
+/// @relates expected
+template <class T, class E>
+  requires std::is_same_v<E, caf::error>
+CAF_DEPRECATED("Compare with caf::unexpected{error} instead")
+bool operator!=(const error& x, const expected<T, E>& y) {
+  return !(x == y);
+}
+
+/// @relates expected
+template <class T, class E, error_code_enum Enum>
+  requires std::is_same_v<E, caf::error>
+CAF_DEPRECATED("Compare with caf::unexpected{error{enum}} instead")
+bool operator!=(const expected<T, E>& x, Enum y) {
+  return !(x == y);
+}
+
+/// @relates expected
+template <error_code_enum Enum, class T, class E>
+  requires std::is_same_v<E, caf::error>
+CAF_DEPRECATED("Compare with caf::unexpected{error{enum}} instead")
+bool operator!=(Enum x, const expected<T, E>& y) {
+  return !(x == y);
+}
+
+/// @relates expected
+template <class T, class E>
+bool operator!=(const expected<T, E>& x, const unexpected<E>& y) {
   return !(x == y);
 }
 
 /// @relates expected
 template <class E, class T>
-bool operator!=(const unexpected<E>& x, const expected<T>& y) {
+bool operator!=(const unexpected<E>& x, const expected<T, E>& y) {
   return !(x == y);
 }
 
 /// The pattern `expected<void>` shall be used for functions that may generate
 /// an error but would otherwise return `bool`.
-template <>
-class expected<void> {
+template <class E>
+class expected<void, E> {
 public:
   // -- member types -----------------------------------------------------------
 
   using value_type = void;
 
-  using error_type = caf::error;
+  using error_type = E;
 
-  using unexpected_type = unexpected<caf::error>;
+  using unexpected_type = unexpected<error_type>;
 
   template <class U>
-  using rebind = expected<U>;
+  using rebind = expected<U, error_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <error_code_enum Enum>
-  CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
-  expected(Enum x) : error_(std::in_place, x) {
+  expected() noexcept = default;
+
+  template <class U = error_type>
+    requires(!std::is_same_v<error_type, caf::error>)
+  explicit expected(error_type err) noexcept(
+    std::is_nothrow_move_constructible_v<error_type>)
+    : error_(std::move(err)) {
     // nop
   }
 
+  template <error_code_enum Enum>
+    requires std::is_same_v<error_type, caf::error>
+  CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
+  expected(Enum x) : error_(make_error(x)) {
+    // nop
+  }
+
+  template <class U = error_type>
+    requires std::is_same_v<U, caf::error>
+             && std::is_same_v<error_type, caf::error>
   CAF_DEPRECATED("construct using unexpect or from an unexpected instead")
   expected(caf::error err) noexcept : error_(std::move(err)) {
     // nop
   }
 
-  expected() noexcept = default;
-
-  expected(unexpected_type x) noexcept : error_(std::move(x.error())) {
+  expected(unexpected_type x) noexcept(
+    std::is_nothrow_move_constructible_v<error_type>)
+    : error_(std::move(x.error())) {
     // nop
   }
 
@@ -848,6 +913,9 @@ public:
 
   expected& operator=(expected&& other) noexcept = default;
 
+  template <class U = error_type>
+    requires std::is_same_v<U, caf::error>
+             && std::is_same_v<error_type, caf::error>
   CAF_DEPRECATED("use assignment with caf::unexpected instead")
   expected& operator=(caf::error err) noexcept {
     error_ = std::move(err);
@@ -855,6 +923,7 @@ public:
   }
 
   template <error_code_enum Enum>
+    requires std::is_same_v<error_type, caf::error>
   CAF_DEPRECATED("use assignment with caf::unexpected instead")
   expected& operator=(Enum code) {
     error_ = make_error(code);
@@ -905,22 +974,22 @@ public:
 
   // -- error access -----------------------------------------------------------
 
-  caf::error& error() & noexcept {
+  error_type& error() & noexcept {
     CAF_ASSERT(!has_value());
     return *error_;
   }
 
-  const caf::error& error() const& noexcept {
+  const error_type& error() const& noexcept {
     CAF_ASSERT(!has_value());
     return *error_;
   }
 
-  caf::error&& error() && noexcept {
+  error_type&& error() && noexcept {
     CAF_ASSERT(!has_value());
     return std::move(*error_);
   }
 
-  const caf::error&& error() const&& noexcept {
+  const error_type&& error() const&& noexcept {
     CAF_ASSERT(!has_value());
     return std::move(*error_);
   }
@@ -931,6 +1000,10 @@ public:
   auto and_then(F&& f) & {
     using res_t = decltype(f());
     static_assert(detail::is_expected<res_t>, "F must return an expected");
+    static_assert(
+      std::is_same_v<error_type,
+                     typename std::remove_cvref_t<res_t>::error_type>,
+      "unexpected type must match");
     if (has_value())
       return f();
     else
@@ -941,6 +1014,10 @@ public:
   auto and_then(F&& f) && {
     using res_t = decltype(f());
     static_assert(detail::is_expected<res_t>, "F must return an expected");
+    static_assert(
+      std::is_same_v<error_type,
+                     typename std::remove_cvref_t<res_t>::error_type>,
+      "unexpected type must match");
     if (has_value())
       return f();
     else
@@ -951,6 +1028,10 @@ public:
   auto and_then(F&& f) const& {
     using res_t = decltype(f());
     static_assert(detail::is_expected<res_t>, "F must return an expected");
+    static_assert(
+      std::is_same_v<error_type,
+                     typename std::remove_cvref_t<res_t>::error_type>,
+      "unexpected type must match");
     if (has_value())
       return f();
     else
@@ -961,10 +1042,14 @@ public:
   auto and_then(F&& f) const&& {
     using res_t = decltype(f());
     static_assert(detail::is_expected<res_t>, "F must return an expected");
+    static_assert(
+      std::is_same_v<error_type,
+                     typename std::remove_cvref_t<res_t>::error_type>,
+      "unexpected type must match");
     if (has_value())
       return f();
     else
-      return res_t{unexpect, *error_};
+      return res_t{unexpect, std::move(*error_)};
   }
 
   template <class F>
@@ -975,8 +1060,8 @@ public:
         f(*error_);
       return *this;
     } else {
-      static_assert(std::is_same_v<expected, res_t>,
-                    "F must return expected<T> or void");
+      static_assert(std::is_same_v<expected<void, error_type>, res_t>,
+                    "F must return expected<void, error_type> or void");
       if (has_value())
         return expected{std::in_place};
       else
@@ -992,8 +1077,8 @@ public:
         f(std::move(*error_));
       return std::move(*this);
     } else {
-      static_assert(std::is_same_v<expected, res_t>,
-                    "F must return expected<T> or void");
+      static_assert(std::is_same_v<expected<void, error_type>, res_t>,
+                    "F must return expected<void, error_type> or void");
       if (has_value())
         return expected{std::in_place};
       else
@@ -1009,8 +1094,8 @@ public:
         f(*error_);
       return *this;
     } else {
-      static_assert(std::is_same_v<expected, res_t>,
-                    "F must return expected<T> or void");
+      static_assert(std::is_same_v<expected<void, error_type>, res_t>,
+                    "F must return expected<void, error_type> or void");
       if (has_value())
         return expected{std::in_place};
       else
@@ -1026,8 +1111,8 @@ public:
         f(std::move(*error_));
       return *this;
     } else {
-      static_assert(std::is_same_v<expected, res_t>,
-                    "F must return expected<T> or void");
+      static_assert(std::is_same_v<expected<void, error_type>, res_t>,
+                    "F must return expected<void, error_type> or void");
       if (has_value())
         return expected{std::in_place};
       else
@@ -1040,9 +1125,9 @@ public:
     using res_t = decltype(f());
     static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
-      return detail::expected_from_fn(std::forward<F>(f));
+      return detail::expected_from_fn<error_type>(std::forward<F>(f));
     else
-      return expected<res_t>{unexpect, *error_};
+      return expected<res_t, error_type>{unexpect, *error_};
   }
 
   template <class F>
@@ -1050,9 +1135,9 @@ public:
     using res_t = decltype(f());
     static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
-      return detail::expected_from_fn(std::forward<F>(f));
+      return detail::expected_from_fn<error_type>(std::forward<F>(f));
     else
-      return expected<res_t>{unexpect, std::move(*error_)};
+      return expected<res_t, error_type>{unexpect, std::move(*error_)};
   }
 
   template <class F>
@@ -1060,9 +1145,9 @@ public:
     using res_t = decltype(f());
     static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
-      return detail::expected_from_fn(std::forward<F>(f));
+      return detail::expected_from_fn<error_type>(std::forward<F>(f));
     else
-      return expected<res_t>{unexpect, *error_};
+      return expected<res_t, error_type>{unexpect, *error_};
   }
 
   template <class F>
@@ -1070,9 +1155,9 @@ public:
     using res_t = decltype(f());
     static_assert(!detail::is_expected<res_t>, "F must not return an expected");
     if (has_value())
-      return detail::expected_from_fn(std::forward<F>(f));
+      return detail::expected_from_fn<error_type>(std::forward<F>(f));
     else
-      return expected<res_t>{unexpect, *error_};
+      return expected<res_t, error_type>{unexpect, std::move(*error_)};
   }
 
   template <class F>
@@ -1102,7 +1187,8 @@ public:
   template <class F>
   expected transform_error(F&& f) & {
     using res_t = decltype(f(*error_));
-    static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
+    static_assert(std::is_same_v<error_type, res_t>,
+                  "F must return an error_type value");
     if (has_value())
       return expected{};
     else
@@ -1112,7 +1198,8 @@ public:
   template <class F>
   expected transform_error(F&& f) && {
     using res_t = decltype(f(std::move(*error_)));
-    static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
+    static_assert(std::is_same_v<error_type, res_t>,
+                  "F must return an error_type value");
     if (has_value())
       return expected{};
     else
@@ -1122,7 +1209,8 @@ public:
   template <class F>
   expected transform_error(F&& f) const& {
     using res_t = decltype(f(*error_));
-    static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
+    static_assert(std::is_same_v<error_type, res_t>,
+                  "F must return an error_type value");
     if (has_value())
       return expected{std::in_place};
     else
@@ -1132,7 +1220,8 @@ public:
   template <class F>
   expected transform_error(F&& f) const&& {
     using res_t = decltype(f(std::move(*error_)));
-    static_assert(std::is_same_v<caf::error, res_t>, "F must return an error");
+    static_assert(std::is_same_v<error_type, res_t>,
+                  "F must return an error_type value");
     if (has_value())
       return expected{};
     else
@@ -1140,16 +1229,18 @@ public:
   }
 
 private:
-  std::optional<caf::error> error_;
+  std::optional<error_type> error_;
 };
 
 /// @relates expected
-inline bool operator==(const expected<void>& x, const expected<void>& y) {
+template <class E>
+bool operator==(const expected<void, E>& x, const expected<void, E>& y) {
   return (x && y) || (!x && !y && x.error() == y.error());
 }
 
 /// @relates expected
-inline bool operator!=(const expected<void>& x, const expected<void>& y) {
+template <class E>
+bool operator!=(const expected<void, E>& x, const expected<void, E>& y) {
   return !(x == y);
 }
 

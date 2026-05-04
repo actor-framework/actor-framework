@@ -11,6 +11,8 @@
 #include "caf/sec.hpp"
 
 #include <cassert>
+#include <cstddef>
+#include <type_traits>
 
 using namespace caf;
 using namespace std::literals;
@@ -43,6 +45,12 @@ using e_void = expected<void>;
 using e_iptr = expected<counted_int_ptr>;
 
 } // namespace
+
+#ifndef CAF_USE_STD_EXPECTED
+// Deprecated `expected(caf::error)` is available only when E == caf::error.
+static_assert(
+  !std::is_constructible_v<caf::expected<int, caf::sec>, caf::error>);
+#endif
 
 // NOLINTBEGIN(bugprone-use-after-move)
 
@@ -947,5 +955,51 @@ TEST("transform_error does nothing when called with a value") {
     check(static_cast<bool>(v3));
     check(static_cast<bool>(v4));
     check(static_cast<bool>(v5));
+  }
+}
+
+TEST("expected propagates sec as unexpected type independent of caf::error") {
+  SECTION("non-void value type") {
+    expected<int, sec> x{42};
+    check_eq(*x, 42);
+    expected<int, sec> y{unexpect, sec::runtime_error};
+    check(!y.has_value());
+    check_eq(y.error(), sec::runtime_error);
+    auto z = expected<int, sec>{caf::unexpected<sec>{sec::invalid_argument}};
+    check(!z.has_value());
+    check_eq(z.error(), sec::invalid_argument);
+
+    auto doubled
+      = x.and_then([](int v) { return expected<long, sec>{v * 2L}; });
+    check_eq(static_cast<long>(*doubled), 84L);
+
+    auto err_mapped
+      = z.transform_error([](sec) -> sec { return sec::runtime_error; });
+    check_eq(err_mapped.error(), sec::runtime_error);
+
+    auto bad_for_transform = expected<int, sec>{unexpect,
+                                                sec::invalid_argument};
+    auto num = bad_for_transform.transform([](int i) { return i + 1; });
+    check(!num.has_value());
+    check_eq(num.error(), sec::invalid_argument);
+  }
+  SECTION("void value type") {
+    expected<void, sec> ok{};
+    check(ok.has_value());
+    expected<void, sec> bad{unexpect, sec::invalid_argument};
+    check(!bad.has_value());
+    check_eq(bad.error(), sec::invalid_argument);
+
+    auto step = ok.and_then([] { return expected<int, sec>{7}; });
+    check_eq(*step, 7);
+
+    auto repl = bad.transform_error([](sec s) -> sec {
+      return s == sec::invalid_argument ? sec::runtime_error : s;
+    });
+    check(!repl.has_value());
+    check_eq(repl.error(), sec::runtime_error);
+
+    auto noop = ok.transform([] { return std::byte{1}; });
+    check(noop.has_value());
   }
 }
