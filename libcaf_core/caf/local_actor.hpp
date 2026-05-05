@@ -344,11 +344,6 @@ public:
   /// @post `what` remains non-null if the result is `skipped`
   virtual consume_result consume(mailbox_element_ptr& what) = 0;
 
-  message_id new_request_id(message_priority mp) noexcept;
-
-  /// Returns a 64-bit ID that is unique on this actor.
-  uint64_t new_u64_id() noexcept;
-
   template <class T>
   void respond(T& x) {
     response_promise::respond_to(this, current_mailbox_element(), x);
@@ -390,9 +385,6 @@ protected:
 
   // pointer to the sender of the currently processed message
   mailbox_element* current_element_;
-
-  // last used request ID
-  message_id last_request_id_;
 
   /// Factory function for returning initial behavior in function-based actors.
   detail::unique_function<behavior(local_actor*)> initial_behavior_fac_;

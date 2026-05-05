@@ -36,6 +36,10 @@ public:
 
   ~abstract_scheduled_actor() override;
 
+  message_id new_request_id(message_priority mp) noexcept;
+
+  uint64_t new_u64_id() noexcept;
+
   // -- message processing -----------------------------------------------------
 
   /// Adds a callback for an awaited response.
@@ -65,6 +69,10 @@ public:
   template <class TypeToken, class State, class Tag>
     requires flow::assert_has_impl_include<State>
   auto response_to_observable(TypeToken, const State& state, Tag);
+
+protected:
+  // last used request ID
+  message_id last_request_id_;
 
 private:
   virtual flow::coordinator* flow_context() = 0;
