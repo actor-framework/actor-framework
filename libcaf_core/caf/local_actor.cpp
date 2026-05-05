@@ -83,16 +83,6 @@ void local_actor::on_exit() {
   // nop
 }
 
-message_id local_actor::new_request_id(message_priority mp) noexcept {
-  auto result = ++last_request_id_;
-  return mp == message_priority::normal ? result : result.with_high_priority();
-}
-
-uint64_t local_actor::new_u64_id() noexcept {
-  auto result = ++last_request_id_;
-  return result.integer_value();
-}
-
 void local_actor::send_exit(const actor_addr& whom, error reason) {
   send_exit(actor_cast<strong_actor_ptr>(whom), std::move(reason));
 }
