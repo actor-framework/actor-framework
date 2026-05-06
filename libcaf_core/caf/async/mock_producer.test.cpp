@@ -14,7 +14,7 @@ void mock_producer::on_consumer_cancel() {
   canceled = true;
 }
 
-void mock_producer::on_consumer_demand(size_t new_demand) {
+void mock_producer::on_consumer_demand(size_t new_demand, bool) {
   demand += new_demand;
 }
 

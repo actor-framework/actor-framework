@@ -188,14 +188,14 @@ SCENARIO("callable sources stream values generated from a function object") {
 
 SCENARIO("asynchronous buffers can generate flow items") {
   GIVEN("a background thread writing into an async buffer") {
-    auto cancelled = std::atomic<bool>{false};
-    auto producer_impl = [this, &cancelled](async::producer_resource<int> res) {
+    auto canceled = std::atomic<bool>{false};
+    auto producer_impl = [this, &canceled](async::producer_resource<int> res) {
       auto producer = async::make_blocking_producer(std::move(res));
       if (!producer)
         fail("make_blocking_producer failed");
       for (int i = 1; i <= 713; ++i) {
         if (!producer->push(i)) {
-          cancelled = true;
+          canceled = true;
           return;
         }
       }
@@ -212,7 +212,7 @@ SCENARIO("asynchronous buffers can generate flow items") {
         run_flows(2s);
         check_eq(res, iota_vec(713));
         bg_thread.join();
-        check(!cancelled);
+        check(!canceled);
       }
     }
     WHEN("reading only a subset of values from the buffer") {
@@ -227,7 +227,7 @@ SCENARIO("asynchronous buffers can generate flow items") {
         run_flows(2s);
         check_eq(res, iota_vec(20));
         bg_thread.join();
-        check(cancelled);
+        check(canceled);
       }
     }
     WHEN("canceling the subscription to the buffer") {
@@ -249,7 +249,7 @@ SCENARIO("asynchronous buffers can generate flow items") {
         run_flows();
         check(res.empty());
         bg_thread.join();
-        check(cancelled);
+        check(canceled);
       }
     }
   }

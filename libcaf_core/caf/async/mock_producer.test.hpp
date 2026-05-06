@@ -17,7 +17,7 @@ public:
 
   void on_consumer_cancel() override;
 
-  void on_consumer_demand(size_t new_demand) override;
+  void on_consumer_demand(size_t new_demand, bool) override;
 
   void ref() const noexcept final;
 

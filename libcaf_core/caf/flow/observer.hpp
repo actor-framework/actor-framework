@@ -383,7 +383,7 @@ public:
     });
   }
 
-  void on_consumer_demand(size_t demand) override {
+  void on_consumer_demand(size_t demand, bool) override {
     auto lg = log::core::trace("demand = {}", demand);
     parent_->schedule_fn([ptr{strong_this()}, demand] { //
       auto lg = log::core::trace("demand = {}", demand);

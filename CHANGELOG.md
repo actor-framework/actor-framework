@@ -62,6 +62,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `abstract_actor* self` parameter. This allows us to remove weak pointers in
   the attachable implementations to avoid unnecessary increment and decrement
   operations on the reference count.
+- The `caf::async::producer::on_consumer_demand` callback now takes a second
+  `bool unblocked` argument. Please refer to the documentation of the `producer`
+  class for more details.
 
 ### Deprecated
 

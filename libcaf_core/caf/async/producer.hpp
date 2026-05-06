@@ -22,7 +22,12 @@ public:
   virtual void on_consumer_cancel() = 0;
 
   /// Called to signal that the consumer requests more events.
-  virtual void on_consumer_demand(size_t demand) = 0;
+  /// @param demand The number of items that the producer may push to the buffer
+  ///               without going past its capacity.
+  /// @param unblocked `true` when a producer received `try_again_later` from
+  ///                  `try_push` prior and may now resume pushing items to the
+  ///                  buffer.
+  virtual void on_consumer_demand(size_t demand, bool unblocked) = 0;
 };
 
 /// @relates producer
