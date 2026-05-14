@@ -74,12 +74,11 @@ bool deserializer::value(strong_actor_ptr& ptr) {
 }
 
 bool deserializer::value(weak_actor_ptr& ptr) {
-  strong_actor_ptr tmp;
-  if (!value(tmp)) {
-    return false;
+  if (auto* codec = actor_handle_codec()) {
+    return codec->load(*this, ptr);
   }
-  ptr = tmp;
-  return true;
+  set_error(make_error(sec::no_actor_handle_codec));
+  return false;
 }
 
 bool deserializer::value(std::vector<bool>& x) {

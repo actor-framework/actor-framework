@@ -211,13 +211,6 @@ inline bool operator!=(const abstract_actor* x,
   return !(x == y);
 }
 
-CAF_CORE_EXPORT error_code<sec> load_actor(strong_actor_ptr& ptr,
-                                           actor_system* sys, actor_id aid,
-                                           const node_id& nid);
-
-CAF_CORE_EXPORT error_code<sec> save_actor(const strong_actor_ptr& ptr,
-                                           actor_id aid, const node_id& nid);
-
 CAF_CORE_EXPORT std::string to_string(const strong_actor_ptr& ptr);
 
 CAF_CORE_EXPORT void append_to_string(std::string& str,
