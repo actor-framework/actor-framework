@@ -6,6 +6,7 @@
 #include "caf/log/level.hpp"
 #include "caf/type_id.hpp"
 
+#include <source_location>
 #include <string_view>
 
 struct foobar;
@@ -26,8 +27,8 @@ void debug(caf::format_string_with_location fmt_str, Ts&&... args) {
                    std::forward<Ts>(args)...);
 }
 
-inline auto debug() {
-  return caf::logger::log(caf::log::level::debug, component);
+inline auto debug(std::source_location loc = std::source_location::current()) {
+  return caf::logger::log(caf::log::level::debug, component, loc);
 }
 
 template <class... Ts>
@@ -36,8 +37,8 @@ void info(caf::format_string_with_location fmt_str, Ts&&... args) {
                    std::forward<Ts>(args)...);
 }
 
-inline auto info() {
-  return caf::logger::log(caf::log::level::info, component);
+inline auto info(std::source_location loc = std::source_location::current()) {
+  return caf::logger::log(caf::log::level::info, component, loc);
 }
 
 template <class... Ts>
@@ -46,8 +47,9 @@ void warning(caf::format_string_with_location fmt_str, Ts&&... args) {
                    std::forward<Ts>(args)...);
 }
 
-inline auto warning() {
-  return caf::logger::log(caf::log::level::warning, component);
+inline auto
+warning(std::source_location loc = std::source_location::current()) {
+  return caf::logger::log(caf::log::level::warning, component, loc);
 }
 
 template <class... Ts>
@@ -56,8 +58,8 @@ void error(caf::format_string_with_location fmt_str, Ts&&... args) {
                    std::forward<Ts>(args)...);
 }
 
-inline auto error() {
-  return caf::logger::log(caf::log::level::error, component);
+inline auto error(std::source_location loc = std::source_location::current()) {
+  return caf::logger::log(caf::log::level::error, component, loc);
 }
 
 } // namespace app
