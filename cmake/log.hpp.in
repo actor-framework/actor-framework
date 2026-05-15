@@ -8,6 +8,7 @@
 #include "caf/log/level.hpp"
 #include "caf/logger.hpp"
 
+#include <source_location>
 #include <string_view>
 
 namespace caf::log::@CAF_COMPONENT_NAME@ {
@@ -51,8 +52,9 @@ void debug(format_string_with_location fmt_str, Ts&&... args) {
 }
 
 /// Starts a new log event with `debug` severity.
-[[nodiscard]] inline auto debug() {
-  return logger::log(level::debug, component);
+[[nodiscard]] inline auto debug(std::source_location loc =
+                                  std::source_location::current()) {
+  return logger::log(level::debug, component, loc);
 }
 
 /// Logs a message with `info` severity.
@@ -65,8 +67,9 @@ void info(format_string_with_location fmt_str, Ts&&... args) {
 }
 
 /// Starts a new log event with `info` severity.
-[[nodiscard]] inline auto info() {
-  return logger::log(level::info, component);
+[[nodiscard]] inline auto info(std::source_location loc =
+                                 std::source_location::current()) {
+  return logger::log(level::info, component, loc);
 }
 
 /// Logs a message with `warning` severity.
@@ -79,8 +82,9 @@ void warning(format_string_with_location fmt_str, Ts&&... args) {
 }
 
 /// Starts a new log event with `warning` severity.
-[[nodiscard]] inline auto warning() {
-  return logger::log(level::warning, component);
+[[nodiscard]] inline auto warning(std::source_location loc =
+                                    std::source_location::current()) {
+  return logger::log(level::warning, component, loc);
 }
 
 /// Logs a message with `error` severity.
@@ -93,8 +97,9 @@ void error(format_string_with_location fmt_str, Ts&&... args) {
 }
 
 /// Starts a new log event with `error` severity.
-[[nodiscard]] inline auto error() {
-  return logger::log(level::error, component);
+[[nodiscard]] inline auto error(std::source_location loc =
+                                  std::source_location::current()) {
+  return logger::log(level::error, component, loc);
 }
 
 } // namespace caf::log::@CAF_COMPONENT_NAME@
