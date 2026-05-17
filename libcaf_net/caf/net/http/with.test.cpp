@@ -9,6 +9,7 @@
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_guard.hpp"
+#include "caf/net/stream_socket.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 
@@ -16,6 +17,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
+#include "caf/internal/connector.hpp"
 #include "caf/uri.hpp"
 
 #include <chrono>
@@ -27,6 +29,24 @@ using namespace caf;
 using namespace std::literals;
 
 namespace {
+
+/// A connector that returns a pre-existing socket on the first connect call.
+/// Intended for unit tests that use connected socket pairs.
+class socket_connector : public internal::connector {
+public:
+  explicit socket_connector(net::stream_socket fd) : fd_(fd) {
+  }
+
+  expected<net::stream_socket> connect(const std::string&, uint16_t, timespan,
+                                       size_t, timespan) override {
+    auto result = fd_;
+    fd_.id = net::invalid_socket_id;
+    return result;
+  }
+
+private:
+  net::stream_socket fd_;
+};
 
 class error_log {
 public:
@@ -350,25 +370,24 @@ TEST("GH-2226 regression") {
   check_eq(elog->errors(), std::vector<error>{});
 }
 
-// TODO: refactor the test to use a connected socket pair and improve test
-// coverage for different host formats.
-TEST("GH-2309 regression: Host header contains explicit non-default port") {
+TEST("GH-2309 Host header field in outgoing requests") {
+  auto parse_uri = [this](std::string_view sv) {
+    uri u;
+    auto err = parse(sv, u);
+    require(err.empty());
+    return u;
+  };
   caf::actor_system_config cfg;
   cfg.load<caf::net::middleman>();
   caf::actor_system sys{cfg};
-  auto acceptor = unbox(net::make_tcp_accept_socket(0));
-  auto port = unbox(net::local_port(acceptor));
-  auto uri_str = net::is_ipv4(acceptor)
-                   ? detail::format("http://127.0.0.1:{}/host-check", port)
-                   : detail::format("http://[::1]:{}/host-check", port);
-  auto expected_host = net::is_ipv4(acceptor)
-                         ? detail::format("127.0.0.1:{}", port)
-                         : detail::format("[::1]:{}", port);
+  auto fd_pair = net::make_stream_socket_pair();
+  require_has_value(fd_pair);
+  auto [server_fd, client_fd] = *fd_pair;
   std::promise<std::string> prom;
   auto host_fut = prom.get_future();
   auto hdl
     = net::http::with(sys)
-        .accept(acceptor)
+        .serve(server_fd)
         .route("/host-check", net::http::method::get,
                [prom = std::move(prom)](net::http::responder& res) mutable {
                  prom.set_value(std::string{res.header().field("Host")});
@@ -377,18 +396,47 @@ TEST("GH-2309 regression: Host header contains explicit non-default port") {
         .start();
   require_has_value(hdl);
   detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
-  uri endpoint;
-  require(parse(uri_str, endpoint).empty());
-  auto client_res = net::http::with(sys)
-                      .connect(endpoint)
-                      .connection_timeout(2s)
-                      .max_retry_count(1)
-                      .get();
-  require_has_value(client_res);
-  auto maybe_resp = client_res->first.get(5s);
-  require_has_value(maybe_resp);
-  check_eq(maybe_resp->code(), net::http::status::ok);
+  auto assert_request_host_is = [this, &sys, &host_fut,
+                                 client_fd](const caf::uri& uri,
+                                            std::string_view expected_host) {
+    auto client_res
+      = net::http::with(sys)
+          .connect(uri)
+          .connector(std::make_unique<socket_connector>(client_fd))
+          .connection_timeout(1s)
+          .max_retry_count(1)
+          .get();
+    require_has_value(client_res);
+    auto maybe_resp = client_res->first.get(1s);
+    require_has_value(maybe_resp);
+    require(host_fut.wait_for(1s) == std::future_status::ready);
+    check_eq(host_fut.get(), expected_host);
+  };
 
-  require(host_fut.wait_for(1s) == std::future_status::ready);
-  check_eq(host_fut.get(), expected_host);
+  SECTION("http IPv4 with non-default port") {
+    assert_request_host_is(parse_uri("http://127.0.0.1:8080/host-check"),
+                           "127.0.0.1:8080");
+  }
+  SECTION("http IPv4 omitted port") {
+    assert_request_host_is(parse_uri("http://127.0.0.1/host-check"),
+                           "127.0.0.1");
+  }
+  SECTION("http IPv4 explicit default port") {
+    assert_request_host_is(parse_uri("http://127.0.0.1:80/host-check"),
+                           "127.0.0.1");
+  }
+  SECTION("http hostname with non-default port") {
+    assert_request_host_is(parse_uri("http://api.example.org:3000/host-check"),
+                           "api.example.org:3000");
+  }
+  SECTION("http IPv6 with non-default port") {
+    assert_request_host_is(parse_uri("http://[::1]:9090/host-check"),
+                           "[::1]:9090");
+  }
+  SECTION("http IPv6 omitted port") {
+    assert_request_host_is(parse_uri("http://[::1]/host-check"), "[::1]");
+  }
+  SECTION("http IPv6 explicit default port") {
+    assert_request_host_is(parse_uri("http://[::1]:80/host-check"), "[::1]");
+  }
 }
