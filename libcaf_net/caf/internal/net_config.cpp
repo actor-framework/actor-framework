@@ -4,7 +4,13 @@
 
 #include "caf/internal/net_config.hpp"
 
+#include "caf/internal/connector.hpp"
+
 namespace caf::internal {
+
+connector::~connector() {
+  // nop
+}
 
 net_config::~net_config() {
   // nop

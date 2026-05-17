@@ -118,6 +118,13 @@ public:
     return do_start_server(acc);
   }
 
+  expected<disposable> start_server_impl(net::stream_socket) override {
+    return expected<disposable>{
+      unexpect, sec::invalid_argument,
+      "serving on a pre-connected stream socket is not supported for Web "
+      "Sockets"};
+  }
+
   // state for clients
 
   pull_t pull;

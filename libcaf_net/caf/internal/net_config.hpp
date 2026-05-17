@@ -18,6 +18,7 @@
 #include "caf/defaults.hpp"
 #include "caf/disposable.hpp"
 #include "caf/format_to_unexpected.hpp"
+#include "caf/internal/connector.hpp"
 #include "caf/log/net.hpp"
 #include "caf/none.hpp"
 #include "caf/uri.hpp"
@@ -76,6 +77,45 @@ public:
       }
     };
 
+    /// Configuration for a server that handles a single connected stream
+    /// socket, for example one end of a connected socket pair.
+    class stream {
+    public:
+      explicit stream(net::stream_socket fd) : fd(fd) {
+        // nop
+      }
+
+      stream(const stream&) = delete;
+
+      stream& operator=(const stream&) = delete;
+
+      stream(stream&& other) noexcept : fd(other.fd) {
+        other.fd.id = net::invalid_socket_id;
+      }
+
+      stream& operator=(stream&& other) noexcept {
+        using std::swap;
+        swap(fd, other.fd);
+        return *this;
+      }
+
+      ~stream() {
+        if (fd != net::invalid_socket) {
+          net::close(fd);
+        }
+      }
+
+      /// The connected stream socket.
+      net::stream_socket fd;
+
+      /// Takes ownership of the file descriptor.
+      net::stream_socket take_fd() noexcept {
+        auto result = fd;
+        fd.id = net::invalid_socket_id;
+        return result;
+      }
+    };
+
     void assign(uint16_t port, std::string&& bind_address, bool reuse_addr) {
       value.emplace<lazy>(port, std::move(bind_address), reuse_addr);
     }
@@ -84,7 +124,11 @@ public:
       value.emplace<socket>(fd);
     }
 
-    using value_t = std::variant<none_t, lazy, socket>;
+    void assign(net::stream_socket fd) {
+      value.emplace<stream>(std::move(fd));
+    }
+
+    using value_t = std::variant<none_t, lazy, socket, stream>;
 
     value_t value;
   };
@@ -252,6 +296,8 @@ public:
 
   virtual expected<disposable> start_server_impl(net::tcp_accept_socket) = 0;
 
+  virtual expected<disposable> start_server_impl(net::stream_socket) = 0;
+
   expected<disposable> start_server(none_t) {
     return expected<disposable>{unexpect, caf::sec::logic_error,
                                 "invalid WebSocket server configuration"};
@@ -275,6 +321,17 @@ public:
     }
     server_config::socket sub_cfg{*maybe_fd};
     return start_server(sub_cfg);
+  }
+
+  expected<disposable> start_server(server_config::stream& cfg) {
+    if (ctx) {
+      return expected<disposable>{
+        unexpect, sec::invalid_argument,
+        "cannot combine an SSL context with serving on a pre-connected stream "
+        "socket"};
+    }
+    auto fd = cfg.take_fd();
+    return start_server_impl(std::move(fd));
   }
 
   expected<disposable> start_server() {
@@ -304,6 +361,14 @@ public:
   std::string hostname;
 
   client_config client;
+
+  /// Optional custom connector for establishing outbound TCP connections.
+  /// When set, replaces the default `detail::tcp_try_connect` call.
+  std::unique_ptr<connector> connector_;
+
+  void set_connector(std::unique_ptr<connector> c) {
+    connector_ = std::move(c);
+  }
 
   virtual expected<disposable> start_client_impl(net::ssl::connection&) = 0;
 
@@ -339,12 +404,21 @@ public:
   }
 
   expected<disposable> start_client(std::string& host, uint16_t port) {
-    auto maybe_fd = detail::tcp_try_connect(host, port, connection_timeout,
-                                            max_retry_count, retry_delay);
-    if (!maybe_fd) {
-      return expected<disposable>{unexpect, std::move(maybe_fd.error())};
+    net::stream_socket fd;
+    if (connector_) {
+      auto maybe_fd = connector_->connect(host, port, connection_timeout,
+                                          max_retry_count, retry_delay);
+      if (!maybe_fd)
+        return expected<disposable>{unexpect, std::move(maybe_fd.error())};
+      fd = *maybe_fd;
+    } else {
+      auto maybe_fd = detail::tcp_try_connect(host, port, connection_timeout,
+                                              max_retry_count, retry_delay);
+      if (!maybe_fd)
+        return expected<disposable>{unexpect, std::move(maybe_fd.error())};
+      fd = *maybe_fd;
     }
-    client_config::socket sub_cfg{*maybe_fd};
+    client_config::socket sub_cfg{fd};
     hostname = std::move(host);
     return start_client(sub_cfg);
   }

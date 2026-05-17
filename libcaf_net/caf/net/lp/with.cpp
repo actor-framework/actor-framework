@@ -141,6 +141,13 @@ public:
     return do_start_server(acc);
   }
 
+  expected<disposable> start_server_impl(net::stream_socket) override {
+    return expected<disposable>{
+      unexpect, sec::invalid_argument,
+      "serving on a pre-connected stream socket is not supported for the "
+      "length-prefix framing protocol"};
+  }
+
   template <typename Connection>
   expected<disposable> do_start_client(Connection& conn) {
     auto bridge = internal::make_lp_flow_bridge(std::move(client_pull),
