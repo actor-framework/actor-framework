@@ -11,12 +11,14 @@
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_manager.hpp"
 
+#include "caf/abstract_actor.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/connection_guard.hpp"
 #include "caf/internal/accept_handler.hpp"
+#include "caf/internal/connector.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/internal/net_config.hpp"
 #include "caf/make_counted.hpp"
@@ -113,6 +115,29 @@ private:
   action on_close_;
 };
 
+template <class Connection>
+net::socket_manager_ptr
+make_http_socket_manager(net::multiplexer* mpx, Connection conn,
+                         const std::vector<route_ptr>& routes,
+                         size_t max_consecutive_reads, size_t max_request_size,
+                         action on_close) {
+  // Create the connection guard. The router and each http::request hold a
+  // reference. When all references are released, on_close fires.
+  auto guard = make_counted<http_connection_guard>(mpx, std::move(on_close));
+  auto app = net::http::router::make(routes, std::move(guard));
+  auto serv = net::http::server::make(std::move(app));
+  serv->max_request_size(max_request_size);
+  auto transport = std::unique_ptr<net::octet_stream::transport>{};
+  if constexpr (std::is_same_v<std::decay_t<Connection>, net::ssl::connection>)
+    transport = net::ssl::transport::make(std::move(conn), std::move(serv));
+  else
+    transport = net::octet_stream::transport::make(std::move(conn),
+                                                   std::move(serv));
+  transport->max_consecutive_reads(max_consecutive_reads);
+  transport->active_policy().accept();
+  return net::socket_manager::make(mpx, std::move(transport));
+}
+
 template <class Acceptor>
 class http_conn_acceptor : public detail::connection_acceptor {
 public:
@@ -144,24 +169,10 @@ public:
     if (!conn)
       return expected<net::socket_manager_ptr>{unexpect,
                                                std::move(conn.error())};
-    // Create the connection guard. The router and each http::request hold a
-    // reference. When all references are released, on_conn_close_ fires.
     auto* mpx = parent_->mpx_ptr();
-    auto guard = make_counted<http_connection_guard>(mpx, on_conn_close_);
-    // Instantiate our protocol stack.
-    auto app = net::http::router::make(routes_, std::move(guard));
-    auto serv = net::http::server::make(std::move(app));
-    serv->max_request_size(max_request_size_);
-    auto transport = std::unique_ptr<net::octet_stream::transport>{};
-    if constexpr (std::is_same_v<std::decay_t<decltype(*conn)>,
-                                 net::ssl::connection>)
-      transport = net::ssl::transport::make(std::move(*conn), std::move(serv));
-    else
-      transport = net::octet_stream::transport::make(std::move(*conn),
-                                                     std::move(serv));
-    transport->max_consecutive_reads(max_consecutive_reads_);
-    transport->active_policy().accept();
-    auto res = net::socket_manager::make(mpx, std::move(transport));
+    auto res = make_http_socket_manager(mpx, std::move(*conn), routes_,
+                                        max_consecutive_reads_,
+                                        max_request_size_, on_conn_close_);
     mpx->watch(res->as_disposable());
     return res;
   }
@@ -200,6 +211,23 @@ make_http_conn_acceptor(net::ssl::tcp_acceptor acceptor,
                                   max_consecutive_reads, max_request_size);
 }
 
+// Builds the RFC 7230 `Host` header value from endpoint. The port is
+// omitted when it is unset, or equal to the default.
+std::string host_header_value(const uri& endpoint) {
+  const auto& scheme = endpoint.scheme();
+  auto auth = endpoint.authority();
+  if (auth.userinfo) {
+    auth.userinfo = std::nullopt; // suppress userinfo in 'Host' header field
+  }
+  if (scheme == "http" && auth.port == defaults::net::http_default_port) {
+    auth.port = 0; // suppress default HTTP port in 'Host' Header field
+  }
+  if (scheme == "https" && auth.port == defaults::net::https_default_port) {
+    auth.port = 0; // suppress default HTTPS port in 'Host' Header field
+  }
+  return to_string(auth);
+}
+
 } // namespace
 
 class with_t::config_impl : public internal::net_config {
@@ -212,8 +240,7 @@ public:
 
   using super::super;
 
-  template <class Acceptor>
-  expected<disposable> do_start_server(Acceptor& acc) {
+  expected<void> prepare_http_routes() {
     if (push) {
       auto producer = make_http_request_producer({mpx, add_ref},
                                                  push.try_open());
@@ -224,16 +251,25 @@ public:
         }
       });
       if (!new_route) {
-        return expected<disposable>{unexpect, std::move(new_route.error())};
+        return expected<void>{unexpect, std::move(new_route.error())};
       }
       routes.push_back(std::move(*new_route));
     } else if (routes.empty()) {
-      return expected<disposable>{
-        unexpect, sec::logic_error,
-        "cannot start an HTTP server without any routes"};
+      return expected<void>{unexpect, sec::logic_error,
+                            "cannot start an HTTP server without any routes"};
     }
     for (auto& ptr : routes)
       ptr->init();
+    return {};
+  }
+
+  template <class Acceptor>
+  expected<disposable> do_start_server(Acceptor& acc) {
+    auto prep = prepare_http_routes();
+    if (!prep) {
+      close(acc);
+      return expected<disposable>{unexpect, std::move(prep.error())};
+    }
     auto factory = make_http_conn_acceptor(std::move(acc), routes,
                                            max_consecutive_reads,
                                            max_request_size);
@@ -254,6 +290,34 @@ public:
 
   expected<disposable> start_server_impl(net::tcp_accept_socket acc) override {
     return do_start_server(acc);
+  }
+
+  expected<disposable> start_server_impl(net::stream_socket conn) override {
+    auto prep = prepare_http_routes();
+    if (!prep) {
+      close(conn);
+      return expected<disposable>{unexpect, std::move(prep.error())};
+    }
+    auto ptr = make_http_socket_manager(mpx, std::move(conn), routes,
+                                        max_consecutive_reads, max_request_size,
+                                        action{});
+    if (!monitored_actors.empty()) {
+      auto cb = make_action([p = ptr] { p->shutdown(); });
+      ptr->add_cleanup_listener(make_action([cb]() mutable { cb.dispose(); }));
+      auto ctx = async::execution_context_ptr{mpx, add_ref};
+      for (const auto& hdl : monitored_actors) {
+        CAF_ASSERT(hdl);
+        hdl->get()->attach_functor([ctx, cb] {
+          if (!cb.disposed())
+            ctx->schedule(cb);
+        });
+      }
+    }
+    if (mpx->start(ptr))
+      return disposable{std::move(ptr)};
+    return expected<disposable>{
+      unexpect, sec::logic_error,
+      "failed to register socket manager to net::multiplexer"};
   }
 
   template <typename Connection>
@@ -428,30 +492,15 @@ with_t::client&& with_t::client::max_retry_count(size_t value) && {
   return std::move(*this);
 }
 
+with_t::client&&
+with_t::client::connector(std::unique_ptr<internal::connector>&& c) && {
+  config_->set_connector(std::move(c));
+  return std::move(*this);
+}
+
 void with_t::client::do_add_header_field(std::string name, std::string value) {
   config_->fields.insert(std::pair{std::move(name), std::move(value)});
 }
-
-namespace {
-
-// Builds the RFC 7230 `Host` header value from @p endpoint.
-// The port is omitted when it is unset, or equal to the default (80 or 443).
-std::string host_header_value(const uri& endpoint) {
-  const auto& scheme = endpoint.scheme();
-  auto auth = endpoint.authority();
-  if (auth.userinfo) {
-    auth.userinfo = std::nullopt; // suppress userinfo in 'Host' header field
-  }
-  if (scheme == "http" && auth.port == defaults::net::http_default_port) {
-    auth.port = 0; // suppress default HTTP port in 'Host' Header field
-  }
-  if (scheme == "https" && auth.port == defaults::net::https_default_port) {
-    auth.port = 0; // suppress default HTTPS port in 'Host' Header field
-  }
-  return to_string(auth);
-}
-
-} // namespace
 
 expected<std::pair<async::future<response>, disposable>>
 with_t::client::request(http::method method, const_byte_span payload) {
@@ -462,12 +511,19 @@ with_t::client::request(http::method method, const_byte_span payload) {
     return expected<std::pair<async::future<response>, disposable>>{
       unexpect, config_->err};
   }
-  // Only connecting to an URI is enabled in the 'with' DSL.
-  using lazy_t = internal::net_config::client_config::lazy;
-  CAF_ASSERT(std::holds_alternative<lazy_t>(config_->client.value));
-  auto& lazy = std::get<lazy_t>(config_->client.value);
-  CAF_ASSERT(std::holds_alternative<uri>(lazy.server));
-  auto& endpoint = std::get<uri>(lazy.server);
+  using client_cfg = internal::net_config::client_config;
+  const uri* endpoint_ptr = nullptr;
+  if (auto* lazy = std::get_if<client_cfg::lazy>(&config_->client.value)) {
+    if (!std::holds_alternative<uri>(lazy->server)) {
+      return expected<std::pair<async::future<response>, disposable>>{
+        unexpect, sec::logic_error, "HTTP with client requires a URI endpoint"};
+    }
+    endpoint_ptr = &std::get<uri>(lazy->server);
+  } else {
+    return expected<std::pair<async::future<response>, disposable>>{
+      unexpect, sec::logic_error, "invalid HTTP with client configuration"};
+  }
+  const uri& endpoint = *endpoint_ptr;
   config_->path = endpoint.path_query_fragment();
   config_->method = method;
   config_->payload = payload;
@@ -532,6 +588,11 @@ with_t::server with_t::accept(tcp_accept_socket fd) && {
 with_t::server with_t::accept(ssl::tcp_acceptor acc) && {
   config_->ctx = acc.ctx_ptr();
   config_->server.assign(acc.fd());
+  return server{std::move(config_)};
+}
+
+with_t::server with_t::serve(net::stream_socket fd) && {
+  config_->server.assign(std::move(fd));
   return server{std::move(config_)};
 }
 
