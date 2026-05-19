@@ -10,4 +10,8 @@ actor_system_impl::~actor_system_impl() {
   // nop
 }
 
+bool actor_system_impl::is_deterministic() const noexcept {
+  return false;
+}
+
 } // namespace caf::detail
