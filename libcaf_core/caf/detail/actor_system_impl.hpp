@@ -59,6 +59,10 @@ public:
 
   virtual size_t detached_actors() const noexcept = 0;
 
+  /// Returns `true` when the implementation is the deterministic test fixture
+  /// (`deterministic_actor_system`).
+  virtual bool is_deterministic() const noexcept;
+
   virtual bool await_actors_before_shutdown() const = 0;
 
   virtual void await_actors_before_shutdown(bool new_value) = 0;

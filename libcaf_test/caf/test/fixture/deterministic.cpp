@@ -735,6 +735,10 @@ public:
     return 0;
   }
 
+  bool is_deterministic() const noexcept override {
+    return true;
+  }
+
   bool await_actors_before_shutdown() const override {
     return await_actors_before_shutdown_;
   }
