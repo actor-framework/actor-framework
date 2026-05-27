@@ -120,8 +120,8 @@ concept is_result = is_result_oracle<T>::value;
 template <class T>
 struct is_expected_oracle : std::false_type {};
 
-template <class T>
-struct is_expected_oracle<expected<T>> : std::true_type {};
+template <class T, class E>
+struct is_expected_oracle<expected<T, E>> : std::true_type {};
 
 template <class T>
 concept is_expected = is_expected_oracle<T>::value;
