@@ -130,7 +130,7 @@ TEST("typed_behavior_assignment") {
   // compatible handlers resulting in perfect match
   auto f1 = [=](int) { return 0.; };
   auto f2 = [=](double, double) -> result<int, int> { return {0, 0}; };
-  // incompatbile handlers
+  // incompatible handlers
   auto e1 = [=](int) { return 0.f; };
   auto e2 = [=](double, double) { return std::make_tuple(0.f, 0.f); };
   // omit one handler
