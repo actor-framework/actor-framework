@@ -42,6 +42,12 @@ public:
       set(name, level);
   }
 
+  /// Returns all level-to-name mappings currently stored in this map.
+  /// Elements are sorted in descending order by log level.
+  [[nodiscard]] const auto& mapping() const noexcept {
+    return mapping_;
+  }
+
 private:
   std::vector<std::pair<unsigned, std::string>> mapping_;
 };

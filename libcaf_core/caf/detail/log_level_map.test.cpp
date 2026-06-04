@@ -84,6 +84,19 @@ TEST("log level maps allow overriding default log level names") {
   check_eq(uut[level::trace + 1], "TRACE");
 }
 
+TEST("log level maps expose their mapping for iteration") {
+  detail::log_level_map uut;
+  check_eq(uut.mapping().size(), 5u);
+}
+
+TEST("log level maps reflect custom levels in mapping") {
+  std::map<std::string, unsigned> custom{{"NOTICE"s, CAF_LOG_LEVEL_WARNING + 1},
+                                         {"VERBOSE"s, CAF_LOG_LEVEL_INFO + 1}};
+  detail::log_level_map uut;
+  uut.set(custom);
+  check_eq(uut.mapping().size(), 7u);
+}
+
 TEST("log level maps allow case-insensitive lookup by name") {
   std::map<std::string, unsigned> custom{{"NOTICE"s, CAF_LOG_LEVEL_WARNING + 1},
                                          {"VERBOSE"s, CAF_LOG_LEVEL_INFO + 1}};
