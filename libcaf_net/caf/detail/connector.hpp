@@ -24,8 +24,7 @@ public:
 
   virtual expected<net::stream_socket>
   connect(const std::string& host, uint16_t port, timespan connection_timeout,
-          size_t max_retry_count, timespan retry_delay)
-    = 0;
+          size_t max_retry_count, timespan retry_delay) = 0;
 };
 
 } // namespace caf::detail

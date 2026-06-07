@@ -76,8 +76,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Connect to the server.
-  auto [line_producer, line_pull]
-    = caf::async::make_blocking_producer<caf::chunk>();
+  auto [line_producer,
+        line_pull] = caf::async::make_blocking_producer<caf::chunk>();
   auto conn
     = caf::net::lp::with(sys)
         // Optionally enable TLS.

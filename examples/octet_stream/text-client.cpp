@@ -56,8 +56,8 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto use_tls = caf::get_or(cfg, "tls.enable", false);
   auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
   // Connect to the server.
-  auto [line_producer, line_pull]
-    = caf::async::make_blocking_producer<caf::cow_string>();
+  auto [line_producer,
+        line_pull] = caf::async::make_blocking_producer<caf::cow_string>();
   auto conn
     = caf::net::octet_stream::with(sys)
         // Optionally enable TLS.
