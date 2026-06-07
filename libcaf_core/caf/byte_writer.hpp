@@ -29,9 +29,8 @@ public:
   /// Overrides the buffer at `offset` with `content`.
   /// @returns `true` if the buffer had enough space to hold `content`, `false`
   ///          otherwise.
-  [[nodiscard]] virtual bool
-  update(size_t offset, const_byte_span content) noexcept
-    = 0;
+  [[nodiscard]] virtual bool update(size_t offset,
+                                    const_byte_span content) noexcept = 0;
 };
 
 } // namespace caf

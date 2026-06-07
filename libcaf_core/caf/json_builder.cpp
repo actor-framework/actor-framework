@@ -633,7 +633,7 @@ private:
 };
 
 json_builder::json_builder(caf::actor_handle_codec* codec)
-  : super(new(impl_storage_) json_builder_impl(codec)) {
+  : super(new (impl_storage_) json_builder_impl(codec)) {
   static_assert(sizeof(json_builder_impl) <= impl_storage_size);
 }
 

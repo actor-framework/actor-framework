@@ -665,7 +665,7 @@ private:
 
 config_value_reader::config_value_reader(const config_value* input,
                                          caf::actor_handle_codec* codec)
-  : super(new(impl_storage_) config_value_reader_impl(input, codec)) {
+  : super(new (impl_storage_) config_value_reader_impl(input, codec)) {
   static_assert(sizeof(config_value_reader_impl) <= impl_storage_size);
 }
 

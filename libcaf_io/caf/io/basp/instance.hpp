@@ -44,8 +44,7 @@ public:
     /// Called if a server handshake was received and
     /// the connection to `nid` is established.
     virtual void finalize_handshake(const node_id& nid, actor_id aid,
-                                    std::set<std::string>& sigs)
-      = 0;
+                                    std::set<std::string>& sigs) = 0;
 
     /// Called whenever a direct connection was closed or a
     /// node became unreachable for other reasons *before*
@@ -60,9 +59,8 @@ public:
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
-    virtual void
-    learned_new_node_directly(const node_id& nid, bool was_known_indirectly)
-      = 0;
+    virtual void learned_new_node_directly(const node_id& nid,
+                                           bool was_known_indirectly) = 0;
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.

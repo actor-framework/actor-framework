@@ -28,14 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install clang-format-19
-        run: |
-          sudo apt-get update -y \
-            && sudo apt-get install -y --no-install-recommends \
-              clang-format-19
-      - name: clang-format
-        run: |
-          find libcaf* -name '*.[ch]pp' | xargs clang-format-19 --dry-run --Werror
+      - name: Install clang-format
+        run: sudo pip install --break-system-package clang-format==22.1.5
+      - name: Run clang-format
+        run: find libcaf* -name '*.[ch]pp' | xargs clang-format --dry-run --Werror
 
   spell-checking:
     runs-on: ubuntu-latest

@@ -503,7 +503,7 @@ private:
 
 config_value_writer::config_value_writer(config_value* dst,
                                          caf::actor_handle_codec* codec)
-  : super(new(impl_storage_) config_value_writer_impl(dst, codec)) {
+  : super(new (impl_storage_) config_value_writer_impl(dst, codec)) {
   static_assert(sizeof(config_value_writer_impl) <= impl_storage_size);
 }
 

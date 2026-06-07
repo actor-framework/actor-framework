@@ -67,12 +67,12 @@ public:
 
   /// Reports a failed check with a binary predicate.
   virtual void fail(binary_predicate type, std::string_view lhs,
-                    std::string_view rhs, const std::source_location& location)
-    = 0;
+                    std::string_view rhs,
+                    const std::source_location& location) = 0;
 
   /// Reports a failed check (unary predicate).
-  virtual void fail(std::string_view arg, const std::source_location& location)
-    = 0;
+  virtual void fail(std::string_view arg,
+                    const std::source_location& location) = 0;
 
   virtual void unhandled_exception(std::string_view msg) = 0;
 

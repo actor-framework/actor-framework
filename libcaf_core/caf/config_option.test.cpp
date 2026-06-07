@@ -39,8 +39,8 @@ OUTLINE("config options parse their parameters for long, short and env names") {
     WHEN("constructing a config option with these parameters") {
       THEN("long name is <long>, short name is <short>, env name is <env> "
            "and flat is <flat>") {
-        auto [lname, sname, ename, flat]
-          = block_parameters<string, string, string, bool>();
+        auto [lname, sname, ename,
+              flat] = block_parameters<string, string, string, bool>();
         auto uut = config_option{category, name, desc, &dummy};
         auto category_name = category;
         if (category_name.front() == '?')

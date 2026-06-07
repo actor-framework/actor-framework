@@ -20,13 +20,12 @@ public:
 
   /// Called by the underlying I/O device whenever it received data.
   /// @returns `true` if the manager accepts further reads, otherwise `false`.
-  virtual bool consume(scheduler*, datagram_handle hdl, receive_buffer& buf)
-    = 0;
+  virtual bool consume(scheduler*, datagram_handle hdl,
+                       receive_buffer& buf) = 0;
 
   /// Called by the underlying I/O device whenever it sent data.
-  virtual void
-  datagram_sent(scheduler*, datagram_handle hdl, size_t, byte_buffer buffer)
-    = 0;
+  virtual void datagram_sent(scheduler*, datagram_handle hdl, size_t,
+                             byte_buffer buffer) = 0;
 
   /// Called by the underlying I/O device to indicate that a new remote
   /// endpoint has been detected, passing in the received datagram.

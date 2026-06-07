@@ -705,7 +705,7 @@ private:
 // -- constructors, destructors, and assignment operators ----------------------
 
 json_writer::json_writer(caf::actor_handle_codec* codec)
-  : super(new(impl_storage_) json_writer_impl(codec)) {
+  : super(new (impl_storage_) json_writer_impl(codec)) {
   static_assert(sizeof(json_writer_impl) <= impl_storage_size);
 }
 

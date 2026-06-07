@@ -66,8 +66,8 @@ public:
     template <class OnStart>
     [[nodiscard]] expected<disposable> start(OnStart on_start) && {
       static_assert(std::is_invocable_v<OnStart, pull_t>);
-      auto [pull, push]
-        = async::make_spsc_buffer_resource<accept_event<chunk>>();
+      auto [pull,
+            push] = async::make_spsc_buffer_resource<accept_event<chunk>>();
       auto res = do_start(std::move(push));
       if (res) {
         on_start(std::move(pull));
