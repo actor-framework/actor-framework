@@ -33,8 +33,8 @@ public:
   /// @returns The number of consumed bytes or a negative value to signal an
   ///          error.
   /// @note Discarded data is lost permanently.
-  virtual ptrdiff_t consume(const request_header& hdr, const_byte_span payload)
-    = 0;
+  virtual ptrdiff_t consume(const request_header& hdr,
+                            const_byte_span payload) = 0;
 
   /// Begins a chunked message.
   /// @param hdr The header fields for the incoming message.
@@ -67,8 +67,8 @@ public:
   /// @returns The number of consumed bytes or a negative value to signal an
   ///          error.
   /// @note Discarded data is lost permanently.
-  virtual ptrdiff_t consume(const response_header& hdr, const_byte_span payload)
-    = 0;
+  virtual ptrdiff_t consume(const response_header& hdr,
+                            const_byte_span payload) = 0;
 
   /// Initializes the upper layer.
   /// @param down A pointer to the lower layer that remains valid for the

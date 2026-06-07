@@ -4,7 +4,6 @@ FROM debian:12
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
       ca-certificates \
-      clang-format-19 \
       clangd \
       cmake \
       cppcheck \
@@ -19,13 +18,12 @@ RUN apt-get update -y \
       python3-pip \
       vim
 
-# Set clang-format-19 as the default clang-format.
-RUN update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-19 100 \
-    && update-alternatives --set clang-format /usr/bin/clang-format-19
-
 # Install Robot dependencies
 COPY robot/dependencies.txt /tmp/robot-dependencies.txt
 RUN python3 -m pip install -r /tmp/robot-dependencies.txt --break-system-packages
+
+# Install clang-format 22 (same version as used in CI).
+RUN python3 -m pip install --break-system-package clang-format==22.1.5
 
 # Have CMake use Ninja as the default generator
 ENV CMAKE_GENERATOR=Ninja

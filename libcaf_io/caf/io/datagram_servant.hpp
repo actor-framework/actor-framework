@@ -54,8 +54,8 @@ public:
 
   /// Adds a new remote endpoint identified by the `ip_endpoint` to
   /// the related manager.
-  virtual void add_endpoint(const network::ip_endpoint& ep, datagram_handle hdl)
-    = 0;
+  virtual void add_endpoint(const network::ip_endpoint& ep,
+                            datagram_handle hdl) = 0;
 
   virtual void remove_endpoint(datagram_handle hdl) = 0;
 

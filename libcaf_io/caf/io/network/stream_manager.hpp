@@ -23,9 +23,8 @@ public:
   virtual bool consume(scheduler* ctx, const void* buf, size_t bsize) = 0;
 
   /// Called by the underlying I/O device whenever it sent data.
-  virtual void
-  data_transferred(scheduler* ctx, size_t num_bytes, size_t remaining_bytes)
-    = 0;
+  virtual void data_transferred(scheduler* ctx, size_t num_bytes,
+                                size_t remaining_bytes) = 0;
 
   /// Get the port of the underlying I/O device.
   virtual uint16_t port() const = 0;

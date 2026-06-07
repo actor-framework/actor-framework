@@ -17,14 +17,12 @@ public:
   virtual ~flow_bridge_initializer();
 
   /// Connects the output of the bridge to the socket.
-  virtual void
-  init_outputs(flow::coordinator* self, flow::observer<std::byte> out)
-    = 0;
+  virtual void init_outputs(flow::coordinator* self,
+                            flow::observer<std::byte> out) = 0;
 
   /// Connects the input of the socket to the bridge.
-  virtual void
-  init_inputs(flow::coordinator* self, flow::observable<std::byte> in)
-    = 0;
+  virtual void init_inputs(flow::coordinator* self,
+                           flow::observable<std::byte> in) = 0;
 };
 
 template <class Trait>

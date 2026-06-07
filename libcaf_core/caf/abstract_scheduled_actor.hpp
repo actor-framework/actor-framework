@@ -43,16 +43,14 @@ public:
   // -- message processing -----------------------------------------------------
 
   /// Adds a callback for an awaited response.
-  virtual void add_awaited_response_handler(message_id response_id,
-                                            behavior bhvr,
-                                            disposable pending_timeout = {})
-    = 0;
+  virtual void
+  add_awaited_response_handler(message_id response_id, behavior bhvr,
+                               disposable pending_timeout = {}) = 0;
 
   /// Adds a callback for a multiplexed response.
-  virtual void add_multiplexed_response_handler(message_id response_id,
-                                                behavior bhvr,
-                                                disposable pending_timeout = {})
-    = 0;
+  virtual void
+  add_multiplexed_response_handler(message_id response_id, behavior bhvr,
+                                   disposable pending_timeout = {}) = 0;
 
   /// Calls the default error handler.
   virtual void call_error_handler(error& what) = 0;

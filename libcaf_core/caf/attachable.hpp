@@ -37,9 +37,8 @@ public:
 
   /// Executed if the actor finished execution with given `reason`.
   /// @warning `sched` can be `nullptr`
-  virtual void
-  actor_exited(abstract_actor* self, const error& reason, scheduler* sched)
-    = 0;
+  virtual void actor_exited(abstract_actor* self, const error& reason,
+                            scheduler* sched) = 0;
 
   /// Returns `true` if `what` selects this instance, otherwise `false`.
   virtual bool matches(const internal::attachable_predicate& pred) const;

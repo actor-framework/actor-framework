@@ -77,8 +77,7 @@ private:
   public:
     virtual flow::observable<T> observe_on(flow::coordinator* parent,
                                            size_t buffer_size,
-                                           size_t min_request_size) const
-      = 0;
+                                           size_t min_request_size) const = 0;
   };
 
   // Default implementation of the internal interface for wrapping a regular

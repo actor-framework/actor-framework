@@ -92,8 +92,8 @@ request_header::parse(std::string_view raw) {
     return {status::bad_request, "Empty header."};
   raw_.assign(raw.begin(), raw.end());
   // Parse the first line, i.e., "METHOD REQUEST-URI VERSION".
-  auto [first_line, remainder]
-    = split_by(std::string_view{raw_.data(), raw_.size()}, eol);
+  auto [first_line,
+        remainder] = split_by(std::string_view{raw_.data(), raw_.size()}, eol);
   auto [method_str, first_line_remainder] = split_by(first_line, " ");
   // Verify and store the method.
   if (icase_equal(method_str, "get")) {

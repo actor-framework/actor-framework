@@ -32,9 +32,8 @@ public:
   /// @param body The payload from the client.
   /// @param parent Pointer to the object that uses this route.
   /// @return `true` if the route matches the request, `false` otherwise.
-  virtual bool
-  exec(const request_header& hdr, const_byte_span body, router* parent)
-    = 0;
+  virtual bool exec(const request_header& hdr, const_byte_span body,
+                    router* parent) = 0;
 
   /// Called by the HTTP server when starting up. May be used to spin up workers
   /// that the path dispatches to. The default implementation does nothing.

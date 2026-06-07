@@ -788,8 +788,8 @@ scheduled_actor::categorize(mailbox_element& x) {
       return message_category::internal;
     }
     case type_id_v<stream_ack_msg>: {
-      auto [origin, sink_id, src_id, mipb]
-        = msg_content.get_as<stream_ack_msg>(0);
+      auto [origin, sink_id, src_id,
+            mipb] = msg_content.get_as<stream_ack_msg>(0);
       static_cast<void>(origin);
       if (auto i = stream_bridges_.find(sink_id); i != stream_bridges_.end()) {
         auto bridge = i->second;

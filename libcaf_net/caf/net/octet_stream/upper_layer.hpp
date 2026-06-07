@@ -28,8 +28,8 @@ public:
   /// @param delta Bytes that arrived since last calling this function.
   /// @returns The number of consumed bytes. May be zero if waiting for more
   ///          input or negative to signal an error.
-  [[nodiscard]] virtual ptrdiff_t consume(byte_span buffer, byte_span delta)
-    = 0;
+  [[nodiscard]] virtual ptrdiff_t consume(byte_span buffer,
+                                          byte_span delta) = 0;
 
   /// Called from the lower layer whenever data has been written.
   virtual void written(size_t num_bytes);

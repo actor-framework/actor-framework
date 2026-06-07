@@ -66,8 +66,8 @@ response_header::parse(std::string_view raw) {
     return {status::bad_request, "Empty header."};
   raw_.assign(raw.begin(), raw.end());
   // Parse the first line, i.e., "VERSION STATUS STATUS-TEXT".
-  auto [first_line, remainder]
-    = split_by(std::string_view{raw_.data(), raw_.size()}, eol);
+  auto [first_line,
+        remainder] = split_by(std::string_view{raw_.data(), raw_.size()}, eol);
   auto [version_str, first_line_remainder] = split_by(first_line, " ");
   auto [status_str, status_text_line] = split_by(first_line_remainder, " ");
   if (!validate_http_version(version_str)) {

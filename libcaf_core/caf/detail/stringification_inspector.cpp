@@ -47,8 +47,7 @@ public:
     = delete;
 
   stringification_inspector_impl&
-  operator=(const stringification_inspector_impl&)
-    = delete;
+  operator=(const stringification_inspector_impl&) = delete;
 
   // -- properties -------------------------------------------------------------
 
@@ -391,7 +390,7 @@ private:
 // -- constructors, destructors, and assignment operators --------------------
 
 stringification_inspector::stringification_inspector(std::string& result)
-  : super(new(impl_storage_) stringification_inspector_impl(result)) {
+  : super(new (impl_storage_) stringification_inspector_impl(result)) {
   static_assert(sizeof(stringification_inspector_impl) <= impl_storage_size);
 }
 
