@@ -4,13 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/net_export.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/type_id.hpp"
 
-#include <memory>
 #include <vector>
 
 namespace caf::net {
@@ -156,3 +154,9 @@ enum class format;
 enum class tls;
 
 } // namespace caf::net::ssl
+
+namespace caf::detail {
+
+class connector;
+
+} // namespace caf::detail

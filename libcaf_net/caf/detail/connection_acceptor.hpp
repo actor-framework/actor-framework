@@ -7,6 +7,7 @@
 #include "caf/net/fwd.hpp"
 
 #include "caf/action.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 
 #include <memory>

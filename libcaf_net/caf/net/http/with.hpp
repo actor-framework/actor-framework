@@ -8,12 +8,14 @@
 #include "caf/net/http/route.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/ssl/context.hpp"
+#include "caf/net/stream_socket.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 
 #include "caf/actor_cast.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/forward_like.hpp"
 #include "caf/fwd.hpp"
+#include "caf/uri.hpp"
 
 #include <cstdint>
 #include <string>
@@ -246,6 +248,10 @@ public:
     expected<std::pair<async::future<response>, disposable>>
     request(http::method method, const_byte_span payload);
 
+    /// Installs a custom connector for establishing the TCP connection. This
+    /// setter is intended for unit tests, not for production use.
+    [[nodiscard]] client&& connector(std::unique_ptr<detail::connector>&&) &&;
+
   private:
     void do_add_header_field(std::string name, std::string value);
 
@@ -312,6 +318,12 @@ public:
   /// @param fd File descriptor for the accept socket.
   /// @returns an `server` object that will start a server on `fd`.
   [[nodiscard]] server accept(tcp_accept_socket fd) &&;
+
+  /// Creates a new server factory for an already-connected stream socket, for
+  /// example one end of a socket pair from @ref net::make_stream_socket_pair.
+  /// @param fd The stream socket that speaks HTTP to exactly one peer.
+  /// @returns a `server` object that will run the protocol on `fd`.
+  [[nodiscard]] server serve(stream_socket fd) &&;
 
   /// Creates a new server factory object for the given acceptor.
   /// @param acc The SSL acceptor for incoming TCP connections.
