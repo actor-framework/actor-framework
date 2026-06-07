@@ -16,9 +16,9 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/connector.hpp"
 #include "caf/disposable.hpp"
 #include "caf/format_to_unexpected.hpp"
-#include "caf/internal/connector.hpp"
 #include "caf/log/net.hpp"
 #include "caf/none.hpp"
 #include "caf/uri.hpp"
@@ -364,11 +364,7 @@ public:
 
   /// Optional custom connector for establishing outbound TCP connections.
   /// When set, replaces the default `detail::tcp_try_connect` call.
-  std::unique_ptr<connector> connector_;
-
-  void set_connector(std::unique_ptr<connector> c) {
-    connector_ = std::move(c);
-  }
+  std::unique_ptr<detail::connector> connector_;
 
   virtual expected<disposable> start_client_impl(net::ssl::connection&) = 0;
 

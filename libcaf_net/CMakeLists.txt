@@ -31,6 +31,7 @@ caf_add_component(
   SOURCES
     caf/detail/connection_acceptor.cpp
     caf/detail/connection_guard.cpp
+    caf/detail/connector.cpp
     caf/detail/flow_bridge_initializer.cpp
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp

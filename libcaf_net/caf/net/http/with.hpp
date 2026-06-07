@@ -20,10 +20,6 @@
 #include <cstdint>
 #include <string>
 
-namespace caf::internal {
-class connector;
-} // namespace caf::internal
-
 namespace caf::net::http {
 
 /// Entry point for the `with(...)` DSL.
@@ -253,9 +249,8 @@ public:
     request(http::method method, const_byte_span payload);
 
     /// Installs a custom connector for establishing the TCP connection. This
-    /// setter is intended for unit tests only and is not part of the public
-    /// API.
-    [[nodiscard]] client&& connector(std::unique_ptr<internal::connector>&&) &&;
+    /// setter is intended for unit tests, not for production use.
+    [[nodiscard]] client&& connector(std::unique_ptr<detail::connector>&&) &&;
 
   private:
     void do_add_header_field(std::string name, std::string value);

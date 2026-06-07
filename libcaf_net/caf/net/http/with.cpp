@@ -17,8 +17,8 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/connection_guard.hpp"
+#include "caf/detail/connector.hpp"
 #include "caf/internal/accept_handler.hpp"
-#include "caf/internal/connector.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/internal/net_config.hpp"
 #include "caf/make_counted.hpp"
@@ -493,8 +493,8 @@ with_t::client&& with_t::client::max_retry_count(size_t value) && {
 }
 
 with_t::client&&
-with_t::client::connector(std::unique_ptr<internal::connector>&& c) && {
-  config_->set_connector(std::move(c));
+with_t::client::connector(std::unique_ptr<detail::connector>&& ptr) && {
+  config_->connector_ = std::move(ptr);
   return std::move(*this);
 }
 

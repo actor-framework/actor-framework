@@ -15,9 +15,9 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/connector.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
-#include "caf/internal/connector.hpp"
 #include "caf/uri.hpp"
 
 #include <chrono>
@@ -32,7 +32,7 @@ namespace {
 
 /// A connector that returns a pre-existing socket on the first connect call.
 /// Intended for unit tests that use connected socket pairs.
-class socket_connector : public internal::connector {
+class socket_connector : public detail::connector {
 public:
   explicit socket_connector(net::stream_socket fd) : fd_(fd) {
   }
