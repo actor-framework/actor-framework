@@ -99,6 +99,7 @@ caf_add_component(
     caf/actor_system_config.cpp
     caf/actor_system_config.test.cpp
     caf/actor_system_module.cpp
+    caf/actor_system_module.test.cpp
     caf/actor_termination.test.cpp
     caf/anon_mail.test.cpp
     caf/async/batch.cpp
