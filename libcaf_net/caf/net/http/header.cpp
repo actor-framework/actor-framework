@@ -103,6 +103,16 @@ bool header::chunked_transfer_encoding() const noexcept {
   return field("Transfer-Encoding").find("chunked") != std::string_view::npos;
 }
 
+bool header::has_token(std::string_view key,
+                       std::string_view token) const noexcept {
+  std::vector<std::string_view> parts;
+  split(parts, field(key), ",;");
+  return std::any_of(parts.begin(), parts.end(),
+                     [token](std::string_view part) {
+                       return icase_equal(trim(part), token);
+                     });
+}
+
 std::optional<size_t> header::content_length() const noexcept {
   return field_as<size_t>("Content-Length");
 }

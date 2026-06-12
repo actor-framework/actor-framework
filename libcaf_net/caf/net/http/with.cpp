@@ -424,8 +424,20 @@ with_t::server&& with_t::server::max_connections(size_t value) && {
   return std::move(*this);
 }
 
+with_t::server&& with_t::server::max_connections(expected<size_t> value) && {
+  if (value)
+    config_->max_connections = *value;
+  return std::move(*this);
+}
+
 with_t::server&& with_t::server::max_request_size(size_t value) && {
   config_->max_request_size = value;
+  return std::move(*this);
+}
+
+with_t::server&& with_t::server::max_request_size(expected<size_t> value) && {
+  if (value)
+    config_->max_request_size = *value;
   return std::move(*this);
 }
 

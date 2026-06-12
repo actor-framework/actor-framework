@@ -82,6 +82,11 @@ public:
     return false;
   }
 
+  /// Checks whether the field `key` contains `token` as one of its
+  /// comma- or semicolon-separated elements, using a case-insensitive
+  /// compare.
+  bool has_token(std::string_view key, std::string_view token) const noexcept;
+
   /// Returns the value of the field with the specified key as the requested
   /// type T, or std::nullopt if the field is not found or cannot be converted.
   template <class T>

@@ -61,6 +61,16 @@ TEST("parsing an HTTP request") {
     check_eq(hdr.field_as<float>("number"), 150.0);
     check_eq(hdr.field_as<int>("Host"), std::nullopt);
   }
+  SECTION("has_token checks for a token inside a field, ignoring case") {
+    net::http::header content_type_hdr;
+    content_type_hdr.parse_fields(
+      "Content-Type: multipart/form-data; boundary=abc123\r\n\r\n");
+    check(content_type_hdr.has_token("Content-Type", "multipart/form-data"));
+    check(content_type_hdr.has_token("Content-Type", "MULTIPART/FORM-DATA"));
+    check(content_type_hdr.has_token("Content-Type", "boundary=abc123"));
+    check(!content_type_hdr.has_token("Content-Type", "text/plain"));
+    check(!content_type_hdr.has_token("Foo", "multipart/form-data"));
+  }
   SECTION("parse_fields returns the HTTP body as remainder") {
     hdr.clear();
     auto remainder = hdr.parse_fields("Host: localhost:8090\r\n"
