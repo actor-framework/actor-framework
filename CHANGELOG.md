@@ -172,6 +172,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix a heap-buffer-overflow in the test runner on missing CLI arguments. For
   example, running `caf-core-test -s` previously crashed (`-s` requires an
   argument, #2384).
+- When using the HTTP server API with an SPSC buffer, the HTTP server now
+  responds with `503 Service Unavailable` when encountering backpressure from
+  the consumer, i.e., if the HTTP client sends requests faster than the server
+  can process them.
 
 ### Removed
 
