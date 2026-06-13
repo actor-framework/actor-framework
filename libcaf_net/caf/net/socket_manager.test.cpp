@@ -429,4 +429,73 @@ SCENARIO("shutting down on scheduled action") {
   }
 }
 
+/// Event layer that postpones cleanup until a later write event.
+class deferred_cleanup_layer : public test_event_layer {
+public:
+  using super = test_event_layer;
+
+  using super::super;
+
+  error start(net::socket_manager* mgr) override {
+    std::ignore = super::start(mgr);
+    return {};
+  }
+
+  void abort(const error&) override {
+    metrics_->counter_singleton("test", "aborts", "test")->inc();
+  }
+
+  bool finalized() const noexcept override {
+    return finalized_;
+  }
+
+  void handle_write_event() override {
+    metrics_->counter_singleton("test", "write-events", "test")->inc();
+    finalized_ = true;
+  }
+
+private:
+  bool finalized_ = false;
+};
+
+SCENARIO("disposing a socket manager only aborts once and defers cleanup") {
+  GIVEN("an event layer that finalizes on a later write event") {
+    auto mgr = start<deferred_cleanup_layer>(fd1);
+    require_metric_eq("test", "constructed", 1);
+    require_metric_eq("test", "started", 1);
+    WHEN("the manager is disposed twice before cleanup") {
+      mgr->dispose();
+      mgr->dispose();
+      mgr->mpx().apply_updates();
+      THEN("the handler aborts once and remains alive until finalized") {
+        require_metric_eq("test", "aborts", 1);
+      }
+    }
+    AND_WHEN("the handler finalizes on a later write event") {
+      mgr->handle_write_event();
+      THEN("the manager cleans up") {
+        require_metric_eq("test", "write-events", 1);
+        require_metric_eq("test", "destructed", 1);
+        check(connection_closes(fd2));
+      }
+    }
+  }
+}
+
+SCENARIO("hard socket errors clean up immediately") {
+  GIVEN("an event layer that finalizes on a later write event") {
+    auto mgr = start<deferred_cleanup_layer>(fd1);
+    require_metric_eq("test", "constructed", 1);
+    require_metric_eq("test", "started", 1);
+    WHEN("the manager receives a hard socket error") {
+      mgr->handle_error(sec::socket_operation_failed);
+      THEN("the handler aborts and the manager cleans up right away") {
+        require_metric_eq("test", "aborts", 1);
+        require_metric_eq("test", "destructed", 1);
+        check(connection_closes(fd2));
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(fixture)
