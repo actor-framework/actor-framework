@@ -320,7 +320,7 @@ public:
     if constexpr (requires { Trait::context(self_); }) {
       sched = Trait::context(self_);
     }
-    ptr->enqueue(make_mailbox_element(actor_cast(self_, strong_ref),
+    ptr->enqueue(make_mailbox_element(Trait::ref(self_, strong_ref),
                                       make_message_id(Priority),
                                       std::move(content_)),
                  sched);
