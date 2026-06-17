@@ -70,7 +70,7 @@ public:
     [[maybe_unused]] context_guard guard{self_};
     auto* ptr = actor_cast<abstract_actor*>(receiver);
     auto& clock = ptr->home_system().clock();
-    return clock.schedule_message(actor_cast(self_, self_ref_tag),
+    return clock.schedule_message(Trait::ref(self_, self_ref_tag),
                                   actor_cast(receiver, ref_tag), timeout_,
                                   make_message_id(Priority),
                                   std::move(content_));
@@ -105,10 +105,10 @@ public:
     using result_t = std::pair<delegated_t, disposable>;
     [[maybe_unused]] context_guard guard{self_};
     if (!receiver) {
-      self_->do_delegate_error();
+      Trait::delegate_error(self_);
       return result_t{delegated_t{}, disposable{}};
     }
-    auto [mid, sender] = self_->template do_delegate<Priority>();
+    auto [mid, sender] = Trait::template delegate<Priority>(self_);
     auto* ptr = actor_cast<abstract_actor*>(receiver);
     auto& clock = ptr->home_system().clock();
     auto hdl = clock.schedule_message(actor_cast(sender, self_ref_tag),
@@ -145,20 +145,21 @@ public:
     using response_type = response_type_t<typename Handle::signatures, Args...>;
     using response_handle =
       typename Trait::template delayed_response_handle<response_type>;
-    auto mid = self_->new_request_id(Priority);
+    auto mid = Trait::new_request_id(self_, Priority);
     if constexpr (response_handle::is_blocking) {
       disposable in_flight;
       if (receiver) {
-        auto& clock = self_->clock();
-        in_flight = clock.schedule_message(actor_cast(self_, self_ref_tag),
+        auto& clock = Trait::clock(self_);
+        in_flight = clock.schedule_message(Trait::ref(self_, self_ref_tag),
                                            actor_cast(receiver, ref_tag),
                                            timeout_, mid, std::move(content_));
 
       } else {
-        self_->enqueue(make_mailbox_element(actor_cast(self_, strong_ref),
-                                            mid.response_id(),
-                                            make_error(sec::invalid_request)),
-                       current_scheduler());
+        Trait::send(self_,
+                    make_mailbox_element(Trait::ref(self_, strong_ref),
+                                         mid.response_id(),
+                                         make_error(sec::invalid_request)),
+                    Trait::context(self_));
       }
       return response_handle{self_, mid.response_id(), relative_timeout,
                              std::move(in_flight)};
@@ -166,22 +167,23 @@ public:
       disposable in_flight_response;
       disposable in_flight_timeout;
       if (receiver) {
-        auto& clock = self_->clock();
+        auto& clock = Trait::clock(self_);
         if (relative_timeout != infinite) {
           in_flight_timeout = clock.schedule_message(
-            nullptr, actor_cast(self_, weak_ref), timeout_ + relative_timeout,
+            nullptr, Trait::ref(self_, weak_ref), timeout_ + relative_timeout,
             mid.response_id(), make_message(make_error(sec::request_timeout)));
         }
         in_flight_response
-          = clock.schedule_message(actor_cast(self_, self_ref_tag),
+          = clock.schedule_message(Trait::ref(self_, self_ref_tag),
                                    actor_cast(receiver, ref_tag), timeout_, mid,
                                    std::move(content_));
 
       } else {
-        self_->enqueue(make_mailbox_element(actor_cast(self_, strong_ref),
-                                            mid.response_id(),
-                                            make_error(sec::invalid_request)),
-                       current_scheduler());
+        Trait::send(self_,
+                    make_mailbox_element(Trait::ref(self_, strong_ref),
+                                         mid.response_id(),
+                                         make_error(sec::invalid_request)),
+                    Trait::context(self_));
       }
       return response_handle{self_, mid.response_id(),
                              std::move(in_flight_timeout),
@@ -240,30 +242,31 @@ public:
     pending_msgs.reserve(destinations.size());
     std::vector<disposable> pending_requests;
     pending_requests.reserve(destinations.size());
-    auto& clock = self_->clock();
-    auto self_handle = actor_cast(self_, self_ref_tag);
+    auto& clock = Trait::clock(self_);
+    auto self_handle = Trait::ref(self_, self_ref_tag);
     for (const auto& dest : destinations) {
       if (!dest)
         continue;
-      auto req_id = self_->new_request_id(Priority);
+      auto req_id = Trait::new_request_id(self_, Priority);
       // Schedule the request message for delivery
       pending_requests.push_back(clock.schedule_message(
         self_handle, actor_cast(dest, ref_tag), timeout_, req_id, content_));
       // Schedule timeout for response
       if (relative_timeout != infinite) {
         pending_msgs.emplace_back(clock.schedule_message(
-          nullptr, actor_cast(self_, weak_ref), timeout_ + relative_timeout,
+          nullptr, Trait::ref(self_, weak_ref), timeout_ + relative_timeout,
           req_id.response_id(),
           make_message(make_error(sec::request_timeout))));
       }
       ids.emplace_back(req_id.response_id());
     }
     if (ids.empty()) {
-      auto req_id = self_->new_request_id(Priority);
-      self_->enqueue(make_mailbox_element(actor_cast(self_, strong_ref),
-                                          req_id.response_id(),
-                                          make_error(sec::invalid_argument)),
-                     current_scheduler());
+      auto req_id = Trait::new_request_id(self_, Priority);
+      Trait::send(self_,
+                  make_mailbox_element(Trait::ref(self_, strong_ref),
+                                       req_id.response_id(),
+                                       make_error(sec::invalid_argument)),
+                  Trait::context(self_));
       ids.emplace_back(req_id.response_id());
     }
     using response_type
@@ -284,15 +287,6 @@ private:
   using signatures = typename Trait::signatures;
 
   using context_guard = typename Trait::context_guard;
-
-  scheduler* current_scheduler() const noexcept {
-    using actor_type = std::remove_pointer_t<self_pointer>;
-    if constexpr (detail::has_context<actor_type>) {
-      return self_->context();
-    } else {
-      return nullptr;
-    }
-  }
 
   self_pointer self_;
   message content_;
@@ -322,10 +316,14 @@ public:
       return;
     [[maybe_unused]] context_guard guard{self_};
     auto* ptr = actor_cast<abstract_actor*>(receiver);
+    scheduler* sched = nullptr;
+    if constexpr (requires { Trait::context(self_); }) {
+      sched = Trait::context(self_);
+    }
     ptr->enqueue(make_mailbox_element(actor_cast(self_, strong_ref),
                                       make_message_id(Priority),
                                       std::move(content_)),
-                 current_scheduler());
+                 sched);
   }
 
   /// Sends the message to `receiver`.
@@ -336,14 +334,14 @@ public:
     using result_t = delegated_response_type_t<Handle, Args...>;
     [[maybe_unused]] context_guard guard{self_};
     if (!receiver) {
-      self_->do_delegate_error();
+      Trait::delegate_error(self_);
       return result_t{};
     }
-    auto [mid, sender] = self_->template do_delegate<Priority>();
+    auto [mid, sender] = Trait::template delegate<Priority>(self_);
     auto* ptr = actor_cast<abstract_actor*>(receiver);
     ptr->enqueue(make_mailbox_element(std::move(sender), mid,
                                       std::move(content_)),
-                 current_scheduler());
+                 Trait::context(self_));
     return result_t{};
   }
 
@@ -358,39 +356,41 @@ public:
     using response_handle =
       typename Trait::template response_handle<response_type>;
     [[maybe_unused]] context_guard guard{self_};
-    auto mid = self_->new_request_id(Priority);
+    auto mid = Trait::new_request_id(self_, Priority);
     if constexpr (response_handle::is_blocking) {
       if (receiver) {
         auto* ptr = actor_cast<abstract_actor*>(receiver);
-        ptr->enqueue(make_mailbox_element(actor_cast(self_, strong_ref), mid,
+        ptr->enqueue(make_mailbox_element(Trait::ref(self_, strong_ref), mid,
                                           std::move(content_)),
-                     current_scheduler());
+                     Trait::context(self_));
       } else {
-        self_->enqueue(make_mailbox_element(actor_cast(self_, strong_ref),
-                                            mid.response_id(),
-                                            make_error(sec::invalid_request)),
-                       current_scheduler());
+        Trait::send(self_,
+                    make_mailbox_element(Trait::ref(self_, strong_ref),
+                                         mid.response_id(),
+                                         make_error(sec::invalid_request)),
+                    Trait::context(self_));
       }
       return response_handle{self_, mid.response_id(), relative_timeout};
     } else {
       disposable in_flight_timeout;
       if (receiver) {
         if (relative_timeout != infinite) {
-          auto& clock = self_->clock();
+          auto& clock = Trait::clock(self_);
           in_flight_timeout = clock.schedule_message(
-            nullptr, actor_cast(self_, weak_ref),
+            nullptr, Trait::ref(self_, weak_ref),
             clock.now() + relative_timeout, mid.response_id(),
             make_message(make_error(sec::request_timeout)));
         }
         auto* ptr = actor_cast<abstract_actor*>(receiver);
-        ptr->enqueue(make_mailbox_element(actor_cast(self_, strong_ref), mid,
+        ptr->enqueue(make_mailbox_element(Trait::ref(self_, strong_ref), mid,
                                           std::move(content_)),
-                     current_scheduler());
+                     Trait::context(self_));
       } else {
-        self_->enqueue(make_mailbox_element(actor_cast(self_, strong_ref),
-                                            mid.response_id(),
-                                            make_error(sec::invalid_request)),
-                       current_scheduler());
+        Trait::send(self_,
+                    make_mailbox_element(Trait::ref(self_, strong_ref),
+                                         mid.response_id(),
+                                         make_error(sec::invalid_request)),
+                    Trait::context(self_));
       }
       return response_handle{self_, mid.response_id(),
                              std::move(in_flight_timeout)};
@@ -432,20 +432,23 @@ public:
     for (const auto& dest : destinations) {
       if (!dest)
         continue;
-      auto req_id = self_->new_request_id(Priority);
-      dest->enqueue(make_mailbox_element(actor_cast(self_, strong_ref), req_id,
+      auto req_id = Trait::new_request_id(self_, Priority);
+      dest->enqueue(make_mailbox_element(Trait::ref(self_, strong_ref), req_id,
                                          content_),
-                    current_scheduler());
-      pending_msgs.emplace_back(
-        self_->request_response_timeout(timeout, req_id));
+                    Trait::context(self_));
+      if (timeout != infinite) {
+        pending_msgs.emplace_back(
+          Trait::request_response_timeout(self_, timeout, req_id));
+      }
       ids.emplace_back(req_id.response_id());
     }
     if (ids.empty()) {
-      auto req_id = self_->new_request_id(Priority);
-      self_->enqueue(make_mailbox_element(actor_cast(self_, strong_ref),
-                                          req_id.response_id(),
-                                          make_error(sec::invalid_argument)),
-                     current_scheduler());
+      auto req_id = Trait::new_request_id(self_, Priority);
+      Trait::send(self_,
+                  make_mailbox_element(Trait::ref(self_, strong_ref),
+                                       req_id.response_id(),
+                                       make_error(sec::invalid_argument)),
+                  Trait::context(self_));
       ids.emplace_back(req_id.response_id());
     }
     using response_type
@@ -474,31 +477,19 @@ public:
   /// Schedules the message for delivery with a relative timeout.
   [[nodiscard]] auto delay(actor_clock::duration_type timeout) && {
     using result_t = scheduled_mailer<Trait, Priority, Args...>;
-    return result_t{self_, std::move(content_), now() + timeout};
+    if constexpr (requires { Trait::clock(self_); }) {
+      return result_t{self_, std::move(content_),
+                      Trait::clock(self_).now() + timeout};
+    } else {
+      return result_t{self_, std::move(content_),
+                      actor_clock::clock_type::now() + timeout};
+    }
   }
 
 private:
   using signatures = typename Trait::signatures;
 
   using context_guard = typename Trait::context_guard;
-
-  actor_clock::time_point now() const {
-    using actor_type = std::remove_pointer_t<self_pointer>;
-    if constexpr (std::is_same_v<actor_type, unit_t>) {
-      return actor_clock::clock_type::now();
-    } else {
-      return self_->clock().now();
-    }
-  }
-
-  scheduler* current_scheduler() const noexcept {
-    using actor_type = std::remove_pointer_t<self_pointer>;
-    if constexpr (detail::has_context<actor_type>) {
-      return self_->context();
-    } else {
-      return nullptr;
-    }
-  }
 
   self_pointer self_;
   message content_;
