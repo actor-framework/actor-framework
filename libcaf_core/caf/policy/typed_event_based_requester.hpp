@@ -50,6 +50,43 @@ struct typed_event_based_requester {
   template <class Policy, class T>
   using fan_out_delayed_response_handle =
     typename untyped::template fan_out_delayed_response_handle<Policy, T>;
+
+  template <class RefTag>
+  static typename RefTag::handle_type ref(self_pointer self, RefTag tag) {
+    return untyped::ref(self, tag);
+  }
+
+  static scheduler* context(self_pointer self) noexcept {
+    return untyped::context(self);
+  }
+
+  static void delegate_error(self_pointer self) {
+    untyped::delegate_error(self);
+  }
+
+  template <message_priority Priority>
+  static auto delegate(self_pointer self) {
+    return untyped::template delegate<Priority>(self);
+  }
+
+  static message_id new_request_id(self_pointer self,
+                                   message_priority mp) noexcept {
+    return untyped::new_request_id(self, mp);
+  }
+
+  static void send(self_pointer self, mailbox_element_ptr&& what,
+                   scheduler* sched) {
+    untyped::send(self, std::move(what), sched);
+  }
+
+  static actor_clock& clock(self_pointer self) {
+    return untyped::clock(self);
+  }
+
+  static disposable request_response_timeout(self_pointer self, timespan d,
+                                             message_id mid) {
+    return untyped::request_response_timeout(self, d, mid);
+  }
 };
 
 } // namespace caf::policy

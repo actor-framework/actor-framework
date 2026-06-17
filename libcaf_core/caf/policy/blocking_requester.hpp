@@ -4,8 +4,11 @@
 
 #pragma once
 
+#include "caf/actor_clock.hpp"
+#include "caf/add_ref.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/fwd.hpp"
+#include "caf/mailbox_element.hpp"
 
 namespace caf::detail {
 
@@ -84,6 +87,43 @@ struct blocking_requester {
   /// Maps a response type to a blocking delayed response handle.
   template <class T>
   using delayed_response_handle = detail::blocking_delayed_response_handle_t<T>;
+
+  template <class RefTag>
+  static typename RefTag::handle_type ref(self_pointer self, RefTag) {
+    return {self->ctrl(), add_ref};
+  }
+
+  static scheduler* context(self_pointer self) noexcept {
+    return self->context();
+  }
+
+  static void delegate_error(self_pointer self) {
+    self->do_delegate_error();
+  }
+
+  template <message_priority Priority>
+  static auto delegate(self_pointer self) {
+    return self->template do_delegate<Priority>();
+  }
+
+  static message_id new_request_id(self_pointer self,
+                                   message_priority mp) noexcept {
+    return self->new_request_id(mp);
+  }
+
+  static void send(self_pointer self, mailbox_element_ptr&& what,
+                   scheduler* sched) {
+    self->enqueue(std::move(what), sched);
+  }
+
+  static actor_clock& clock(self_pointer self) {
+    return self->clock();
+  }
+
+  static disposable request_response_timeout(self_pointer self, timespan d,
+                                             message_id mid) {
+    return self->request_response_timeout(d, mid);
+  }
 };
 
 } // namespace caf::policy

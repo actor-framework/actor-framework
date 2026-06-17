@@ -27,6 +27,15 @@ struct anon_sender {
 
   /// Whether to enable the `fan_out_request` method.
   static constexpr bool enable_fan_out_request = false;
+
+  static constexpr scheduler* context(self_pointer) noexcept {
+    return nullptr;
+  }
+
+  template <class RefTag>
+  static typename RefTag::handle_type ref(self_pointer, RefTag) {
+    return {};
+  }
 };
 
 } // namespace caf::detail
