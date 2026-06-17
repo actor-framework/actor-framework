@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/add_ref.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/fwd.hpp"
 
@@ -29,6 +30,11 @@ struct sender {
 
   /// Whether to enable the `fan_out_request` method.
   static constexpr bool enable_fan_out_request = false;
+
+  template <class RefTag>
+  static typename RefTag::handle_type ref(self_pointer self, RefTag) {
+    return {self->ctrl(), add_ref};
+  }
 };
 
 } // namespace caf::policy
