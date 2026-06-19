@@ -117,7 +117,8 @@ CAF_IO_EXPORT error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f,
                                             size_t& l);
 
 template <class Inspector>
-CAF_DEPRECATED("use caf.net instead") bool inspect(Inspector& f, ip_endpoint& x) {
+CAF_DEPRECATED("use caf.net instead")
+bool inspect(Inspector& f, ip_endpoint& x) {
   uint32_t fam = 0;
   std::string h;
   uint16_t p = 0;

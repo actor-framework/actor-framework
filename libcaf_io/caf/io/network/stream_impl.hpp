@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/io/network/stream.hpp"
+
+#include "caf/caf_deprecated.hpp"
 
 namespace caf::io::network {
 
