@@ -29,8 +29,7 @@ namespace caf::io::network {
 class CAF_DEPRECATED("use caf.net instead") multiplexer_backend;
 
 /// Low-level backend for IO multiplexing.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED multiplexer
-  : public scheduler {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED multiplexer : public scheduler {
 public:
   explicit multiplexer(actor_system& sys);
 
@@ -79,9 +78,8 @@ public:
     = 0;
 
   /// Simple wrapper for runnables
-  class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED runnable
-    : public resumable,
-      public ref_counted {
+  class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED runnable : public resumable,
+                                                           public ref_counted {
   public:
     void ref_resumable() const noexcept final;
     void deref_resumable() const noexcept final;

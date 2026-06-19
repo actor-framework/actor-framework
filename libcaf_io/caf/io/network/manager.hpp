@@ -20,8 +20,7 @@ namespace caf::io::network {
 
 /// A manager configures an I/O device and provides callbacks
 /// for various I/O operations.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED manager
-  : public ref_counted {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED manager : public ref_counted {
 public:
   manager();
 
