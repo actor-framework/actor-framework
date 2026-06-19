@@ -6,10 +6,17 @@
 
 // Use __attribute__((deprecated)) instead of [[deprecated]] when combined with
 // CAF_IO_EXPORT so that GCC accepts both visibility and deprecation on the
-// same declaration (mixing [[attr]] and __attribute__ can fail in some orderings).
+// same declaration (mixing [[attr]] and __attribute__ can fail in some
+// orderings).
 
 #ifdef CAF_SUPPRESS_DEPRECATION_WARNINGS
 #  define CAF_IO_NETWORK_DEPRECATED
 #else
-#  define CAF_IO_NETWORK_DEPRECATED __attribute__((deprecated("use caf.net instead")))
+#  if defined(CAF_MSVC)
+#    define CAF_IO_NETWORK_DEPRECATED                                          \
+      __declspec(deprecated("use caf.net instead"))
+#  else
+#    define CAF_IO_NETWORK_DEPRECATED                                          \
+      __attribute__((deprecated("use caf.net instead")))
+#  endif
 #endif

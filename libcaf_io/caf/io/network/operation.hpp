@@ -28,7 +28,8 @@ CAF_DEPRECATED("use caf.net instead")
 CAF_IO_EXPORT bool from_integer(std::underlying_type_t<operation>, operation&);
 
 template <class Inspector>
-CAF_DEPRECATED("use caf.net instead") bool inspect(Inspector& f, operation& x) {
+CAF_DEPRECATED("use caf.net instead")
+bool inspect(Inspector& f, operation& x) {
   return default_enum_inspect(f, x);
 }
 

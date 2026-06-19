@@ -17,8 +17,7 @@
 namespace caf::io::network {
 
 /// Default doorman implementation.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED doorman_impl
-  : public doorman {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED doorman_impl : public doorman {
 public:
   doorman_impl(default_multiplexer& mx, native_socket sockfd);
 
