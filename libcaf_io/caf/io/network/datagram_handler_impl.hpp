@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/datagram_handler.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
+
+#include "caf/caf_deprecated.hpp"
 
 namespace caf::io::network {
 

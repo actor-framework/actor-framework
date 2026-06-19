@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/io/network/manager.hpp"
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/io_network_deprecated.hpp"
 
@@ -16,8 +16,7 @@ namespace caf::io::network {
 
 /// A stream manager configures an IO stream and provides callbacks
 /// for incoming data as well as for error handling.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED stream_manager
-  : public manager {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED stream_manager : public manager {
 public:
   ~stream_manager() override;
 

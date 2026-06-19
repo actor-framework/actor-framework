@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/io/network/manager.hpp"
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/io_network_deprecated.hpp"
 

@@ -44,8 +44,7 @@ CAF_IO_EXPORT extern const int no_sigpipe_io_flag;
 
 #ifdef CAF_WINDOWS
 using native_socket CAF_DEPRECATED("use caf.net instead") = size_t;
-constexpr native_socket invalid_native_socket
-  = static_cast<native_socket>(-1);
+constexpr native_socket invalid_native_socket = static_cast<native_socket>(-1);
 CAF_DEPRECATED("use caf.net instead")
 inline int64_t int64_from_native_socket(native_socket sock) {
   return sock == invalid_native_socket ? -1 : static_cast<int64_t>(sock);
