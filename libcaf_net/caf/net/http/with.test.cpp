@@ -4,8 +4,10 @@
 
 #include "caf/net/http/with.hpp"
 
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/net/http/response_header.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_guard.hpp"
@@ -15,6 +17,8 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/async/blocking_consumer.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/connector.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/fwd.hpp"
@@ -23,6 +27,7 @@
 #include <chrono>
 #include <future>
 #include <latch>
+#include <source_location>
 #include <thread>
 
 using namespace caf;
@@ -73,6 +78,45 @@ private:
 using error_log_ptr = std::shared_ptr<error_log>;
 
 using latch_ptr = std::shared_ptr<std::latch>;
+
+struct raw_http_response {
+  net::http::response_header header;
+  std::string body;
+};
+
+raw_http_response read_http_response(net::stream_socket fd,
+                                     const std::source_location& loc
+                                     = std::source_location::current()) {
+  auto& self = test::runnable::current();
+  auto require_readable = [&self, fd, loc] {
+    auto err = net::receive_timeout(fd, 1s);
+    self.require(!err.valid(), loc);
+  };
+  std::string raw_header;
+  byte_buffer buf;
+  buf.resize(1);
+  while (raw_header.find("\r\n\r\n") == std::string::npos) {
+    require_readable();
+    auto bytes_read = net::read(fd, buf);
+    self.require_eq(bytes_read, ptrdiff_t{1}, loc);
+    raw_header.push_back(
+      static_cast<char>(std::to_integer<unsigned char>(buf[0])));
+  }
+  raw_http_response result;
+  auto parse_result = result.header.parse(raw_header);
+  self.require_eq(parse_result.first, net::http::status::ok, loc);
+  auto content_length = result.header.content_length().value_or(size_t{0});
+  result.body.reserve(content_length);
+  while (result.body.size() < content_length) {
+    require_readable();
+    buf.resize(content_length - result.body.size());
+    auto bytes_read = net::read(fd, buf);
+    self.require_gt(bytes_read, ptrdiff_t{0}, loc);
+    result.body.append(reinterpret_cast<const char*>(buf.data()),
+                       static_cast<size_t>(bytes_read));
+  }
+  return result;
+}
 
 // std::latch has no timed wait; poll try_wait() until timeout.
 static bool latch_count_down_and_wait_for(latch_ptr lptr,
@@ -141,13 +185,26 @@ void test_client(const char* host, uint16_t port, bool wait_before_connect,
   }
 }
 
+actor_system_config& init(actor_system_config& cfg) {
+  cfg.set("caf.scheduler.max-threads", 2);
+  cfg.load<net::middleman>();
+  return cfg;
+}
+
+struct fixture {
+  actor_system_config cfg;
+  actor_system sys;
+
+  fixture() : sys(init(cfg)) {
+    // nop
+  }
+};
+
 } // namespace
 
+WITH_FIXTURE(fixture) {
+
 TEST("connection lifetime tracking with outstanding requests") {
-  // Setup.
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
   // Create an accept socket with the port chosen by the OS.
   auto acceptor = unbox(net::make_tcp_accept_socket(0));
   auto port = unbox(net::local_port(acceptor));
@@ -214,10 +271,6 @@ TEST("connection lifetime tracking with outstanding requests") {
 }
 
 TEST("requests become orphaned when the connection is closed") {
-  // Setup.
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
   // Create an accept socket with the port chosen by the OS.
   auto acceptor = unbox(net::make_tcp_accept_socket(0));
   auto port = unbox(net::local_port(acceptor));
@@ -280,10 +333,6 @@ TEST("requests become orphaned when the connection is closed") {
 }
 
 TEST("requests become orphaned when disposing the server") {
-  // Setup.
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
   // Create an accept socket with the port chosen by the OS.
   auto acceptor = unbox(net::make_tcp_accept_socket(0));
   auto port = unbox(net::local_port(acceptor));
@@ -332,10 +381,6 @@ TEST("requests become orphaned when disposing the server") {
 }
 
 TEST("GH-2226 regression") {
-  // Setup.
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
   // Create an accept socket with the port chosen by the OS.
   auto acceptor = unbox(net::make_tcp_accept_socket(0));
   auto port = unbox(net::local_port(acceptor));
@@ -370,6 +415,65 @@ TEST("GH-2226 regression") {
   check_eq(elog->errors(), std::vector<error>{});
 }
 
+SCENARIO("server responds with 503 unavailable when queue is overloaded") {
+  GIVEN("a HTTP server queueing incoming requests asynchronously") {
+    auto overflow_count = size_t{2};
+    auto [server_fd, client_fd] = unbox(net::make_stream_socket_pair());
+    net::socket_guard client_guard{client_fd};
+    std::optional<async::consumer_resource<net::http::request>> requests;
+    auto hdl
+      = net::http::with(sys) //
+          .serve(server_fd)
+          .start([&requests](auto pull) { requests.emplace(std::move(pull)); });
+    require_has_value(hdl);
+    detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
+    WHEN("filling the queue capacity and overflowing by two requests") {
+      // When configuring HTTP with a stream socket, all requests are
+      // exchanged via the connected socket pair. This might change with
+      // future connection keepalive changes.
+      auto request_count = defaults::flow::buffer_size + overflow_count;
+      // Fill the queue, and send two requests that overflow the queue.
+      for (auto i = size_t{0}; i < request_count; ++i) {
+        auto req = detail::format("GET /{} HTTP/1.1\r\nHost: localhost\r\n\r\n",
+                                  i);
+        require_eq(net::write(client_fd, as_bytes(std::span{req})),
+                   static_cast<ptrdiff_t>(req.size()));
+      }
+      THEN("the two overflow responses fail") {
+        for (auto i = size_t{0}; i < overflow_count; ++i) {
+          auto response = read_http_response(client_fd);
+          check_eq(response.header.status(), uint16_t{503});
+          check_eq(response.header.status_text(), "Service Unavailable");
+          check_eq(response.body,
+                   "service unavailable: request could not be queued");
+        }
+      }
+      AND_THEN("the remaining requests are processed in order") {
+        // Respond 200 to each earlier request.
+        require(requests.has_value());
+        auto request_buffer = requests->try_open();
+        require(request_buffer != nullptr);
+        async::blocking_consumer<net::http::request> consumer{request_buffer};
+        for (auto i = size_t{0}; i < defaults::flow::buffer_size; ++i) {
+          net::http::request req;
+          auto result = consumer.pull(async::delay_errors, req, 1s);
+          require_eq(result, async::read_result::ok);
+          req.respond(net::http::status::ok, "text/plain", "ok");
+        }
+        request_buffer->close();
+        net::http::request dummy;
+        require_eq(consumer.pull(async::delay_errors, dummy, 1s),
+                   async::read_result::stop);
+        for (auto i = size_t{0}; i < defaults::flow::buffer_size; ++i) {
+          auto response = read_http_response(client_fd);
+          check_eq(response.header.status(), uint16_t{200});
+          check_eq(response.body, "ok");
+        }
+      }
+    }
+  }
+}
+
 TEST("GH-2309 Host header field in outgoing requests") {
   auto parse_uri = [this](std::string_view sv) {
     uri u;
@@ -377,12 +481,7 @@ TEST("GH-2309 Host header field in outgoing requests") {
     require(err.empty());
     return u;
   };
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
-  auto fd_pair = net::make_stream_socket_pair();
-  require_has_value(fd_pair);
-  auto [server_fd, client_fd] = *fd_pair;
+  auto [server_fd, client_fd] = unbox(net::make_stream_socket_pair());
   std::promise<std::string> prom;
   auto host_fut = prom.get_future();
   auto hdl
@@ -396,7 +495,7 @@ TEST("GH-2309 Host header field in outgoing requests") {
         .start();
   require_has_value(hdl);
   detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
-  auto assert_request_host_is = [this, &sys, &host_fut,
+  auto assert_request_host_is = [this, &host_fut,
                                  client_fd](const caf::uri& uri,
                                             std::string_view expected_host) {
     auto client_res
@@ -440,3 +539,5 @@ TEST("GH-2309 Host header field in outgoing requests") {
     assert_request_host_is(parse_uri("http://[::1]:80/host-check"), "[::1]");
   }
 }
+
+} // WITH_FIXTURE(fixture)
