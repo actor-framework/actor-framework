@@ -36,7 +36,7 @@ public:
     read_result
     pull(ErrorPolicy policy, T& item, [[maybe_unused]] TimePoint timeout) {
       if (!buf_) {
-        return abort_reason_ ? read_result::abort : read_result::stop;
+        return abort_reason_.valid() ? read_result::abort : read_result::stop;
       }
       val_ = &item;
       std::unique_lock guard{buf_->mtx()};
@@ -53,7 +53,7 @@ public:
       }
       if (n == 1) {
         return read_result::ok;
-      } else if (abort_reason_) {
+      } else if (abort_reason_.valid()) {
         return read_result::abort;
       } else {
         return read_result::stop;
