@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <caf/fwd.hpp>
-#include <caf/type_list.hpp>
+#include "caf/fwd.hpp"
+#include "caf/type_list.hpp"
+#include "caf/typed_actor_pack.hpp"
 
 namespace caf {
 

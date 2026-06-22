@@ -227,6 +227,43 @@ struct t1970 {
 
 using a1970 = typed_actor<t1970>;
 
+// GH-2202 regression
+// Self-referential trait: signatures mention the actor handle being defined.
+struct ping_pong_trait {
+  using signatures = type_list<result<void>(typed_actor<ping_pong_trait>)>;
+};
+using ping_pong_actor = typed_actor<ping_pong_trait>;
+// Force full instantiation which evaluates the internal
+// static_assert(typed_actor_pack<...>);
+static_assert(std::is_same_v<ping_pong_actor::behavior_type,
+                             typed_behavior<ping_pong_trait>>);
+static_assert(
+  std::is_same_v<ping_pong_actor::signatures,
+                 type_list<result<void>(typed_actor<ping_pong_trait>)>>);
+
+// Mutually recursive traits: each signature references the other handle.
+struct ping_trait;
+struct pong_trait;
+
+struct ping_trait {
+  using signatures = type_list<result<void>(typed_actor<pong_trait>)>;
+};
+
+struct pong_trait {
+  using signatures = type_list<result<void>(typed_actor<ping_trait>)>;
+};
+
+using ping_actor = typed_actor<ping_trait>;
+using pong_actor = typed_actor<pong_trait>;
+static_assert(
+  std::is_same_v<ping_actor::behavior_type, typed_behavior<ping_trait>>);
+static_assert(
+  std::is_same_v<pong_actor::behavior_type, typed_behavior<pong_trait>>);
+static_assert(std::is_same_v<ping_actor::signatures,
+                             type_list<result<void>(typed_actor<pong_trait>)>>);
+static_assert(std::is_same_v<pong_actor::signatures,
+                             type_list<result<void>(typed_actor<ping_trait>)>>);
+
 } // namespace
 
 CAF_BEGIN_TYPE_ID_BLOCK(typed_actor_test, caf::first_custom_type_id + 130, 20)

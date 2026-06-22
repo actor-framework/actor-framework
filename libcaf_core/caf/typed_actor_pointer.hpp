@@ -6,6 +6,7 @@
 
 #include "caf/detail/to_statically_typed_trait.hpp"
 #include "caf/detail/type_list.hpp"
+#include "caf/typed_actor_pack.hpp"
 #include "caf/typed_actor_view.hpp"
 
 namespace caf {
@@ -13,8 +14,9 @@ namespace caf {
 /// Provides a view to an actor that implements this messaging interface without
 /// knowledge of the actual type.
 template <class... Ts>
-  requires typed_actor_pack<Ts...>
 class typed_actor_pointer : public typed_actor_view_base {
+  static_assert(typed_actor_pack<Ts...>);
+
 public:
   using trait = detail::to_statically_typed_trait_t<Ts...>;
 

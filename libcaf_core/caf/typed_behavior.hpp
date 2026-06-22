@@ -13,6 +13,7 @@
 #include "caf/message_handler.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/timespan.hpp"
+#include "caf/typed_actor_pack.hpp"
 #include "caf/unsafe_behavior_init.hpp"
 
 #include <utility>
@@ -147,8 +148,9 @@ constexpr partial_behavior_init_t partial_behavior_init
   = partial_behavior_init_t{};
 
 template <class... Ts>
-  requires typed_actor_pack<Ts...>
 class typed_behavior {
+  static_assert(typed_actor_pack<Ts...>);
+
 public:
   // -- member types -----------------------------------------------------------
 

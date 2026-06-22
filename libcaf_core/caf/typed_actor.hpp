@@ -16,6 +16,7 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/type_id_list.hpp"
+#include "caf/typed_actor_pack.hpp"
 #include "caf/typed_actor_view_base.hpp"
 #include "caf/typed_behavior.hpp"
 
@@ -27,11 +28,12 @@ namespace caf {
 
 /// Identifies a statically typed actor.
 template <class... Ts>
-  requires typed_actor_pack<Ts...>
 class typed_actor : detail::comparable<typed_actor<Ts...>>,
                     detail::comparable<typed_actor<Ts...>, actor>,
                     detail::comparable<typed_actor<Ts...>, actor_addr>,
                     detail::comparable<typed_actor<Ts...>, strong_actor_ptr> {
+  static_assert(typed_actor_pack<Ts...>);
+
 public:
   // -- member types -----------------------------------------------------------
 
@@ -44,7 +46,6 @@ public:
   // -- friends ----------------------------------------------------------------
 
   template <class... Us>
-    requires typed_actor_pack<Us...>
   friend class typed_actor;
 
   friend class local_actor;
