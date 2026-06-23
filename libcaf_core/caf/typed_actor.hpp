@@ -32,9 +32,11 @@ class typed_actor : detail::comparable<typed_actor<Ts...>>,
                     detail::comparable<typed_actor<Ts...>, actor>,
                     detail::comparable<typed_actor<Ts...>, actor_addr>,
                     detail::comparable<typed_actor<Ts...>, strong_actor_ptr> {
+public:
+  // -- static assertions ------------------------------------------------------
+
   static_assert(typed_actor_pack<Ts...>);
 
-public:
   // -- member types -----------------------------------------------------------
 
   /// Stores the template parameter pack.

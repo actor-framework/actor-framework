@@ -15,9 +15,11 @@ namespace caf {
 /// knowledge of the actual type.
 template <class... Ts>
 class typed_actor_pointer : public typed_actor_view_base {
+public:
+  // -- static assertions ------------------------------------------------------
+
   static_assert(typed_actor_pack<Ts...>);
 
-public:
   using trait = detail::to_statically_typed_trait_t<Ts...>;
 
   /// Stores the template parameter pack.

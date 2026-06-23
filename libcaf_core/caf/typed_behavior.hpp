@@ -149,9 +149,11 @@ constexpr partial_behavior_init_t partial_behavior_init
 
 template <class... Ts>
 class typed_behavior {
+public:
+  // -- static assertions ------------------------------------------------------
+
   static_assert(typed_actor_pack<Ts...>);
 
-public:
   // -- member types -----------------------------------------------------------
 
   using trait = detail::to_statically_typed_trait_t<Ts...>;

@@ -27,9 +27,11 @@ class typed_event_based_actor : public scheduled_actor,
                                 public statically_typed_actor_base
 
 {
+public:
+  // -- static assertions ------------------------------------------------------
+
   static_assert(typed_actor_pack<Ts...>);
 
-public:
   // -- member types -----------------------------------------------------------
 
   using super = scheduled_actor;
