@@ -37,8 +37,10 @@ bool serializer::value(const strong_actor_ptr& ptr) {
 }
 
 bool serializer::value(const weak_actor_ptr& ptr) {
-  auto tmp = ptr.lock();
-  return value(tmp);
+  if (auto* codec = actor_handle_codec())
+    return codec->save(*this, ptr);
+  set_error(make_error(sec::no_actor_handle_codec));
+  return false;
 }
 
 bool serializer::value(const std::vector<bool>& xs) {
