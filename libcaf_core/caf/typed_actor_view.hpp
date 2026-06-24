@@ -18,6 +18,7 @@
 #include "caf/scheduled_actor.hpp"
 #include "caf/stream.hpp"
 #include "caf/timespan.hpp"
+#include "caf/typed_actor_pack.hpp"
 #include "caf/typed_actor_view_base.hpp"
 #include "caf/typed_stream.hpp"
 
@@ -34,9 +35,12 @@ auto typed_actor_view_flow_access(T* self) {
 /// Decorates a pointer to a @ref scheduled_actor with a statically typed actor
 /// interface.
 template <class... Ts>
-  requires typed_actor_pack<Ts...>
 class typed_actor_view : public typed_actor_view_base {
 public:
+  // -- static assertions ------------------------------------------------------
+
+  static_assert(typed_actor_pack<Ts...>);
+
   using trait = detail::to_statically_typed_trait_t<Ts...>;
 
   /// Stores the template parameter pack.

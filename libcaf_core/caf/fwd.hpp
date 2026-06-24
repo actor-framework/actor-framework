@@ -7,7 +7,6 @@
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code_enum.hpp"
-#include "caf/typed_actor_pack.hpp"
 #include "caf/weak_intrusive_ptr_traits.hpp"
 
 #include <cstddef>
@@ -83,11 +82,11 @@ template <class...> class typed_response_promise;
 template <class, class...> class event_based_fan_out_response_handle;
 template <class, class...> class event_based_fan_out_delayed_response_handle;
 
-template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor;
-template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor_pointer;
-template <class... Ts> requires typed_actor_pack<Ts...> class typed_actor_view;
-template <class... Ts> requires typed_actor_pack<Ts...> class typed_behavior;
-template <class... Ts> requires typed_actor_pack<Ts...> class typed_event_based_actor;
+template <class...> class typed_actor;
+template <class...> class typed_actor_pointer;
+template <class...> class typed_actor_view;
+template <class...> class typed_behavior;
+template <class...> class typed_event_based_actor;
 
 // clang-format on
 

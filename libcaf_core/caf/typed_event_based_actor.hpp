@@ -14,6 +14,7 @@
 #include "caf/policy/typed_event_based_requester.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/typed_actor_pack.hpp"
 #include "caf/typed_behavior.hpp"
 
 namespace caf {
@@ -22,12 +23,15 @@ namespace caf {
 /// type-checking.
 /// @extends scheduled actor
 template <class... Ts>
-  requires typed_actor_pack<Ts...>
 class typed_event_based_actor : public scheduled_actor,
                                 public statically_typed_actor_base
 
 {
 public:
+  // -- static assertions ------------------------------------------------------
+
+  static_assert(typed_actor_pack<Ts...>);
+
   // -- member types -----------------------------------------------------------
 
   using super = scheduled_actor;
