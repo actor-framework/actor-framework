@@ -149,8 +149,12 @@ bool message::load(deserializer& source) {
           STOP(sec::runtime_error, "unable to allocate memory");
         meta_obj->default_construct(vptr.get());
         objects.emplace_back(vptr.release(), meta_obj);
+        GUARDED(source.begin_object(type, meta_obj->type_name));
+        GUARDED(source.begin_field("@value"));
         if (!meta_obj->load(source, objects.back().obj))
           return false;
+        GUARDED(source.end_field());
+        GUARDED(source.end_object());
       } else {
         STOP(sec::unknown_type);
       }
@@ -225,7 +229,11 @@ bool message::save(serializer& sink) const {
   auto storage = data_->storage();
   for (auto id : type_ids) {
     auto& meta = gmos[id];
+    GUARDED(sink.begin_object(id, meta.type_name));
+    GUARDED(sink.begin_field("@value"));
     GUARDED(meta.save(sink, storage));
+    GUARDED(sink.end_field());
+    GUARDED(sink.end_object());
     storage += meta.padded_size;
   }
   return sink.end_sequence();

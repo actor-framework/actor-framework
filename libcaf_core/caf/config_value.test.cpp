@@ -944,8 +944,11 @@ SCENARIO("config values can parse their own to_string output") {
         CHECK_ROUNDTRIP("hello world"s, "hello world");
         CHECK_ROUNDTRIP(std::vector<int>({1, 2, 3}), "[1, 2, 3]");
         CHECK_ROUNDTRIP(my_request(1, 2), R"_({a = 1, b = 2})_");
-        CHECK_ROUNDTRIP(std::make_tuple(add_atom_v, 1, 2), R"_([{}, 1, 2])_");
-        CHECK_ROUNDTRIP(make_message(add_atom_v, 1, 2), R"_([{}, 1, 2])_");
+        CHECK_ROUNDTRIP(std::make_tuple(add_atom_v, 1, 2),
+                        R"_([{"@type" = "caf::add_atom"}, 1, 2])_");
+        CHECK_ROUNDTRIP(
+          make_message(add_atom_v, 1, 2),
+          R"_([{"@type" = "caf::add_atom", "@value" = {}}, {"@type" = "int32_t", "@value" = 1}, {"@type" = "int32_t", "@value" = 2}])_");
       }
     }
   }
@@ -1023,6 +1026,16 @@ SCENARIO("config values can parse messages") {
           if (check((msg->match_elements<add_atom, int32_t, int32_t>()))) {
             check_eq(msg->get_as<int32_t>(1), 1);
             check_eq(msg->get_as<int32_t>(2), 2);
+          }
+        }
+        config_value assigned;
+        if (check(!assigned.assign(make_message(add_atom_v, 1, 2)))) {
+          if (auto msg = parse(to_string(assigned));
+              check(static_cast<bool>(msg))) {
+            if (check((msg->match_elements<add_atom, int32_t, int32_t>()))) {
+              check_eq(msg->get_as<int32_t>(1), 1);
+              check_eq(msg->get_as<int32_t>(2), 2);
+            }
           }
         }
       }

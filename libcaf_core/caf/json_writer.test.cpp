@@ -285,7 +285,8 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     auto x = make_message(put_atom_v, "foo", 42);
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
-        std::string out = R"_([{"@type": "caf::put_atom"}, "foo", 42])_";
+        std::string out
+          = R"_([{"@type": "caf::put_atom", "@value": {}}, {"@type": "std::string", "@value": "foo"}, {"@type": "int32_t", "@value": 42}])_";
         check_eq(to_json_string(x, 0), out);
       }
     }
@@ -293,10 +294,17 @@ SCENARIO("the JSON writer converts builtin types to strings") {
       THEN("the JSON output uses multiple lines") {
         std::string out = R"_([
   {
-    "@type": "caf::put_atom"
+    "@type": "caf::put_atom",
+    "@value": {}
   },
-  "foo",
-  42
+  {
+    "@type": "std::string",
+    "@value": "foo"
+  },
+  {
+    "@type": "int32_t",
+    "@value": 42
+  }
 ])_";
         check_eq(to_json_string(x, 2), out);
       }

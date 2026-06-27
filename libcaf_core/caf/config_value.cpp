@@ -17,6 +17,7 @@
 #include "caf/expected.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/format_to_unexpected.hpp"
+#include "caf/message.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
@@ -475,35 +476,54 @@ bool config_value::can_convert_to_dictionary() const {
 std::optional<message>
 config_value::parse_msg_impl(std::string_view str,
                              std::span<const type_id_list> allowed_types) {
-  if (auto val = parse(str)) {
-    auto ls_size = val->as_list().size();
+  auto val = parse(str);
+  if (!val)
+    return std::nullopt;
+  auto matches_allowed = [&](const message& msg) {
+    auto loaded = msg.types();
+    return std::ranges::any_of(allowed_types, [&](type_id_list allowed) {
+      return loaded == allowed;
+    });
+  };
+  // Canonical format with per-element @type/@value wrappers.
+  {
+    config_value_reader reader{std::addressof(*val)};
     message result;
-    auto converts = [&val, &result, ls_size](type_id_list ls) {
-      if (ls.size() != ls_size)
-        return false;
-      config_value_reader reader{std::addressof(*val)};
-      auto unused = size_t{0};
-      reader.begin_sequence(unused);
-      CAF_ASSERT(unused == ls_size);
-      intrusive_ptr<detail::message_data> ptr;
-      if (auto vptr = malloc(sizeof(detail::message_data) + ls.data_size()))
-        ptr.reset(new (vptr) detail::message_data(ls), adopt_ref);
-      else
-        return false;
-      auto pos = ptr->storage();
-      for (auto type : ls) {
-        auto& meta = detail::global_meta_object(type);
-        meta.default_construct(pos);
-        ptr->inc_constructed_elements();
-        if (!meta.load(reader.as_deserializer(), pos))
-          return false;
-        pos += meta.padded_size;
-      }
-      result.reset(ptr.release(), adopt_ref);
-      return reader.end_sequence();
-    };
-    if (std::ranges::any_of(allowed_types, converts))
+    if (result.load(reader.as_deserializer()) && matches_allowed(result))
       return {std::move(result)};
+  }
+  // Legacy bare element format for hand-authored configs.
+  auto ls_size = val->as_list().size();
+  for (auto ls : allowed_types) {
+    if (ls.size() != ls_size)
+      continue;
+    config_value_reader reader{std::addressof(*val)};
+    auto unused = size_t{0};
+    if (!reader.begin_sequence(unused))
+      continue;
+    CAF_ASSERT(unused == ls_size);
+    intrusive_ptr<detail::message_data> ptr;
+    if (auto vptr = malloc(sizeof(detail::message_data) + ls.data_size()))
+      ptr.reset(new (vptr) detail::message_data(ls), adopt_ref);
+    else
+      continue;
+    auto pos = ptr->storage();
+    bool ok = true;
+    for (auto type : ls) {
+      auto& meta = detail::global_meta_object(type);
+      meta.default_construct(pos);
+      ptr->inc_constructed_elements();
+      if (!meta.load(reader.as_deserializer(), pos)) {
+        ok = false;
+        break;
+      }
+      pos += meta.padded_size;
+    }
+    if (ok && reader.end_sequence()) {
+      message result;
+      result.reset(ptr.release(), adopt_ref);
+      return {std::move(result)};
+    }
   }
   return std::nullopt;
 }

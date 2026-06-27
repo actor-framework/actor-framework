@@ -149,7 +149,8 @@ public:
       pop();
       return true;
     };
-    if (skip_object_type_annotation_ || inside_object())
+    if (skip_object_type_annotation_
+        || (inside_object() && !sequence_element_context()))
       return begin_associative_array(0);
     else
       return begin_associative_array(0) // Put opening paren, ...
@@ -617,6 +618,14 @@ private:
       return x.t == internal::json_node::object;
     };
     return std::ranges::any_of(stack_, is_object);
+  }
+
+  // Checks whether the current position is a direct element of a sequence.
+  bool sequence_element_context() const noexcept {
+    if (!stack_.empty() && stack_.back().t == internal::json_node::array)
+      return true;
+    return stack_.size() >= 2
+           && stack_[stack_.size() - 2].t == internal::json_node::array;
   }
 
   // -- printing ---------------------------------------------------------------

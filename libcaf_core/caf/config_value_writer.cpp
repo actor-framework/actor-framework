@@ -82,7 +82,7 @@ public:
     return true;
   }
 
-  bool begin_object(type_id_t, std::string_view) override {
+  bool begin_object(type_id_t id, std::string_view name) override {
     CHECK_NOT_EMPTY();
     auto f = detail::make_overload(
       [this](config_value* x) {
@@ -130,9 +130,14 @@ public:
         st_.push(obj);
         return true;
       },
-      [this](config_value::list* ls) {
+      [this, id, name](config_value::list* ls) {
         ls->emplace_back(settings{});
-        st_.push(std::addressof(get<settings>(ls->back())));
+        auto& obj = get<settings>(ls->back());
+        if (auto tname = query_type_name(id); !tname.empty())
+          put(obj, "@type", std::string{tname});
+        else
+          put(obj, "@type", std::string{name});
+        st_.push(std::addressof(obj));
         return true;
       });
     if (!visit(f, st_.top()))

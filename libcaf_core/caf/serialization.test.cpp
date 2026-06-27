@@ -12,6 +12,7 @@
 #include "caf/config_value_reader.hpp"
 #include "caf/config_value_writer.hpp"
 #include "caf/detail/default_actor_handle_codec.hpp"
+#include "caf/error.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/json_reader.hpp"
 #include "caf/json_writer.hpp"
@@ -931,6 +932,51 @@ SCENARIO("binary serializer and deserializer handle vectors of booleans") {
         auto copy = std::vector<bool>{};
         check(source.apply(copy));
         check_eq(copy, val);
+      }
+    }
+  }
+}
+
+SCENARIO("caf::error round-trips through JSON") {
+  GIVEN("an empty error") {
+    error original;
+    WHEN("serializing it to JSON and back") {
+      json_writer_wrapper sink{sys};
+      check(sink.sink.apply(original));
+      auto reader
+        = std::get<std::shared_ptr<json_reader>>(sink.make_deserializer());
+      error copy;
+      check(reader->apply(copy));
+      THEN("the deserialized error matches the original") {
+        check_eq(copy, original);
+      }
+    }
+  }
+  GIVEN("a runtime error without context") {
+    auto original = make_error(sec::runtime_error);
+    WHEN("serializing it to JSON and back") {
+      json_writer_wrapper sink{sys};
+      check(sink.sink.apply(original));
+      auto reader
+        = std::get<std::shared_ptr<json_reader>>(sink.make_deserializer());
+      error copy;
+      check(reader->apply(copy));
+      THEN("the deserialized error matches the original") {
+        check_eq(copy, original);
+      }
+    }
+  }
+  GIVEN("a runtime error with string context") {
+    auto original = make_error(sec::runtime_error, std::string{"oops"});
+    WHEN("serializing it to JSON and back") {
+      json_writer_wrapper sink{sys};
+      check(sink.sink.apply(original));
+      auto reader
+        = std::get<std::shared_ptr<json_reader>>(sink.make_deserializer());
+      error copy;
+      check(reader->apply(copy));
+      THEN("the deserialized error matches the original") {
+        check_eq(copy, original);
       }
     }
   }
