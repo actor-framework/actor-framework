@@ -439,7 +439,7 @@ SCENARIO("server responds with 503 unavailable when queue is overloaded") {
         require_eq(net::write(client_fd, as_bytes(std::span{req})),
                    static_cast<ptrdiff_t>(req.size()));
       }
-      THEN("the two overflow responses fail") {
+      THEN("the two overflow requests receive 503 responses") {
         for (auto i = size_t{0}; i < overflow_count; ++i) {
           auto response = read_http_response(client_fd);
           check_eq(response.header.status(), uint16_t{503});
