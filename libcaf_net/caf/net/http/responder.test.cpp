@@ -7,6 +7,7 @@
 #include "caf/test/runnable.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/net/http/response.hpp"
 #include "caf/net/http/response_header.hpp"
 #include "caf/net/http/router.hpp"
 #include "caf/net/http/server.hpp"
@@ -220,6 +221,64 @@ TEST("responding with custom header fields with payload") {
   check_eq(fields["X-Custom-Header"], "custom-value");
   check_eq(payload.size(), hello.size());
   check_eq(ascii(payload), hello);
+}
+
+TEST("responding with custom headers and payload via respond") {
+  auto body = "Hello world!"sv;
+  route("/test", [body](http::responder& res) {
+    std::vector<std::pair<std::string, std::string>> headers{
+      {"Content-Type", "text/plain"},
+      {"X-Custom-Header", "custom-value"},
+    };
+    res.respond(http::status::ok, headers, as_bytes(std::span{body}));
+  });
+  launch();
+  send_request(http::method::get, "/test");
+  auto [code, fields, payload] = receive_response();
+  check_eq(code, http::status::ok);
+  check_eq(fields.size(), 3u);
+  check_eq(fields["Content-Type"], "text/plain");
+  check_eq(fields["X-Custom-Header"], "custom-value");
+  check_eq(fields["Content-Length"], "12");
+  check_eq(payload.size(), body.size());
+  check_eq(ascii(payload), body);
+}
+
+TEST("responding with fields_map via respond") {
+  route("/test", [](http::responder& res) {
+    http::response::fields_map headers{
+      {"Content-Type", "text/plain"},
+    };
+    res.respond(http::status::ok, headers, const_byte_span{});
+  });
+  launch();
+  send_request(http::method::get, "/test");
+  auto [code, fields, payload] = receive_response();
+  check_eq(code, http::status::ok);
+  check_eq(fields.size(), 2u);
+  check_eq(fields["Content-Type"], "text/plain");
+  check_eq(fields["Content-Length"], "0");
+  check_eq(payload.size(), 0u);
+}
+
+TEST("responding with header_fields span via respond") {
+  route("/test", [](http::responder& res) {
+    http::response::fields_map fields{
+      {"Content-Type", "text/plain"},
+      {"X-Another", "value"},
+    };
+    http::response res_obj(http::status::ok, std::move(fields), {});
+    res.respond(http::status::ok, res_obj.header_fields(), const_byte_span{});
+  });
+  launch();
+  send_request(http::method::get, "/test");
+  auto [code, fields, payload] = receive_response();
+  check_eq(code, http::status::ok);
+  check_eq(fields.size(), 3u);
+  check_eq(fields["Content-Type"], "text/plain");
+  check_eq(fields["X-Another"], "value");
+  check_eq(fields["Content-Length"], "0");
+  check_eq(payload.size(), 0u);
 }
 
 } // WITH_FIXTURE(fixture)
