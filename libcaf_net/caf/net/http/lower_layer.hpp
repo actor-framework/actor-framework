@@ -7,11 +7,31 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/generic_lower_layer.hpp"
 
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 
+#include <string>
 #include <string_view>
+
+namespace caf::detail {
+
+/// Checks whether T is a key/value pair suitable for an HTTP header field.
+template <class T>
+concept http_header_field = requires(const T& field) {
+  { std::get<0>(field) } -> std::convertible_to<std::string_view>;
+  { std::get<1>(field) } -> std::convertible_to<std::string_view>;
+};
+
+/// Checks whether T is an iterable container of HTTP header field pairs.
+template <class T>
+concept http_header_fields
+  = iterable<T>
+    && http_header_field<typename std::iterator_traits<
+      decltype(std::declval<T&>().begin())>::value_type>;
+
+} // namespace caf::detail
 
 namespace caf::net::http {
 
@@ -76,6 +96,22 @@ public:
 
   /// @copydoc send_response
   bool send_response(status code, const error& err);
+
+  /// Convenience function for sending a response with arbitrary header fields.
+  /// Automatically sets the `Content-Length` header field from @p content.
+  /// @note Callers must not include `Content-Length` in @p headers; doing so
+  ///       results in duplicate header fields on the wire.
+  template <detail::http_header_fields HeaderFields>
+  bool send_response(status code, const HeaderFields& headers,
+                     const_byte_span content) {
+    auto content_size = std::to_string(content.size());
+    begin_header(code);
+    for (const auto& [key, value] : headers) {
+      add_header_field(key, value);
+    }
+    add_header_field(std::string_view{"Content-Length"}, content_size);
+    return end_header() && send_payload(content);
+  }
 };
 
 class CAF_NET_EXPORT lower_layer::client : public lower_layer {

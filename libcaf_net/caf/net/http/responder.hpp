@@ -95,6 +95,17 @@ public:
       impl_->set_completed();
     }
 
+    /// Sends an HTTP response message with arbitrary header fields.
+    /// Automatically sets the `Content-Length` header field from @p content.
+    /// @note Callers must not include `Content-Length` in @p headers; doing so
+    ///       results in duplicate header fields on the wire.
+    template <detail::http_header_fields HeaderFields>
+    void
+    respond(status code, const HeaderFields& headers, const_byte_span content) {
+      impl_->down()->send_response(code, headers, content);
+      impl_->set_completed();
+    }
+
     /// Returns a pointer to the HTTP layer.
     lower_layer::server* down() {
       return impl_->down();
@@ -176,6 +187,17 @@ public:
   /// description to the client.
   void respond(status code, const error& what) {
     down()->send_response(code, what);
+  }
+
+  /// Sends an HTTP response message with arbitrary header fields.
+  /// Automatically sets the `Content-Length` header field from @p content.
+  /// @note Callers must not include `Content-Length` in @p headers; doing so
+  ///       results in duplicate header fields on the wire.
+  /// @pre `valid()`
+  template <detail::http_header_fields HeaderFields>
+  void
+  respond(status code, const HeaderFields& headers, const_byte_span content) {
+    down()->send_response(code, headers, content);
   }
 
   /// Starts writing an HTTP header.
