@@ -13,7 +13,9 @@
 #include "caf/config_value_writer.hpp"
 #include "caf/detail/default_actor_handle_codec.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/json_object.hpp"
 #include "caf/json_reader.hpp"
+#include "caf/json_value.hpp"
 #include "caf/json_writer.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/serializer.hpp"
@@ -881,6 +883,85 @@ OUTLINE("serializing a type that initializes members to a non-empty state") {
     | json_writer         |
     | config_value_writer |
   )_";
+}
+
+SCENARIO("caf::error round-trips through JSON") {
+  GIVEN("a json_writer and json_reader") {
+    auto sink = json_writer_wrapper{sys};
+    WHEN("serializing an empty error") {
+      auto original = error{};
+      check(inspect(sink.sink, original));
+      THEN("deserializing produces an empty error") {
+        auto source = json_reader{&sink.codec};
+        require(source.load(sink.sink.str()));
+        auto copy = make_error(sec::runtime_error);
+        check(source.apply(copy));
+        check(copy.empty());
+      }
+    }
+    WHEN("serializing an error with a code but no context") {
+      auto original = make_error(sec::runtime_error);
+      check(inspect(sink.sink, original));
+      THEN("deserializing produces the same error") {
+        auto source = json_reader{&sink.codec};
+        require(source.load(sink.sink.str()));
+        auto copy = error{};
+        check(source.apply(copy));
+        check_eq(copy, original);
+      }
+    }
+    WHEN("serializing an error that carries a string message in its context") {
+      auto original = make_error(sec::runtime_error, std::string{"oops"});
+      check(inspect(sink.sink, original));
+      THEN("the JSON context stores message types and values") {
+        auto parsed = json_value::parse(sink.sink.str());
+        require(parsed.has_value());
+        // error -> data -> context -> { types, values }
+        auto ctx = parsed->to_object()
+                     .value("data")
+                     .to_object()
+                     .value("context")
+                     .to_object();
+        check(ctx.value("types").is_array());
+        check(ctx.value("values").is_array());
+      }
+      AND_THEN("deserializing produces the same error") {
+        auto source = json_reader{&sink.codec};
+        require(source.load(sink.sink.str()));
+        auto copy = error{};
+        check(source.apply(copy));
+        check_eq(copy, original);
+      }
+    }
+  }
+}
+
+SCENARIO("caf::message round-trips through JSON") {
+  GIVEN("a json_writer and json_reader") {
+    auto sink = json_writer_wrapper{sys};
+    WHEN("serializing a message with builtin and custom types") {
+      auto original = make_message(std::string{"oops"}, int32_t{42},
+                                   weekday::tuesday, c_array{{1, 2, 3, 4}});
+      check(sink.sink.apply(original));
+      THEN("the JSON stores message types and values in an object") {
+        auto parsed = json_value::parse(sink.sink.str());
+        require(parsed.has_value());
+        check(parsed->is_object());
+        auto obj = parsed->to_object();
+        check(obj.value("types").is_array());
+        check(obj.value("values").is_array());
+      }
+      AND_THEN("deserializing produces the same message") {
+        auto source = json_reader{&sink.codec};
+        require(source.load(sink.sink.str()));
+        auto copy = message{};
+        check(source.apply(copy));
+        check(copy.match_elements<std::string, int32_t, weekday, c_array>());
+        check(copy.matches(std::string{"oops"}, int32_t{42}, weekday::tuesday,
+                           c_array{{1, 2, 3, 4}}));
+      }
+    }
+  }
 }
 
 SCENARIO("binary serializer and deserializer handle vectors of booleans") {
