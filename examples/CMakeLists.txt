@@ -94,6 +94,9 @@ add_net_example(http client)
 add_net_example(http rest)
 add_net_example(http time-server)
 
+add_net_example(multipart reader)
+add_net_example(multipart writer)
+
 add_net_example(length_prefix_framing chat-client)
 add_net_example(length_prefix_framing chat-server)
 
