@@ -65,6 +65,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `caf::async::producer::on_consumer_demand` callback now takes a second
   `bool unblocked` argument. Please refer to the documentation of the `producer`
   class for more details.
+- `caf::message` is now serialized as an object with `types` and `values` fields
+  instead of as a bare sequence of dynamically typed values. This representation
+  provides type information to deserializers before loading the message contents
+  and resolves issues related to out-of-sync `caf::message::save` and
+  `caf::message::load` format.
 
 ### Deprecated
 

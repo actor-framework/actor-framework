@@ -945,7 +945,9 @@ SCENARIO("config values can parse their own to_string output") {
         CHECK_ROUNDTRIP(std::vector<int>({1, 2, 3}), "[1, 2, 3]");
         CHECK_ROUNDTRIP(my_request(1, 2), R"_({a = 1, b = 2})_");
         CHECK_ROUNDTRIP(std::make_tuple(add_atom_v, 1, 2), R"_([{}, 1, 2])_");
-        CHECK_ROUNDTRIP(make_message(add_atom_v, 1, 2), R"_([{}, 1, 2])_");
+        CHECK_ROUNDTRIP(
+          make_message(add_atom_v, 1, 2),
+          R"_({types = ["caf::add_atom", "int32_t", "int32_t"], values = [{}, 1, 2]})_");
       }
     }
   }

@@ -85,99 +85,60 @@ bool message::load(deserializer& source) {
     data_.reset(ptr.release(), adopt_ref);
     return source.end_tuple() && source.end_field() && source.end_object();
   }
-  // For human-readable data formats, we serialize messages as a single list of
-  // dynamically-typed objects. This is more expensive, because we first need
-  // the full type information before we can allocate the storage. Hence, we
-  // must deserialize each element into a separate memory block first and then
-  // move them to their final destination later.
-  struct object_ptr {
-    void* obj;
-    const detail::meta_object* meta;
-    object_ptr(void* obj, const detail::meta_object* meta) noexcept
-      : obj(obj), meta(meta) {
-      // nop
-    }
-    object_ptr(object_ptr&& other) noexcept : obj(nullptr), meta(nullptr) {
-      using std::swap;
-      swap(obj, other.obj);
-      swap(meta, other.meta);
-    }
-    object_ptr& operator=(object_ptr&& other) noexcept {
-      if (this != &other) {
-        if (obj) {
-          meta->destroy(obj);
-          free(obj);
-          obj = nullptr;
-          meta = nullptr;
-        }
-        using std::swap;
-        swap(obj, other.obj);
-        swap(meta, other.meta);
-      }
-      return *this;
-    }
-    ~object_ptr() noexcept {
-      if (obj) {
-        meta->destroy(obj);
-        free(obj);
-      }
-    }
-  };
-  struct free_t {
-    void operator()(void* ptr) const noexcept {
-      return free(ptr);
-    }
-  };
-  using unique_void_ptr = std::unique_ptr<void, free_t>;
+  // For human-readable data formats, we prefix the values with type names.
+  GUARDED(source.begin_object(type_id_v<message>, "message"));
+  GUARDED(source.begin_field("types"));
   auto msg_size = size_t{0};
   GUARDED(source.begin_sequence(msg_size));
-  if (msg_size > 0) {
-    // Deserialize message elements individually.
-    std::vector<object_ptr> objects;
-    detail::type_id_list_builder ids;
-    objects.reserve(msg_size);
-    auto data_size = size_t{0};
-    for (size_t i = 0; i < msg_size; ++i) {
-      auto type = type_id_t{0};
-      GUARDED(source.fetch_next_object_type(type));
-      if (auto meta_obj = detail::global_meta_object_or_null(type)) {
-        ids.push_back(type);
-        auto obj_size = meta_obj->padded_size;
-        data_size += obj_size;
-        unique_void_ptr vptr{malloc(obj_size)};
-        if (vptr == nullptr)
-          STOP(sec::runtime_error, "unable to allocate memory");
-        meta_obj->default_construct(vptr.get());
-        objects.emplace_back(vptr.release(), meta_obj);
-        if (!meta_obj->load(source, objects.back().obj))
-          return false;
-      } else {
-        STOP(sec::unknown_type);
-      }
-    }
-    GUARDED(source.end_sequence());
-    // Merge elements into a single message data object.
-    intrusive_ptr<detail::message_data> ptr;
-    if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
-      // We don't need to worry about exceptions here: the message_data
-      // constructor as well as `move_to_list` are `noexcept`.
-      ptr.reset(new (vptr) detail::message_data(ids.move_to_list()), adopt_ref);
-    } else {
-      STOP(sec::runtime_error, "unable to allocate memory");
-    }
-    auto pos = ptr->storage();
-    for (auto& x : objects) {
-      // TODO: avoid extra copy by adding move_construct to meta objects
-      x.meta->copy_construct(pos, x.obj);
-      ptr->inc_constructed_elements();
-      pos += x.meta->padded_size;
-    }
-    data_.reset(ptr.release(), adopt_ref);
-    return true;
-  } else {
-    data_.reset();
-    return source.end_sequence();
+  using uint16_limits = std::numeric_limits<uint16_t>;
+  if (msg_size > static_cast<size_t>(uint16_limits::max() - 1))
+    STOP(sec::invalid_argument, "too many types for message");
+  detail::type_id_list_builder ids{msg_size};
+  size_t data_size = 0;
+  for (size_t i = 0; i < msg_size; ++i) {
+    std::string type_name;
+    GUARDED(source.value(type_name));
+    auto type = query_type_id(type_name);
+    if (auto meta = detail::global_meta_object_or_null(type))
+      data_size += meta->padded_size;
+    else
+      STOP(sec::unknown_type, type_name);
+    ids.push_back(type);
   }
+  GUARDED(source.end_sequence());
+  GUARDED(source.end_field());
+  if (msg_size == 0) {
+    data_.reset();
+    return source.begin_field("values") //
+           && source.begin_tuple(0)     //
+           && source.end_tuple()        //
+           && source.end_field()        //
+           && source.end_object();
+  }
+  CAF_ASSERT(ids.size() == msg_size);
+  intrusive_ptr<detail::message_data> ptr;
+  if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
+    // We don't need to worry about exceptions here: the message_data
+    // constructor as well as `move_to_list` are `noexcept`.
+    ptr.reset(new (vptr) detail::message_data(ids.move_to_list()), adopt_ref);
+  } else {
+    STOP(sec::runtime_error, "unable to allocate memory");
+  }
+  auto pos = ptr->storage();
+  auto types = ptr->types();
+  auto gmos = detail::global_meta_objects();
+  GUARDED(source.begin_field("values"));
+  GUARDED(source.begin_tuple(msg_size));
+  for (size_t i = 0; i < msg_size; ++i) {
+    auto& meta = gmos[types[i]];
+    meta.default_construct(pos);
+    ptr->inc_constructed_elements();
+    if (!meta.load(source, pos))
+      return false;
+    pos += meta.padded_size;
+  }
+  data_.reset(ptr.release(), adopt_ref);
+  return source.end_tuple() && source.end_field() && source.end_object();
 }
 
 bool message::save(serializer& sink) const {
@@ -214,21 +175,23 @@ bool message::save(serializer& sink) const {
     }
     return sink.end_tuple() && sink.end_field() && sink.end_object();
   }
-  // For human-readable data formats, we serialize messages as a single list of
-  // dynamically-typed objects.
-  if (data_ == nullptr) {
-    // Short-circuit empty tuples.
-    return sink.begin_sequence(0) && sink.end_sequence();
+  // For human-readable data formats, we prefix values with type names.
+  GUARDED(sink.begin_object(type_id_v<message>, "message"));
+  auto type_ids = data_ ? data_->types() : make_type_id_list();
+  GUARDED(sink.begin_field("types") && sink.begin_sequence(type_ids.size()));
+  for (auto id : type_ids) {
+    auto& meta = gmos[id];
+    GUARDED(sink.value(meta.type_name));
   }
-  auto type_ids = data_->types();
-  GUARDED(sink.begin_sequence(type_ids.size()));
-  auto storage = data_->storage();
+  GUARDED(sink.end_sequence() && sink.end_field());
+  GUARDED(sink.begin_field("values") && sink.begin_tuple(type_ids.size()));
+  auto storage = data_ ? data_->storage() : nullptr;
   for (auto id : type_ids) {
     auto& meta = gmos[id];
     GUARDED(meta.save(sink, storage));
     storage += meta.padded_size;
   }
-  return sink.end_sequence();
+  return sink.end_tuple() && sink.end_field() && sink.end_object();
 }
 
 bool message::save(detail::stringification_inspector& sink) const {
