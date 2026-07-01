@@ -13,7 +13,9 @@
 #include "caf/config_value_writer.hpp"
 #include "caf/detail/default_actor_handle_codec.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/json_object.hpp"
 #include "caf/json_reader.hpp"
+#include "caf/json_value.hpp"
 #include "caf/json_writer.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/serializer.hpp"
@@ -883,6 +885,109 @@ OUTLINE("serializing a type that initializes members to a non-empty state") {
   )_";
 }
 
+OUTLINE("serializing and then deserializing an empty message") {
+  GIVEN("a <serializer>") {
+    auto sink = serializer_by_name(block_parameters<std::string>());
+    WHEN("serializing an empty message") {
+      auto val = message{};
+      std::visit([this, &val](auto& ptr) { check(ptr->sink.apply(val)); },
+                 sink);
+      THEN("deserializing the result produces an empty message again") {
+        auto source = make_deserializer(sink);
+        auto copy = make_message(int32_t{1});
+        std::visit([this, &copy](auto& ptr) { check(ptr->apply(copy)); },
+                   source);
+        check(copy.empty());
+      }
+    }
+  }
+  EXAMPLES = R"_(
+    | serializer          |
+    | binary_serializer   |
+    | json_writer         |
+    | config_value_writer |
+  )_";
+}
+
+OUTLINE("serializing and then deserializing a non-empty message") {
+  GIVEN("a <serializer>") {
+    auto sink = serializer_by_name(block_parameters<std::string>());
+    WHEN("serializing a message with builtin and custom types") {
+      auto original = make_message(std::string{"oops"}, int32_t{42},
+                                   weekday::tuesday, c_array{{1, 2, 3, 4}});
+      std::visit([this,
+                  &original](auto& ptr) { check(ptr->sink.apply(original)); },
+                 sink);
+      THEN("deserializing the result produces the same message") {
+        auto source = make_deserializer(sink);
+        auto copy = message{};
+        std::visit([this, &copy](auto& ptr) { check(ptr->apply(copy)); },
+                   source);
+        check(copy.match_elements<std::string, int32_t, weekday, c_array>());
+        check(copy.matches(std::string{"oops"}, int32_t{42}, weekday::tuesday,
+                           c_array{{1, 2, 3, 4}}));
+      }
+    }
+  }
+  EXAMPLES = R"_(
+    | serializer          |
+    | binary_serializer   |
+    | json_writer         |
+    | config_value_writer |
+  )_";
+}
+
+SCENARIO("caf::error round-trips through JSON") {
+  GIVEN("a json_writer and json_reader") {
+    auto sink = json_writer_wrapper{sys};
+    WHEN("serializing an empty error") {
+      auto original = error{};
+      check(inspect(sink.sink, original));
+      THEN("deserializing produces an empty error") {
+        auto source = json_reader{&sink.codec};
+        require(source.load(sink.sink.str()));
+        auto copy = make_error(sec::runtime_error);
+        check(source.apply(copy));
+        check(copy.empty());
+      }
+    }
+    WHEN("serializing an error with a code but no context") {
+      auto original = make_error(sec::runtime_error);
+      check(inspect(sink.sink, original));
+      THEN("deserializing produces the same error") {
+        auto source = json_reader{&sink.codec};
+        require(source.load(sink.sink.str()));
+        auto copy = error{};
+        check(source.apply(copy));
+        check_eq(copy, original);
+      }
+    }
+    WHEN("serializing an error that carries a string message in its context") {
+      auto original = make_error(sec::runtime_error, std::string{"oops"});
+      check(inspect(sink.sink, original));
+      THEN("the JSON context stores message types and values") {
+        auto parsed = json_value::parse(sink.sink.str());
+        require(parsed.has_value());
+        // error -> data -> context -> { types, values }
+        auto ctx = parsed->to_object()
+                     .value("data")
+                     .to_object()
+                     .value("context")
+                     .to_object();
+        check(ctx.value("types").is_array());
+        check(ctx.value("values").is_array());
+      }
+      AND_THEN("deserializing produces the same error") {
+        auto source = json_reader{&sink.codec};
+        require(source.load(sink.sink.str()));
+        auto copy = error{};
+        check(source.apply(copy));
+        check_eq(copy, original);
+      }
+    }
+  }
+}
+
 SCENARIO("binary serializer and deserializer handle vectors of booleans") {
   GIVEN("a binary serializer") {
     auto sink = binary_serializer_wrapper{sys};
@@ -931,6 +1036,46 @@ SCENARIO("binary serializer and deserializer handle vectors of booleans") {
         auto copy = std::vector<bool>{};
         check(source.apply(copy));
         check_eq(copy, val);
+      }
+    }
+  }
+}
+
+SCENARIO("custom type ID mapper is respected for caf::message serialization") {
+  GIVEN("a custom type ID mapper that maps 'weekday' to an alias") {
+    struct alias_mapper : type_id_mapper {
+      std::string_view operator()(type_id_t type) const override {
+        if (type == type_id_v<weekday>)
+          return "my_app.weekday";
+        return query_type_name(type);
+      }
+      type_id_t operator()(std::string_view name) const override {
+        if (name == "my_app.weekday")
+          return type_id_v<weekday>;
+        return query_type_id(name);
+      }
+    };
+    alias_mapper mapper;
+    auto wrapper = json_writer_wrapper{sys};
+    wrapper.sink.mapper(&mapper);
+    WHEN("serializing a message containing a weekday and an int32_t") {
+      auto original = make_message(weekday::tuesday, int32_t{42});
+      require(wrapper.sink.apply(original));
+      THEN("deserializing with the same mapper produces the original message") {
+        auto source = json_reader{&wrapper.codec};
+        source.mapper(&mapper);
+        require(source.load(wrapper.sink.str()));
+        auto copy = message{};
+        require(source.apply(copy));
+        require(copy.match_elements<weekday, int32_t>());
+        check(copy.matches(weekday::tuesday, int32_t{42}));
+      }
+      AND_THEN(
+        "deserializing without the mapper fails due to the unknown alias") {
+        auto source = json_reader{&wrapper.codec};
+        require(source.load(wrapper.sink.str()));
+        auto copy = message{};
+        check(!source.apply(copy));
       }
     }
   }

@@ -176,6 +176,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   responds with `503 Service Unavailable` when encountering backpressure from
   the consumer, i.e., if the HTTP client sends requests faster than the server
   can process them.
+- Added type information to the serialization format of `caf::message` for human
+  readable serializers (such as `json`). This representation resolves issues
+  related to `caf::message` deserialization in those formats.
 
 ### Removed
 

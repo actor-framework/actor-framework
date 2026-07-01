@@ -58,7 +58,7 @@ bool batch::data::save(Inspector& sink) const {
     if (!sink.value(item_type_))
       return false;
   } else {
-    if (!sink.value(meta->type_name))
+    if (!sink.value(sink.as_serializer().resolve_type_name(item_type_)))
       return false;
   }
   if (!sink.end_field())
@@ -132,7 +132,7 @@ bool batch::load_impl(Inspector& source) {
     std::string type_name;
     if (!source.value(type_name))
       return false;
-    payload_type = query_type_id(type_name);
+    payload_type = source.resolve_type_id(type_name);
   }
   const auto* meta = detail::global_meta_object_or_null(payload_type);
   if (!meta) {
