@@ -15,7 +15,7 @@ deserializer::~deserializer() {
   // nop
 }
 
-type_id_t deserializer::resolve_type_id(std::string_view type_name) const {
+type_id_t deserializer::to_type_id(std::string_view type_name) const {
   return query_type_id(type_name);
 }
 

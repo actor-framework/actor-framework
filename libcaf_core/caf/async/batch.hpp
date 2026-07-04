@@ -14,7 +14,6 @@
 #include "caf/type_id.hpp"
 
 #include <algorithm>
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -65,13 +64,9 @@ public:
     return std::span<const T>{};
   }
 
-  bool save(serializer& f) const;
+  bool save(serializer& sink) const;
 
-  bool save(binary_serializer& f) const;
-
-  bool load(deserializer& f);
-
-  bool load(binary_deserializer& f);
+  bool load(deserializer& source);
 
   void swap(batch& other) {
     data_.swap(other.data_);
@@ -174,8 +169,7 @@ private:
     // -- serialization --------------------------------------------------------
 
     /// @pre `size() > 0`
-    template <class Inspector>
-    bool save(Inspector& sink) const;
+    bool save(serializer& sink) const;
 
   private:
     mutable detail::atomic_ref_count ref_count_;

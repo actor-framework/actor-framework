@@ -286,8 +286,8 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
         std::string out
-          = R"_({"@type": "caf::message", "types": ["caf::put_atom", "std::string", "int32_t"], "values": [{}, "foo", 42]})_";
-        check_eq(to_json_string(x, 0), out);
+          = R"_({"types": ["caf::put_atom", "std::string", "int32_t"], "values": [{}, "foo", 42]})_";
+        check_eq(to_json_string(x, 0, true, true), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {

@@ -312,7 +312,7 @@ public:
     return true;
   }
 
-  type_id_t resolve_type_id(std::string_view name) const override {
+  type_id_t to_type_id(std::string_view name) const override {
     auto id = (*mapper_)(name);
     return id != invalid_type_id ? id : query_type_id(name);
   }
@@ -320,7 +320,7 @@ public:
   bool fetch_next_object_type(type_id_t& type) override {
     std::string_view type_name;
     if (fetch_next_object_name(type_name)) {
-      if (auto id = resolve_type_id(type_name); id != invalid_type_id) {
+      if (auto id = to_type_id(type_name); id != invalid_type_id) {
         type = id;
         return true;
       } else {
@@ -459,7 +459,7 @@ public:
         member != nullptr
         && member->val->data.index() != detail::json::value::null_index) {
       auto ft = field_type(top<position::object>(), name, field_type_suffix_);
-      if (auto id = resolve_type_id(ft); id != invalid_type_id) {
+      if (auto id = to_type_id(ft); id != invalid_type_id) {
         if (auto i = std::ranges::find(types, id); i != types.end()) {
           index = static_cast<size_t>(std::distance(types.begin(), i));
           push(member->val);

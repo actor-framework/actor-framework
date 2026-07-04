@@ -14,7 +14,7 @@ serializer::~serializer() {
   // nop
 }
 
-std::string_view serializer::resolve_type_name(type_id_t id) const {
+std::string_view serializer::to_type_name(type_id_t id) const {
   return query_type_name(id);
 }
 

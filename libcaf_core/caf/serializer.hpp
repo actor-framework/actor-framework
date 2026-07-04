@@ -43,7 +43,7 @@ public:
   /// override this to apply custom type name mappings (e.g. via a
   /// @ref type_id_mapper). The default implementation delegates to
   /// @ref query_type_name.
-  virtual std::string_view resolve_type_name(type_id_t id) const;
+  virtual std::string_view to_type_name(type_id_t id) const;
 
   // -- interface functions ----------------------------------------------------
 

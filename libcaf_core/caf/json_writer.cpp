@@ -131,7 +131,7 @@ public:
     return true;
   }
 
-  std::string_view resolve_type_name(type_id_t id) const override {
+  std::string_view to_type_name(type_id_t id) const override {
     auto tname = (*mapper_)(id);
     return tname.empty() ? query_type_name(id) : tname;
   }
@@ -142,7 +142,7 @@ public:
       add(R"_("@type": )_");
       pop();
       CAF_ASSERT(top() == internal::json_node::element);
-      auto tname = resolve_type_name(id);
+      auto tname = to_type_name(id);
       add('"');
       add(tname.empty() ? name : tname);
       add('"');
@@ -223,7 +223,7 @@ public:
       pop();
       CAF_ASSERT(top() == internal::json_node::element);
       pop();
-      auto tname = resolve_type_name(types[index]);
+      auto tname = to_type_name(types[index]);
       if (tname.empty()) {
         err_ = make_error(sec::runtime_error, "failed to retrieve type name");
         return false;

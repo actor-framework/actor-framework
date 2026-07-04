@@ -4,8 +4,6 @@
 
 #include "caf/async/batch.hpp"
 
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/meta_object.hpp"
@@ -40,8 +38,7 @@ void dynamic_item_destructor(type_id_t item_type, size_t item_size,
 
 } // namespace
 
-template <class Inspector>
-bool batch::data::save(Inspector& sink) const {
+bool batch::data::save(serializer& sink) const {
   CAF_ASSERT(size_ > 0);
   const auto* meta = detail::global_meta_object_or_null(item_type_);
   if (!meta) {
@@ -58,7 +55,7 @@ bool batch::data::save(Inspector& sink) const {
     if (!sink.value(item_type_))
       return false;
   } else {
-    if (!sink.value(sink.as_serializer().resolve_type_name(item_type_)))
+    if (!sink.value(sink.to_type_name(item_type_)))
       return false;
   }
   if (!sink.end_field())
@@ -71,7 +68,7 @@ bool batch::data::save(Inspector& sink) const {
     return false;
   auto len = size_;
   do {
-    if (!do_save(*meta, sink.as_serializer(), ptr))
+    if (!do_save(*meta, sink, ptr))
       return false;
     ptr += item_size_;
     --len;
@@ -81,8 +78,7 @@ bool batch::data::save(Inspector& sink) const {
 
 // -- batch --------------------------------------------------------------------
 
-template <class Inspector>
-bool batch::save_impl(Inspector& sink) const {
+bool batch::save(serializer& sink) const {
   if (data_)
     return data_->save(sink);
   return sink.begin_object(type_id_v<batch>, type_name_v<batch>) //
@@ -93,15 +89,7 @@ bool batch::save_impl(Inspector& sink) const {
          && sink.end_object();
 }
 
-bool batch::save(serializer& f) const {
-  return save_impl(f);
-}
-
-bool batch::save(binary_serializer& f) const {
-  return save_impl(f);
-}
-template <class Inspector>
-bool batch::load_impl(Inspector& source) {
+bool batch::load(deserializer& source) {
   if (!source.begin_object(type_id_v<batch>, type_name_v<batch>))
     return false;
   bool type_field_present = false;
@@ -132,7 +120,7 @@ bool batch::load_impl(Inspector& source) {
     std::string type_name;
     if (!source.value(type_name))
       return false;
-    payload_type = source.resolve_type_id(type_name);
+    payload_type = source.to_type_id(type_name);
   }
   const auto* meta = detail::global_meta_object_or_null(payload_type);
   if (!meta) {
@@ -180,14 +168,6 @@ bool batch::load_impl(Inspector& source) {
   }
   data_ = std::move(ptr);
   return source.end_sequence() && source.end_field() && source.end_object();
-}
-
-bool batch::load(deserializer& f) {
-  return load_impl(f);
-}
-
-bool batch::load(binary_deserializer& f) {
-  return load_impl(f.as_deserializer());
 }
 
 } // namespace caf::async

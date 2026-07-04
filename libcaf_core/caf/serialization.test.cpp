@@ -937,55 +937,55 @@ OUTLINE("serializing and then deserializing a non-empty message") {
   )_";
 }
 
-SCENARIO("caf::error round-trips through JSON") {
-  GIVEN("a json_writer and json_reader") {
-    auto sink = json_writer_wrapper{sys};
+OUTLINE("serializing and then deserializing errors") {
+  GIVEN("a <serializer>") {
+    auto sink = serializer_by_name(block_parameters<std::string>());
     WHEN("serializing an empty error") {
       auto original = error{};
-      check(inspect(sink.sink, original));
-      THEN("deserializing produces an empty error") {
-        auto source = json_reader{&sink.codec};
-        require(source.load(sink.sink.str()));
-        auto copy = make_error(sec::runtime_error);
-        check(source.apply(copy));
-        check(copy.empty());
+      std::visit([this,
+                  &original](auto& ptr) { check(ptr->sink.apply(original)); },
+                 sink);
+      THEN("deserializing the result produces the same error") {
+        auto source = make_deserializer(sink);
+        auto copy = error{};
+        std::visit([this, &copy](auto& ptr) { check(ptr->apply(copy)); },
+                   source);
+        check_eq(copy, original);
       }
     }
-    WHEN("serializing an error with a code but no context") {
+    WHEN("serializing an error that only carries an error code") {
       auto original = make_error(sec::runtime_error);
-      check(inspect(sink.sink, original));
-      THEN("deserializing produces the same error") {
-        auto source = json_reader{&sink.codec};
-        require(source.load(sink.sink.str()));
+      std::visit([this,
+                  &original](auto& ptr) { check(ptr->sink.apply(original)); },
+                 sink);
+      THEN("deserializing the result produces the same error") {
+        auto source = make_deserializer(sink);
         auto copy = error{};
-        check(source.apply(copy));
+        std::visit([this, &copy](auto& ptr) { check(ptr->apply(copy)); },
+                   source);
         check_eq(copy, original);
       }
     }
     WHEN("serializing an error that carries a string message in its context") {
-      auto original = make_error(sec::runtime_error, std::string{"oops"});
-      check(inspect(sink.sink, original));
-      THEN("the JSON context stores message types and values") {
-        auto parsed = json_value::parse(sink.sink.str());
-        require(parsed.has_value());
-        // error -> data -> context -> { types, values }
-        auto ctx = parsed->to_object()
-                     .value("data")
-                     .to_object()
-                     .value("context")
-                     .to_object();
-        check(ctx.value("types").is_array());
-        check(ctx.value("values").is_array());
-      }
-      AND_THEN("deserializing produces the same error") {
-        auto source = json_reader{&sink.codec};
-        require(source.load(sink.sink.str()));
+      auto original = make_error(sec::runtime_error, "oops");
+      std::visit([this,
+                  &original](auto& ptr) { check(ptr->sink.apply(original)); },
+                 sink);
+      THEN("deserializing the result produces the same error") {
+        auto source = make_deserializer(sink);
         auto copy = error{};
-        check(source.apply(copy));
+        std::visit([this, &copy](auto& ptr) { check(ptr->apply(copy)); },
+                   source);
         check_eq(copy, original);
       }
     }
   }
+  EXAMPLES = R"_(
+    | serializer          |
+    | binary_serializer   |
+    | json_writer         |
+    | config_value_writer |
+  )_";
 }
 
 SCENARIO("binary serializer and deserializer handle vectors of booleans") {

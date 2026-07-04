@@ -54,7 +54,7 @@ bool message::load(deserializer& source) {
     for (size_t i = 0; i < msg_size; ++i) {
       std::string type_name;
       GUARDED(source.value(type_name));
-      auto type = source.resolve_type_id(type_name);
+      auto type = source.to_type_id(type_name);
       if (auto meta = detail::global_meta_object_or_null(type))
         data_size += meta->padded_size;
       else
@@ -122,7 +122,7 @@ bool message::save(serializer& sink) const {
   GUARDED(sink.begin_field("types") && sink.begin_sequence(type_ids.size()));
   if (sink.has_human_readable_format()) {
     for (auto id : type_ids)
-      GUARDED(sink.value(sink.resolve_type_name(id)));
+      GUARDED(sink.value(sink.to_type_name(id)));
   } else {
     for (auto id : type_ids)
       GUARDED(sink.value(id));

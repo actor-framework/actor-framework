@@ -113,7 +113,7 @@ public:
       *top_ptr<key_type>() = "@type"sv;
       pop();
       CAF_ASSERT(top() == internal::json_node::element);
-      if (auto tname = resolve_type_name(id); !tname.empty()) {
+      if (auto tname = to_type_name(id); !tname.empty()) {
         top_ptr()->data = tname;
       } else {
         top_ptr()->data = name;
@@ -182,14 +182,16 @@ public:
       return false;
     }
     if (begin_key_value_pair()) {
-      if (auto tname = resolve_type_name(types[index]); !tname.empty()) {
+      const auto type = types[index];
+      if (auto tname = to_type_name(type); !tname.empty()) {
         auto& annotation = top_obj()->emplace_back();
         annotation.key = detail::json::concat({"@"sv, name, field_type_suffix_},
                                               &storage_->buf);
         annotation.val = detail::json::make_value(storage_);
         annotation.val->data = tname;
       } else {
-        err_ = make_error(sec::runtime_error, "resolve_type_name failed");
+        err_ = format_to_error(sec::runtime_error,
+                               "failed to get type name for type ID {}", type);
         return false;
       }
       CAF_ASSERT(top() == internal::json_node::key);
