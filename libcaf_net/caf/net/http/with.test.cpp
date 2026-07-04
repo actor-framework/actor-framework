@@ -370,6 +370,29 @@ TEST("GH-2226 regression") {
   check_eq(elog->errors(), std::vector<error>{});
 }
 
+TEST("max_connections and max_request_size accept the result of get_as") {
+  // Setup.
+  caf::actor_system_config cfg;
+  cfg.load<caf::net::middleman>();
+  caf::actor_system sys{cfg};
+  auto acceptor = unbox(net::make_tcp_accept_socket(0));
+  // "max-connections" is absent from the empty settings, so get_as fails and
+  // the server must fall back to its builtin default instead of rejecting
+  // the missing value.
+  auto hdl = net::http::with(sys)
+               .accept(acceptor)
+               .max_connections(
+                 caf::get_as<size_t>(caf::settings{}, "max-connections"))
+               .max_request_size(caf::expected<size_t>{4096})
+               .route("/status", net::http::method::get,
+                      [](net::http::responder& res) {
+                        res.respond(net::http::status::no_content);
+                      })
+               .start();
+  require_has_value(hdl);
+  hdl->dispose();
+}
+
 TEST("GH-2309 Host header field in outgoing requests") {
   auto parse_uri = [this](std::string_view sv) {
     uri u;

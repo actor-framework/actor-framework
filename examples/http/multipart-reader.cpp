@@ -1,5 +1,15 @@
-// Simple HTTP server that receives multipart/form-data uploads and
-// prints parsed part headers and content to stdout.
+// HTTP server example that accepts multipart/form-data uploads via POST /
+// and parses request parts with caf::net::http::multipart_reader.
+//
+// Usage:
+//   multipart-reader [--port=<port>] [--max-connections=<num>]
+//                    [--max-request-size=<bytes>]
+//                    [--tls.key-file=<path> --tls.cert-file=<path>]
+//
+// For each received part, this example prints all part header fields and the
+// part content to stdout, then responds with HTTP 200. Requests with a
+// non-multipart Content-Type or malformed multipart payload are rejected with
+// HTTP 400.
 
 #include "caf/net/http/multipart_reader.hpp"
 #include "caf/net/http/with.hpp"
@@ -7,9 +17,11 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/defaults.hpp"
 
+#include <atomic>
 #include <chrono>
 #include <csignal>
 #include <string>
@@ -20,8 +32,6 @@ using namespace std::literals;
 // -- constants ----------------------------------------------------------------
 
 static constexpr uint16_t default_port = 8080;
-
-static constexpr size_t default_max_connections = 128;
 
 // -- configuration ------------------------------------------------------------
 
@@ -39,7 +49,7 @@ struct config : caf::actor_system_config {
   caf::settings dump_content() const override {
     auto result = actor_system_config::dump_content();
     caf::put_missing(result, "port", default_port);
-    caf::put_missing(result, "max-connections", default_max_connections);
+    caf::put_missing(result, "max-connections", size_t{128});
     caf::put_missing(result, "max-request-size",
                      caf::defaults::net::http_max_request_size);
     return result;
@@ -50,11 +60,7 @@ struct config : caf::actor_system_config {
 
 namespace {
 
-volatile std::sig_atomic_t shutdown_flag = 0;
-
-void set_shutdown_flag(int) {
-  shutdown_flag = 1;
-}
+std::atomic<bool> shutdown_flag;
 
 } // namespace
 
@@ -62,6 +68,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace ssl = caf::net::ssl;
   namespace http = caf::net::http;
   // Do a regular shutdown for CTRL+C and SIGTERM.
+  auto set_shutdown_flag = [](int) { shutdown_flag = true; };
   signal(SIGTERM, set_shutdown_flag);
   signal(SIGINT, set_shutdown_flag);
   // Read the configuration.
@@ -69,13 +76,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto pem = ssl::format::pem;
   auto key_file = caf::get_as<std::string>(cfg, "tls.key-file");
   auto cert_file = caf::get_as<std::string>(cfg, "tls.cert-file");
-  auto max_connections = caf::get_or(cfg, "max-connections",
-                                     default_max_connections);
-  auto max_request_size = caf::get_or(
-    cfg, "max-request-size", caf::defaults::net::http_max_request_size);
-  auto has_key_file = static_cast<bool>(key_file);
-  auto has_cert_file = static_cast<bool>(cert_file);
-  if (has_key_file != has_cert_file) {
+  if (key_file.has_value() != cert_file.has_value()) {
     sys.println("*** inconsistent TLS config: declare neither file or both");
     return EXIT_FAILURE;
   }
@@ -87,40 +88,34 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                    .and_then(ssl::emplace_server(ssl::tls::v1_2))
                    .and_then(ssl::use_private_key_file(key_file, pem))
                    .and_then(ssl::use_certificate_file(cert_file, pem)))
-        // Bind to the user-defined port.
         .accept(port)
-        // Limit how many clients may be connected at any given time.
-        .max_connections(max_connections)
-        // Limit the maximum request size.
-        .max_request_size(max_request_size)
+        .max_connections(caf::get_as<size_t>(cfg, "max-connections"))
+        .max_request_size(caf::get_as<size_t>(cfg, "max-request-size"))
         .route(
           "/", http::method::post,
           [&sys](http::responder& res) {
             auto value = res.payload();
             auto& header = res.header();
-            const auto content_type = header.field("Content-Type");
-            if (!content_type.starts_with("multipart/form-data")) {
+            if (!header.has_token("Content-Type", "multipart/form-data")) {
               sys.println("*** expected multipart/form-data content. Found: {}",
-                          content_type);
+                          header.field("Content-Type"));
               res.respond(http::status::bad_request);
               return;
             }
             auto reader = caf::net::http::multipart_reader{header, value};
-            bool ok = false;
-            auto parts = reader.parse(&ok);
-            if (!ok) {
+            if (!reader.for_each([&sys](http::header&& part_header,
+                                        caf::const_byte_span part_content) {
+                  sys.println("Number of fields: {}", part_header.num_fields());
+                  part_header.for_each_field(
+                    [&sys](std::string_view name, std::string_view value) {
+                      sys.println("{}: {}", name, value);
+                    });
+                  auto val = caf::to_string_view(part_content);
+                  sys.println("Content: {}", val);
+                })) {
               sys.println("*** failed to parse multipart data");
               res.respond(http::status::bad_request);
               return;
-            }
-            for (const auto& part : parts) {
-              sys.println("Number of fields: {}", part.header.num_fields());
-              part.header.for_each_field(
-                [&sys](std::string_view name, std::string_view value) {
-                  sys.println("{}: {}", name, value);
-                });
-              auto val = caf::to_string_view(part.content);
-              sys.println("Content: {}", val);
             }
             res.respond(http::status::ok);
           })
@@ -132,8 +127,9 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Wait for CTRL+C or SIGTERM.
-  while (!shutdown_flag)
+  while (!shutdown_flag) {
     std::this_thread::sleep_for(250ms);
+  }
   sys.println("*** shutting down");
   server->dispose();
   return EXIT_SUCCESS;

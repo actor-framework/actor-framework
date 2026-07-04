@@ -84,6 +84,21 @@ the class ``http::request`` is connected to the HTTP server with a future.
 
 |after-start|
 
+Multipart Form Data
+-------------------
+
+CAF provides ``caf::net::http::multipart_writer`` for creating
+``multipart/form-data`` request payloads and
+``caf::net::http::multipart_reader`` for parsing multipart payloads from HTTP
+messages.
+
+For complete examples, see:
+
+- ``examples/http/multipart-writer.cpp`` for sending one or more files with an
+  HTTP ``POST`` request.
+- ``examples/http/multipart-reader.cpp`` for receiving multipart uploads in an
+  HTTP server route and iterating over parsed parts.
+
 Responders
 ----------
 

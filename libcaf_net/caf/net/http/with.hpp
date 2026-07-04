@@ -50,8 +50,18 @@ public:
     /// Sets the maximum request size to @p value. Defaults to 64KiB.
     [[nodiscard]] server&& max_request_size(size_t value) &&;
 
+    /// Sets the maximum request size to @p value if present, otherwise has no
+    /// effect and the server keeps its default. Convenience overload for
+    /// passing the result of `get_as` directly.
+    [[nodiscard]] server&& max_request_size(expected<size_t> value) &&;
+
     /// Sets the maximum number of connections the server permits.
     [[nodiscard]] server&& max_connections(size_t value) &&;
+
+    /// Sets the maximum number of connections the server permits if present,
+    /// otherwise has no effect and the server keeps its default. Convenience
+    /// overload for passing the result of `get_as` directly.
+    [[nodiscard]] server&& max_connections(expected<size_t> value) &&;
 
     /// Configures whether the server creates its socket with `SO_REUSEADDR`.
     [[nodiscard]] server&& reuse_address(bool value) &&;
