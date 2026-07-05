@@ -39,6 +39,12 @@ public:
   /// Returns whether the serialization format is human-readable.
   virtual bool has_human_readable_format() const noexcept = 0;
 
+  /// Returns the human-readable type name for @p id. Implementations may
+  /// override this to apply custom type name mappings (e.g. via a
+  /// @ref type_id_mapper). The default implementation delegates to
+  /// @ref query_type_name.
+  virtual std::string_view to_type_name(type_id_t id) const;
+
   // -- interface functions ----------------------------------------------------
 
   /// Begins processing of an object. May save the type information to the

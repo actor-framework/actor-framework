@@ -131,21 +131,21 @@ public:
     return true;
   }
 
+  std::string_view to_type_name(type_id_t id) const override {
+    auto tname = (*mapper_)(id);
+    return tname.empty() ? query_type_name(id) : tname;
+  }
+
   bool begin_object(type_id_t id, std::string_view name) override {
     auto add_type_annotation = [this, id, name] {
       CAF_ASSERT(top() == internal::json_node::key);
       add(R"_("@type": )_");
       pop();
       CAF_ASSERT(top() == internal::json_node::element);
-      if (auto tname = (*mapper_)(id); !tname.empty()) {
-        add('"');
-        add(tname);
-        add('"');
-      } else {
-        add('"');
-        add(name);
-        add('"');
-      }
+      auto tname = to_type_name(id);
+      add('"');
+      add(tname.empty() ? name : tname);
+      add('"');
       pop();
       return true;
     };
@@ -223,14 +223,14 @@ public:
       pop();
       CAF_ASSERT(top() == internal::json_node::element);
       pop();
-      if (auto tname = (*mapper_)(types[index]); !tname.empty()) {
-        add('"');
-        add(tname);
-        add('"');
-      } else {
+      auto tname = to_type_name(types[index]);
+      if (tname.empty()) {
         err_ = make_error(sec::runtime_error, "failed to retrieve type name");
         return false;
       }
+      add('"');
+      add(tname);
+      add('"');
       return end_key_value_pair() && begin_field(name);
     } else {
       return false;

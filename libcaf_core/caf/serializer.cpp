@@ -6,11 +6,16 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_handle_codec.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf {
 
 serializer::~serializer() {
   // nop
+}
+
+std::string_view serializer::to_type_name(type_id_t id) const {
+  return query_type_name(id);
 }
 
 bool serializer::begin_key_value_pair() {

@@ -367,8 +367,9 @@ fixture::fixture() {
   add_test_case(R"_({"xs": ["x1", "x2"], "ys": ["y1", "y2"]})_",
                 dict<str_set>({{"xs", set<std::string>("x1", "x2")},
                                {"ys", set<std::string>("y1", "y2")}}));
-  add_test_case(R"_([{"@type": "my_request", "a": 1, "b": 2}])_",
-                make_message(my_request(1, 2)));
+  add_test_case(
+    R"_({"@type": "caf::message", "types": ["my_request"], "values": [{"a": 1, "b": 2}]})_",
+    make_message(my_request(1, 2)));
   add_test_case(
     R"_({"top-left":{"x":100,"y":200},"bottom-right":{"x":10,"y":20}})_",
     rectangle{{100, 200}, {10, 20}});

@@ -15,6 +15,10 @@ deserializer::~deserializer() {
   // nop
 }
 
+type_id_t deserializer::to_type_id(std::string_view type_name) const {
+  return query_type_id(type_name);
+}
+
 bool deserializer::fetch_next_object_name(std::string_view& type_name) {
   auto t = type_id_t{};
   if (fetch_next_object_type(t)) {
