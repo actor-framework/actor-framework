@@ -14,10 +14,10 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/ws_conn_acceptor.hpp"
 #include "caf/disposable.hpp"
-#include "caf/internal/accept_handler.hpp"
 #include "caf/internal/get_fd.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/internal/net_config.hpp"
@@ -99,9 +99,9 @@ public:
     using impl_t = connection_acceptor_impl<Acceptor>;
     auto conn_acc = std::make_unique<impl_t>(std::move(acc), acceptor,
                                              max_consecutive_reads);
-    auto handler = internal::make_accept_handler(std::move(conn_acc),
-                                                 max_connections,
-                                                 monitored_actors);
+    auto handler = detail::make_accept_handler(std::move(conn_acc),
+                                               max_connections,
+                                               monitored_actors);
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};

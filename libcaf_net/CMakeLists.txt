@@ -29,6 +29,7 @@ caf_add_component(
   HEADERS
     ${CAF_NET_HEADERS}
   SOURCES
+    caf/detail/accept_handler.cpp
     caf/detail/connection_acceptor.cpp
     caf/detail/connection_guard.cpp
     caf/detail/connector.cpp
@@ -36,7 +37,6 @@ caf_add_component(
     caf/detail/rfc6455.cpp
     caf/detail/rfc6455.test.cpp
     caf/detail/ws_conn_acceptor.cpp
-    caf/internal/accept_handler.cpp
     caf/internal/lp_flow_bridge.cpp
     caf/internal/net_config.cpp
     caf/internal/octet_stream_flow_bridge.cpp
