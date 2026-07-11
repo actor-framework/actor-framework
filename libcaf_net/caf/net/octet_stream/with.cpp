@@ -7,12 +7,12 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/op/mcast.hpp"
-#include "caf/internal/accept_handler.hpp"
 #include "caf/internal/get_fd.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/internal/net_config.hpp"
@@ -124,9 +124,9 @@ public:
     using impl_t = connection_acceptor_impl<Acceptor>;
     auto conn_acc = impl_t::make(std::move(acc), read_buffer_size,
                                  write_buffer_size, std::move(server_push));
-    auto handler = internal::make_accept_handler(std::move(conn_acc),
-                                                 max_connections,
-                                                 monitored_actors);
+    auto handler = detail::make_accept_handler(std::move(conn_acc),
+                                               max_connections,
+                                               monitored_actors);
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};

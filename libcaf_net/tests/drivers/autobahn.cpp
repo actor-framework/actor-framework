@@ -4,6 +4,7 @@
 #include "caf/net/middleman.hpp"
 #include "caf/net/ssl/tcp_acceptor.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
+#include "caf/net/tcp_stream_socket.hpp"
 #include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/server.hpp"
 #include "caf/net/web_socket/upper_layer.hpp"
@@ -13,7 +14,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
 #include "caf/detail/connection_factory.hpp"
-#include "caf/internal/accept_handler.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/log/net.hpp"
 

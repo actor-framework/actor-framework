@@ -11,11 +11,11 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/chunk.hpp"
+#include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/op/mcast.hpp"
-#include "caf/internal/accept_handler.hpp"
 #include "caf/internal/get_fd.hpp"
 #include "caf/internal/lp_flow_bridge.hpp"
 #include "caf/internal/make_transport.hpp"
@@ -122,9 +122,9 @@ public:
                                              max_consecutive_reads,
                                              std::move(server_push),
                                              max_message_size, size_field);
-    auto handler = internal::make_accept_handler(std::move(conn_acc),
-                                                 max_connections,
-                                                 std::move(monitored_actors));
+    auto handler = detail::make_accept_handler(std::move(conn_acc),
+                                               max_connections,
+                                               std::move(monitored_actors));
     auto ptr = net::socket_manager::make(mpx, std::move(handler));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};

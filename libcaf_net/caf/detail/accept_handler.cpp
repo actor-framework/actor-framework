@@ -2,12 +2,23 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
-#include "caf/internal/accept_handler.hpp"
+#include "caf/detail/accept_handler.hpp"
+
+#include "caf/net/multiplexer.hpp"
+#include "caf/net/socket.hpp"
+#include "caf/net/socket_event_layer.hpp"
+#include "caf/net/socket_manager.hpp"
 
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/async/execution_context.hpp"
+#include "caf/async/fwd.hpp"
+#include "caf/detail/assert.hpp"
+#include "caf/log/net.hpp"
 
-namespace caf::internal {
+#include <vector>
+
+namespace caf::detail {
 
 namespace {
 
@@ -17,8 +28,7 @@ class accept_handler_impl : public net::socket_event_layer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  accept_handler_impl(detail::connection_acceptor_ptr acceptor,
-                      size_t max_connections,
+  accept_handler_impl(connection_acceptor_ptr acceptor, size_t max_connections,
                       std::vector<strong_actor_ptr> monitored_actors = {})
     : acceptor_(std::move(acceptor)),
       max_connections_(max_connections),
@@ -141,7 +151,7 @@ private:
     conns.erase(new_end, conns.end());
   }
 
-  detail::connection_acceptor_ptr acceptor_;
+  connection_acceptor_ptr acceptor_;
 
   size_t max_connections_;
 
@@ -166,10 +176,10 @@ private:
 } // namespace
 
 std::unique_ptr<net::socket_event_layer>
-make_accept_handler(detail::connection_acceptor_ptr ptr, size_t max_connections,
+make_accept_handler(connection_acceptor_ptr ptr, size_t max_connections,
                     std::vector<strong_actor_ptr> monitored_actors) {
   return std::make_unique<accept_handler_impl>(std::move(ptr), max_connections,
                                                std::move(monitored_actors));
 }
 
-} // namespace caf::internal
+} // namespace caf::detail

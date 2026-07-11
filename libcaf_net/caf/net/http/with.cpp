@@ -15,10 +15,10 @@
 #include "caf/actor_system.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/connection_guard.hpp"
 #include "caf/detail/connector.hpp"
-#include "caf/internal/accept_handler.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/internal/net_config.hpp"
 #include "caf/make_counted.hpp"
@@ -274,9 +274,8 @@ public:
     auto factory = make_http_conn_acceptor(std::move(acc), routes,
                                            max_consecutive_reads,
                                            max_request_size);
-    auto impl = internal::make_accept_handler(std::move(factory),
-                                              max_connections,
-                                              monitored_actors);
+    auto impl = detail::make_accept_handler(std::move(factory), max_connections,
+                                            monitored_actors);
     auto ptr = net::socket_manager::make(mpx, std::move(impl));
     if (mpx->start(ptr))
       return expected<disposable>{disposable{std::move(ptr)}};
