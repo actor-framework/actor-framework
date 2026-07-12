@@ -9,6 +9,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/message_builder.hpp"
@@ -63,12 +64,12 @@ bool message::load(deserializer& source) {
     }
   } else {
     for (size_t i = 0; i < msg_size; ++i) {
-      type_id_t id = 0;
-      GUARDED(source.value(id));
+      auto id = type_id_t{0};
+      GUARDED(detail::load(source, id));
       if (auto meta = detail::global_meta_object_or_null(id))
         data_size += meta->padded_size;
       else
-        STOP(sec::unknown_type, id);
+        STOP(sec::unknown_type, detail::to_underlying(id));
       ids.push_back(id);
     }
   }
@@ -89,7 +90,7 @@ bool message::load(deserializer& source) {
   GUARDED(source.begin_field("values"));
   GUARDED(source.begin_tuple(msg_size));
   for (size_t i = 0; i < msg_size; ++i) {
-    auto& meta = gmos[types[i]];
+    auto& meta = gmos[detail::to_underlying(types[i])];
     meta.default_construct(pos);
     ptr->inc_constructed_elements();
     if (!meta.load(source, pos))
@@ -125,14 +126,14 @@ bool message::save(serializer& sink) const {
       GUARDED(sink.value(sink.to_type_name(id)));
   } else {
     for (auto id : type_ids)
-      GUARDED(sink.value(id));
+      GUARDED(detail::save(sink, id));
   }
   GUARDED(sink.end_sequence() && sink.end_field());
   // Write elements.
   auto storage = data_->storage();
   GUARDED(sink.begin_field("values") && sink.begin_tuple(type_ids.size()));
   for (auto id : type_ids) {
-    auto& meta = gmos[id];
+    auto& meta = gmos[detail::to_underlying(id)];
     GUARDED(meta.save(sink, storage));
     storage += meta.padded_size;
   }

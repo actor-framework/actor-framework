@@ -63,8 +63,8 @@ TEST("query_type_name returns type names for valid type IDs") {
 
 TEST("query_type_name returns empty string for invalid type IDs") {
   check_eq(query_type_name(invalid_type_id), ""sv);
-  check_eq(query_type_name(static_cast<type_id_t>(65534)), ""sv);
-  check_eq(query_type_name(static_cast<type_id_t>(10000)), ""sv);
+  check_eq(query_type_name(type_id_t{65534}), ""sv);
+  check_eq(query_type_name(type_id_t{10000}), ""sv);
 }
 
 TEST("query_type_id returns type IDs for valid type names") {
@@ -102,7 +102,7 @@ TEST("is_system_message identifies system message types") {
   }
   SECTION("invalid type IDs return false") {
     check(!is_system_message(invalid_type_id));
-    check(!is_system_message(static_cast<type_id_t>(10000)));
+    check(!is_system_message(type_id_t{10000}));
   }
 }
 
@@ -160,8 +160,8 @@ TEST("has_type_id_v checks if type has registered ID") {
 }
 
 TEST("type ID constants have expected values") {
-  check_eq(invalid_type_id, 65535u);
-  check_eq(first_custom_type_id, 200u);
+  check_eq(invalid_type_id, type_id_t{65535});
+  check_eq(first_custom_type_id, type_id_t{200});
   check_ge(type_id_v<test_type_1>, first_custom_type_id);
 }
 

@@ -6,6 +6,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/type_id_list.hpp"
@@ -22,10 +23,10 @@ struct dyn_type_id_list {
   explicit dyn_type_id_list(type_id_t* storage) noexcept : storage(storage) {
     CAF_ASSERT(storage != nullptr);
     auto first = storage + 1;
-    auto last = first + storage[0];
+    auto last = first + detail::to_underlying(storage[0]);
     caf::hash::fnv<size_t> h;
     for (auto i = first; i != last; ++i)
-      h.value(*i);
+      h.value(detail::to_underlying(*i));
     hash = h.result;
   }
 
@@ -105,7 +106,7 @@ void type_id_list_builder::reserve(size_t new_capacity) {
   storage_ = reinterpret_cast<type_id_t*>(ptr);
   // Add the dummy for later inserting the size on first push_back.
   if (size_ == 0) {
-    storage_[0] = 0;
+    storage_[0] = type_id_t{0};
     size_ = 1;
   }
 }

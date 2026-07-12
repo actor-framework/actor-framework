@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/async/fwd.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/pp.hpp"
@@ -23,11 +24,11 @@
 namespace caf {
 
 /// Internal representation of a type ID.
-using type_id_t = uint16_t;
+enum class type_id_t : uint16_t {};
 
 /// Special value equal to the greatest possible value for `type_id_t`.
 /// Generally indicates that no type ID for a given type exists.
-constexpr type_id_t invalid_type_id = 65535;
+constexpr type_id_t invalid_type_id = type_id_t{65535};
 
 /// Maps the type `T` to a globally unique ID.
 template <class T>
@@ -74,7 +75,12 @@ template <class T>
 constexpr std::string_view type_name_v = type_name<T>::value;
 
 /// The first type ID not reserved by CAF and its modules.
-constexpr type_id_t first_custom_type_id = 200;
+constexpr type_id_t first_custom_type_id = type_id_t{200};
+
+/// Adds an integer offset to a type ID.
+constexpr type_id_t operator+(type_id_t lhs, uint16_t rhs) noexcept {
+  return static_cast<type_id_t>(detail::to_underlying(lhs) + rhs);
+}
 
 /// Checks whether `type_id` is specialized for `T`.
 template <class T>
@@ -146,20 +152,20 @@ public:
 #define CAF_DETAIL_BEGIN_TYPE_ID_BLOCK_2(project_name, first_id)               \
   namespace caf::id_block {                                                    \
   CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
-  constexpr type_id_t project_name##_type_id_counter_init = __COUNTER__;       \
+  constexpr uint16_t project_name##_type_id_counter_init = __COUNTER__;        \
   CAF_POP_C2Y_EXTENSIONS_WARNING                                               \
-  constexpr type_id_t project_name##_first_type_id = first_id;                 \
-  constexpr type_id_t project_name##_max_size                                  \
-    = 65535 - project_name##_type_id_counter_init;                             \
+  constexpr type_id_t project_name##_first_type_id = type_id_t{first_id};      \
+  constexpr uint16_t project_name##_max_size                                   \
+    = uint16_t{65535} - project_name##_type_id_counter_init;                   \
   }
 
 #define CAF_DETAIL_BEGIN_TYPE_ID_BLOCK_3(project_name, first_id, max_size)     \
   namespace caf::id_block {                                                    \
   CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
-  constexpr type_id_t project_name##_type_id_counter_init = __COUNTER__;       \
+  constexpr uint16_t project_name##_type_id_counter_init = __COUNTER__;        \
   CAF_POP_C2Y_EXTENSIONS_WARNING                                               \
-  constexpr type_id_t project_name##_first_type_id = first_id;                 \
-  constexpr type_id_t project_name##_max_size = max_size;                      \
+  constexpr type_id_t project_name##_first_type_id = type_id_t{first_id};      \
+  constexpr uint16_t project_name##_max_size = max_size;                       \
   }
 
 #ifdef CAF_MSVC
@@ -178,19 +184,19 @@ public:
 #  define CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)          \
     template <>                                                                \
     struct type_id<::CAF_PP_EXPAND fully_qualified_name> {                     \
-      static constexpr type_id_t value                                         \
-        = id_block::project_name##_first_type_id                               \
-          + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                    \
-             - id_block::project_name##_type_id_counter_init - 1);             \
+      static constexpr type_id_t value = static_cast<type_id_t>(               \
+        detail::to_underlying(id_block::project_name##_first_type_id)          \
+        + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                      \
+           - id_block::project_name##_type_id_counter_init - 1));              \
     };
 #else
 #  define CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)          \
     CAF_PUSH_C2Y_EXTENSIONS_WARNING                                            \
     template <>                                                                \
     struct type_id<::CAF_PP_EXPAND fully_qualified_name> {                     \
-      static constexpr type_id_t value                                         \
-        = id_block::project_name##_first_type_id                               \
-          + (__COUNTER__ - id_block::project_name##_type_id_counter_init - 1); \
+      static constexpr type_id_t value = static_cast<type_id_t>(               \
+        detail::to_underlying(id_block::project_name##_first_type_id)          \
+        + (__COUNTER__ - id_block::project_name##_type_id_counter_init - 1));  \
     };                                                                         \
     CAF_POP_C2Y_EXTENSIONS_WARNING
 #endif
@@ -250,19 +256,19 @@ public:
 #  define CAF_DETAIL_NEXT_TYPE_ID_FROM_EXPR(project_name, type_expr)           \
     template <>                                                                \
     struct type_id<CAF_PP_EXPAND type_expr> {                                  \
-      static constexpr type_id_t value                                         \
-        = id_block::project_name##_first_type_id                               \
-          + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                    \
-             - id_block::project_name##_type_id_counter_init - 1);             \
+      static constexpr type_id_t value = static_cast<type_id_t>(               \
+        detail::to_underlying(id_block::project_name##_first_type_id)          \
+        + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                      \
+           - id_block::project_name##_type_id_counter_init - 1));              \
     };
 #else
 #  define CAF_DETAIL_NEXT_TYPE_ID_FROM_EXPR(project_name, type_expr)           \
     CAF_PUSH_C2Y_EXTENSIONS_WARNING                                            \
     template <>                                                                \
     struct type_id<CAF_PP_EXPAND type_expr> {                                  \
-      static constexpr type_id_t value                                         \
-        = id_block::project_name##_first_type_id                               \
-          + (__COUNTER__ - id_block::project_name##_type_id_counter_init - 1); \
+      static constexpr type_id_t value = static_cast<type_id_t>(               \
+        detail::to_underlying(id_block::project_name##_first_type_id)          \
+        + (__COUNTER__ - id_block::project_name##_type_id_counter_init - 1));  \
     };                                                                         \
     CAF_POP_C2Y_EXTENSIONS_WARNING
 #endif
@@ -393,16 +399,18 @@ public:
 #define CAF_END_TYPE_ID_BLOCK(project_name)                                    \
   namespace caf::id_block {                                                    \
   CAF_PUSH_C2Y_EXTENSIONS_WARNING                                              \
-  constexpr type_id_t project_name##_last_type_id                              \
-    = project_name##_first_type_id                                             \
-      + (__COUNTER__ - project_name##_type_id_counter_init - 2);               \
+  constexpr type_id_t project_name##_last_type_id = static_cast<type_id_t>(    \
+    detail::to_underlying(project_name##_first_type_id)                        \
+    + (__COUNTER__ - project_name##_type_id_counter_init - 2));                \
   CAF_POP_C2Y_EXTENSIONS_WARNING                                               \
-  static_assert(project_name##_last_type_id                                    \
-                  < project_name##_first_type_id + project_name##_max_size,    \
+  static_assert(detail::to_underlying(project_name##_last_type_id)             \
+                  < detail::to_underlying(project_name##_first_type_id)        \
+                      + project_name##_max_size,                               \
                 "Type ID block '" #project_name "' contains too many types");  \
   struct project_name {                                                        \
     static constexpr type_id_t begin = project_name##_first_type_id;           \
-    static constexpr type_id_t end = project_name##_last_type_id + 1;          \
+    static constexpr type_id_t end = static_cast<type_id_t>(                   \
+      detail::to_underlying(project_name##_last_type_id) + 1);                 \
   };                                                                           \
   }
 
@@ -546,6 +554,7 @@ static constexpr type_id_t net_module_begin = io_module_end;
 
 static constexpr type_id_t net_module_end = net_module_begin + 1;
 
-static_assert(net_module_end <= first_custom_type_id);
+static_assert(to_underlying(net_module_end)
+              <= to_underlying(first_custom_type_id));
 
 } // namespace caf::detail

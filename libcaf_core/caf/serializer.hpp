@@ -9,7 +9,6 @@
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/save_inspector_base.hpp"
-#include "caf/sec.hpp"
 
 #include <concepts>
 #include <cstddef>
@@ -17,9 +16,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <tuple>
-#include <type_traits>
-#include <utility>
 
 namespace caf {
 

@@ -7,6 +7,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- `caf::type_id_t` is now an `enum class` instead of a `uint16_t` alias to
+  prevent implicit conversions to integer types.
 - CAF now requires C++20 to build.
 - When using the HTTP client API, SSL hostname validation is now enabled by
   default. Users can disable it by setting `hostname_validation` to `false` if

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/make_meta_object.hpp"
 #include "caf/detail/meta_object.hpp"
@@ -43,7 +44,8 @@ using type_id_sequence_helper_t =
 
 template <class Range>
 using make_type_id_sequence
-  = type_id_sequence_helper_t<type_id_pair<Range::begin, Range::end>>;
+  = type_id_sequence_helper_t<type_id_pair<detail::to_underlying(Range::begin),
+                                           detail::to_underlying(Range::end)>>;
 
 } // namespace caf::detail
 
@@ -55,7 +57,8 @@ template <class ProjectIds, uint16_t... Is>
 void init_global_meta_objects_impl(std::integer_sequence<uint16_t, Is...>) {
   static_assert(sizeof...(Is) > 0);
   detail::meta_object src[] = {
-    detail::make_meta_object<type_by_id_t<Is>>(type_name_by_id_v<Is>)...,
+    detail::make_meta_object<type_by_id_t<type_id_t{Is}>>(
+      type_name_by_id_v<type_id_t{Is}>)...,
   };
   detail::set_global_meta_objects(ProjectIds::begin, std::span{src});
 }

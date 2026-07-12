@@ -8,6 +8,7 @@
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/message.hpp"
 #include "caf/serializer.hpp"
@@ -60,14 +61,15 @@ std::string_view error::what() const noexcept {
 // -- observers ----------------------------------------------------------------
 
 int error::compare(const error& x) const noexcept {
-  return x.valid() ? compare(x.data_->code, x.data_->category) : compare(0, 0);
+  return x.valid() ? compare(x.data_->code, x.data_->category)
+                   : compare(0, type_id_t{0});
 }
 
 int error::compare(uint8_t code, type_id_t category) const noexcept {
   int x = 0;
   if (data_ != nullptr)
-    x = (data_->code << 16) | data_->category;
-  return x - int{(code << 16) | category};
+    x = (data_->code << 16) | detail::to_underlying(data_->category);
+  return x - int{(code << 16) | detail::to_underlying(category)};
 }
 
 // -- inspection support -----------------------------------------------------

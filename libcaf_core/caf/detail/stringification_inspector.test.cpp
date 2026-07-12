@@ -150,7 +150,7 @@ TEST("stringification of std::string") {
 TEST("stringification of objects with type_name") {
   std::string result;
   stringification_inspector inspector{result};
-  check_eq(inspector.begin_object(0, "std::string"), true);
+  check_eq(inspector.begin_object(type_id_v<std::string>, "std::string"), true);
   check_eq(inspector.value("Hello World"s), true);
   check_eq(inspector.end_object(), true);
   check_eq(result, R"("Hello World")"s);

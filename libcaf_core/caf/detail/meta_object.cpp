@@ -9,6 +9,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/panic.hpp"
 #include "caf/error.hpp"
@@ -54,8 +55,9 @@ std::span<const meta_object> global_meta_objects() {
 }
 
 const meta_object& global_meta_object(type_id_t id) {
-  if (id < meta_objects_size) {
-    auto& meta = meta_objects[id];
+  const auto index = detail::to_underlying(id);
+  if (index < meta_objects_size) {
+    auto& meta = meta_objects[index];
     if (!meta.type_name.empty())
       return meta;
   }
@@ -67,12 +69,13 @@ const meta_object& global_meta_object(type_id_t id) {
     "        - caf::core::init_global_meta_objects()\n"
     "        - <module>::init_global_meta_objects() for all loaded modules\n"
     "        - caf::init_global_meta_objects<T>() for all custom ID blocks",
-    id);
+    index);
 }
 
 const meta_object* global_meta_object_or_null(type_id_t id) {
-  if (id < meta_objects_size) {
-    auto& meta = meta_objects[id];
+  const auto index = detail::to_underlying(id);
+  if (index < meta_objects_size) {
+    auto& meta = meta_objects[index];
     if (!meta.type_name.empty())
       return &meta;
   }
@@ -102,14 +105,15 @@ std::span<meta_object> resize_global_meta_objects(size_t size) {
 
 void set_global_meta_objects(type_id_t first_id,
                              std::span<const meta_object> xs) {
-  auto new_size = first_id + xs.size();
-  if (first_id < meta_objects_size) {
+  const auto first = detail::to_underlying(first_id);
+  auto new_size = first + xs.size();
+  if (first < meta_objects_size) {
     if (new_size > meta_objects_size)
       panic("set_global_meta_objects called with "
             "'first_id ({}) < meta_objects_size ({})' and "
             "'new_size ({}) > meta_objects_size ({})'",
             first_id, meta_objects_size, new_size, meta_objects_size);
-    auto out = meta_objects + first_id;
+    auto out = meta_objects + first;
     for (const auto& x : xs) {
       if (out->type_name.empty()) {
         // We support calling set_global_meta_objects for building the global
@@ -129,8 +133,8 @@ void set_global_meta_objects(type_id_t first_id,
     }
     return;
   }
-  auto dst = resize_global_meta_objects(first_id + xs.size());
-  std::copy(xs.begin(), xs.end(), dst.begin() + first_id);
+  auto dst = resize_global_meta_objects(first + xs.size());
+  std::copy(xs.begin(), xs.end(), dst.begin() + first);
 }
 
 } // namespace caf::detail
