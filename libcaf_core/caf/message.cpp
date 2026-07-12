@@ -11,7 +11,6 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/meta_object.hpp"
-#include "caf/detail/type_id_list_builder.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/serializer.hpp"
@@ -34,63 +33,42 @@ namespace caf {
 bool message::load(deserializer& source) {
   GUARDED(source.begin_object(type_id_v<message>, "message"));
   GUARDED(source.begin_field("types"));
-  size_t msg_size = 0;
-  GUARDED(source.begin_sequence(msg_size));
+  type_id_list types = make_type_id_list();
+  GUARDED(source.value(types));
+  GUARDED(source.end_field());
   using uint16_limits = std::numeric_limits<uint16_t>;
-  if (msg_size > static_cast<size_t>(uint16_limits::max() - 1))
+  if (types.size() > static_cast<size_t>(uint16_limits::max() - 1))
     STOP(sec::invalid_argument, "too many types for message");
-  if (msg_size == 0) {
+  if (types.empty()) {
     data_.reset();
-    return source.end_sequence()           //
-           && source.end_field()           //
-           && source.begin_field("values") //
-           && source.begin_tuple(0)        //
-           && source.end_tuple()           //
-           && source.end_field()           //
+    return source.begin_field("values") //
+           && source.begin_tuple(0)     //
+           && source.end_tuple()        //
+           && source.end_field()        //
            && source.end_object();
   }
-  detail::type_id_list_builder ids{msg_size};
   size_t data_size = 0;
-  if (source.has_human_readable_format()) {
-    for (size_t i = 0; i < msg_size; ++i) {
-      std::string type_name;
-      GUARDED(source.value(type_name));
-      auto type = source.to_type_id(type_name);
-      if (auto meta = detail::global_meta_object_or_null(type))
-        data_size += meta->padded_size;
-      else
-        STOP(sec::unknown_type, type_name);
-      ids.push_back(type);
-    }
-  } else {
-    for (size_t i = 0; i < msg_size; ++i) {
-      auto id = type_id_t{0};
-      GUARDED(detail::load(source, id));
-      if (auto meta = detail::global_meta_object_or_null(id))
-        data_size += meta->padded_size;
-      else
-        STOP(sec::unknown_type, detail::to_underlying(id));
-      ids.push_back(id);
-    }
+  for (auto id : types) {
+    if (const auto* meta = detail::global_meta_object_or_null(id))
+      data_size += meta->padded_size;
+    else
+      STOP(sec::unknown_type, detail::to_underlying(id));
   }
-  GUARDED(source.end_sequence());
-  GUARDED(source.end_field());
-  CAF_ASSERT(ids.size() == msg_size);
   intrusive_ptr<detail::message_data> ptr;
   if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
     // We don't need to worry about exceptions here: the message_data
-    // constructor as well as `move_to_list` are `noexcept`.
-    ptr.reset(new (vptr) detail::message_data(ids.move_to_list()), adopt_ref);
+    // constructor is `noexcept`.
+    ptr.reset(new (vptr) detail::message_data(types), adopt_ref);
   } else {
     STOP(sec::runtime_error, "unable to allocate memory");
   }
   auto pos = ptr->storage();
-  auto types = ptr->types();
+  auto msg_types = ptr->types();
   auto gmos = detail::global_meta_objects();
   GUARDED(source.begin_field("values"));
-  GUARDED(source.begin_tuple(msg_size));
-  for (size_t i = 0; i < msg_size; ++i) {
-    auto& meta = gmos[detail::to_underlying(types[i])];
+  GUARDED(source.begin_tuple(types.size()));
+  for (size_t i = 0; i < types.size(); ++i) {
+    auto& meta = gmos[detail::to_underlying(msg_types[i])];
     meta.default_construct(pos);
     ptr->inc_constructed_elements();
     if (!meta.load(source, pos))
@@ -107,8 +85,7 @@ bool message::save(serializer& sink) const {
     // Short-circuit empty tuples.
     return sink.begin_object(type_id_v<message>, "message") //
            && sink.begin_field("types")                     //
-           && sink.begin_sequence(0)                        //
-           && sink.end_sequence()                           //
+           && sink.value(make_type_id_list<>())             //
            && sink.end_field()                              //
            && sink.begin_field("values")                    //
            && sink.begin_tuple(0)                           //
@@ -120,15 +97,9 @@ bool message::save(serializer& sink) const {
   auto type_ids = data_->types();
   // Write type information. This is needed for serialization round trips. Human
   // readable formats will have human readable type information.
-  GUARDED(sink.begin_field("types") && sink.begin_sequence(type_ids.size()));
-  if (sink.has_human_readable_format()) {
-    for (auto id : type_ids)
-      GUARDED(sink.value(sink.to_type_name(id)));
-  } else {
-    for (auto id : type_ids)
-      GUARDED(detail::save(sink, id));
-  }
-  GUARDED(sink.end_sequence() && sink.end_field());
+  GUARDED(sink.begin_field("types"));
+  GUARDED(sink.value(type_ids));
+  GUARDED(sink.end_field());
   // Write elements.
   auto storage = data_->storage();
   GUARDED(sink.begin_field("values") && sink.begin_tuple(type_ids.size()));

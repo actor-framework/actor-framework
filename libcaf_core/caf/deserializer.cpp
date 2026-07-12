@@ -6,8 +6,13 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_handle_codec.hpp"
+#include "caf/detail/type_id_list_builder.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/sec.hpp"
+#include "caf/type_id_list.hpp"
+
+#include <limits>
+#include <type_traits>
 
 namespace caf {
 
@@ -98,6 +103,38 @@ bool deserializer::value(std::vector<bool>& x) {
     x.emplace_back(tmp);
   }
   return end_sequence();
+}
+
+bool deserializer::value(type_id_list& xs) {
+  size_t size = 0;
+  if (!begin_sequence(size))
+    return false;
+  using type_id_int_t = std::underlying_type_t<type_id_t>;
+  constexpr size_t max_size = std::numeric_limits<type_id_int_t>::max();
+  if (size > max_size) {
+    emplace_error(sec::invalid_argument);
+    return false;
+  }
+  if (size == 0) {
+    xs = make_type_id_list();
+    return end_sequence();
+  }
+  std::string type_name;
+  detail::type_id_list_builder ids{size};
+  for (size_t i = 0; i < size; ++i) {
+    if (!value(type_name))
+      return false;
+    auto id = to_type_id(type_name);
+    if (id == invalid_type_id) {
+      emplace_error(sec::unknown_type, type_name);
+      return false;
+    }
+    ids.push_back(id);
+  }
+  if (!end_sequence())
+    return false;
+  xs = ids.move_to_list();
+  return true;
 }
 
 } // namespace caf
