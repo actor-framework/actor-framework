@@ -298,18 +298,18 @@ TEST("flat object with type annotation") {
 }
 
 TEST("begin field") {
-  check(builder.begin_object(1, "circle"));
+  check(builder.begin_object(type_id_v<circle>, "circle"));
   SECTION("is present") {
     SECTION("missing index") {
-      auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
+      auto circle_type = std::vector{type_id_v<circle>};
       check(!builder.begin_field("foo", true, std::span{circle_type}, 1));
     }
     SECTION("missing query type") {
-      auto circle_type = std::vector<uint16_t>{1000};
+      auto circle_type = std::vector{type_id_t{1000}};
       check(!builder.begin_field("foo", true, std::span{circle_type}, 0));
     }
     SECTION("present query type") {
-      auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
+      auto circle_type = std::vector{type_id_v<circle>};
       check(builder.begin_field("foo", true, std::span{circle_type}, 0));
       check(builder.value(42));
       check(builder.end_field());
@@ -320,7 +320,7 @@ TEST("begin field") {
     }
   }
   SECTION("is not present") {
-    auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
+    auto circle_type = std::vector{type_id_v<circle>};
     SECTION("don't skip empty fields") {
       builder.skip_empty_fields(false);
       check(builder.begin_field("foo", false, std::span{circle_type}, 0));
@@ -345,7 +345,7 @@ TEST("begin field") {
 
 TEST("begin associative array") {
   SECTION("valid associative array") {
-    auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
+    auto circle_type = std::vector{type_id_v<circle>};
     check(builder.begin_tuple(1));
     check(builder.begin_associative_array(1));
     builder.skip_empty_fields(false);
@@ -364,7 +364,7 @@ TEST("begin associative array") {
 TEST("begin sequence") {
   SECTION("valid array") {
     builder.skip_empty_fields(false);
-    auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
+    auto circle_type = std::vector{type_id_v<circle>};
     check(builder.begin_sequence(1));
     check(builder.begin_sequence(1));
     check(!builder.begin_field("foo", false, std::span{circle_type}, 0));
@@ -382,7 +382,7 @@ TEST("begin sequence") {
 }
 
 TEST("unexpected object") {
-  auto circle_type = std::vector<uint16_t>{type_id_v<circle>};
+  auto circle_type = std::vector{type_id_v<circle>};
   check(!builder.begin_field("foo", false, std::span{circle_type}, 0));
 }
 

@@ -52,7 +52,7 @@ bool batch::data::save(serializer& sink) const {
   if (!sink.begin_field("type", true))
     return false;
   if (!sink.has_human_readable_format()) {
-    if (!sink.value(item_type_))
+    if (!detail::save(sink, item_type_))
       return false;
   } else {
     if (!sink.value(sink.to_type_name(item_type_)))
@@ -114,7 +114,7 @@ bool batch::load(deserializer& source) {
   }
   auto payload_type = invalid_type_id;
   if (!source.has_human_readable_format()) {
-    if (!source.value(payload_type))
+    if (!detail::load(source, payload_type))
       return false;
   } else {
     std::string type_name;

@@ -5,6 +5,7 @@
 #include "caf/detail/message_data.hpp"
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/message.hpp"
 #include "caf/raise_error.hpp"
@@ -40,10 +41,10 @@ message_data* message_data::copy() const {
   // Note: no need to perform bound checks or nullptr checks here, because
   //       we verify the type IDs while constructing the original message.
   auto gmos = global_meta_objects();
-  auto storage_size = std::accumulate(types_.begin(), types_.end(), size_t{0},
-                                      [&](size_t acc, type_id_t id) {
-                                        return acc + gmos[id].padded_size;
-                                      });
+  auto storage_size = std::accumulate(
+    types_.begin(), types_.end(), size_t{0}, [&](size_t acc, type_id_t id) {
+      return acc + gmos[detail::to_underlying(id)].padded_size;
+    });
   auto total_size = sizeof(message_data) + storage_size;
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
@@ -52,7 +53,7 @@ message_data* message_data::copy() const {
   auto src = storage();
   auto dst = ptr->storage();
   for (auto id : types_) {
-    auto& meta = gmos[id];
+    auto& meta = gmos[detail::to_underlying(id)];
     meta.copy_construct(dst, src);
     ++ptr->constructed_elements_;
     src += meta.padded_size;
@@ -80,7 +81,7 @@ std::byte* message_data::at(size_t index) noexcept {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (size_t i = 0; i < index; ++i)
-    ptr += gmos[types_[i]].padded_size;
+    ptr += gmos[detail::to_underlying(types_[i])].padded_size;
   return ptr;
 }
 
@@ -90,7 +91,7 @@ const std::byte* message_data::at(size_t index) const noexcept {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (size_t i = 0; i < index; ++i)
-    ptr += gmos[types_[i]].padded_size;
+    ptr += gmos[detail::to_underlying(types_[i])].padded_size;
   return ptr;
 }
 
@@ -106,7 +107,7 @@ std::byte* message_data::stepwise_init_from(std::byte* pos,
   auto gmos = global_meta_objects();
   auto src = other->storage();
   for (auto id : other->types()) {
-    auto& meta = gmos[id];
+    auto& meta = gmos[detail::to_underlying(id)];
     meta.copy_construct(pos, src);
     ++constructed_elements_;
     src += meta.padded_size;

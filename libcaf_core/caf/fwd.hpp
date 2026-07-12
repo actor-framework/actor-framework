@@ -44,8 +44,10 @@ template <class> struct inspector_access;
 template <class> struct timeout_definition;
 template <class> struct type_id;
 
-template <uint16_t> struct type_by_id;
-template <uint16_t> struct type_name_by_id;
+enum class type_id_t : uint16_t;
+
+template <type_id_t> struct type_by_id;
+template <type_id_t> struct type_name_by_id;
 
 class [[nodiscard]] error;
 
@@ -220,7 +222,6 @@ using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
 using settings = dictionary<config_value>;
-using type_id_t = uint16_t;
 
 #ifdef CAF_USE_STD_EXPECTED
 template <class E>

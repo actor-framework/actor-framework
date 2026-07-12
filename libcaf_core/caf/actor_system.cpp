@@ -16,6 +16,7 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/asynchronous_actor_clock.hpp"
 #include "caf/detail/asynchronous_logger.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/daemons.hpp"
 #include "caf/detail/match_wildcard_pattern.hpp"
@@ -354,14 +355,16 @@ public:
     modules_[actor_system_module::daemons].reset(new detail::daemons(owner));
     // Make sure meta objects are loaded.
     auto gmos = detail::global_meta_objects();
-    if (gmos.size() < id_block::core_module::end
-        || gmos[id_block::core_module::begin].type_name.empty()) {
+    if (gmos.size() < detail::to_underlying(id_block::core_module::end)
+        || gmos[detail::to_underlying(id_block::core_module::begin)]
+             .type_name.empty()) {
       detail::critical("actor_system created without calling "
                        "caf::init_global_meta_objects<>() before");
     }
     if (modules_[actor_system_module::middleman] != nullptr) {
-      if (gmos.size() < detail::io_module_end
-          || gmos[detail::io_module_begin].type_name.empty()) {
+      if (gmos.size() < detail::to_underlying(detail::io_module_end)
+          || gmos[detail::to_underlying(detail::io_module_begin)]
+               .type_name.empty()) {
         detail::critical("I/O module loaded without calling "
                          "caf::io::middleman::init_global_meta_objects()");
       }

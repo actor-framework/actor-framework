@@ -49,21 +49,22 @@ CAF_END_TYPE_ID_BLOCK(type_id_test)
 using namespace caf;
 
 TEST("lists store the size at index 0") {
-  type_id_t data[] = {3, 1, 2, 4};
+  type_id_t data[] = {type_id_t{3}, type_id_t{1}, type_id_t{2}, type_id_t{4}};
   type_id_list xs{data};
   check_eq(xs.size(), 3u);
-  check_eq(xs[0], 1u);
-  check_eq(xs[1], 2u);
-  check_eq(xs[2], 4u);
+  check_eq(xs[0], type_id_t{1});
+  check_eq(xs[1], type_id_t{2});
+  check_eq(xs[2], type_id_t{4});
 }
 
 TEST("lists are comparable") {
-  type_id_t data[] = {3, 1, 2, 4};
+  type_id_t data[] = {type_id_t{3}, type_id_t{1}, type_id_t{2}, type_id_t{4}};
   type_id_list xs{data};
-  type_id_t data_copy[] = {3, 1, 2, 4};
+  type_id_t data_copy[] = {type_id_t{3}, type_id_t{1}, type_id_t{2},
+                           type_id_t{4}};
   type_id_list ys{data_copy};
   check_eq(xs, ys);
-  data_copy[1] = 10;
+  data_copy[1] = type_id_t{10};
   check_ne(xs, ys);
   check_lt(xs, ys);
   check_eq(make_type_id_list<add_atom>(), make_type_id_list<add_atom>());

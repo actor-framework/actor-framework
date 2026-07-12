@@ -6,6 +6,7 @@
 
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/detail/as_mutable_ref.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/error.hpp"
@@ -23,6 +24,7 @@
 #include <span>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -438,6 +440,26 @@ struct inspector_access<std::byte> : inspector_access_base<std::byte> {
     auto getter = [&x] { return static_cast<integer_type>(x); };
     auto set = [&x](integer_type val) { x = static_cast<std::byte>(val); };
     return f.apply(getter, set);
+  }
+};
+
+// -- inspection support for type_id_t -----------------------------------------
+
+template <>
+struct inspector_access<type_id_t> : inspector_access_base<type_id_t> {
+  template <class Inspector>
+  static bool apply(Inspector& f, type_id_t& x) {
+    if constexpr (Inspector::is_loading) {
+      auto tmp = std::underlying_type_t<type_id_t>{0};
+      if (!f.value(tmp))
+        return false;
+      x = static_cast<type_id_t>(tmp);
+    } else {
+      auto tmp = detail::to_underlying(x);
+      if (!f.value(tmp))
+        return false;
+    }
+    return true;
   }
 };
 

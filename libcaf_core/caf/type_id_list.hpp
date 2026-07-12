@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/type_id.hpp"
@@ -42,7 +43,7 @@ public:
 
   /// Returns the number of elements in the list.
   constexpr size_t size() const noexcept {
-    return data_[0];
+    return detail::to_underlying(data_[0]);
   }
 
   /// Returns `size() == 0`.
@@ -58,8 +59,8 @@ public:
   /// Compares this list to `other`.
   int compare(type_id_list other) const noexcept {
     // These conversions are safe, because the size is stored in 16 bits.
-    int s1 = data_[0];
-    int s2 = other.data_[0];
+    int s1 = detail::to_underlying(data_[0]);
+    int s2 = detail::to_underlying(other.data_[0]);
     int diff = s1 - s2;
     if (diff == 0)
       return memcmp(begin(), other.begin(),
@@ -99,8 +100,7 @@ private:
 /// @private
 template <class... Ts>
 struct make_type_id_list_helper {
-  static inline type_id_t data[] = {static_cast<type_id_t>(sizeof...(Ts)),
-                                    type_id_v<Ts>...};
+  static inline type_id_t data[] = {type_id_t{sizeof...(Ts)}, type_id_v<Ts>...};
 };
 
 /// Constructs a ::type_id_list from the template parameter pack `Ts`.
