@@ -9,7 +9,6 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/error.hpp"
-#include "caf/inspector_access.hpp"
 #include "caf/sec.hpp"
 #include "caf/type_id_list.hpp"
 
@@ -411,9 +410,7 @@ public:
     size_t size = 0;
     if (!begin_sequence(size))
       return false;
-    using type_id_int_t = std::underlying_type_t<type_id_t>;
-    constexpr size_t max_size = std::numeric_limits<type_id_int_t>::max();
-    if (size > max_size) {
+    if (size > type_id_list::max_size) {
       emplace_error(sec::invalid_argument);
       return false;
     }
@@ -422,6 +419,7 @@ public:
       return end_sequence();
     }
     detail::type_id_list_builder ids{size};
+    using type_id_int_t = std::underlying_type_t<type_id_t>;
     for (size_t i = 0; i < size; ++i) {
       auto id = type_id_int_t{0};
       if (!value(id))

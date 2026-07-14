@@ -11,9 +11,6 @@
 #include "caf/sec.hpp"
 #include "caf/type_id_list.hpp"
 
-#include <limits>
-#include <type_traits>
-
 namespace caf {
 
 deserializer::~deserializer() {
@@ -109,9 +106,7 @@ bool deserializer::value(type_id_list& xs) {
   size_t size = 0;
   if (!begin_sequence(size))
     return false;
-  using type_id_int_t = std::underlying_type_t<type_id_t>;
-  constexpr size_t max_size = std::numeric_limits<type_id_int_t>::max();
-  if (size > max_size) {
+  if (size > type_id_list::max_size) {
     emplace_error(sec::invalid_argument);
     return false;
   }

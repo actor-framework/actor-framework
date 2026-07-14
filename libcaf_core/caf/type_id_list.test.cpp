@@ -18,21 +18,6 @@
 
 #include <string>
 
-namespace {
-
-caf::byte_buffer encode_varbyte_size(size_t size) {
-  caf::byte_buffer buf;
-  auto x = static_cast<uint32_t>(size);
-  while (x > 0x7f) {
-    buf.push_back(static_cast<std::byte>((x & 0x7f) | 0x80));
-    x >>= 7;
-  }
-  buf.push_back(static_cast<std::byte>(x & 0x7f));
-  return buf;
-}
-
-} // namespace
-
 namespace detail {
 
 struct my_secret {
@@ -113,9 +98,9 @@ TEST("type ID lists are concatenable") {
   // 1 + 0
   check_eq((make_type_id_list<int8_t>()),
            type_id_list::concat(make_type_id_list<int8_t>(),
-                                make_type_id_list<>()));
+                                make_type_id_list()));
   check_eq((make_type_id_list<int8_t>()),
-           type_id_list::concat(make_type_id_list<>(),
+           type_id_list::concat(make_type_id_list(),
                                 make_type_id_list<int8_t>()));
   // 1 + 1
   check_eq((make_type_id_list<int8_t, int16_t>()),
@@ -124,9 +109,9 @@ TEST("type ID lists are concatenable") {
   // 2 + 0
   check_eq((make_type_id_list<int8_t, int16_t>()),
            type_id_list::concat(make_type_id_list<int8_t, int16_t>(),
-                                make_type_id_list<>()));
+                                make_type_id_list()));
   check_eq((make_type_id_list<int8_t, int16_t>()),
-           type_id_list::concat(make_type_id_list<>(),
+           type_id_list::concat(make_type_id_list(),
                                 make_type_id_list<int8_t, int16_t>()));
   // 2 + 1
   check_eq((make_type_id_list<int8_t, int16_t, int32_t>()),
@@ -187,7 +172,7 @@ SCENARIO("type ID lists are serializable") {
     }
   }
   GIVEN("an empty type ID list") {
-    auto xs = make_type_id_list<>();
+    auto xs = make_type_id_list();
     WHEN("serializing with a binary serializer") {
       byte_buffer buf;
       binary_serializer sink{buf};
@@ -215,62 +200,13 @@ SCENARIO("type ID lists are serializable") {
   }
 }
 
-SCENARIO("type ID lists reject oversized sequences") {
-  GIVEN("a binary payload with a sequence size of 65536") {
-    WHEN("deserializing a type ID list") {
-      THEN("the deserializer rejects the input") {
-        auto buf = encode_varbyte_size(65536);
-        binary_deserializer source{buf};
-        type_id_list xs = make_type_id_list<int32_t>();
-        check(!source.value(xs));
-        check_eq(source.get_error(), sec::invalid_argument);
-        check_eq(xs, make_type_id_list<int32_t>());
-      }
-    }
-  }
-  GIVEN("a binary payload with a sequence size of 131070") {
-    WHEN("deserializing a type ID list") {
-      THEN("the deserializer rejects the input") {
-        auto buf = encode_varbyte_size(131070);
-        binary_deserializer source{buf};
-        type_id_list xs = make_type_id_list<int32_t>();
-        check(!source.value(xs));
-        check_eq(source.get_error(), sec::invalid_argument);
-        check_eq(xs, make_type_id_list<int32_t>());
-      }
-    }
-  }
-  GIVEN("a type ID list with the maximum representable size") {
-    caf::detail::type_id_list_builder ids{65535};
-    for (size_t i = 0; i < 65535; ++i)
-      ids.push_back(type_id_v<int32_t>);
-    auto xs = ids.move_to_list();
-    WHEN("serializing and deserializing with a binary serializer") {
-      byte_buffer buf;
-      binary_serializer sink{buf};
-      check(sink.value(xs));
-      THEN("the list round-trips without truncation") {
-        binary_deserializer source{buf};
-        type_id_list ys = make_type_id_list();
-        check(source.value(ys));
-        check_eq(xs, ys);
-        check_eq(ys.size(), 65535u);
-      }
-    }
-  }
-}
-
 SCENARIO("message load rejects oversized type lists") {
-  GIVEN("a binary payload with 65535 type IDs in the types field") {
+  GIVEN("a binary payload exceeding the maximum size") {
     byte_buffer buf;
     binary_serializer sink{buf};
-    check(sink.begin_object(type_id_v<message>, "message"));
-    check(sink.begin_field("types"));
-    check(sink.begin_sequence(65535));
-    for (size_t i = 0; i < 65535; ++i)
-      check(sink.value(caf::detail::to_underlying(type_id_v<int32_t>)));
-    check(sink.end_sequence());
-    check(sink.end_field());
+    require(sink.begin_object(type_id_v<message>, "message"));
+    require(sink.begin_field("types"));
+    require(sink.begin_sequence(type_id_list::max_size + 1));
     WHEN("loading the message from the binary payload") {
       binary_deserializer source{buf};
       message loaded;

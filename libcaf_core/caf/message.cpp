@@ -22,70 +22,62 @@
   if (!(statement))                                                            \
   return false
 
-#define STOP(...)                                                              \
-  do {                                                                         \
-    source.emplace_error(__VA_ARGS__);                                         \
-    return false;                                                              \
-  } while (false)
-
 namespace caf {
 
 bool message::load(deserializer& source) {
-  GUARDED(source.begin_object(type_id_v<message>, "message"));
-  GUARDED(source.begin_field("types"));
-  type_id_list types = make_type_id_list();
-  GUARDED(source.value(types));
-  GUARDED(source.end_field());
-  using uint16_limits = std::numeric_limits<uint16_t>;
-  if (types.size() > static_cast<size_t>(uint16_limits::max() - 1))
-    STOP(sec::invalid_argument, "too many types for message");
+  type_id_list types{nullptr};
+  GUARDED(source.begin_object(type_id_v<message>, "message") //
+          && source.begin_field("types")                     //
+          && source.value(types)                             //
+          && source.end_field());
+  GUARDED(source.begin_field("values") //
+          && source.begin_tuple(types.size()));
   if (types.empty()) {
     data_.reset();
-    return source.begin_field("values") //
-           && source.begin_tuple(0)     //
-           && source.end_tuple()        //
-           && source.end_field()        //
-           && source.end_object();
-  }
-  size_t data_size = 0;
-  for (auto id : types) {
-    if (const auto* meta = detail::global_meta_object_or_null(id))
-      data_size += meta->padded_size;
-    else
-      STOP(sec::unknown_type, detail::to_underlying(id));
-  }
-  intrusive_ptr<detail::message_data> ptr;
-  if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
-    // We don't need to worry about exceptions here: the message_data
-    // constructor is `noexcept`.
-    ptr.reset(new (vptr) detail::message_data(types), adopt_ref);
   } else {
-    STOP(sec::runtime_error, "unable to allocate memory");
-  }
-  auto pos = ptr->storage();
-  auto msg_types = ptr->types();
-  auto gmos = detail::global_meta_objects();
-  GUARDED(source.begin_field("values"));
-  GUARDED(source.begin_tuple(types.size()));
-  for (size_t i = 0; i < types.size(); ++i) {
-    auto& meta = gmos[detail::to_underlying(msg_types[i])];
-    meta.default_construct(pos);
-    ptr->inc_constructed_elements();
-    if (!meta.load(source, pos))
+    size_t data_size = 0;
+    for (auto id : types) {
+      if (const auto* meta = detail::global_meta_object_or_null(id)) {
+        data_size += meta->padded_size;
+      } else {
+        auto msg = detail::format("unknown type ID: {}",
+                                  detail::to_underlying(id));
+        source.emplace_error(sec::unknown_type, std::move(msg));
+        return false;
+      }
+    }
+    intrusive_ptr<detail::message_data> ptr;
+    if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
+      // We don't need to worry about exceptions here: the message_data
+      // constructor is `noexcept`.
+      ptr.reset(new (vptr) detail::message_data(types), adopt_ref);
+    } else {
+      source.emplace_error(sec::runtime_error, "unable to allocate memory");
       return false;
-    pos += meta.padded_size;
+    }
+    auto pos = ptr->storage();
+    auto msg_types = ptr->types();
+    auto gmos = detail::global_meta_objects();
+    for (size_t i = 0; i < types.size(); ++i) {
+      auto& meta = gmos[detail::to_underlying(msg_types[i])];
+      meta.default_construct(pos);
+      ptr->inc_constructed_elements();
+      if (!meta.load(source, pos))
+        return false;
+      pos += meta.padded_size;
+    }
+    data_.reset(ptr.release(), adopt_ref);
   }
-  data_.reset(ptr.release(), adopt_ref);
   return source.end_tuple() && source.end_field() && source.end_object();
 }
 
 bool message::save(serializer& sink) const {
   auto gmos = detail::global_meta_objects();
   if (data_ == nullptr) {
-    // Short-circuit empty tuples.
+    // Short-circuit empty sequences.
     return sink.begin_object(type_id_v<message>, "message") //
            && sink.begin_field("types")                     //
-           && sink.value(make_type_id_list<>())             //
+           && sink.value(make_type_id_list())               //
            && sink.end_field()                              //
            && sink.begin_field("values")                    //
            && sink.begin_tuple(0)                           //
@@ -97,12 +89,15 @@ bool message::save(serializer& sink) const {
   auto type_ids = data_->types();
   // Write type information. This is needed for serialization round trips. Human
   // readable formats will have human readable type information.
-  GUARDED(sink.begin_field("types"));
-  GUARDED(sink.value(type_ids));
-  GUARDED(sink.end_field());
-  // Write elements.
+  auto ok = sink.begin_field("types")     //
+            && sink.value(type_ids)       //
+            && sink.end_field()           //
+            && sink.begin_field("values") //
+            && sink.begin_tuple(type_ids.size());
+  if (!ok) {
+    return false;
+  }
   auto storage = data_->storage();
-  GUARDED(sink.begin_field("values") && sink.begin_tuple(type_ids.size()));
   for (auto id : type_ids) {
     auto& meta = gmos[detail::to_underlying(id)];
     GUARDED(meta.save(sink, storage));

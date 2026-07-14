@@ -78,12 +78,12 @@ struct result_to_type_id_list {
 
 template <>
 struct result_to_type_id_list<void> {
-  static constexpr auto value = make_type_id_list<>();
+  static constexpr auto value = make_type_id_list();
 };
 
 template <>
 struct result_to_type_id_list<unit_t> {
-  static constexpr auto value = make_type_id_list<>();
+  static constexpr auto value = make_type_id_list();
 };
 
 template <class T>
