@@ -12,6 +12,7 @@
 #include "caf/dictionary.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
+#include "caf/type_id.hpp"
 
 using namespace caf;
 
@@ -524,6 +525,31 @@ SCENARIO("mappers enable custom type names in JSON input") {
         } else {
           tstlog::debug("reader reported error: {}", reader.get_error());
         }
+      }
+    }
+  }
+}
+
+SCENARIO("type ID mappers are authoritative") {
+  struct nil_mapper : type_id_mapper {
+    std::string_view operator()(type_id_t) const override {
+      return {};
+    }
+    type_id_t operator()(std::string_view) const override {
+      return invalid_type_id;
+    }
+  };
+  GIVEN("a nil mapper") {
+    nil_mapper mapper_instance;
+    WHEN("reading JSON that uses a standard CAF type name") {
+      using value_type = std::variant<int32_t, std::string>;
+      json_reader reader;
+      reader.mapper(&mapper_instance);
+      auto input = R"_({"@value-type": "int32_t", "value": 42})_"sv;
+      value_type value;
+      THEN("deserialization fails because the mapper rejects the type name") {
+        check(reader.load(input));
+        check(!reader.apply(value));
       }
     }
   }

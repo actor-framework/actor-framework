@@ -9,6 +9,8 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
+#include "caf/type_id.hpp"
+#include "caf/type_id_list.hpp"
 
 using namespace caf;
 
@@ -552,6 +554,40 @@ SCENARIO("the JSON writer can render nested lists") {
   ]
 ])_";
         check_eq(to_json_string(x, 2), out);
+      }
+    }
+  }
+}
+
+SCENARIO("type ID mappers are authoritative") {
+  struct alias_mapper : type_id_mapper {
+    std::string_view operator()(type_id_t type) const override {
+      if (type == type_id_v<int32_t>)
+        return "my_app.int32";
+      return {};
+    }
+    type_id_t operator()(std::string_view) const override {
+      return invalid_type_id;
+    }
+  };
+  GIVEN("a mapper that aliases only int32_t") {
+    alias_mapper mapper;
+    WHEN("serializing a type ID list with the mapper") {
+      auto xs = make_type_id_list<int32_t>();
+      json_writer sink;
+      sink.mapper(&mapper);
+      THEN("serialization succeeds with the alias") {
+        check(sink.value(xs));
+        check(sink.str().find("my_app.int32") != std::string::npos);
+        check(sink.str().find("int32_t") == std::string::npos);
+      }
+    }
+    WHEN("serializing a type ID list for an unmapped type") {
+      auto xs = make_type_id_list<double>();
+      json_writer sink;
+      sink.mapper(&mapper);
+      THEN("serialization fails instead of falling back to query_type_name") {
+        check(!sink.value(xs));
       }
     }
   }
