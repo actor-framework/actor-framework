@@ -165,6 +165,7 @@ class skippable_result;
 class stream;
 class text_reader;
 class thread_hook;
+class type_id_mapper;
 class type_id_list;
 class uri;
 class uri_builder;

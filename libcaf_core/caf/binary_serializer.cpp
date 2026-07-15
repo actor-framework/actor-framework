@@ -13,6 +13,7 @@
 #include "caf/detail/squashed_int.hpp"
 #include "caf/sec.hpp"
 #include "caf/serializer.hpp"
+#include "caf/type_id.hpp"
 #include "caf/type_id_list.hpp"
 
 #include <iomanip>
@@ -36,6 +37,8 @@ namespace caf {
 class binary_serializer_impl : public byte_writer {
 public:
   // -- member types -----------------------------------------------------------
+
+  using super = byte_writer;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -86,6 +89,22 @@ public:
     return true;
   }
 
+  [[nodiscard]] bool use_type_names() const noexcept override {
+    return use_type_names_;
+  }
+
+  void use_type_names(bool value) noexcept override {
+    use_type_names_ = value;
+  }
+
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept override {
+    return mapper_;
+  }
+
+  void mapper(const type_id_mapper* ptr) noexcept override {
+    mapper_ = ptr;
+  }
+
   // -- interface functions ----------------------------------------------------
 
   void set_error(error stop_reason) override {
@@ -98,6 +117,11 @@ public:
 
   caf::actor_handle_codec* actor_handle_codec() noexcept override {
     return codec_;
+  }
+
+  std::string_view to_type_name(type_id_t id) const override {
+    auto tname = (*mapper_)(id);
+    return tname.empty() ? query_type_name(id) : tname;
   }
 
   constexpr bool begin_object(type_id_t, std::string_view) noexcept override {
@@ -381,6 +405,8 @@ public:
   }
 
   bool value(type_id_list xs) override {
+    if (use_type_names_)
+      return super::value(xs);
     if (!begin_sequence(xs.size()))
       return false;
     for (auto id : xs) {
@@ -407,6 +433,12 @@ private:
   caf::actor_handle_codec* codec_ = nullptr;
 
   error err_;
+
+  bool use_type_names_ = false;
+
+  default_type_id_mapper default_mapper_;
+
+  const type_id_mapper* mapper_ = &default_mapper_;
 };
 
 // -- constructors, destructors, and assignment operators --------------------

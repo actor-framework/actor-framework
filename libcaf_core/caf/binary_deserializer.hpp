@@ -43,8 +43,30 @@ public:
     return impl_->load_bytes(bytes);
   }
 
+  /// Returns whether the reader expects type ID lists using names instead of
+  /// integers.
+  [[nodiscard]] bool use_type_names() const noexcept {
+    return impl_->use_type_names();
+  }
+
+  /// Configures whether the reader expects type ID lists using names instead
+  /// of integers.
+  void use_type_names(bool value) noexcept {
+    impl_->use_type_names(value);
+  }
+
+  /// Returns the type ID mapper used by the reader.
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+    return impl_->mapper();
+  }
+
+  /// Changes the type ID mapper for the reader.
+  void mapper(const type_id_mapper* ptr) noexcept {
+    impl_->mapper(ptr);
+  }
+
 private:
-  static constexpr size_t impl_storage_size = 48;
+  static constexpr size_t impl_storage_size = 64;
 
   /// Storage for the implementation object.
   alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
