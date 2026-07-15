@@ -15,6 +15,7 @@
 #include "caf/json_writer.hpp"
 #include "caf/message.hpp"
 #include "caf/sec.hpp"
+#include "caf/type_id.hpp"
 
 #include <string>
 
@@ -145,6 +146,65 @@ SCENARIO("type ID lists are serializable") {
         check(source.apply(ys));
         check_eq(xs, ys);
       }
+      AND_THEN("a deserializer with use_type_names(true) fails") {
+        binary_deserializer source{buf};
+        source.use_type_names(true);
+        type_id_list ys = make_type_id_list();
+        check(!source.value(ys));
+      }
+    }
+    WHEN("serializing with use_type_names(true)") {
+      byte_buffer buf;
+      binary_serializer sink{buf};
+      sink.use_type_names(true);
+      check(sink.value(xs));
+      THEN("a matching binary deserializer reproduces the list") {
+        binary_deserializer source{buf};
+        source.use_type_names(true);
+        type_id_list ys = make_type_id_list();
+        check(source.value(ys));
+        check_eq(xs, ys);
+      }
+      AND_THEN("a deserializer without the flag does not reproduce the list") {
+        binary_deserializer source{buf};
+        type_id_list ys = make_type_id_list();
+        auto ok = source.value(ys);
+        check(!ok || ys != xs);
+      }
+    }
+    WHEN("serializing with use_type_names(true) and a custom mapper") {
+      struct alias_mapper : type_id_mapper {
+        std::string_view operator()(type_id_t type) const override {
+          if (type == type_id_v<int32_t>)
+            return "my_app.int32";
+          return query_type_name(type);
+        }
+        type_id_t operator()(std::string_view name) const override {
+          if (name == "my_app.int32")
+            return type_id_v<int32_t>;
+          return query_type_id(name);
+        }
+      };
+      alias_mapper mapper;
+      byte_buffer buf;
+      binary_serializer sink{buf};
+      sink.use_type_names(true);
+      sink.mapper(&mapper);
+      check(sink.value(xs));
+      THEN("a deserializer with the same mapper reproduces the list") {
+        binary_deserializer source{buf};
+        source.use_type_names(true);
+        source.mapper(&mapper);
+        type_id_list ys = make_type_id_list();
+        check(source.value(ys));
+        check_eq(xs, ys);
+      }
+      AND_THEN("a deserializer without the mapper fails") {
+        binary_deserializer source{buf};
+        source.use_type_names(true);
+        type_id_list ys = make_type_id_list();
+        check(!source.value(ys));
+      }
     }
     WHEN("serializing with a JSON writer") {
       json_writer sink;
@@ -198,6 +258,11 @@ SCENARIO("type ID lists are serializable") {
       }
     }
   }
+}
+
+TEST("binary serializers use integer type IDs by default") {
+  byte_buffer buf;
+  check(!binary_serializer{buf}.use_type_names());
 }
 
 SCENARIO("message load rejects oversized type lists") {

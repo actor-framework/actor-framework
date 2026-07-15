@@ -10,6 +10,7 @@
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/error.hpp"
 #include "caf/sec.hpp"
+#include "caf/type_id.hpp"
 #include "caf/type_id_list.hpp"
 
 #include <sstream>
@@ -26,6 +27,9 @@ namespace caf {
 
 class binary_deserializer_impl : public byte_reader {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using super = byte_reader;
   // -- constructors, destructors, and assignment operators --------------------
 
   binary_deserializer_impl(const std::byte* buf, size_t size,
@@ -56,6 +60,22 @@ public:
     return true;
   }
 
+  [[nodiscard]] bool use_type_names() const noexcept override {
+    return use_type_names_;
+  }
+
+  void use_type_names(bool value) noexcept override {
+    use_type_names_ = value;
+  }
+
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept override {
+    return mapper_;
+  }
+
+  void mapper(const type_id_mapper* ptr) noexcept override {
+    mapper_ = ptr;
+  }
+
   const std::byte* current() const noexcept {
     return current_;
   }
@@ -80,6 +100,11 @@ public:
 
   caf::actor_handle_codec* actor_handle_codec() noexcept override {
     return codec_;
+  }
+
+  type_id_t to_type_id(std::string_view name) const override {
+    auto id = (*mapper_)(name);
+    return id != invalid_type_id ? id : query_type_id(name);
   }
 
   bool fetch_next_object_type(type_id_t& type) noexcept override {
@@ -407,6 +432,8 @@ public:
   }
 
   bool value(type_id_list& xs) override {
+    if (use_type_names_)
+      return super::value(xs);
     size_t size = 0;
     if (!begin_sequence(size))
       return false;
@@ -479,6 +506,12 @@ private:
 
   /// The last occurred error.
   error err_;
+
+  bool use_type_names_ = false;
+
+  default_type_id_mapper default_mapper_;
+
+  const type_id_mapper* mapper_ = &default_mapper_;
 };
 
 // -- constructors, destructors, and assignment operators --------------------

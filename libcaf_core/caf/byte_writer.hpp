@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
 #include "caf/serializer.hpp"
 
 namespace caf {
@@ -31,6 +32,20 @@ public:
   ///          otherwise.
   [[nodiscard]] virtual bool update(size_t offset,
                                     const_byte_span content) noexcept = 0;
+
+  /// Returns whether the writer represents type ID lists using names instead
+  /// of rendering them as integers.
+  [[nodiscard]] virtual bool use_type_names() const noexcept = 0;
+
+  /// Configures whether the writer represents type ID lists using names
+  /// instead of rendering them as integers.
+  virtual void use_type_names(bool value) noexcept = 0;
+
+  /// Returns the type ID mapper used by the writer.
+  [[nodiscard]] virtual const type_id_mapper* mapper() const noexcept = 0;
+
+  /// Changes the type ID mapper for the writer.
+  virtual void mapper(const type_id_mapper* ptr) noexcept = 0;
 };
 
 } // namespace caf

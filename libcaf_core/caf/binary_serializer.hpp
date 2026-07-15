@@ -57,8 +57,30 @@ public:
     return impl_->update(offset, content);
   }
 
+  /// Returns whether the writer represents type ID lists using names instead
+  /// of rendering them as integers.
+  [[nodiscard]] bool use_type_names() const noexcept {
+    return impl_->use_type_names();
+  }
+
+  /// Configures whether the writer represents type ID lists using names
+  /// instead of rendering them as integers.
+  void use_type_names(bool value) noexcept {
+    impl_->use_type_names(value);
+  }
+
+  /// Returns the type ID mapper used by the writer.
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+    return impl_->mapper();
+  }
+
+  /// Changes the type ID mapper for the writer.
+  void mapper(const type_id_mapper* ptr) noexcept {
+    impl_->mapper(ptr);
+  }
+
 private:
-  static constexpr size_t impl_storage_size = 40;
+  static constexpr size_t impl_storage_size = 64;
 
   /// Storage for the implementation object.
   alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
