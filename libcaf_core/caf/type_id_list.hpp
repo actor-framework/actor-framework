@@ -23,6 +23,8 @@ class CAF_CORE_EXPORT type_id_list : detail::comparable<type_id_list> {
 public:
   using pointer = const type_id_t*;
 
+  static constexpr size_t max_size = 0xFFFF; // 16-bit unsigned integer
+
   constexpr explicit type_id_list(pointer data) noexcept : data_(data) {
     // nop
   }

@@ -7,11 +7,13 @@
 #include "caf/actor_handle_codec.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/sec.hpp"
 #include "caf/serializer.hpp"
+#include "caf/type_id_list.hpp"
 
 #include <iomanip>
 #include <span>
@@ -374,6 +376,16 @@ public:
       if (!value(tmp)) {
         return false;
       }
+    }
+    return end_sequence();
+  }
+
+  bool value(type_id_list xs) override {
+    if (!begin_sequence(xs.size()))
+      return false;
+    for (auto id : xs) {
+      if (!value(detail::to_underlying(id)))
+        return false;
     }
     return end_sequence();
   }

@@ -189,6 +189,9 @@ public:
   /// Reads the vector of booleans from the input.
   virtual bool value(std::vector<bool>& x);
 
+  /// @copydoc value
+  virtual bool value(type_id_list& xs);
+
   // Announce special handling of `vector<bool>` to the inspection API.
   bool builtin_inspect(std::vector<bool>& x) {
     return value(x);

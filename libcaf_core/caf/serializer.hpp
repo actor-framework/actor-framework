@@ -156,6 +156,9 @@ public:
   /// Adds the vector of booleans to the output.
   virtual bool value(const std::vector<bool>& x);
 
+  /// @copydoc value
+  virtual bool value(type_id_list xs);
+
   // Announce special handling of `vector<bool>` to the inspection API.
   bool builtin_inspect(const std::vector<bool>& x) {
     return value(x);

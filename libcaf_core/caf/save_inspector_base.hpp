@@ -244,6 +244,10 @@ public:
     return impl_->value(x);
   }
 
+  bool value(type_id_list what) {
+    return impl_->value(what);
+  }
+
   bool builtin_inspect(const std::vector<bool>& x) {
     return value(x);
   }

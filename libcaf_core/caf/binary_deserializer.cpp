@@ -7,8 +7,10 @@
 #include "caf/actor_handle_codec.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/detail/type_id_list_builder.hpp"
 #include "caf/error.hpp"
 #include "caf/sec.hpp"
+#include "caf/type_id_list.hpp"
 
 #include <sstream>
 #include <type_traits>
@@ -402,6 +404,32 @@ public:
       }
     }
     return end_sequence();
+  }
+
+  bool value(type_id_list& xs) override {
+    size_t size = 0;
+    if (!begin_sequence(size))
+      return false;
+    if (size > type_id_list::max_size) {
+      emplace_error(sec::invalid_argument);
+      return false;
+    }
+    if (size == 0) {
+      xs = make_type_id_list();
+      return end_sequence();
+    }
+    detail::type_id_list_builder ids{size};
+    using type_id_int_t = std::underlying_type_t<type_id_t>;
+    for (size_t i = 0; i < size; ++i) {
+      auto id = type_id_int_t{0};
+      if (!value(id))
+        return false;
+      ids.push_back(static_cast<type_id_t>(id));
+    }
+    if (!end_sequence())
+      return false;
+    xs = ids.move_to_list();
+    return true;
   }
 
 private:

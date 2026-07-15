@@ -4,9 +4,19 @@
 
 #include "caf/type_id_list.hpp"
 
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/detail/type_id_list_builder.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/json_reader.hpp"
+#include "caf/json_writer.hpp"
+#include "caf/message.hpp"
+#include "caf/sec.hpp"
+
+#include <string>
 
 namespace detail {
 
@@ -88,9 +98,9 @@ TEST("type ID lists are concatenable") {
   // 1 + 0
   check_eq((make_type_id_list<int8_t>()),
            type_id_list::concat(make_type_id_list<int8_t>(),
-                                make_type_id_list<>()));
+                                make_type_id_list()));
   check_eq((make_type_id_list<int8_t>()),
-           type_id_list::concat(make_type_id_list<>(),
+           type_id_list::concat(make_type_id_list(),
                                 make_type_id_list<int8_t>()));
   // 1 + 1
   check_eq((make_type_id_list<int8_t, int16_t>()),
@@ -99,9 +109,9 @@ TEST("type ID lists are concatenable") {
   // 2 + 0
   check_eq((make_type_id_list<int8_t, int16_t>()),
            type_id_list::concat(make_type_id_list<int8_t, int16_t>(),
-                                make_type_id_list<>()));
+                                make_type_id_list()));
   check_eq((make_type_id_list<int8_t, int16_t>()),
-           type_id_list::concat(make_type_id_list<>(),
+           type_id_list::concat(make_type_id_list(),
                                 make_type_id_list<int8_t, int16_t>()));
   // 2 + 1
   check_eq((make_type_id_list<int8_t, int16_t, int32_t>()),
@@ -114,4 +124,96 @@ TEST("type ID lists are concatenable") {
   check_eq((make_type_id_list<int8_t, int16_t, int32_t, int64_t>()),
            type_id_list::concat(make_type_id_list<int8_t, int16_t>(),
                                 make_type_id_list<int32_t, int64_t>()));
+}
+
+SCENARIO("type ID lists are serializable") {
+  GIVEN("a non-empty type ID list") {
+    auto xs = make_type_id_list<int32_t, std::string, double>();
+    WHEN("serializing with a binary serializer") {
+      byte_buffer buf;
+      binary_serializer sink{buf};
+      check(sink.value(xs));
+      THEN("a binary deserializer reproduces the list") {
+        binary_deserializer source{buf};
+        type_id_list ys = make_type_id_list();
+        check(source.value(ys));
+        check_eq(xs, ys);
+      }
+      AND_THEN("apply roundtrips via the binary serializer") {
+        binary_deserializer source{buf};
+        type_id_list ys = make_type_id_list();
+        check(source.apply(ys));
+        check_eq(xs, ys);
+      }
+    }
+    WHEN("serializing with a JSON writer") {
+      json_writer sink;
+      check(sink.value(xs));
+      THEN("the JSON contains type name strings") {
+        auto json = sink.str();
+        check(json.find("int32_t") != std::string::npos);
+        check(json.find("string") != std::string::npos);
+        check(json.find("double") != std::string::npos);
+      }
+      AND_THEN("a JSON reader reproduces the list") {
+        json_reader source;
+        type_id_list ys = make_type_id_list();
+        check(source.load(sink.str()));
+        check(source.value(ys));
+        check_eq(xs, ys);
+      }
+      AND_THEN("apply roundtrips via the JSON reader") {
+        json_reader source;
+        type_id_list ys = make_type_id_list();
+        check(source.load(sink.str()));
+        check(source.apply(ys));
+        check_eq(xs, ys);
+      }
+    }
+  }
+  GIVEN("an empty type ID list") {
+    auto xs = make_type_id_list();
+    WHEN("serializing with a binary serializer") {
+      byte_buffer buf;
+      binary_serializer sink{buf};
+      check(sink.value(xs));
+      THEN("a binary deserializer reproduces the empty list") {
+        binary_deserializer source{buf};
+        type_id_list ys = make_type_id_list();
+        check(source.value(ys));
+        check_eq(xs, ys);
+        check(ys.empty());
+      }
+    }
+    WHEN("serializing with a JSON writer") {
+      json_writer sink;
+      check(sink.value(xs));
+      THEN("a JSON reader reproduces the empty list") {
+        json_reader source;
+        type_id_list ys = make_type_id_list();
+        check(source.load(sink.str()));
+        check(source.value(ys));
+        check_eq(xs, ys);
+        check(ys.empty());
+      }
+    }
+  }
+}
+
+SCENARIO("message load rejects oversized type lists") {
+  GIVEN("a binary payload exceeding the maximum size") {
+    byte_buffer buf;
+    binary_serializer sink{buf};
+    require(sink.begin_object(type_id_v<message>, "message"));
+    require(sink.begin_field("types"));
+    require(sink.begin_sequence(type_id_list::max_size + 1));
+    WHEN("loading the message from the binary payload") {
+      binary_deserializer source{buf};
+      message loaded;
+      THEN("deserialization fails before reading values") {
+        check(!loaded.load(source.as_deserializer()));
+        check_eq(source.get_error(), sec::invalid_argument);
+      }
+    }
+  }
 }

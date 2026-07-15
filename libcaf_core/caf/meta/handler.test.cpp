@@ -12,17 +12,17 @@ using namespace caf;
 
 TEST("handlers are convertible to strings") {
   check_eq(to_string(meta::handler{
-             make_type_id_list<>(),
-             make_type_id_list<>(),
+             make_type_id_list(),
+             make_type_id_list(),
            }),
            "() -> ()");
   check_eq(to_string(meta::handler{
              make_type_id_list<int32_t>(),
-             make_type_id_list<>(),
+             make_type_id_list(),
            }),
            "(int32_t) -> ()");
   check_eq(to_string(meta::handler{
-             make_type_id_list<>(),
+             make_type_id_list(),
              make_type_id_list<int32_t>(),
            }),
            "() -> (int32_t)");
@@ -45,25 +45,25 @@ TEST("handlers are comparable") {
   check_eq(
     meta::handler{
       make_type_id_list<int32_t>(),
-      make_type_id_list<>(),
+      make_type_id_list(),
     },
     meta::handler{
       make_type_id_list<int32_t>(),
-      make_type_id_list<>(),
+      make_type_id_list(),
     });
   check_ne(
     meta::handler{
       make_type_id_list<int32_t>(),
-      make_type_id_list<>(),
+      make_type_id_list(),
     },
     meta::handler{
       make_type_id_list<int16_t>(),
-      make_type_id_list<>(),
+      make_type_id_list(),
     });
   check_ne(
     meta::handler{
       make_type_id_list<int32_t>(),
-      make_type_id_list<>(),
+      make_type_id_list(),
     },
     meta::handler{
       make_type_id_list<int32_t>(),
