@@ -120,8 +120,7 @@ public:
   }
 
   std::string_view to_type_name(type_id_t id) const override {
-    auto tname = (*mapper_)(id);
-    return tname.empty() ? query_type_name(id) : tname;
+    return (*mapper_)(id);
   }
 
   constexpr bool begin_object(type_id_t, std::string_view) noexcept override {

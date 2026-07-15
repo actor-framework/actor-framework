@@ -313,8 +313,7 @@ public:
   }
 
   type_id_t to_type_id(std::string_view name) const override {
-    auto id = (*mapper_)(name);
-    return id != invalid_type_id ? id : query_type_id(name);
+    return (*mapper_)(name);
   }
 
   bool fetch_next_object_type(type_id_t& type) override {

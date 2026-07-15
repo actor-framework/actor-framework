@@ -206,6 +206,46 @@ SCENARIO("type ID lists are serializable") {
         check(!source.value(ys));
       }
     }
+    WHEN("using a mapper that does not fall back to global queries") {
+      struct alias_mapper : type_id_mapper {
+        std::string_view operator()(type_id_t type) const override {
+          if (type == type_id_v<int32_t>)
+            return "my_app.int32";
+          return {};
+        }
+        type_id_t operator()(std::string_view name) const override {
+          if (name == "my_app.int32")
+            return type_id_v<int32_t>;
+          return invalid_type_id;
+        }
+      };
+      alias_mapper mapper;
+      auto ys = make_type_id_list<int32_t>();
+      byte_buffer buf;
+      binary_serializer sink{buf};
+      sink.use_type_names(true);
+      sink.mapper(&mapper);
+      check(sink.value(ys));
+      THEN("a deserializer with the same mapper roundtrips") {
+        binary_deserializer source{buf};
+        source.use_type_names(true);
+        source.mapper(&mapper);
+        type_id_list zs = make_type_id_list();
+        check(source.value(zs));
+        check_eq(ys, zs);
+      }
+      AND_THEN("mismatched mappers fail to roundtrip") {
+        byte_buffer std_buf;
+        binary_serializer std_sink{std_buf};
+        std_sink.use_type_names(true);
+        check(std_sink.value(ys));
+        binary_deserializer source{std_buf};
+        source.use_type_names(true);
+        source.mapper(&mapper);
+        type_id_list zs = make_type_id_list();
+        check(!source.value(zs));
+      }
+    }
     WHEN("serializing with a JSON writer") {
       json_writer sink;
       check(sink.value(xs));
