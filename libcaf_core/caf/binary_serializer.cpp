@@ -43,8 +43,12 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit binary_serializer_impl(byte_buffer& buf,
-                                  caf::actor_handle_codec* codec) noexcept
-    : buf_(buf), write_pos_(buf.size()), codec_(codec) {
+                                  caf::actor_handle_codec* codec,
+                                  bool use_type_names = false) noexcept
+    : buf_(buf),
+      write_pos_(buf.size()),
+      codec_(codec),
+      use_type_names_(use_type_names) {
     // nop
   }
 
@@ -87,14 +91,6 @@ public:
     }
     memcpy(buf_.data() + offset, content.data(), content.size());
     return true;
-  }
-
-  [[nodiscard]] bool use_type_names() const noexcept override {
-    return use_type_names_;
-  }
-
-  void use_type_names(bool value) noexcept override {
-    use_type_names_ = value;
   }
 
   [[nodiscard]] const type_id_mapper* mapper() const noexcept override {
@@ -445,6 +441,12 @@ private:
 binary_serializer::binary_serializer(byte_buffer& buf,
                                      caf::actor_handle_codec* codec) noexcept
   : super(new (impl_storage_) binary_serializer_impl(buf, codec)) {
+  static_assert(sizeof(binary_serializer_impl) <= impl_storage_size);
+}
+
+binary_serializer::binary_serializer(byte_buffer& buf, policy::use_type_names_t,
+                                     caf::actor_handle_codec* codec) noexcept
+  : super(new (impl_storage_) binary_serializer_impl(buf, codec, true)) {
   static_assert(sizeof(binary_serializer_impl) <= impl_storage_size);
 }
 

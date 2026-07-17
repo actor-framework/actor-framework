@@ -8,6 +8,7 @@
 #include "caf/byte_writer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/policy/use_type_names.hpp"
 
 #include <cstddef>
 
@@ -24,6 +25,9 @@ public:
 
   explicit binary_serializer(byte_buffer& buf,
                              caf::actor_handle_codec* codec = nullptr) noexcept;
+
+  binary_serializer(byte_buffer& buf, policy::use_type_names_t,
+                    caf::actor_handle_codec* codec = nullptr) noexcept;
 
   ~binary_serializer() noexcept override;
 
@@ -55,18 +59,6 @@ public:
   ///          otherwise.
   [[nodiscard]] bool update(size_t offset, const_byte_span content) noexcept {
     return impl_->update(offset, content);
-  }
-
-  /// Returns whether the writer represents type ID lists using names instead
-  /// of rendering them as integers.
-  [[nodiscard]] bool use_type_names() const noexcept {
-    return impl_->use_type_names();
-  }
-
-  /// Configures whether the writer represents type ID lists using names
-  /// instead of rendering them as integers.
-  void use_type_names(bool value) noexcept {
-    impl_->use_type_names(value);
   }
 
   /// Returns the type ID mapper used by the writer.

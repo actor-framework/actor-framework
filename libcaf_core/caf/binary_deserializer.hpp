@@ -8,6 +8,7 @@
 #include "caf/byte_reader.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/policy/use_type_names.hpp"
 
 #include <cstddef>
 
@@ -29,6 +30,12 @@ public:
   binary_deserializer(const void* buf, size_t size,
                       caf::actor_handle_codec* codec = nullptr) noexcept;
 
+  binary_deserializer(const_byte_span input, policy::use_type_names_t,
+                      caf::actor_handle_codec* codec = nullptr) noexcept;
+
+  binary_deserializer(const void* buf, size_t size, policy::use_type_names_t,
+                      caf::actor_handle_codec* codec = nullptr) noexcept;
+
   ~binary_deserializer() noexcept override;
 
   binary_deserializer(const binary_deserializer&) = delete;
@@ -41,18 +48,6 @@ public:
 
   [[nodiscard]] bool load_bytes(const_byte_span bytes) {
     return impl_->load_bytes(bytes);
-  }
-
-  /// Returns whether the reader expects type ID lists using names instead of
-  /// integers.
-  [[nodiscard]] bool use_type_names() const noexcept {
-    return impl_->use_type_names();
-  }
-
-  /// Configures whether the reader expects type ID lists using names instead
-  /// of integers.
-  void use_type_names(bool value) noexcept {
-    impl_->use_type_names(value);
   }
 
   /// Returns the type ID mapper used by the reader.
