@@ -102,35 +102,6 @@ void actor_control_block::deref() noexcept {
                 get()->id());
 }
 
-error_code<sec> load_actor(strong_actor_ptr& ptr, actor_system* sys,
-                           actor_id aid, const node_id& nid) {
-  if (sys == nullptr)
-    return error_code{sec::no_context};
-  if (sys->node() == nid) {
-    ptr = sys->registry().get(aid);
-    log::core::debug("fetch actor handle from local actor registry: {}",
-                     (ptr ? "found" : "not found"));
-    return {};
-  }
-  // Get or create a proxy for the remote actor.
-  if (auto* registry = proxy_registry::current()) {
-    ptr = registry->get_or_put(nid, aid);
-    return {};
-  }
-  return error_code{sec::no_proxy_registry};
-}
-
-error_code<sec> save_actor(const strong_actor_ptr& storage, actor_id aid,
-                           const node_id& nid) {
-  // Register locally running actors to be able to deserialize them later.
-  if (storage) {
-    auto& sys = storage->system();
-    if (nid == sys.node())
-      sys.registry().put(aid, storage);
-  }
-  return {};
-}
-
 namespace {
 
 void append_to_string_impl(std::string& str, const actor_control_block* ptr) {
