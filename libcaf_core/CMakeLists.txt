@@ -176,6 +176,7 @@ caf_add_component(
     caf/detail/critical.cpp
     caf/detail/current_actor.cpp
     caf/detail/daemons.cpp
+    caf/detail/daemons.test.cpp
     caf/detail/default_mailbox.cpp
     caf/detail/default_actor_handle_codec.cpp
     caf/detail/default_mailbox.test.cpp
