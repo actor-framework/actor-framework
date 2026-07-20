@@ -98,6 +98,59 @@ TEST("the sample operator emits items at regular intervals") {
   }
 }
 
+SCENARIO("samples keep ticking after a zero-demand tick") {
+  GIVEN("a sample operator with a passive subscriber") {
+    auto pub = caf::flow::multicaster<int>{coordinator()};
+    auto snk = flow::make_passive_observer<int>();
+    pub.as_observable().sample(1s).subscribe(snk->as_observer());
+    run_flows();
+    WHEN("the first control tick arrives before downstream demand") {
+      pub.push(1);
+      run_flows();
+      advance_time(1s);
+      run_flows();
+      check(snk->buf.empty());
+      THEN("later demand keeps the control stream alive for future samples") {
+        snk->request(1);
+        pub.push(2);
+        run_flows();
+        advance_time(1s);
+        run_flows();
+        check_eq(snk->buf, std::vector<int>{2});
+        snk->unsubscribe();
+        run_flows();
+      }
+    }
+  }
+}
+
+SCENARIO("samples resume control tokens after zero-demand ticks") {
+  GIVEN("an initialized sample operator with counted subscriptions") {
+    auto snk = flow::make_passive_observer<int>();
+    auto out = snk->as_observer();
+    auto uut = make_counted<caf::flow::op::sample_sub<int>>(coordinator(), out);
+    out.on_subscribe(caf::flow::subscription{uut});
+    auto data_sub = make_counting_sub();
+    auto ctrl_sub = make_counting_sub();
+    uut->fwd_on_subscribe(fwd_data, caf::flow::subscription{data_sub});
+    uut->fwd_on_subscribe(fwd_ctrl, caf::flow::subscription{ctrl_sub});
+    check_eq(data_sub->demand, defaults::flow::buffer_size);
+    check_eq(ctrl_sub->demand, 1u);
+    WHEN("a control token arrives before downstream demand") {
+      uut->fwd_on_next(fwd_data, 1);
+      uut->fwd_on_next(fwd_ctrl, 0);
+      THEN("the sample requests the next control token on downstream demand") {
+        check(snk->buf.empty());
+        check_eq(ctrl_sub->demand, 1u);
+        snk->request(1);
+        check_eq(ctrl_sub->demand, 2u);
+        snk->unsubscribe();
+        run_flows();
+      }
+    }
+  }
+}
+
 TEST("the sample operator forwards errors") {
   SECTION("an observable that produces some values followed by an error") {
     auto outputs = std::make_shared<std::vector<int>>();
