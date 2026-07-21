@@ -334,6 +334,31 @@ SCENARIO("disposing head_and_tail disposes the input subscription") {
   }
 }
 
+SCENARIO("disposing the prefix subscription aborts a live tail subscriber") {
+  using tuple_t = cow_tuple<cow_vector<int>, caf::flow::observable<int>>;
+  auto tail_snk
+    = coordinator()->add_child(std::in_place_type<flow::passive_observer<int>>);
+  auto got_prefix = false;
+  auto prefix_sub = //
+    coordinator()
+      ->make_observable()
+      .iota(1) //
+      .prefix_and_tail(3)
+      .for_each([&](const tuple_t& x) {
+        got_prefix = true;
+        auto [prefix, tail] = x.data();
+        check_eq(prefix, ls(1, 2, 3));
+        tail.subscribe(tail_snk->as_observer());
+      });
+  run_flows();
+  check(got_prefix);
+  check(tail_snk->subscribed());
+  prefix_sub.dispose();
+  run_flows();
+  check(tail_snk->aborted());
+  check_eq(tail_snk->err, sec::disposed);
+}
+
 SCENARIO("disposing the tail of head_and_tail disposes the operator") {
   using tuple_t = cow_tuple<cow_vector<int>, caf::flow::observable<int>>;
   GIVEN("a subscribed head_and_tail operator") {

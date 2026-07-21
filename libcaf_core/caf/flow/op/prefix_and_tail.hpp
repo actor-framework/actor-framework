@@ -159,7 +159,12 @@ private:
     sub_.cancel();
     if (sink_) {
       CAF_ASSERT(!out_); // Either in tail mode or in prefix mode.
-      sink_ = nullptr;
+      auto sink = std::move(sink_);
+      sink->state().listener = nullptr;
+      if (from_external)
+        sink->state().dispose();
+      else
+        sink->close();
       return;
     }
     CAF_ASSERT(out_);
