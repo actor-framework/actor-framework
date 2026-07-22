@@ -62,9 +62,10 @@ public:
   ///          `false` otherwise.
   template <class... Fs>
   bool try_send(const typed_actor<Fs...>& dst) {
+    using signatures = typename typed_actor<Fs...>::signatures;
     auto dst_hdl = actor_cast<actor>(dst);
-    return (detail::mtl_util<Fs>::send(self_, dst_hdl, adapter_, *reader_)
-            || ...);
+    return detail::mtl_try_send<signatures>::run(self_, dst_hdl, adapter_,
+                                                 *reader_);
   }
 
   /// Tries to get a message from the reader that matches any of the accepted
@@ -82,10 +83,11 @@ public:
                    OnResult on_result, OnError on_error) {
     using on_error_result = decltype(on_error(std::declval<error&>()));
     static_assert(std::is_same_v<void, on_error_result>);
+    using signatures = typename typed_actor<Fs...>::signatures;
     auto dst_hdl = actor_cast<actor>(dst);
-    return (detail::mtl_util<Fs>::request(self_, dst_hdl, timeout, adapter_,
-                                          *reader_, on_result, on_error)
-            || ...);
+    return detail::mtl_try_request<signatures>::run(self_, dst_hdl, timeout,
+                                                    adapter_, *reader_,
+                                                    on_result, on_error);
   }
 
 private:

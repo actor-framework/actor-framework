@@ -24,8 +24,15 @@ using namespace caf;
 
 namespace {
 
-using testee_actor = typed_actor<result<void>(put_atom, std::string, int32_t),
-                                 result<int32_t>(get_atom, std::string)>;
+struct testee_trait {
+  using signatures = type_list<result<void>(put_atom, std::string, int32_t),
+                               result<int32_t>(get_atom, std::string)>;
+};
+
+using testee_actor = typed_actor<testee_trait>;
+
+static_assert(
+  std::is_same_v<testee_actor::signatures, testee_trait::signatures>);
 
 struct testee_state {
   static inline const char* name = "testee";

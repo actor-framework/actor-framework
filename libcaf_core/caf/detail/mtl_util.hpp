@@ -68,4 +68,32 @@ struct mtl_util<result<Rs...>(Ts...)> {
   }
 };
 
+template <class>
+struct mtl_try_send;
+
+template <class... Sigs>
+struct mtl_try_send<type_list<Sigs...>> {
+  template <class Self, class Adapter, class Reader>
+  static bool
+  run(Self& self, const actor& dst, Adapter& adapter, Reader& reader) {
+    return (mtl_util<Sigs>::send(self, dst, adapter, reader) || ...);
+  }
+};
+
+template <class>
+struct mtl_try_request;
+
+template <class... Sigs>
+struct mtl_try_request<type_list<Sigs...>> {
+  template <class Self, class Timeout, class Adapter, class Reader,
+            class OnResult, class OnError>
+  static bool run(Self& self, const actor& dst, Timeout timeout,
+                  Adapter& adapter, Reader& reader, OnResult& on_result,
+                  OnError& on_error) {
+    return (mtl_util<Sigs>::request(self, dst, timeout, adapter, reader,
+                                    on_result, on_error)
+            || ...);
+  }
+};
+
 } // namespace caf::detail
