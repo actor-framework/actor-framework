@@ -330,12 +330,6 @@ public:
     return fn(std::move(*this));
   }
 
-  // -- batching ---------------------------------------------------------------
-
-  /// Like @c buffer, but wraps the collected items into type-erased batches.
-  observable<async::batch> collect_batches(timespan max_delay,
-                                           size_t max_items);
-
   // -- observing --------------------------------------------------------------
 
   /// Observes items from this observable on another @ref coordinator.
