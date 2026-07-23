@@ -8,6 +8,7 @@
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/anon_mail.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/event_based_actor.hpp"
@@ -41,6 +42,16 @@ behavior int_sink(event_based_actor* self, std::shared_ptr<ivec> results,
         })
         .for_each([results](int x) { results->push_back(x); });
     },
+  };
+}
+
+behavior disposable_int_sink(event_based_actor* self,
+                             std::shared_ptr<disposable> sub) {
+  return {
+    [self, sub](const stream& input) {
+      *sub = self->observe_as<int>(input, 30, 10).for_each([](int) {});
+    },
+    [](int) {},
   };
 }
 
@@ -93,11 +104,11 @@ TEST("streams allow actors to transmit flow items to other actors") {
   std::iota(res.begin(), res.end(), 1);
   auto r1 = std::make_shared<ivec>();
   auto e1 = std::make_shared<error>();
-  auto s1 = sys.spawn(int_sink, r1, e1);
   auto r2 = std::make_shared<ivec>();
   auto e2 = std::make_shared<error>();
-  auto s2 = sys.spawn(int_sink, r2, e2);
   SECTION("streams may be subscribed to multiple times") {
+    auto s1 = sys.spawn(int_sink, r1, e1);
+    auto s2 = sys.spawn(int_sink, r2, e2);
     auto src = sys.spawn([s1, s2](event_based_actor* self) {
       auto vals = self //
                     ->make_observable()
@@ -122,7 +133,7 @@ TEST("streams allow actors to transmit flow items to other actors") {
     check(terminated(s2));
   }
   SECTION("stream sources terminates open streams when shutting down") {
-    inject_exit(s2);
+    auto s1 = sys.spawn(int_sink, r1, e1);
     auto src = sys.spawn([s1](event_based_actor* self) {
       auto vals = self //
                     ->make_observable()
@@ -140,7 +151,7 @@ TEST("streams allow actors to transmit flow items to other actors") {
     check(terminated(s1));
   }
   SECTION("stream sinks cancel open subscriptions when shutting down") {
-    inject_exit(s2);
+    auto s1 = sys.spawn(int_sink, r1, e1);
     auto src = sys.spawn([s1](event_based_actor* self) {
       auto vals = self //
                     ->make_observable()
@@ -157,7 +168,29 @@ TEST("streams allow actors to transmit flow items to other actors") {
     prepone_and_expect<stream_cancel_msg>().to(src);
     check(!terminated(src)); // Must clean up state but not terminate.
   }
+  SECTION("external disposal cancels open subscriptions") {
+    auto sub = std::make_shared<disposable>();
+    auto sink = sys.spawn(disposable_int_sink, sub);
+    auto src = sys.spawn([sink](event_based_actor* self) {
+      auto vals = self //
+                    ->make_observable()
+                    .iota(1)
+                    .take(256)
+                    .to_stream("foo", 10ms, 10);
+      self->mail(vals).send(sink);
+    });
+    expect<stream>().from(src).to(sink);
+    expect<stream_open_msg>().from(sink).to(src);
+    expect<stream_ack_msg>().from(src).to(sink);
+    check(!sub->disposed());
+    sub->dispose();
+    inject().with(0).to(sink);
+    prepone_and_expect<stream_cancel_msg>().from(sink).to(src);
+    check(sub->disposed());
+    check(!terminated(src));
+  }
   SECTION("streams must have a positive delay") {
+    auto s1 = sys.spawn(int_sink, r1, e1);
     auto src = sys.spawn([s1](event_based_actor* self) {
       auto vals = self //
                     ->make_observable()
