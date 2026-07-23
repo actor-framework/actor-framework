@@ -72,6 +72,10 @@ std::string_view multipart_writer::boundary() const noexcept {
   return boundary_;
 }
 
+std::string multipart_writer::make_content_type() const {
+  return "multipart/form-data; boundary=" + boundary_;
+}
+
 void multipart_writer::do_append(const_byte_span payload, add_headers_fn& fn) {
   header_builder builder{this};
   write_string(buf_, "--");

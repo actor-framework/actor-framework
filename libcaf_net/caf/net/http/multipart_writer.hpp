@@ -88,6 +88,10 @@ public:
   /// Returns the boundary used by this writer.
   std::string_view boundary() const noexcept;
 
+  /// Returns the `Content-Type` header field value for this multipart
+  /// payload, including the boundary.
+  std::string make_content_type() const;
+
 private:
   using add_headers_fn = callback<void(header_builder&)>;
 
