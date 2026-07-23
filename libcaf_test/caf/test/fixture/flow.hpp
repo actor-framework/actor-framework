@@ -5,12 +5,14 @@
 #pragma once
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
+#include "caf/flow/subscription.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -230,6 +232,45 @@ public:
     }
   };
 
+  /// A subscription that records cumulative downstream demand.
+  class counting_sub : public caf::flow::subscription::impl_base {
+  public:
+    explicit counting_sub(caf::flow::coordinator* parent) : parent_(parent) {
+      // nop
+    }
+
+    caf::flow::coordinator* parent() const noexcept override {
+      return parent_;
+    }
+
+    bool disposed() const noexcept override {
+      return disposed_;
+    }
+
+    void request(size_t n) override {
+      demand += n;
+    }
+
+    void ref() const noexcept final {
+      ref_count_.inc();
+    }
+
+    void deref() const noexcept final {
+      ref_count_.dec(this);
+    }
+
+    size_t demand = 0;
+
+  private:
+    void do_dispose(bool) override {
+      disposed_ = true;
+    }
+
+    mutable detail::atomic_ref_count ref_count_;
+    caf::flow::coordinator* parent_;
+    bool disposed_ = false;
+  };
+
   // -- constructors, destructors, and assignment operators --------------------
 
   flow() {
@@ -276,6 +317,11 @@ public:
   make_canceling_observer(bool accept_first = false, bool auto_request = true) {
     return coordinator()->add_child(std::in_place_type<canceling_observer<T>>,
                                     accept_first, auto_request);
+  }
+
+  /// Returns a subscription that records cumulative demand.
+  intrusive_ptr<counting_sub> make_counting_sub() {
+    return coordinator()->add_child(std::in_place_type<counting_sub>);
   }
 
   /// Shortcut for creating an observable error via

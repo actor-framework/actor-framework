@@ -108,7 +108,7 @@ public:
       return;
     }
     control_sub_ = std::move(sub);
-    control_sub_.request(1);
+    request_control_token();
   }
 
   void fwd_on_complete(sample_emit_t) {
@@ -130,15 +130,19 @@ public:
       shutdown();
       return;
     }
-    if (demand_ == 0)
+    if (demand_ == 0) {
+      control_paused_ = true;
       return;
-    --demand_;
-    auto sampled = buf_.has_value();
-    if (sampled) {
+    }
+    if (demand_ > 0 && buf_.has_value()) {
+      --demand_;
       out_.on_next(*buf_);
       buf_.reset();
     }
-    control_sub_.request(1);
+    if (demand_ > 0)
+      request_control_token();
+    else
+      control_paused_ = true;
   }
 
   // -- implementation of subscription -----------------------------------------
@@ -150,6 +154,8 @@ public:
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
     demand_ += n;
+    if (n > 0 && control_paused_ && control_sub_)
+      request_control_token();
   }
 
   // -- reference counting -----------------------------------------------------
@@ -163,6 +169,11 @@ public:
   }
 
 private:
+  void request_control_token() {
+    control_paused_ = false;
+    control_sub_.request(1);
+  }
+
   void do_dispose(bool from_external) override {
     if (!out_)
       return;
@@ -215,6 +226,9 @@ private:
 
   /// Demand signaled by the observer.
   size_t demand_ = 0;
+
+  /// Stores whether the control stream needs new credit once demand resumes.
+  bool control_paused_ = false;
 
   /// Our current state.
   /// - running: alive and ready to emit batches.
