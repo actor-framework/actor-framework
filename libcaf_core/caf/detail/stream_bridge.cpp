@@ -126,7 +126,7 @@ flow::coordinator* stream_bridge_sub::parent() const noexcept {
 }
 
 bool stream_bridge_sub::disposed() const noexcept {
-  return src_ != nullptr;
+  return src_ == nullptr;
 }
 
 void stream_bridge_sub::request(size_t n) {
