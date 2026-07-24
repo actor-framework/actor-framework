@@ -73,6 +73,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `from_resource()` and then connecting an observable that may cancel the flow
   mid-flow, e.g., by using `take()` (#2395).
 - Fix stalling in the flow operators `throttle_first` and `sample` (#2453).
+- Fix a bug in the `dispose` implementation of the subscription object for
+  `prefix_and_tail` that caused subscribers to not receive terminal events such
+  as `on_complete` or `on_error` (#2456).
 
 ## [1.1.0] - 2025-07-25
 
