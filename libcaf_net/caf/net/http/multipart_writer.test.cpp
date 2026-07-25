@@ -6,8 +6,6 @@
 
 #include "caf/test/scenario.hpp"
 
-#include <span>
-
 using namespace caf;
 using namespace caf::net::http;
 using namespace std::literals;
@@ -117,6 +115,26 @@ SCENARIO("a multipart writer accepts payloads with a header builder function") {
                                     "--gc0p4Jq0M2Yt08j34c0p--\r\n";
         check_eq(result, expected);
       }
+    }
+  }
+}
+
+SCENARIO("a multipart writer provides the Content-Type header field value") {
+  GIVEN("a multipart_writer with the default boundary") {
+    multipart_writer writer;
+    WHEN("checking the content_type of the writer") {
+      THEN("content_type returns the media type with the boundary") {
+        check_eq(writer.make_content_type(),
+                 "multipart/form-data; boundary=gc0p4Jq0M2Yt08j34c0p");
+      }
+    }
+  }
+  GIVEN("a multipart_writer with a custom boundary") {
+    multipart_writer writer{"custom-boundary"};
+    WHEN("checking the content_type of the writer") {
+      THEN("content_type returns the media type with the custom boundary")
+      check_eq(writer.make_content_type(),
+               "multipart/form-data; boundary=custom-boundary");
     }
   }
 }

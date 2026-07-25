@@ -51,16 +51,17 @@ CAF_CORE_EXPORT void split(std::vector<std::string_view>& result,
 
 // TODO: use the equivalent C++20 constructor instead, once available.
 constexpr std::string_view make_string_view(const char* first,
-                                            const char* last) {
+                                            const char* last) noexcept {
   auto n = static_cast<size_t>(std::distance(first, last));
   return std::string_view{first, n};
 }
 
 /// Drops any leading and trailing whitespaces from `str`.
-CAF_CORE_EXPORT std::string_view trim(std::string_view str);
+CAF_CORE_EXPORT std::string_view trim(std::string_view str) noexcept;
 
 /// Checks whether two strings are equal when ignoring upper/lower case.
-CAF_CORE_EXPORT bool icase_equal(std::string_view x, std::string_view y);
+CAF_CORE_EXPORT bool icase_equal(std::string_view x,
+                                 std::string_view y) noexcept;
 
 /// Splits a string by a separator into a head and a tail. If `sep` was not
 /// found, the tail is empty.
@@ -89,10 +90,12 @@ CAF_CORE_EXPORT void replace_all(std::string& str, std::string_view what,
                                  std::string_view with);
 
 /// Returns whether `str` begins with `prefix`.
-CAF_CORE_EXPORT bool starts_with(std::string_view str, std::string_view prefix);
+CAF_CORE_EXPORT bool starts_with(std::string_view str,
+                                 std::string_view prefix) noexcept;
 
 /// Returns whether `str` ends with `suffix`.
-CAF_CORE_EXPORT bool ends_with(std::string_view str, std::string_view suffix);
+CAF_CORE_EXPORT bool ends_with(std::string_view str,
+                               std::string_view suffix) noexcept;
 
 /// Returns a string representation of `bytes` in hexadecimal notation.
 CAF_CORE_EXPORT std::string to_hex_str(const_byte_span bytes);
