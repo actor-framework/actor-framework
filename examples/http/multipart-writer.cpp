@@ -20,7 +20,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/caf_main.hpp"
-#include "caf/deep_to_string.hpp"
+#include "caf/string_algorithms.hpp"
 
 #include <chrono>
 #include <cstdio>
@@ -36,10 +36,10 @@ using namespace std::literals;
 
 namespace http = caf::net::http;
 namespace ssl = caf::net::ssl;
+
 using namespace caf;
 
-// -- configuration ------------------------------------------------------------
-
+// Custom config for adding a command line option for the CA file.
 struct config : caf::actor_system_config {
   config() {
     opt_group{custom_options_, "tls"} //
@@ -47,49 +47,59 @@ struct config : caf::actor_system_config {
   }
 };
 
-namespace {
-
+// Checks whether a string contains any reserved characters that would make it
+// unsafe to use in a multipart header field.
 bool is_sanitized(std::string_view value) {
   return value.find_first_of("\r\n\"\\") == std::string_view::npos;
 }
 
-std::string_view content_type_by_extension(std::string_view file_extension) {
-  if (file_extension == ".jpg" || file_extension == ".jpeg")
+// Returns a MIME content type based on the file extension.
+std::string_view content_type_by_extension(std::string_view extension) {
+  if (icase_equal(extension, ".jpg") || icase_equal(extension, ".jpeg")) {
     return "image/jpeg";
-  if (file_extension == ".png")
+  }
+  if (icase_equal(extension, ".png")) {
     return "image/png";
-  if (file_extension == ".pdf")
+  }
+  if (icase_equal(extension, ".pdf")) {
     return "application/pdf";
+  }
   return "text/plain";
 }
 
+// Custom deleter for std::unique_ptr to automatically close FILE* handles.
+struct fcloser {
+  void operator()(FILE* file) const noexcept {
+    if (file != nullptr) {
+      fclose(file);
+    }
+  }
+};
+
+// Reads the entire contents of a file into a vector of bytes.
 std::optional<std::vector<std::byte>>
 read_file(const std::filesystem::path& file_path) {
-  std::unique_ptr<FILE, int (*)(FILE*)> file{
-    fopen(file_path.string().c_str(), "rb"), fclose};
+  using file_ptr = std::unique_ptr<FILE, fcloser>;
+  auto file = file_ptr{fopen(file_path.string().c_str(), "rb")};
   if (!file)
     return std::nullopt;
   if (fseek(file.get(), 0, SEEK_END) != 0)
     return std::nullopt;
   auto size = ftell(file.get());
-  if (size < 0)
+  if (size <= 0)
     return std::nullopt;
   if (fseek(file.get(), 0, SEEK_SET) != 0)
     return std::nullopt;
-  std::vector<std::byte> result(static_cast<size_t>(size));
-  if (!result.empty()) {
-    auto bytes_read = fread(result.data(), 1, result.size(), file.get());
-    if (bytes_read != result.size() || ferror(file.get()) != 0)
-      return std::nullopt;
-  }
+  std::vector<std::byte> result;
+  result.resize(static_cast<size_t>(size));
+  auto bytes_read = fread(result.data(), 1, result.size(), file.get());
+  if (bytes_read != result.size() || ferror(file.get()) != 0)
+    return std::nullopt;
   return result;
 }
 
-} // namespace
-
-// -- main ---------------------------------------------------------------------
-
 int caf_main(caf::actor_system& sys, const config& cfg) {
+  // Parse command line arguments.
   auto remainder = cfg.remainder();
   if (remainder.size() < 1) {
     sys.println("*** expected mandatory positional argument: URL");
@@ -104,7 +114,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     sys.println("*** expected field name alongside file path");
     return EXIT_FAILURE;
   }
-  auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
+  // Feed all fields and files into a multipart writer.
   http::multipart_writer writer;
   for (size_t i = 1; i < remainder.size(); i += 2) {
     auto field_name = std::string{remainder[i]};
@@ -123,17 +133,17 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
       sys.println("*** failed to read file: {}", file_path.string());
       return EXIT_FAILURE;
     }
-    writer.append(*file_data,
-                  [field_name = std::move(field_name),
-                   filename = std::move(filename),
-                   file_content_type = content_type_by_extension(
-                     file_path.extension().string())](auto& headers) {
-                    auto name = "form-data; name=\"" + field_name
-                                + "\"; filename=\"" + filename + "\"";
-                    headers.add("Content-Disposition", name);
-                    headers.add("Content-Type", file_content_type);
-                  });
+    auto name = "form-data; name=\"" + field_name + "\"; filename=\"" + filename
+                + "\"";
+    auto extension = file_path.extension().string();
+    auto content_type = content_type_by_extension(extension);
+    writer.append(*file_data, [&name, content_type](auto& headers) {
+      headers.add("Content-Disposition", name);
+      headers.add("Content-Type", content_type);
+    });
   }
+  // Send a POST request with the payload from the multipart writer.
+  auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
   auto result = http::with(sys)
                   // Lazy load TLS when connecting to HTTPS endpoints.
                   .context_factory([ca_file, resource]() {
@@ -151,34 +161,23 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     sys.println("*** Failed to initiate connection: {}", result.error());
     return EXIT_FAILURE;
   }
-  auto response = result->first.get(10s);
-  if (!response) {
-    sys.println("*** HTTP request failed: {}", response.error());
+  // Wait for the response and print it to stdout.
+  auto maybe_response = result->first.get(10s);
+  if (!maybe_response) {
+    sys.println("*** HTTP request failed: {}", maybe_response.error());
     return EXIT_FAILURE;
   }
-  auto& r = *response;
-  sys.println("Server responded with HTTP {}: {}",
-              static_cast<uint16_t>(r.code()), phrase(r.code()));
+  auto& response = *maybe_response;
+  sys.println("Server responded with HTTP code {}",
+              static_cast<uint16_t>(response.code()));
   sys.println("Header fields:");
-  for (const auto& [key, value] : r.header_fields())
+  for (const auto& [key, value] : response.header_fields())
     sys.println("- {}: {}", key, value);
-  if (r.body().empty())
-    return EXIT_SUCCESS;
-  if (is_valid_utf8(r.body())) {
-    sys.println("Payload: {}", to_string_view(r.body()));
-  } else {
-    auto split_at = [](const_byte_span bytes, size_t at) {
-      if (bytes.size() > at)
-        return std::pair{bytes.subspan(0, at), bytes.subspan(at)};
-      return std::pair{bytes, const_byte_span{}};
-    };
-    // Print 8 bytes per row in hex.
-    sys.println("Payload:");
-    auto bytes = r.body();
-    const_byte_span row;
-    while (!bytes.empty()) {
-      std::tie(row, bytes) = split_at(bytes, 8);
-      sys.println("{}", to_hex_str(row));
+  if (auto body = response.body(); !body.empty()) {
+    if (is_valid_utf8(body)) {
+      sys.println("Payload (UTF-8): {}", to_string_view(body));
+    } else {
+      sys.println("Payload (binary): {}", to_hex_str(body));
     }
   }
   return EXIT_SUCCESS;

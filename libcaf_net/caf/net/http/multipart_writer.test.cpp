@@ -6,8 +6,6 @@
 
 #include "caf/test/scenario.hpp"
 
-#include <span>
-
 using namespace caf;
 using namespace caf::net::http;
 using namespace std::literals;

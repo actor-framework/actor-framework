@@ -19,7 +19,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/caf_main.hpp"
-#include "caf/defaults.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -29,19 +28,16 @@
 
 using namespace std::literals;
 
-// -- constants ----------------------------------------------------------------
-
 static constexpr uint16_t default_port = 8080;
 
-// -- configuration ------------------------------------------------------------
-
+// Custom config for adding command line options for the server.
 struct config : caf::actor_system_config {
   config() {
-    opt_group{custom_options_, "global"} //
+    opt_group{custom_options_, "global"}
       .add<uint16_t>("port,p", "port to listen for incoming connections")
       .add<size_t>("max-connections,m", "limit for concurrent clients")
       .add<size_t>("max-request-size,r", "limit for single request size");
-    opt_group{custom_options_, "tls"} //
+    opt_group{custom_options_, "tls"}
       .add<std::string>("key-file,k", "path to the private key file")
       .add<std::string>("cert-file,c", "path to the certificate file");
   }
@@ -49,20 +45,12 @@ struct config : caf::actor_system_config {
   caf::settings dump_content() const override {
     auto result = actor_system_config::dump_content();
     caf::put_missing(result, "port", default_port);
-    caf::put_missing(result, "max-connections", size_t{128});
-    caf::put_missing(result, "max-request-size",
-                     caf::defaults::net::http_max_request_size);
     return result;
   }
 };
 
-// -- main ---------------------------------------------------------------------
-
-namespace {
-
+// Set in signal handlers to request shutdown of the server.
 std::atomic<bool> shutdown_flag;
-
-} // namespace
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace ssl = caf::net::ssl;
@@ -96,28 +84,33 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           [&sys](http::responder& res) {
             auto value = res.payload();
             auto& header = res.header();
-            if (!header.has_token("Content-Type", "multipart/form-data")) {
+            if (!header.has_token("Content-Type", "multipart/form-data", ";")) {
               sys.println("*** expected multipart/form-data content. Found: {}",
                           header.field("Content-Type"));
               res.respond(http::status::bad_request);
               return;
             }
             auto reader = caf::net::http::multipart_reader{header, value};
-            if (!reader.for_each([&sys](http::header&& part_header,
-                                        caf::const_byte_span part_content) {
-                  sys.println("Number of fields: {}", part_header.num_fields());
-                  part_header.for_each_field(
-                    [&sys](std::string_view name, std::string_view value) {
-                      sys.println("{}: {}", name, value);
-                    });
-                  auto val = caf::to_string_view(part_content);
-                  sys.println("Content: {}", val);
-                })) {
-              sys.println("*** failed to parse multipart data");
-              res.respond(http::status::bad_request);
+            auto ok = reader.for_each(
+              [&sys](http::header&& sub_hdr, caf::const_byte_span content) {
+                sys.println("Multipart\nFields:");
+                sub_hdr.for_each_field(
+                  [&sys](std::string_view name, std::string_view value) {
+                    sys.println("- {}: {}", name, value);
+                  });
+                if (caf::is_valid_utf8(content)) {
+                  sys.println("Content: {}\n\n", caf::to_string_view(content));
+                } else {
+                  sys.println("Content: <binary data of size {}>\n\n",
+                              content.size());
+                }
+              });
+            if (ok) {
+              res.respond(http::status::ok);
               return;
             }
-            res.respond(http::status::ok);
+            sys.println("*** failed to parse multipart data");
+            res.respond(http::status::bad_request);
           })
         // Launch the server.
         .start();

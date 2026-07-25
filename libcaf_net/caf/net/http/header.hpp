@@ -82,10 +82,14 @@ public:
     return false;
   }
 
-  /// Checks whether the field `key` contains `token` as one of its
-  /// comma- or semicolon-separated elements, using a case-insensitive
-  /// compare.
-  bool has_token(std::string_view key, std::string_view token) const noexcept;
+  /// Splits the value of the field with the specified key into tokens using the
+  /// provided delimiters and returns true if the specified token is found.
+  /// @param key The name of the header field to scan for the token.
+  /// @param token The token to search for in the field value.
+  /// @param delims The delimiters used to split the field value into tokens.
+  /// @returns True if the token is found in the field value, false otherwise.
+  bool has_token(std::string_view key, std::string_view token,
+                 std::string_view delims = ",") const noexcept;
 
   /// Returns the value of the field with the specified key as the requested
   /// type T, or std::nullopt if the field is not found or cannot be converted.

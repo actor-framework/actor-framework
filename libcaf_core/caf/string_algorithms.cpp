@@ -56,8 +56,10 @@ void split(std::vector<std::string_view>& result, std::string_view str,
   split(result, str, std::string_view{&delim, 1}, keep_all);
 }
 
-std::string_view trim(std::string_view str) {
-  auto non_whitespace = [](char c) { return !isspace(c); };
+std::string_view trim(std::string_view str) noexcept {
+  auto non_whitespace = [](char c) {
+    return !isspace(static_cast<unsigned char>(c));
+  };
   if (std::ranges::any_of(str, non_whitespace)) {
     while (std::isspace(static_cast<unsigned char>(str.front())))
       str.remove_prefix(1);
@@ -69,7 +71,7 @@ std::string_view trim(std::string_view str) {
   return str;
 }
 
-bool icase_equal(std::string_view x, std::string_view y) {
+bool icase_equal(std::string_view x, std::string_view y) noexcept {
   auto cmp = [](const char lhs, const char rhs) {
     auto to_uchar = [](char c) { return static_cast<unsigned char>(c); };
     return tolower(to_uchar(lhs)) == tolower(to_uchar(rhs));
@@ -108,11 +110,11 @@ void replace_all(std::string& str, std::string_view what,
   }
 }
 
-bool starts_with(std::string_view str, std::string_view prefix) {
+bool starts_with(std::string_view str, std::string_view prefix) noexcept {
   return str.compare(0, prefix.size(), prefix) == 0;
 }
 
-bool ends_with(std::string_view str, std::string_view suffix) {
+bool ends_with(std::string_view str, std::string_view suffix) noexcept {
   auto n = str.size();
   auto m = suffix.size();
   return n >= m ? str.compare(n - m, m, suffix) == 0 : false;
