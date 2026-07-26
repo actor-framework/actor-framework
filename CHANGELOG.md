@@ -184,6 +184,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Removed
 
+- Removed the unused `caf::flow::subscription::fwd_impl` class and its companion
+  `subscription::listener` interface. Both were leftovers from earlier flow API
+  iterations and had no remaining callers (#2464).
 - For event-based actors (`scheduled_actor`), removed `set_down_handler` and the
   single-argument `monitor` / `demonitor` overloads for actor handles. Use
   `monitor(handle, callback)` and the returned `disposable` instead (#1873).

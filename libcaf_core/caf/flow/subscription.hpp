@@ -14,7 +14,6 @@
 #include "caf/intrusive_ptr.hpp"
 
 #include <cstddef>
-#include <type_traits>
 
 namespace caf::flow {
 
@@ -66,78 +65,6 @@ public:
     ///                      this call and thus the implementation can simply
     ///                      drop its reference to the observer.
     virtual void do_dispose(bool from_external) = 0;
-  };
-
-  /// Describes a listener to the subscription that will receive an event
-  /// whenever the observer calls `request` or `cancel`.
-  class CAF_CORE_EXPORT listener : public coordinated {
-  public:
-    virtual ~listener();
-
-    virtual void on_request(coordinated* sink, size_t n) = 0;
-
-    virtual void on_cancel(coordinated* sink) = 0;
-
-    virtual void on_dispose(coordinated* sink) = 0;
-  };
-
-  /// Default implementation for subscriptions that forward `request` and
-  /// `cancel` to a @ref listener.
-  class CAF_CORE_EXPORT fwd_impl final : public impl_base {
-  public:
-    fwd_impl(coordinator* parent, listener* src, coordinated* snk)
-      : parent_(parent), src_(src, add_ref), snk_(snk, add_ref) {
-      // nop
-    }
-
-    bool disposed() const noexcept override;
-
-    /// Signals demand for `n` more items.
-    void request(size_t n) override;
-
-    coordinator* parent() const noexcept override {
-      return parent_;
-    }
-
-    /// Creates a new subscription object.
-    /// @param parent The owner of @p src and @p snk.
-    /// @param src The @ref observable that emits items.
-    /// @param snk the @ref observer that consumes items.
-    /// @returns an instance of @ref fwd_impl in a @ref subscription handle.
-    template <class Observable, class Observer>
-    static subscription
-    make(coordinator* parent, Observable* src, Observer* snk) {
-      static_assert(std::is_base_of_v<listener, Observable>);
-      static_assert(std::is_base_of_v<coordinated, Observer>);
-      static_assert(std::is_same_v<typename Observable::output_type,
-                                   typename Observer::input_type>);
-      auto child = parent->template add_child<fwd_impl>(src, snk);
-      return subscription{std::move(child)};
-    }
-
-    /// Like @ref make but without any type checking.
-    static subscription make_unsafe(coordinator* parent, listener* src,
-                                    coordinated* snk) {
-      intrusive_ptr<subscription::impl> child{new fwd_impl(parent, src, snk),
-                                              adopt_ref};
-      return subscription{std::move(child)};
-    }
-
-    void ref() const noexcept final {
-      ref_count_.inc();
-    }
-
-    void deref() const noexcept final {
-      ref_count_.dec(this);
-    }
-
-  private:
-    void do_dispose(bool from_external) override;
-
-    mutable detail::atomic_ref_count ref_count_;
-    coordinator* parent_;
-    intrusive_ptr<listener> src_;
-    intrusive_ptr<coordinated> snk_;
   };
 
   class CAF_CORE_EXPORT trivial_impl final : public subscription::impl_base {
@@ -206,7 +133,7 @@ public:
     }
   }
 
-  /// @copydoc fwd_impl::request
+  /// Signals demand for @p n more items.
   /// @pre `valid()`
   void request(size_t n) {
     pimpl_->request(n);
