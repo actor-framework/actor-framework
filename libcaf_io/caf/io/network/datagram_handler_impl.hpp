@@ -9,13 +9,13 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
 
-#include "caf/caf_deprecated.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 
 namespace caf::io::network {
 
 /// A concrete datagram_handler with a technology-dependent policy.
 template <class ProtocolPolicy>
-class CAF_DEPRECATED("use caf.net instead") datagram_handler_impl
+class CAF_IO_NETWORK_DEPRECATED_CLASS datagram_handler_impl
   : public datagram_handler {
 public:
   template <class... Ts>

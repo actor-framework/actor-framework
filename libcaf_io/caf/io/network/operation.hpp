@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 
 #include <string>
 
@@ -18,18 +18,17 @@ enum class operation {
   propagate_error,
 };
 
-CAF_DEPRECATED("use caf.net instead")
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT std::string to_string(operation);
 
-CAF_DEPRECATED("use caf.net instead")
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT bool from_string(std::string_view, operation&);
 
-CAF_DEPRECATED("use caf.net instead")
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT bool from_integer(std::underlying_type_t<operation>, operation&);
 
 template <class Inspector>
-CAF_DEPRECATED("use caf.net instead")
-bool inspect(Inspector& f, operation& x) {
+CAF_IO_NETWORK_DEPRECATED bool inspect(Inspector& f, operation& x) {
   return default_enum_inspect(f, x);
 }
 

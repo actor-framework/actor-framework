@@ -6,7 +6,6 @@
 
 #include "caf/io/network/manager.hpp"
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/io_network_deprecated.hpp"
 
@@ -14,7 +13,7 @@ namespace caf::io::network {
 
 /// An acceptor manager configures an acceptor and provides
 /// callbacks for incoming connections as well as for error handling.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED acceptor_manager
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS acceptor_manager
   : public manager {
 public:
   ~acceptor_manager() override;

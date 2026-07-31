@@ -4,12 +4,12 @@
 
 #pragma once
 
-#include "caf/caf_deprecated.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 
 namespace caf::io::network {
 
 /// Denotes the returned state of read and write operations on sockets.
-enum class rw_state {
+enum class CAF_IO_NETWORK_DEPRECATED_CLASS rw_state {
   /// Reports that bytes could be read or written.
   success,
   /// Reports that the socket is closed or faulty.

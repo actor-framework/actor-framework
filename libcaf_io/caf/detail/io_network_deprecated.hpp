@@ -4,19 +4,23 @@
 
 #pragma once
 
-// Use __attribute__((deprecated)) instead of [[deprecated]] when combined with
-// CAF_IO_EXPORT so that GCC accepts both visibility and deprecation on the
-// same declaration (mixing [[attr]] and __attribute__ can fail in some
-// orderings).
+#include "caf/caf_deprecated.hpp"
+#include "caf/config.hpp"
 
+/// Marks a declaration in `caf::io::network` as deprecated.
+#define CAF_IO_NETWORK_DEPRECATED CAF_DEPRECATED("use caf.net instead")
+
+/// Same as ::CAF_IO_NETWORK_DEPRECATED, but for type declarations, i.e.,
+/// classes, structs and enums. Uses `__attribute__((deprecated))` instead of
+/// `[[deprecated]]` so that GCC accepts both visibility and deprecation on the
+/// same declaration (mixing `[[attr]]` and `__attribute__` can fail in some
+/// orderings).
 #ifdef CAF_SUPPRESS_DEPRECATION_WARNINGS
-#  define CAF_IO_NETWORK_DEPRECATED
+#  define CAF_IO_NETWORK_DEPRECATED_CLASS
+#elif defined(CAF_MSVC)
+#  define CAF_IO_NETWORK_DEPRECATED_CLASS                                      \
+    __declspec(deprecated("use caf.net instead"))
 #else
-#  if defined(CAF_MSVC)
-#    define CAF_IO_NETWORK_DEPRECATED                                          \
-      __declspec(deprecated("use caf.net instead"))
-#  else
-#    define CAF_IO_NETWORK_DEPRECATED                                          \
-      __attribute__((deprecated("use caf.net instead")))
-#  endif
+#  define CAF_IO_NETWORK_DEPRECATED_CLASS                                      \
+    __attribute__((deprecated("use caf.net instead")))
 #endif

@@ -10,7 +10,6 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/io_network_deprecated.hpp"
 #include "caf/log/io.hpp"
@@ -19,7 +18,8 @@
 namespace caf::io::network {
 
 /// An acceptor is responsible for accepting incoming connections.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED acceptor : public event_handler {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS acceptor
+  : public event_handler {
 public:
   /// A manager providing the `accept` member function.
   using manager_type = acceptor_manager;

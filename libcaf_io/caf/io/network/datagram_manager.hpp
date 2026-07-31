@@ -8,7 +8,6 @@
 #include "caf/io/network/manager.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/io_network_deprecated.hpp"
 
@@ -16,7 +15,7 @@ namespace caf::io::network {
 
 /// A datagram manager provides callbacks for outgoing
 /// datagrams as well as for error handling.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED datagram_manager
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS datagram_manager
   : public manager {
 public:
   ~datagram_manager() override;

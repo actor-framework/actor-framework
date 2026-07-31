@@ -9,7 +9,6 @@
 #include "caf/io/network/acceptor_impl.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/io_network_deprecated.hpp"
 #include "caf/policy/tcp.hpp"
@@ -17,7 +16,8 @@
 namespace caf::io::network {
 
 /// Default doorman implementation.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED doorman_impl : public doorman {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS doorman_impl
+  : public doorman {
 public:
   doorman_impl(default_multiplexer& mx, native_socket sockfd);
 

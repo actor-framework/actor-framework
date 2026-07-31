@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/allowed_unsafe_message_type.hpp"
-#include "caf/caf_deprecated.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/io_network_deprecated.hpp"
 
@@ -18,7 +17,7 @@
 namespace caf::io::network {
 
 /// A container that does not call constructors and destructors for its values.
-class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED receive_buffer {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS receive_buffer {
 public:
   using value_type = char;
   using size_type = size_t;
