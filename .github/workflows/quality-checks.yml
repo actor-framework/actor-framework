@@ -20,14 +20,14 @@ jobs:
   posix-text-files:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: posix-text-files
         run: python3 scripts/check-posix-text-files.py "$GITHUB_WORKSPACE"
 
   code-formatting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install clang-format
         run: sudo pip install --break-system-package clang-format==22.1.5
       - name: Run clang-format
@@ -36,7 +36,7 @@ jobs:
   spell-checking:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: spell-checking
         uses: crate-ci/typos@master
         with:
@@ -45,7 +45,7 @@ jobs:
   forbidden-includes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: forbidden-includes
         run: |
           find libcaf_* -name '*hpp' -type f | grep -v 'caf/internal/' | xargs python3 scripts/forbidden-includes-check.py
@@ -53,14 +53,14 @@ jobs:
   type-id-block-offsets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: type-id-block-offsets
         run: python3 scripts/get-next-free-block-offset.py 1>/dev/null && echo OK
 
   cppcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install cppcheck
         run: |
           sudo apt-get update -y \

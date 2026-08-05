@@ -20,7 +20,7 @@ jobs:
   windows:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: egor-tensin/vs-shell@v2
       - uses: actions/setup-python@v4
         with:
@@ -41,7 +41,7 @@ jobs:
   asan-and-ubsan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: install-robot
         run:  pip install -r robot/dependencies.txt
       - name: configure
@@ -54,7 +54,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: install-robot
         run:  pip install -r robot/dependencies.txt
       - name: configure
