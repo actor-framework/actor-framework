@@ -22,7 +22,7 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository_owner }}/ci-debian-12:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: configure
         run: |
           cmake \
@@ -40,7 +40,7 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository_owner }}/ci-fedora-42:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: configure
         run: |
           cmake \
@@ -58,7 +58,7 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository_owner }}/ci-fedora-42:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: configure
         run: |
           cmake \
@@ -76,7 +76,7 @@ jobs:
   no-exceptions:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: install-robot
         run:  pip install -r robot/dependencies.txt
       - name: configure
@@ -94,7 +94,7 @@ jobs:
   no-rtti:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: install-robot
         run:  pip install -r robot/dependencies.txt
       - name: configure
