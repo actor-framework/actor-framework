@@ -153,6 +153,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   uses of `typeid` and `dynamic_cast` in CAF. This enables users to build CAF
   with compiler options such as `-fno-rtti`.
 - Added support for `std::monostate` in the inspection API (#2388).
+- Futures now support `dispose()` to cancel the asynchronous operation and can
+  convert to a `disposable` via `to_disposable()`. Whether calling `dispose()`
+  stops running background activity depends on the implementation of the task.
+  However, the observable result will always be the error `sec::disposed`. Any
+  result that the background computation may produce after calling `dispose()`
+  will be ignored (#2467).
 
 ### Fixed
 
