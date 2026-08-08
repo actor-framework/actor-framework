@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/io_export.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"
 #include "caf/sec.hpp"
@@ -25,7 +26,7 @@ namespace caf::io::network {
 // - https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 // - http://www.isthe.com/chongo/tech/comp/fnv/index.html
 // Always hash 128 bit address, for v4 we use the embedded addr.
-class CAF_IO_EXPORT ep_hash {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS ep_hash {
 public:
   ep_hash();
   size_t operator()(const sockaddr& sa) const noexcept;
@@ -34,7 +35,7 @@ public:
 };
 
 /// A hashable wrapper for a sockaddr storage.
-struct CAF_IO_EXPORT ip_endpoint {
+struct CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS ip_endpoint {
 public:
   /// Default constructor for sockaddr storage which reserves memory for the
   /// internal data structure on creation.
@@ -78,34 +79,44 @@ private:
   std::unique_ptr<impl, impl_deleter> ptr_;
 };
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT bool operator==(const ip_endpoint& lhs, const ip_endpoint& rhs);
 
+CAF_IO_NETWORK_DEPRECATED
 inline bool operator!=(const ip_endpoint& lhs, const ip_endpoint& rhs) {
   return !(lhs == rhs);
 }
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT std::string to_string(const ip_endpoint& ep);
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT std::string host(const ip_endpoint& ep);
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT uint16_t port(const ip_endpoint& ep);
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT uint32_t family(const ip_endpoint& ep);
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT bool is_ipv4(const ip_endpoint& ep);
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT bool is_ipv6(const ip_endpoint& ep);
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t f,
                                             const std::string& h, uint16_t p,
                                             size_t l);
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f,
                                             std::string& h, uint16_t& p,
                                             size_t& l);
 
 template <class Inspector>
-bool inspect(Inspector& f, ip_endpoint& x) {
+CAF_IO_NETWORK_DEPRECATED bool inspect(Inspector& f, ip_endpoint& x) {
   uint32_t fam = 0;
   std::string h;
   uint16_t p = 0;
@@ -143,7 +154,7 @@ bool inspect(Inspector& f, ip_endpoint& x) {
 namespace std {
 
 template <>
-struct hash<caf::io::network::ip_endpoint> {
+struct CAF_IO_NETWORK_DEPRECATED_CLASS hash<caf::io::network::ip_endpoint> {
   using argument_type = caf::io::network::ip_endpoint;
   using result_type = size_t;
   result_type operator()(const argument_type& ep) const {

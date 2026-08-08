@@ -62,6 +62,9 @@ if(TARGET CAF::io)
   function(add_io_example folder name)
     add_example(${folder} ${name} ${ARGN})
     target_link_libraries(${name} PRIVATE CAF::internal CAF::io)
+    # The legacy I/O module is deprecated as a whole, so its examples cannot
+    # avoid naming deprecated APIs.
+    caf_silence_deprecation_warnings(${name})
   endfunction()
 
   # basic remoting
@@ -74,6 +77,7 @@ if(TARGET CAF::io)
     add_executable(curl_fuse curl/curl_fuse.cpp)
     include_directories(${CURL_INCLUDE_DIRS})
     target_link_libraries(curl_fuse ${CURL_LIBRARY} CAF::io CAF::internal)
+    caf_silence_deprecation_warnings(curl_fuse)
     add_dependencies(curl_fuse all_examples)
   endif()
 

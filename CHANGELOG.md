@@ -105,6 +105,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The method `actor_system::redirect_text_output` is now deprecated. Configure a
   console printer instead via `actor_system_config::console_printer_factory()`
   before constructing the actor system.
+- Deprecate all members of `caf::io::network`. This namespace contains legacy
+  networking APIs that have been replaced by the `caf::net` module.
 
 ### Added
 

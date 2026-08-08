@@ -167,6 +167,17 @@ add_custom_target(caf-code-gen COMMENT "Generating enum .cpp files")
 
 # -- utility functions ---------------------------------------------------------
 
+# Turns off deprecation warnings for a target.
+function(caf_silence_deprecation_warnings target)
+  target_compile_definitions(${target} PRIVATE
+                             CAF_SUPPRESS_DEPRECATION_WARNINGS)
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /wd4996)
+  else()
+    target_compile_options(${target} PRIVATE -Wno-deprecated-declarations)
+  endif()
+endfunction()
+
 # generates the implementation file for the enum that contains to_string,
 # from_string and from_integer
 function(caf_add_enum_type target enum_name)
@@ -282,6 +293,8 @@ function(caf_add_component name)
       CAF_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
     target_link_libraries("caf-${name}-test" PRIVATE libcaf_test
                           ${CAF_ADD_COMPONENT_DEPENDENCIES} ${lib_target})
+    # Unit tests may cover deprecated APIs, warning is disabled here.
+    caf_silence_deprecation_warnings("caf-${name}-test")
   endif()
   foreach(source_file ${CAF_ADD_COMPONENT_SOURCES})
     get_filename_component(ext ${source_file} EXT)
@@ -298,13 +311,6 @@ function(caf_add_component name)
                      CAF_TEST_SUITE_NAME=${test_name})
         add_test(NAME ${test_name} COMMAND "caf-${name}-test" -s "^${test_name}$" -n -v5)
         set_tests_properties(${test_name} PROPERTIES TIMEOUT 300)
-      endif()
-      if (MSVC)
-        set_source_files_properties(${source_file} PROPERTIES
-                                    COMPILE_FLAGS /wd4996)
-      else()
-        set_source_files_properties(${source_file} PROPERTIES
-                                    COMPILE_FLAGS -Wno-deprecated-declarations)
       endif()
     endif()
   endforeach()
@@ -351,6 +357,8 @@ function(caf_add_test_executable name)
   endif()
   add_executable(${name} ${args_SOURCES})
   target_link_libraries(${name} PRIVATE CAF::internal ${args_DEPENDENCIES})
+  # Test drivers may cover deprecated APIs, so we never warn about them here.
+  caf_silence_deprecation_warnings(${name})
 endfunction()
 
 # -- build all components the user asked for -----------------------------------

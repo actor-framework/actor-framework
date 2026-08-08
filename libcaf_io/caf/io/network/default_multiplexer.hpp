@@ -26,6 +26,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/io_export.hpp"
+#include "caf/detail/io_network_deprecated.hpp"
 #include "caf/extend.hpp"
 #include "caf/log/io.hpp"
 #include "caf/ref_counted.hpp"
@@ -55,39 +56,41 @@ namespace caf::io::network {
 // Define type aliases based on backend type.
 #ifdef CAF_POLL_MULTIPLEXER
 
-using event_mask_type = short;
-using multiplexer_data = pollfd;
-using multiplexer_poll_shadow_data = std::vector<event_handler*>;
+using event_mask_type CAF_IO_NETWORK_DEPRECATED = short;
+using multiplexer_data CAF_IO_NETWORK_DEPRECATED = pollfd;
+using multiplexer_poll_shadow_data CAF_IO_NETWORK_DEPRECATED
+  = std::vector<event_handler*>;
 
 #else // CAF_POLL_MULTIPLEXER
 
-using event_mask_type = int;
-using multiplexer_data = epoll_event;
-using multiplexer_poll_shadow_data = native_socket;
+using event_mask_type CAF_IO_NETWORK_DEPRECATED = int;
+using multiplexer_data CAF_IO_NETWORK_DEPRECATED = epoll_event;
+using multiplexer_poll_shadow_data CAF_IO_NETWORK_DEPRECATED = native_socket;
 
 #endif // CAF_POLL_MULTIPLEXER
 
 /// Defines the bitmask for input (read) socket events.
-extern const event_mask_type input_mask;
+CAF_IO_NETWORK_DEPRECATED extern const event_mask_type input_mask;
 
 /// Defines the bitmask for output (write) socket events.
-extern const event_mask_type output_mask;
+CAF_IO_NETWORK_DEPRECATED extern const event_mask_type output_mask;
 
 /// Defines the bitmask for error socket events.
-extern const event_mask_type error_mask;
+CAF_IO_NETWORK_DEPRECATED extern const event_mask_type error_mask;
 
-class CAF_IO_EXPORT default_multiplexer : public multiplexer {
+class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS default_multiplexer
+  : public multiplexer {
 public:
   friend class io::middleman; // disambiguate reference
   friend class supervisor;
 
-  struct event {
+  struct CAF_IO_NETWORK_DEPRECATED_CLASS event {
     native_socket fd;
     int mask;
     event_handler* ptr;
   };
 
-  struct event_less {
+  struct CAF_IO_NETWORK_DEPRECATED_CLASS event_less {
     bool operator()(native_socket lhs, const event& rhs) const noexcept {
       return lhs < rhs.fd;
     }
@@ -97,7 +100,7 @@ public:
     bool operator()(const event& lhs, const event& rhs) const noexcept {
       return lhs.fd < rhs.fd;
     }
-  };
+  }; // namespace caf::io::network
 
   scribe_ptr new_scribe(native_socket fd) override;
 
@@ -250,26 +253,32 @@ private:
   int64_t servant_ids_;
 };
 
+CAF_IO_NETWORK_DEPRECATED
 inline connection_handle conn_hdl_from_socket(native_socket fd) {
   return connection_handle::from_int(int64_from_native_socket(fd));
 }
 
+CAF_IO_NETWORK_DEPRECATED
 inline accept_handle accept_hdl_from_socket(native_socket fd) {
   return accept_handle::from_int(int64_from_native_socket(fd));
 }
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT expected<native_socket>
 new_tcp_connection(const std::string& host, uint16_t port,
                    std::optional<protocol::network> preferred = std::nullopt);
 
+CAF_IO_NETWORK_DEPRECATED
 CAF_IO_EXPORT expected<native_socket>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
 
+CAF_IO_NETWORK_DEPRECATED
 expected<std::pair<native_socket, ip_endpoint>>
 new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
                              std::optional<protocol::network> preferred
                              = std::nullopt);
 
+CAF_IO_NETWORK_DEPRECATED
 expected<std::pair<native_socket, protocol::network>>
 new_local_udp_endpoint_impl(uint16_t port, const char* addr,
                             bool reuse_addr = false,

@@ -9,11 +9,13 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
 
+#include "caf/detail/io_network_deprecated.hpp"
+
 namespace caf::io::network {
 
 /// A concrete acceptor with a technology-dependent policy.
 template <class ProtocolPolicy>
-class acceptor_impl : public acceptor {
+class CAF_IO_NETWORK_DEPRECATED_CLASS acceptor_impl : public acceptor {
 public:
   template <class... Ts>
   acceptor_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)

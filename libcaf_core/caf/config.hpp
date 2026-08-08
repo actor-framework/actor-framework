@@ -125,7 +125,8 @@
     __pragma(warning(push))                                                    \
     __pragma(warning(disable: 4102))
 #  define CAF_PUSH_DEPRECATED_WARNING                                          \
-    __pragma(warning(push))
+    __pragma(warning(push))                                                    \
+    __pragma(warning(disable: 4996))
 #  define CAF_PUSH_INVALID_OFFSETOF_WARNING                                    \
     __pragma(warning(push))
 #  define CAF_PUSH_STRINGOP_OVERREAD_WARNING                                   \
