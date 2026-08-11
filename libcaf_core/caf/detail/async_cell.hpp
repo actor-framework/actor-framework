@@ -26,7 +26,7 @@ namespace caf::detail {
 template <class T>
 class async_cell final : public disposable::impl {
 public:
-  using value_type = std::conditional_t<std::is_void_v<T>, unit_t, T>;
+  using value_type = lift_void_t<T>;
 
   static_assert(!std::is_same_v<value_type, error>);
 
@@ -75,13 +75,7 @@ public:
           events_.swap(events);
         }
       }
-      for (auto& [ctx, callback] : events) {
-        if (ctx) {
-          ctx->schedule(std::move(callback));
-        } else {
-          callback.run();
-        }
-      }
+      run_events(events);
     }
   }
 
@@ -105,21 +99,8 @@ public:
       events_.swap(events);
       std::swap(on_dispose, on_dispose_);
     }
-    for (auto& [ctx, callback] : events) {
-      if (ctx) {
-        ctx->schedule(std::move(callback));
-      } else {
-        callback.run();
-      }
-    }
-    auto& [ctx, callback] = on_dispose;
-    if (callback) {
-      if (ctx) {
-        ctx->schedule(std::move(callback));
-      } else {
-        callback.run();
-      }
-    }
+    run_events(events);
+    run_event(on_dispose);
   }
 
   bool disposed() const noexcept override {
@@ -130,7 +111,7 @@ public:
   /// Tries to set the dispose callback.
   /// @return `true` if the callback was set, `false` if the cell is already
   ///         disposed.
-  bool set_on_dispose(async::execution_context_ptr ctx, action callback) {
+  bool on_dispose(async::execution_context_ptr ctx, action callback) {
     {
       std::unique_lock guard{mtx_};
       if (!std::holds_alternative<none_t>(value_)) {
@@ -156,12 +137,7 @@ public:
       value_ = std::forward<What>(what);
       events_.swap(events);
     }
-    for (auto& [ctx, callback] : events) {
-      if (ctx)
-        ctx->schedule(std::move(callback));
-      else
-        callback.run();
-    }
+    run_events(events);
   }
 
   /// Visits the value of the cell using the given visitor.
@@ -183,6 +159,21 @@ private:
   using event = std::pair<async::execution_context_ptr, action>;
 
   using event_list = std::vector<event>;
+
+  static void run_event(event& item) {
+    auto& [ctx, callback] = item;
+    if (callback) {
+      if (ctx)
+        ctx->schedule(std::move(callback));
+      else
+        callback.run();
+    }
+  }
+
+  static void run_events(event_list& events) {
+    for (auto& item : events)
+      run_event(item);
+  }
 
   /// The intrusive reference count.
   mutable atomic_ref_count ref_count_;

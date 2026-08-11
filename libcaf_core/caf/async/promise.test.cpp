@@ -76,6 +76,53 @@ SCENARIO("futures can actively wait on a promise") {
   }
 }
 
+SCENARIO("void futures can actively wait on a promise") {
+  auto uut = async::promise<void>{};
+  auto fut = uut.get_future();
+  GIVEN("a void promise") {
+    WHEN("future::get times out") {
+      THEN("the client observes the error code sec::future_timeout") {
+        check_eq(fut.get(1ms), error_code{sec::future_timeout});
+      }
+    }
+    WHEN("future::get retrieves an error while waiting") {
+      auto worker = std::thread{[&uut] {
+        std::this_thread::sleep_for(5ms);
+        uut.set_error(sec::runtime_error);
+      }};
+      THEN("the client observes the error code from set_error") {
+        check_eq(fut.get(), error_code{sec::runtime_error});
+      }
+      worker.join();
+    }
+    WHEN("future::get retrieves a value while waiting") {
+      auto worker = std::thread{[&uut] {
+        std::this_thread::sleep_for(5ms);
+        uut.set_value(unit);
+      }};
+      THEN("the client observes success") {
+        check(fut.get().has_value());
+      }
+      worker.join();
+    }
+    WHEN("the promise goes out of scope without setting a value") {
+      uut = async::promise<void>{};
+      THEN("future::get reports a broken promise") {
+        check(!fut.pending());
+        check_eq(fut.get(), error_code{sec::broken_promise});
+      }
+    }
+    WHEN("future::dispose is called on a pending future") {
+      THEN("future::get reports sec::disposed") {
+        check(fut.pending());
+        fut.dispose();
+        check(!fut.pending());
+        check_eq(fut.get(), error_code{sec::disposed});
+      }
+    }
+  }
+}
+
 WITH_FIXTURE(test::fixture::deterministic) {
 
 SCENARIO("actors can observe futures") {
@@ -261,8 +308,8 @@ SCENARIO("promises can register on-dispose callbacks") {
     auto uut = async::promise<int32_t>{};
     WHEN("registering a synchronous on-dispose callback") {
       auto disposed = std::make_shared<bool>(false);
-      check(uut.set_on_dispose(nullptr, make_single_shot_action(
-                                          [disposed] { *disposed = true; })));
+      check(uut.on_dispose(nullptr, make_single_shot_action(
+                                      [disposed] { *disposed = true; })));
       auto fut = uut.get_future();
       THEN("dispose runs the callback") {
         fut.dispose();
@@ -272,8 +319,8 @@ SCENARIO("promises can register on-dispose callbacks") {
     WHEN("registering an on-dispose callback on an execution context") {
       auto disposed = std::make_shared<bool>(false);
       auto ctx = flow::scoped_coordinator::make();
-      check(uut.set_on_dispose(ctx.get(), make_single_shot_action(
-                                            [disposed] { *disposed = true; })));
+      check(uut.on_dispose(ctx.get(), make_single_shot_action(
+                                        [disposed] { *disposed = true; })));
       auto fut = uut.get_future();
       THEN("dispose schedules the callback on that context") {
         fut.dispose();
@@ -284,15 +331,15 @@ SCENARIO("promises can register on-dispose callbacks") {
     }
     WHEN("the promise already has a value") {
       uut.set_value(42);
-      THEN("set_on_dispose returns false") {
-        check(!uut.set_on_dispose(nullptr, make_single_shot_action([] {})));
+      THEN("on_dispose returns false") {
+        check(!uut.on_dispose(nullptr, make_single_shot_action([] {})));
       }
     }
     WHEN("the future is already disposed") {
       auto fut = uut.get_future();
       fut.dispose();
-      THEN("set_on_dispose returns false") {
-        check(!uut.set_on_dispose(nullptr, make_single_shot_action([] {})));
+      THEN("on_dispose returns false") {
+        check(!uut.on_dispose(nullptr, make_single_shot_action([] {})));
       }
     }
   }
@@ -365,6 +412,58 @@ SCENARIO("never setting a value or an error breaks the promises") {
         dispatch_messages();
         if (check(std::holds_alternative<error>(*val)))
           check_eq(std::get<error>(*val), sec::broken_promise);
+      }
+    }
+  }
+}
+
+SCENARIO("actors can observe void futures") {
+  GIVEN("a void promise and future pair") {
+    WHEN("passing a non-ready future to an actor") {
+      THEN("it can observe completion via .then() later") {
+        auto val = make_shared_val_ptr<unit_t>();
+        auto uut = async::promise<void>{};
+        auto fut = uut.get_future();
+        auto testee = sys.spawn([val, fut](event_based_actor* self) {
+          fut.bind_to(self).then([val]() { *val = unit; },
+                                 [val](const error& err) { *val = err; });
+        });
+        dispatch_messages();
+        check(std::holds_alternative<none_t>(*val));
+        uut.set_value(unit);
+        expect<action>().to(testee);
+        check(std::holds_alternative<unit_t>(*val));
+      }
+    }
+    WHEN("passing a ready future to an actor") {
+      THEN("it can observe completion via .then() immediately") {
+        auto val = make_shared_val_ptr<unit_t>();
+        auto uut = async::promise<void>{};
+        auto fut = uut.get_future();
+        uut.set_value(unit);
+        auto testee = sys.spawn([val, fut](event_based_actor* self) {
+          fut.bind_to(self).then([val]() { *val = unit; },
+                                 [val](const error& err) { *val = err; });
+        });
+        dispatch_messages();
+        check(std::holds_alternative<unit_t>(*val));
+      }
+    }
+    WHEN("disposing a non-ready void future") {
+      THEN("actors observe sec::disposed via .then()") {
+        auto val = make_shared_val_ptr<unit_t>();
+        auto uut = async::promise<void>{};
+        auto fut = uut.get_future();
+        auto testee = sys.spawn([val, fut](event_based_actor* self) {
+          fut.bind_to(self).then([val]() { *val = unit; },
+                                 [val](const error& err) { *val = err; });
+        });
+        dispatch_messages();
+        check(std::holds_alternative<none_t>(*val));
+        fut.dispose();
+        expect<action>().to(testee);
+        if (check(std::holds_alternative<error>(*val)))
+          check_eq(std::get<error>(*val), sec::disposed);
       }
     }
   }

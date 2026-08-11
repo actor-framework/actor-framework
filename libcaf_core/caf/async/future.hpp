@@ -17,6 +17,7 @@
 #include "caf/flow/op/cell.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/sec.hpp"
+#include "caf/unit.hpp"
 
 namespace caf::async {
 
@@ -34,7 +35,11 @@ public:
   /// @p on_error if the asynchronous operation resulted in an error.
   template <class OnSuccess, class OnError>
   disposable then(OnSuccess on_success, OnError on_error) {
-    static_assert(std::is_invocable_v<OnSuccess, const T&>);
+    if constexpr (std::is_same_v<value_type, unit_t>) {
+      static_assert(std::is_invocable_v<OnSuccess>);
+    } else {
+      static_assert(std::is_invocable_v<OnSuccess, const T&>);
+    }
     static_assert(std::is_invocable_v<OnError, const error&>);
     auto cb = [cp = cell_, f = std::move(on_success),
                g = std::move(on_error)]() mutable {
@@ -46,12 +51,10 @@ public:
             g(err);
           } else if constexpr (std::is_same_v<Inner, error>) {
             g(val);
+          } else if constexpr (std::is_same_v<value_type, unit_t>) {
+            f();
           } else {
-            if constexpr (std::is_void_v<T>) {
-              f();
-            } else {
-              f(val);
-            }
+            f(val);
           }
         },
         cp->get());
@@ -68,6 +71,8 @@ private:
   using cell_type = detail::async_cell<T>;
 
   using cell_ptr = intrusive_ptr<cell_type>;
+
+  using value_type = typename cell_type::value_type;
 
   bound_future(execution_context* ctx, cell_ptr cell)
     : ctx_(ctx), cell_(std::move(cell)) {
@@ -129,6 +134,9 @@ public:
   /// @pre `valid()`
   flow::observable<T> observe_on(flow::coordinator* ctx) const {
     using flow_cell_t = flow::op::cell<T>;
+    // flow_cell_t doesn't support `void`, a flow of `void` also makes no sense.
+    static_assert(!std::is_void_v<T>,
+                  "observe_on is not supported for void futures");
     auto ptr = make_counted<flow_cell_t>(ctx);
     bind_to(ctx).then([ptr](const T& val) { ptr->set_value(val); },
                       [ptr](const error& what) { ptr->set_error(what); });
@@ -157,12 +165,10 @@ public:
         return res_t{unexpect, sec::broken_promise};
       } else if constexpr (std::is_same_v<Inner, error>) {
         return res_t{unexpect, val};
+      } else if constexpr (std::is_same_v<value_type, unit_t>) {
+        return res_t{};
       } else {
-        if constexpr (std::is_void_v<T>) {
-          return res_t{};
-        } else {
-          return res_t{val};
-        }
+        return res_t{val};
       }
     });
   }
@@ -178,12 +184,10 @@ public:
         return res_t{unexpect, sec::future_timeout};
       } else if constexpr (std::is_same_v<Inner, error>) {
         return res_t{unexpect, val};
+      } else if constexpr (std::is_same_v<value_type, unit_t>) {
+        return res_t{};
       } else {
-        if constexpr (std::is_void_v<T>) {
-          return res_t{};
-        } else {
-          return res_t{val};
-        }
+        return res_t{val};
       }
     });
   }
@@ -206,7 +210,11 @@ public:
   }
 
 private:
-  using cell_ptr = intrusive_ptr<detail::async_cell<T>>;
+  using cell_type = detail::async_cell<T>;
+
+  using cell_ptr = intrusive_ptr<cell_type>;
+
+  using value_type = typename cell_type::value_type;
 
   explicit future(cell_ptr cell) noexcept : cell_(std::move(cell)) {
     // nop

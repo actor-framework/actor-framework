@@ -19,7 +19,7 @@ namespace caf::async {
 template <class T>
 class promise final {
 public:
-  using value_type = std::conditional_t<std::is_void_v<T>, unit_t, T>;
+  using value_type = lift_void_t<T>;
 
   promise(promise&&) noexcept = default;
 
@@ -88,17 +88,11 @@ public:
 
   /// Tries to set the dispose callback.
   /// @return `true` if the callback was set successfully, `false` otherwise.
-  bool set_on_dispose(execution_context_ptr ctx, action callback) {
+  bool on_dispose(execution_context_ptr ctx, action callback) {
     if (cell_) {
-      return cell_->set_on_dispose(std::move(ctx), std::move(callback));
+      return cell_->on_dispose(std::move(ctx), std::move(callback));
     }
     return false;
-  }
-
-  /// @copydoc set_on_cancel
-  bool set_on_cancel(execution_context* ctx, action callback) {
-    return set_on_dispose(execution_context_ptr{ctx, add_ref},
-                          std::move(callback));
   }
 
   /// @pre `valid()`
@@ -108,6 +102,7 @@ public:
 
 private:
   using cell_type = detail::async_cell<T>;
+
   using cell_ptr = intrusive_ptr<cell_type>;
 
   cell_ptr cell_;
