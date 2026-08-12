@@ -60,6 +60,9 @@ struct lift_void<void> {
 };
 
 template <class T>
+using lift_void_t = typename lift_void<T>::type;
+
+template <class T>
 struct unlift_void {
   using type = T;
 };
@@ -68,5 +71,8 @@ template <>
 struct unlift_void<unit_t> {
   using type = void;
 };
+
+template <class T>
+using unlift_void_t = typename unlift_void<T>::type;
 
 } // namespace caf
