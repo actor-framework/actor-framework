@@ -11,6 +11,7 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/expected.hpp"
+#include "caf/launch_thread.hpp"
 #include "caf/log/net.hpp"
 #include "caf/log/system.hpp"
 #include "caf/raise_error.hpp"
@@ -115,7 +116,8 @@ void middleman::start() {
     mpx_->set_thread_id();
     mpx_->run();
   };
-  mpx_thread_ = sys_.launch_thread("caf.net.mpx", thread_owner::system, fn);
+  mpx_thread_ = caf::launch_thread(sys_, "caf.net.mpx", thread_owner::system,
+                                   fn);
   launch_background_tasks(sys_);
 }
 

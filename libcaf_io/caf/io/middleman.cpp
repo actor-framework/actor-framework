@@ -22,6 +22,7 @@
 #include "caf/format_to_error.hpp"
 #include "caf/format_to_unexpected.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/launch_thread.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
@@ -141,8 +142,8 @@ public:
       sync_ptr->count_down();
       mpx_.run();
     };
-    thread_ = mpx_.system().launch_thread("caf.io.prom", thread_owner::system,
-                                          run_mpx);
+    thread_ = caf::launch_thread(mpx_.system(), "caf.io.prom",
+                                 thread_owner::system, run_mpx);
     sync.wait();
     log::io::info("expose Prometheus metrics at port {}", actual_port);
     return actual_port;
@@ -421,8 +422,8 @@ void middleman::start() {
     sync_ptr->count_down();
     backend().run();
   };
-  thread_ = system().launch_thread("caf.io.mpx", thread_owner::system,
-                                   run_backend);
+  thread_ = caf::launch_thread(system(), "caf.io.mpx", thread_owner::system,
+                               run_backend);
   sync.wait();
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>("BASP");

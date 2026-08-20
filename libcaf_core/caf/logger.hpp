@@ -234,6 +234,9 @@ public:
   static void current_logger(actor_system* sys);
 
   /// Sets the logger for the current thread.
+  static void current_logger(detail::actor_system_impl* sys);
+
+  /// Sets the logger for the current thread.
   static void current_logger(logger* ptr);
 
   /// Sets the logger for the current thread.

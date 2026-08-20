@@ -105,6 +105,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The method `actor_system::redirect_text_output` is now deprecated. Configure a
   console printer instead via `actor_system_config::console_printer_factory()`
   before constructing the actor system.
+- The `http::with(...).connect(...)` API is now deprecated in favor of the new
+  `http::with_v2(...)` API.
 
 ### Added
 
@@ -159,6 +161,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   However, the observable result will always be the error `sec::disposed`. Any
   result that the background computation may produce after calling `dispose()`
   will be ignored (#2467).
+- The new `http::with_v2(...)` API is an iteration on the previous
+  `http::with(...)` design. It is easier to use and supports both synchronous
+  and asynchronous operation modes. In async mode, clients now return a single
+  `future` object instead of `expected<pair<future, disposable>>`. Further, it
+  does not block the current thread while establishing new connections. In
+  synchronous mode, the entire communication will run on the calling thread.
 
 ### Fixed
 

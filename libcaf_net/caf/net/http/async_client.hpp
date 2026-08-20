@@ -18,13 +18,18 @@ public:
        unordered_flat_map<std::string, std::string> fields,
        const_byte_span payload);
 
+  static std::unique_ptr<async_client>
+  make(http::method method, std::string path,
+       unordered_flat_map<std::string, std::string> fields, byte_buffer payload,
+       caf::async::promise<response> promise);
+
   // -- constructors, destructors, and assignment operators --------------------
 
   ~async_client() override;
 
   // -- properties -------------------------------------------------------------
 
-  virtual async::future<response> get_future() const = 0;
+  virtual caf::async::future<response> get_future() const = 0;
 };
 
 } // namespace caf::net::http

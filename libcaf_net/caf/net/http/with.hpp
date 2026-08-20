@@ -12,6 +12,7 @@
 #include "caf/net/tcp_accept_socket.hpp"
 
 #include "caf/actor_cast.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/forward_like.hpp"
 #include "caf/fwd.hpp"
@@ -343,12 +344,14 @@ public:
   /// Creates a new client factory object for the given TCP `endpoint`.
   /// @param endpoint The endpoint of the TCP server to connect to.
   /// @returns a `client` object initialized with the given parameters.
-  [[nodiscard]] client connect(uri endpoint) &&;
+  [[nodiscard]] CAF_DEPRECATED("use with_v2(...) instead") //
+    client connect(uri endpoint) &&;
 
   /// Creates a new client factory object for the given TCP `endpoint`.
   /// @param endpoint The endpoint of the TCP server to connect to.
   /// @returns a `client` object initialized with the given parameters.
-  [[nodiscard]] client connect(expected<uri> endpoint) &&;
+  [[nodiscard]] CAF_DEPRECATED("use with_v2(...) instead") //
+    client connect(expected<uri> endpoint) &&;
 
 private:
   using on_error_callback = unique_callback_ptr<void(const error&)>;

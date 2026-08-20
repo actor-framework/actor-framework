@@ -19,6 +19,7 @@
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/daemons.hpp"
+#include "caf/detail/make_work_sharing.hpp"
 #include "caf/detail/match_wildcard_pattern.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/panic.hpp"
@@ -50,22 +51,6 @@ namespace caf {
 
 namespace {
 
-// -- stream server ------------------------------------------------------------
-
-// The stream server acts as a man-in-the-middle for all streams that cross the
-// network. It manages any number of unrelated streams by placing itself and the
-// stream server on the next remote node into the pipeline.
-
-// Outgoing messages are buffered in FIFO order to ensure fairness. However, the
-// stream server uses five different FIFO queues: on for each priority level.
-// A high priority grants more network bandwidth.
-
-// Note that stream servers do not actively take part in the streams they
-// process. Batch messages and ACKs are treated equally. Open, close, and error
-// messages are evaluated to add and remove state as needed.
-
-namespace {
-
 // Handling a single message generally should take microseconds. Going up to
 // several milliseconds usually indicates a problem (or blocking operations)
 // but may still be expected for very compute-intense tasks. Single messages
@@ -82,8 +67,6 @@ constexpr std::array<double, 9> default_buckets{{
   1.,     // 1s
   5.,     // 5s
 }};
-
-} // namespace
 
 /// Metrics that the actor system collects.
 struct base_metrics_t {
@@ -303,7 +286,7 @@ private:
   mutable std::shared_mutex named_entries_mtx_;
 };
 
-class default_actor_system_impl : public detail::actor_system_impl {
+class default_actor_system_impl final : public detail::actor_system_impl {
 public:
   using module_ptr = std::unique_ptr<actor_system_module>;
 
@@ -422,6 +405,12 @@ public:
         }
       }
       log::core::debug("stop scheduler");
+      {
+        std::lock_guard guard{mtx_};
+        if (async_workers_) {
+          async_workers_->stop();
+        }
+      }
       scheduler_->stop();
       private_threads_.stop();
       registry_.stop();
@@ -468,7 +457,7 @@ public:
     auto count = --running_actors_count_;
     log::system::debug("actor {} decreased running count to {}", who, count);
     if (count <= 1) {
-      std::unique_lock guard{running_actors_mtx_};
+      std::unique_lock guard{mtx_};
       running_actors_cv_.notify_all();
     }
     return count;
@@ -478,7 +467,7 @@ public:
                                         timespan timeout) override {
     CAF_ASSERT(expected == 0 || expected == 1);
     auto lg = log::core::trace("expected = {}", expected);
-    std::unique_lock guard{running_actors_mtx_};
+    std::unique_lock guard{mtx_};
     auto pred = [this, &expected] {
       auto running = running_actors_count_.load();
       log::core::debug("running = {}, expected = {}", running, expected);
@@ -545,6 +534,18 @@ public:
 
   caf::scheduler& scheduler() override {
     return *scheduler_;
+  }
+
+  caf::scheduler& async_workers() override {
+    std::lock_guard guard{mtx_};
+    if (!async_workers_) {
+      const auto num_workers_param = get_or(*cfg_, "caf.async-workers",
+                                            defaults::async_workers);
+      const auto num_workers = std::max(num_workers_param, size_t{1});
+      async_workers_ = detail::make_work_sharing(*this, num_workers, false);
+      async_workers_->start();
+    }
+    return *async_workers_;
   }
 
   caf::logger& logger() override {
@@ -644,12 +645,6 @@ private:
   /// The number of currently running actors.
   std::atomic<size_t> running_actors_count_ = 0;
 
-  /// Mutex for the running actors count condition variable.
-  mutable std::mutex running_actors_mtx_;
-
-  /// Condition variable for waiting on the running actors count.
-  mutable std::condition_variable running_actors_cv_;
-
   /// Manages log output.
   intrusive_ptr<detail::asynchronous_logger> logger_;
 
@@ -658,6 +653,15 @@ private:
 
   /// Stores the actor system scheduler.
   std::unique_ptr<caf::scheduler> scheduler_;
+
+  /// Synchronizes access to `running_actors_cv_` and `async_workers_`.
+  mutable std::mutex mtx_;
+
+  /// Condition variable for waiting on the running actors count.
+  mutable std::condition_variable running_actors_cv_;
+
+  /// Stores the actor system scheduler.
+  std::unique_ptr<caf::scheduler> async_workers_;
 
   /// Stores optional actor system components.
   module_array modules_;

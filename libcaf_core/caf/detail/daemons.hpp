@@ -36,7 +36,7 @@ public:
   /// @param args Additional arguments forwarded to `fn`.
   template <class Fn, class... Args>
   actor launch(Fn fn, std::function<void(actor)> do_stop, Args&&... args) {
-    // Launches a new background worker. We need to this lazily to enable
+    // Launches a new background worker. We need to do this lazily to enable
     // `do_launch` to atomically create the worker and add it to the internal
     // map. If `stop()` has been called prior, we return an invalid actor handle
     // and never call `do_spawn`.

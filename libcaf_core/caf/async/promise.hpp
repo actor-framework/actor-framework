@@ -9,7 +9,6 @@
 #include "caf/detail/async_cell.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/raise_error.hpp"
 
 namespace caf::async {
 
@@ -88,11 +87,19 @@ public:
 
   /// Tries to set the dispose callback.
   /// @return `true` if the callback was set successfully, `false` otherwise.
-  bool on_dispose(execution_context_ptr ctx, action callback) {
+  [[nodiscard]] bool on_dispose(execution_context_ptr ctx, action callback) {
     if (cell_) {
       return cell_->on_dispose(std::move(ctx), std::move(callback));
     }
     return false;
+  }
+
+  /// Checks if the asynchronous task was disposed.
+  bool disposed() const noexcept {
+    if (cell_) {
+      return cell_->disposed();
+    }
+    return true;
   }
 
   /// @pre `valid()`

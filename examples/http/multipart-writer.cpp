@@ -13,7 +13,8 @@
 // certificate against a custom CA bundle.
 
 #include "caf/net/http/multipart_writer.hpp"
-#include "caf/net/http/with.hpp"
+#include "caf/net/http/status.hpp"
+#include "caf/net/http/with_v2.hpp"
 #include "caf/net/middleman.hpp"
 
 #include "caf/actor_system.hpp"
@@ -32,12 +33,11 @@
 #include <utility>
 #include <vector>
 
-using namespace std::literals;
-
 namespace http = caf::net::http;
 namespace ssl = caf::net::ssl;
 
 using namespace caf;
+using namespace std::literals;
 
 // Custom config for adding a command line option for the CA file.
 struct config : caf::actor_system_config {
@@ -144,35 +144,39 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   }
   // Send a POST request with the payload from the multipart writer.
   auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
-  auto result = http::with(sys)
-                  // Lazy load TLS when connecting to HTTPS endpoints.
-                  .context_factory([ca_file, resource]() {
-                    return ssl::emplace_client(ssl::tls::v1_2)()
-                      .and_then(ssl::load_verify_file_if(ca_file))
-                      .and_then(ssl::use_sni_hostname(resource));
-                  })
-                  .connect(resource)
-                  .retry_delay(1s)
-                  .max_retry_count(5)
-                  .connection_timeout(250ms)
-                  .add_header_field("Content-Type", writer.make_content_type())
-                  .request(http::method::post, writer.finalize());
-  if (!result) {
-    sys.println("*** Failed to initiate connection: {}", result.error());
-    return EXIT_FAILURE;
-  }
-  // Wait for the response and print it to stdout.
-  auto maybe_response = result->first.get(10s);
+  auto maybe_response = // Block this thread until the request completes.
+    http::with_v2(sys)
+      .sync()
+      .connect(resource)
+      // Lazy load TLS when connecting to HTTPS endpoints.
+      .context([ca_file, resource]() {
+        return ssl::context::enable()
+          .and_then(ssl::emplace_client(ssl::tls::v1_2))
+          .and_then(ssl::load_verify_file_if(ca_file))
+          .and_then(ssl::use_sni_hostname(resource));
+      })
+      // If we don't succeed at first, try up to 5 times with 1s delay.
+      .retry_delay(1s)
+      .max_retry_count(5)
+      // Wait up to 250ms for establishing a connection.
+      .connection_timeout(250ms)
+      .add_header_field("User-Agent", "CAF Example")
+      .add_header_field("Content-Type", writer.make_content_type())
+      // Send a POST request with the payload from the multipart writer.
+      .post(writer.finalize());
+  // If the request failed, we simply print the error and return.
   if (!maybe_response) {
     sys.println("*** HTTP request failed: {}", maybe_response.error());
     return EXIT_FAILURE;
   }
-  auto& response = *maybe_response;
-  sys.println("Server responded with HTTP code {}",
-              static_cast<uint16_t>(response.code()));
+  // Otherwise, we print the header fields and the received payload.
+  const auto& response = *maybe_response;
+  sys.println("Server responded with HTTP {}: {}",
+              static_cast<uint16_t>(response.code()), phrase(response.code()));
   sys.println("Header fields:");
-  for (const auto& [key, value] : response.header_fields())
+  for (const auto& [key, value] : response.header_fields()) {
     sys.println("- {}: {}", key, value);
+  }
   if (auto body = response.body(); !body.empty()) {
     if (is_valid_utf8(body)) {
       sys.println("Payload (UTF-8): {}", to_string_view(body));

@@ -763,11 +763,16 @@ public:
     return *scheduler_;
   }
 
+  caf::scheduler& async_workers() override {
+    detail::critical("async workers are not supported "
+                     "in deterministic test mode");
+  }
+
   caf::logger& logger() override {
     auto* current = caf::logger::current_logger();
     if (current == nullptr) {
-      detail::critical(
-        "deterministic fixture: test runner failed to provide a logger");
+      detail::critical("deterministic fixture: "
+                       "test runner failed to provide a logger");
     }
     return *current;
   }

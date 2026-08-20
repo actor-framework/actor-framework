@@ -37,6 +37,16 @@ constexpr parameter<T> make_parameter(std::string_view name, T fallback) {
 /// the mailbox instead.
 constexpr auto max_inline_actions_per_run = size_t{10};
 
+/// Configures how many threads the actor system creates for the async workers
+/// thread pool. This thread pool is created lazily on first access and is used
+/// for offloading blocking operations such as DNS lookups and TCP connection
+/// establishment. The pool limits how many connections `caf.net` can establish
+/// concurrently, so increasing this value may improve throughput for
+/// applications that make heavy use of short-lived connections. For most use
+/// cases, however, a small number of threads is sufficient and the workers will
+/// sit idle most of the time.
+constexpr size_t async_workers = 4;
+
 } // namespace caf::defaults
 
 namespace caf::defaults::stream {

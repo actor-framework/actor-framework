@@ -4,15 +4,21 @@
 
 #include "caf/actor_system.hpp"
 
+#include "caf/test/synchronized_counter.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/actor_system_access.hpp"
+#include "caf/detail/atomic_ref_count.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/scoped_actor.hpp"
+#include "caf/resumable.hpp"
+#include "caf/scheduler.hpp"
 
 #include <memory>
 
 using namespace caf;
+using namespace std::literals;
 
 using shared_bool_ptr = std::shared_ptr<bool>;
 
@@ -115,4 +121,52 @@ TEST("println renders its arguments to a text stream") {
     do_print(sys);
   }
   check_eq(*str, "line1\n<red>line2</red>\nline3\n<green>line4</green>\n");
+}
+
+namespace {
+
+constexpr size_t dummy_worker_count = 8;
+
+struct dummy_worker final : public resumable {
+public:
+  explicit dummy_worker(test::synchronized_counter_ptr counter)
+    : counter_(std::move(counter)) {
+    // nop
+  }
+
+  void ref() const noexcept override {
+    ref_count_.inc();
+  }
+
+  void deref() const noexcept override {
+    ref_count_.dec(this);
+  }
+
+  void resume(scheduler* context, uint64_t) override {
+    if (context->is_system_scheduler()) {
+      detail::critical("dummy_worker::resume called on the system scheduler");
+    }
+    counter_->inc();
+  }
+
+private:
+  mutable detail::atomic_ref_count ref_count_;
+
+  test::synchronized_counter_ptr counter_;
+};
+
+} // namespace
+
+TEST("async_workers() allows offloading work to a thread pool") {
+  using detail::actor_system_access;
+  actor_system_config cfg;
+  actor_system sys{cfg};
+  auto& async_workers = actor_system_access{sys}.impl()->async_workers();
+  auto counter = test::synchronized_counter::make();
+  for (size_t i = 0; i < dummy_worker_count; ++i) {
+    auto worker = make_counted<dummy_worker>(counter);
+    async_workers.schedule(worker, 0);
+  }
+  auto deadline = std::chrono::steady_clock::now() + 2s;
+  require(counter->await(dummy_worker_count, deadline));
 }

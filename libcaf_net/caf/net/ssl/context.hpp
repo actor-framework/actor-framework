@@ -61,7 +61,7 @@ public:
   /// Starting point for chaining `expected<T>::and_then()` invocations, whereas
   /// the next function in the chain should create the SSL context depending on
   /// the value of `flag`.
-  static expected<void> enable(bool flag);
+  static expected<void> enable(bool flag = true);
 
   /// Returns a generic SSL context with TLS.
   static expected<context> make(tls min_version, tls max_version = tls::any);

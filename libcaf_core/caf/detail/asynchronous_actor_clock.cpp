@@ -7,6 +7,7 @@
 #include "caf/action.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/launch_thread.hpp"
 #include "caf/log/core.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/thread_owner.hpp"
@@ -51,8 +52,8 @@ public:
     log::core::info("starting the default actor clock with cleanup interval {}",
                     cleanup_interval);
     worker_
-      = sys.launch_thread("caf.clock", caf::thread_owner::system,
-                          [this, cleanup_interval] { run(cleanup_interval); });
+      = caf::launch_thread(sys, "caf.clock", caf::thread_owner::system,
+                           [this, cleanup_interval] { run(cleanup_interval); });
   }
 
   void stop() override {

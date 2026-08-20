@@ -441,6 +441,7 @@ public:
   void thread_terminates();
 
   template <class F>
+  CAF_DEPRECATED("use the free function caf::launch_thread instead")
   std::thread launch_thread(const char* thread_name, thread_owner tag, F fun) {
     auto body = [this, thread_name, tag, f = std::move(fun)](auto) {
       CAF_SET_LOGGER_SYS(this);

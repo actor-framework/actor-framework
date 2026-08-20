@@ -371,6 +371,7 @@ class abstract_worker;
 class abstract_worker_hub;
 class actor_system_access;
 class actor_system_config_access;
+class actor_system_impl;
 class asynchronous_logger;
 class disposer;
 class mailbox_factory;

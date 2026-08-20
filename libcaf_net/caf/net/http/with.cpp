@@ -276,9 +276,10 @@ public:
                                            max_request_size);
     auto impl = detail::make_accept_handler(std::move(factory), max_connections,
                                             monitored_actors);
-    auto ptr = net::socket_manager::make(mpx, std::move(impl));
-    if (mpx->start(ptr))
-      return expected<disposable>{disposable{std::move(ptr)}};
+    auto mgr = net::socket_manager::make(mpx, std::move(impl));
+    if (mpx->start(mgr)) {
+      return disposable{std::move(mgr)};
+    }
     return expected<disposable>{
       unexpect, sec::logic_error,
       "failed to register socket manager to net::multiplexer"};

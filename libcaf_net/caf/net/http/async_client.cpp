@@ -23,11 +23,13 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
   async_client_impl(http::method method, std::string path,
                     unordered_flat_map<std::string, std::string> fields,
-                    byte_buffer payload)
-    : method_{method},
-      path_{std::move(path)},
-      fields_{std::move(fields)},
-      payload_{std::move(payload)} {
+                    byte_buffer payload, caf::async::promise<response> result)
+    : method_(method),
+      path_(std::move(path)),
+      fields_(std::move(fields)),
+      payload_(std::move(payload)),
+      response_(std::move(result)) {
+    // nop
   }
 
   // -- generic lower layer implementation -------------------------------------
@@ -56,7 +58,10 @@ public:
 
   ptrdiff_t consume(const http::response_header& hdr,
                     caf::const_byte_span payload) override {
-    log::net::info("Received a message");
+    if (response_.disposed()) {
+      down->shutdown();
+      return static_cast<ptrdiff_t>(payload.size());
+    }
     http::response::fields_map fields;
     hdr.for_each_field([&fields](auto key, auto value) {
       fields.container().emplace_back(key, value);
@@ -110,7 +115,17 @@ async_client::make(http::method method, std::string path,
                    const_byte_span payload) {
   return std::make_unique<async_client_impl>(method, std::move(path), fields,
                                              byte_buffer{payload.begin(),
-                                                         payload.end()});
+                                                         payload.end()},
+                                             caf::async::promise<response>{});
+}
+
+std::unique_ptr<async_client>
+async_client::make(http::method method, std::string path,
+                   unordered_flat_map<std::string, std::string> fields,
+                   byte_buffer payload, caf::async::promise<response> result) {
+  return std::make_unique<async_client_impl>(method, std::move(path), fields,
+                                             std::move(payload),
+                                             std::move(result));
 }
 
 // -- constructors, destructors, and assignment operators ----------------------
