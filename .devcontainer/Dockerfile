@@ -6,7 +6,6 @@ RUN apt-get update -y \
       ca-certificates \
       clangd \
       cmake \
-      cppcheck \
       curl \
       g++ \
       git \
