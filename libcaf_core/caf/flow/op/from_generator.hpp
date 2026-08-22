@@ -61,6 +61,8 @@ public:
 
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
+    if (n == 0)
+      return;
     demand_ += n;
     run_later();
   }

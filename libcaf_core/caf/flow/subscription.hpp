@@ -39,7 +39,9 @@ public:
     /// and thus can clean up the subscription immediately.
     virtual void cancel() = 0;
 
-    /// Signals demand for `n` more items.
+    /// Signals demand for `n` more items. Calling this member function with
+    /// `n == 0` is a no-op: it neither adds demand nor triggers any observable
+    /// side effect such as arming a timer or scheduling work.
     virtual void request(size_t n) = 0;
   };
 
@@ -133,10 +135,12 @@ public:
     }
   }
 
-  /// Signals demand for @p n more items.
+  /// Signals demand for @p n more items. Passing `0` is a no-op, i.e., it adds
+  /// no demand and has no observable side effects.
   /// @pre `valid()`
   void request(size_t n) {
-    pimpl_->request(n);
+    if (n > 0)
+      pimpl_->request(n);
   }
 
   // -- properties -------------------------------------------------------------

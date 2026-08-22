@@ -77,6 +77,8 @@ public:
 
   void request(size_t n) override {
     auto lg = log::core::trace("n = {}", n);
+    if (n == 0)
+      return;
     if (demand_ != 0) {
       demand_ += n;
     } else {

@@ -421,6 +421,41 @@ SCENARIO("the merge operator emits already buffered data on error") {
   }
 }
 
+SCENARIO("requesting zero items from the merge operator is a no-op") {
+  GIVEN("a merge operator with buffered items and no demand") {
+    WHEN("calling request(0) on the implementation") {
+      THEN("the operator neither pulls buffered items nor emits them") {
+        using snk_t = flow::passive_observer<int>;
+        auto src = caf::flow::multicaster<int>{coordinator()};
+        auto nil = make_observable().never<int>().as_observable();
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = raw_sub(snk->as_observer(), src.as_observable(), nil);
+        run_flows();
+        src.push({1, 2, 3});
+        run_flows();
+        require_eq(uut->buffered(), 3u);
+        require_eq(uut->demand(), 0u);
+        auto pending = pending_actions();
+        snk->sub.request(0);
+        snk->sub.ptr()->request(0);
+        check_eq(pending_actions(), pending);
+        run_flows();
+        check_eq(uut->demand(), 0u);
+        check_eq(uut->buffered(), 3u);
+        check(snk->buf.empty());
+        // Zero demand must not interfere with subsequent requests.
+        snk->sub.request(3);
+        run_flows();
+        check_eq(snk->buf, std::vector<int>({1, 2, 3}));
+        check_eq(snk->state, flow::observer_state::subscribed);
+        uut->dispose();
+        run_flows();
+        check(uut->disposed());
+      }
+    }
+  }
+}
+
 SCENARIO("the merge operator drops inputs with no pending data on error") {
   GIVEN("a merge operator with two inputs") {
     WHEN("one of the inputs fails") {
