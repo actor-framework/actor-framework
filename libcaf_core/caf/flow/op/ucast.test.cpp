@@ -126,6 +126,38 @@ SCENARIO("ucast operators deliver pending items before raising errors") {
   }
 }
 
+SCENARIO("requesting zero items from a ucast operator is a no-op") {
+  GIVEN("a ucast operator with buffered items and no demand") {
+    WHEN("calling request(0) on the subscription") {
+      THEN("the operator neither schedules a pull nor emits items") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_ucast();
+        uut->subscribe(snk->as_observer());
+        uut->push(1);
+        uut->push(2);
+        require_eq(uut->buffered(), 2u);
+        auto pending = pending_actions();
+        // Bypass the guard in subscription::request to make sure that the
+        // operator guards itself as well.
+        snk->sub.request(0);
+        snk->sub.ptr()->request(0);
+        check_eq(pending_actions(), pending);
+        run_flows();
+        check_eq(uut->demand(), 0u);
+        check_eq(uut->buffered(), 2u);
+        check(snk->buf.empty());
+        // Zero demand must not interfere with subsequent requests.
+        snk->sub.request(2);
+        run_flows();
+        check_eq(snk->buf, std::vector<int>({1, 2}));
+        uut->close();
+        run_flows();
+      }
+    }
+  }
+}
+
 #ifdef CAF_ENABLE_RTTI
 SCENARIO("requesting from disposed ucast operators is a no-op") {
   GIVEN("a ucast operator with a disposed subscription") {

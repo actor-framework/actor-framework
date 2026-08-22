@@ -122,4 +122,42 @@ SCENARIO("mcast operators buffer items that they cannot ship immediately") {
   }
 }
 
+SCENARIO("requesting zero items from an mcast operator is a no-op") {
+  GIVEN("an mcast operator with two observers and buffered items") {
+    WHEN("one observer calls request(0) on its subscription") {
+      THEN("the operator ships nothing and the other observer is unaffected") {
+        auto uut = make_mcast();
+        auto o1 = flow::make_passive_observer<int>();
+        auto o2 = flow::make_passive_observer<int>();
+        auto sub1 = uut->subscribe(o1->as_observer());
+        auto sub2 = uut->subscribe(o2->as_observer());
+        o2->request(2);
+        run_flows();
+        for (auto i = 0; i < 2; ++i)
+          uut->push_all(i);
+        run_flows();
+        require_eq(uut->max_buffered(), 2u);
+        require_eq(o2->buf, std::vector<int>({0, 1}));
+        auto pending = pending_actions();
+        // Bypass the guard in subscription::request to make sure that the
+        // operator guards itself as well.
+        o1->sub.request(0);
+        o1->sub.ptr()->request(0);
+        check_eq(pending_actions(), pending);
+        run_flows();
+        check_eq(uut->max_demand(), 0u);
+        check_eq(uut->max_buffered(), 2u);
+        check(o1->buf.empty());
+        // Zero demand must not interfere with subsequent requests.
+        o1->request(2);
+        run_flows();
+        check_eq(o1->buf, std::vector<int>({0, 1}));
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(fixture)

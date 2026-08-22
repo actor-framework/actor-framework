@@ -94,6 +94,37 @@ SCENARIO("a timer is an observable interval with a single value") {
   }
 }
 
+SCENARIO("requesting zero items from an interval is a no-op") {
+  GIVEN("an observable interval with a passive observer") {
+    WHEN("the observer signals zero demand") {
+      THEN("the interval neither arms its timer nor emits items") {
+        auto snk = make_passive_observer<int64_t>();
+        coordinator()->make_observable().interval(1ms, 1ms).subscribe(
+          snk->as_observer());
+        run_flows(1ms);
+        require(snk->subscribed());
+        auto pending = pending_actions();
+        // Bypass the guard in subscription::request to make sure that the
+        // operator guards itself as well.
+        snk->sub.request(0);
+        snk->sub.ptr()->request(0);
+        check_eq(pending_actions(), pending);
+        run_flows(50ms);
+        check(snk->buf.empty());
+        // Zero demand must not put the interval into a state where it stops
+        // reacting to actual demand.
+        snk->sub.request(2);
+        run_flows(50ms);
+        check_eq(snk->buf, i64_list({0, 1}));
+        run_flows(50ms);
+        check_eq(snk->buf, i64_list({0, 1}));
+        snk->unsubscribe();
+        run_flows(1ms);
+      }
+    }
+  }
+}
+
 SCENARIO("an interval must have a positive period") {
   GIVEN("an observable interval") {
     WHEN("an observer subscribes to it with a negative period") {

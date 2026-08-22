@@ -128,7 +128,9 @@ public:
     return !state_;
   }
 
-  void request(size_t) override {
+  void request(size_t n) override {
+    if (n == 0)
+      return;
     if (!listening_) {
       listening_ = true;
       auto self = cell_listener_ptr<T>{this, add_ref};
