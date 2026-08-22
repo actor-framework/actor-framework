@@ -73,6 +73,11 @@ public:
 
   virtual caf::scheduler& scheduler() = 0;
 
+  /// Returns a separate scheduler for async workers. This set of workers
+  /// offloads blocking operations such as DNS lookups and TCP connection
+  /// establishment. Created lazily on first access.
+  virtual caf::scheduler& async_workers() = 0;
+
   virtual caf::logger& logger() = 0;
 
   virtual actor_registry& registry() = 0;

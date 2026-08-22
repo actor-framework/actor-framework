@@ -8,6 +8,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/chunked_string.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/format.hpp"
 #include "caf/detail/get_process_id.hpp"
@@ -96,6 +97,10 @@ logger* logger::current_logger() {
 }
 
 void logger::current_logger(actor_system* sys) {
+  current_logger(detail::actor_system_access{*sys}.impl());
+}
+
+void logger::current_logger(detail::actor_system_impl* sys) {
   if (sys != nullptr)
     current_logger_ptr.reset(&sys->logger(), add_ref);
   else

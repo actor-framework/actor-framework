@@ -11,12 +11,17 @@
 #include "caf/net/http/method.hpp"
 #include "caf/net/http/response.hpp"
 #include "caf/net/http/status.hpp"
+#include "caf/net/http/with_v2.hpp"
+#include "caf/net/middleman.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
 #include "caf/net/socket_id.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
 
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/detail/connector.hpp"
 #include "caf/raise_error.hpp"
 
 #ifdef CAF_WINDOWS
@@ -30,6 +35,57 @@ using namespace caf::net;
 using namespace std::literals;
 
 namespace {
+
+class socket_connector : public detail::connector {
+public:
+  explicit socket_connector(net::stream_socket fd) : fd_(fd) {
+    // nop
+  }
+
+  ~socket_connector() override {
+    if (fd_ != net::invalid_socket) {
+      net::close(fd_);
+    }
+  }
+
+  expected<net::stream_socket> connect(const std::string&, uint16_t, timespan,
+                                       size_t, timespan) override {
+    auto result = fd_;
+    fd_.id = net::invalid_socket_id;
+    return result;
+  }
+
+private:
+  net::stream_socket fd_;
+};
+
+class flaky_socket_connector : public detail::connector {
+public:
+  explicit flaky_socket_connector(net::stream_socket fd) : fd_(fd) {
+    // nop
+  }
+
+  ~flaky_socket_connector() override {
+    if (fd_ != net::invalid_socket) {
+      net::close(fd_);
+    }
+  }
+
+  expected<net::stream_socket> connect(const std::string&, uint16_t, timespan,
+                                       size_t, timespan) override {
+    if (calls_++ == 0) {
+      return caf::unexpected{
+        make_error(sec::runtime_error, "temporary connection failure")};
+    }
+    auto result = fd_;
+    fd_.id = net::invalid_socket_id;
+    return result;
+  }
+
+private:
+  net::stream_socket fd_;
+  size_t calls_ = 0;
+};
 
 // Returns true if a socket gets closed within the given timespan.
 bool closed_within(stream_socket fd, std::chrono::milliseconds timeout) {
@@ -194,6 +250,131 @@ SCENARIO("the client sends HTTP requests") {
         auto res = net::read(fd1, buf);
         check_eq(res, static_cast<ptrdiff_t>(want.size()));
         check_eq(to_string_view(buf), want);
+      }
+    }
+  }
+}
+
+SCENARIO("the async client sends a request through a custom connector") {
+  GIVEN("a connected socket pair and an async client") {
+    auto fd_pair = net::make_stream_socket_pair();
+    require_has_value(fd_pair);
+    auto [server_fd, client_fd] = *fd_pair;
+    actor_system_config cfg;
+    cfg.load<caf::net::middleman>();
+    actor_system sys{cfg};
+    caf::async::promise<std::string> request_prom;
+    auto request_fut = request_prom.get_future();
+    std::thread server([server_fd, &request_prom]() mutable {
+      byte_buffer buf;
+      buf.resize(512);
+      auto bytes = net::read(server_fd, buf);
+      if (bytes <= 0)
+        return;
+      request_prom.set_value(std::string{to_string_view(buf).substr(0, bytes)});
+      const auto response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"sv;
+      net::write(server_fd, as_bytes(std::span{response}));
+    });
+    WHEN("the HTTP request is dispatched") {
+      auto endpoint = caf::uri{};
+      auto parse_err = caf::parse("http://example.org/"s, endpoint);
+      require(parse_err.empty());
+      auto future = net::http::with_v2(sys)
+                      .async()
+                      .connect(std::move(endpoint))
+                      .connector(std::make_unique<socket_connector>(client_fd))
+                      .connection_timeout(1s)
+                      .max_retry_count(1)
+                      .get();
+      THEN("the server sees the request and the future resolves") {
+        const auto maybe_res = future.get(1s);
+        require(maybe_res.has_value());
+        check_eq(maybe_res->code(), net::http::status::ok);
+        const auto maybe_req = request_fut.get(1s);
+        require(maybe_req.has_value());
+        check_eq(maybe_req->substr(0, 4), "GET "s);
+      }
+    }
+    server.join();
+  }
+}
+
+SCENARIO("the async client retries connections on failure") {
+  GIVEN("a connected socket pair and a flaky connector") {
+    auto fd_pair = net::make_stream_socket_pair();
+    require_has_value(fd_pair);
+    auto [server_fd, client_fd] = *fd_pair;
+    actor_system_config cfg;
+    cfg.load<caf::net::middleman>();
+    actor_system sys{cfg};
+    caf::async::promise<std::string> request_prom;
+    auto request_fut = request_prom.get_future();
+    std::thread server([server_fd, &request_prom]() mutable {
+      byte_buffer buf;
+      buf.resize(512);
+      auto bytes = net::read(server_fd, buf);
+      if (bytes <= 0)
+        return;
+      request_prom.set_value(std::string{to_string_view(buf).substr(0, bytes)});
+      const auto response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"sv;
+      net::write(server_fd, as_bytes(std::span{response}));
+    });
+    WHEN("the connector fails on the first call and succeeds on the retry") {
+      auto endpoint = caf::uri{};
+      auto parse_err = caf::parse("http://example.org/"s, endpoint);
+      require(parse_err.empty());
+      auto future
+        = net::http::with_v2(sys)
+            .async()
+            .connect(std::move(endpoint))
+            .connector(std::make_unique<flaky_socket_connector>(client_fd))
+            .connection_timeout(1s)
+            .retry_delay(1ms)
+            .max_retry_count(1)
+            .get();
+      THEN("the request is retried and the future resolves") {
+        const auto maybe_res = future.get(1s);
+        require(maybe_res.has_value());
+        check_eq(maybe_res->code(), net::http::status::ok);
+        const auto maybe_req = request_fut.get(1s);
+        require(maybe_req.has_value());
+        check_eq(maybe_req->substr(0, 4), "GET "s);
+      }
+    }
+    server.join();
+  }
+}
+
+SCENARIO("disposing the future cancels an in-flight request") {
+  GIVEN("a connected socket pair and an async client") {
+    auto fd_pair = net::make_stream_socket_pair();
+    require_has_value(fd_pair);
+    auto [server_fd, client_fd] = *fd_pair;
+    actor_system_config cfg;
+    cfg.load<caf::net::middleman>();
+    actor_system sys{cfg};
+    std::thread server([server_fd]() mutable {
+      byte_buffer buf;
+      buf.resize(512);
+      net::read(server_fd, buf);
+    });
+    WHEN("the HTTP request is dispatched and the future is disposed") {
+      auto endpoint = caf::uri{};
+      auto parse_err = caf::parse("http://example.org/"s, endpoint);
+      require(parse_err.empty());
+      auto future = net::http::with_v2(sys)
+                      .async()
+                      .connect(std::move(endpoint))
+                      .connector(std::make_unique<socket_connector>(client_fd))
+                      .connection_timeout(1s)
+                      .max_retry_count(1)
+                      .get();
+      check(future.pending());
+      future.dispose();
+      THEN("the future is invalidated and the request is aborted") {
+        server.join();
+        auto maybe_res = future.get(1s);
+        check(!maybe_res);
       }
     }
   }

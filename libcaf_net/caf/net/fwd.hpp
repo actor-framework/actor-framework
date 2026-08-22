@@ -7,7 +7,6 @@
 #include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/type_id.hpp"
 
 #include <vector>
 
@@ -120,6 +119,10 @@ enum class status : uint16_t;
 
 namespace caf::net::http {
 
+class async_client_config;
+class async_client_factory;
+class async_client_factory_builder;
+class async_t;
 class header;
 class lower_layer;
 class request;
@@ -130,13 +133,21 @@ class response_header;
 class route;
 class router;
 class server;
+class sync_client_config;
+class sync_client_factory;
+class sync_client_factory_builder;
 class upper_layer;
 class with_t;
+class with_v2_t;
 
 enum class method : uint8_t;
 enum class status : uint16_t;
 
 using route_ptr = intrusive_ptr<route>;
+using async_client_config_ptr = intrusive_ptr<async_client_config>;
+using const_async_client_config_ptr = intrusive_ptr<const async_client_config>;
+using sync_client_config_ptr = intrusive_ptr<sync_client_config>;
+using const_sync_client_config_ptr = intrusive_ptr<const sync_client_config>;
 
 } // namespace caf::net::http
 

@@ -9,11 +9,14 @@
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/actor_system_access.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/cleanup_and_release.hpp"
 #include "caf/detail/default_thread_count.hpp"
 #include "caf/detail/double_ended_queue.hpp"
+#include "caf/detail/make_work_sharing.hpp"
+#include "caf/launch_thread.hpp"
 #include "caf/logger.hpp"
 #include "caf/resumable.hpp"
 #include "caf/thread_owner.hpp"
@@ -107,8 +110,9 @@ public:
   template <class Parent>
   void start(Parent* parent) {
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
-    this_thread_ = parent->system().launch_thread(
-      "caf.worker", thread_owner::scheduler, [this, parent] { run(parent); });
+    this_thread_ = detail::launch_thread(&parent->system(), "caf.worker",
+                                         thread_owner::scheduler,
+                                         [this, parent] { run(parent); });
   }
 
   void start() override {
@@ -219,7 +223,7 @@ private:
 /// Policy-based implementation of the scheduler base class.
 class scheduler_impl : public scheduler {
 public:
-  explicit scheduler_impl(actor_system& sys) : sys_(&sys) {
+  explicit scheduler_impl(detail::actor_system_impl& sys) : sys_(&sys) {
     auto& cfg = sys.config();
     num_workers_ = get_or(cfg, "caf.scheduler.max-threads",
                           detail::default_thread_count());
@@ -233,7 +237,7 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  actor_system& system() {
+  detail::actor_system_impl& system() {
     return *sys_;
   }
 
@@ -336,14 +340,11 @@ private:
   /// Next worker.
   std::atomic<size_t> next_worker = 0;
 
-  /// Thread for managing timeouts and delayed messages.
-  std::thread timer_;
-
   /// Configured number of workers.
   size_t num_workers_ = 0;
 
   /// Reference to the host system.
-  actor_system* sys_ = nullptr;
+  detail::actor_system_impl* sys_ = nullptr;
 };
 
 } // namespace work_stealing
@@ -366,9 +367,9 @@ public:
 
   void start() override {
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
-    this_thread_ = parent_->system().launch_thread("caf.worker",
-                                                   thread_owner::scheduler,
-                                                   [this] { run(); });
+    this_thread_ = detail::launch_thread(&parent_->system(), "caf.worker",
+                                         thread_owner::scheduler,
+                                         [this] { run(); });
   }
 
   void stop() override {
@@ -376,7 +377,7 @@ public:
   }
 
   bool is_system_scheduler() const noexcept final {
-    return true;
+    return parent_->is_system_scheduler();
   }
 
   void schedule(resumable_ptr job, uint64_t) override {
@@ -430,15 +431,17 @@ public:
 
   using queue_type = std::list<resumable_ptr>;
 
-  explicit scheduler_impl(actor_system& sys) : sys_(&sys) {
-    auto& cfg = sys.config();
-    num_workers_ = get_or(cfg, "caf.scheduler.max-threads",
-                          detail::default_thread_count());
+  explicit scheduler_impl(detail::actor_system_impl& sys, size_t num_workers,
+                          bool system_scheduler)
+    : sys_(&sys),
+      num_workers_(num_workers),
+      system_scheduler_(system_scheduler) {
+    // nop
   }
 
   // -- properties -------------------------------------------------------------
 
-  actor_system& system() {
+  detail::actor_system_impl& system() {
     return *sys_;
   }
 
@@ -538,7 +541,7 @@ public:
   }
 
   bool is_system_scheduler() const noexcept final {
-    return true;
+    return system_scheduler_;
   }
 
   resumable_ptr dequeue() {
@@ -566,14 +569,14 @@ private:
 
   std::condition_variable cv;
 
-  /// Thread for managing timeouts and delayed messages.
-  std::thread timer_;
+  /// Reference to the host system.
+  detail::actor_system_impl* sys_ = nullptr;
 
   /// Configured number of workers.
   size_t num_workers_ = 0;
 
-  /// Reference to the host system.
-  actor_system* sys_ = nullptr;
+  /// Indicates whether this scheduler is the system scheduler.
+  bool system_scheduler_ = false;
 };
 
 } // namespace work_sharing
@@ -583,11 +586,16 @@ private:
 // -- factory functions --------------------------------------------------------
 
 std::unique_ptr<scheduler> scheduler::make_work_stealing(actor_system& sys) {
-  return std::make_unique<work_stealing::scheduler_impl>(sys);
+  auto* sys_ptr = detail::actor_system_access{sys}.impl();
+  return std::make_unique<work_stealing::scheduler_impl>(*sys_ptr);
 }
 
 std::unique_ptr<scheduler> scheduler::make_work_sharing(actor_system& sys) {
-  return std::make_unique<work_sharing::scheduler_impl>(sys);
+  const auto num_workers = get_or(sys.config(), "caf.scheduler.max-threads",
+                                  detail::default_thread_count());
+  auto* sys_ptr = detail::actor_system_access{sys}.impl();
+  return std::make_unique<work_sharing::scheduler_impl>(*sys_ptr, num_workers,
+                                                        true);
 }
 
 // -- constructors, destructors, and assignment operators ----------------------
@@ -597,3 +605,14 @@ scheduler::~scheduler() {
 }
 
 } // namespace caf
+
+namespace caf::detail {
+
+std::unique_ptr<scheduler> make_work_sharing(actor_system_impl& sys,
+                                             size_t num_workers,
+                                             bool system_scheduler) {
+  return std::make_unique<work_sharing::scheduler_impl>(sys, num_workers,
+                                                        system_scheduler);
+}
+
+} // namespace caf::detail

@@ -7,6 +7,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/private_thread.hpp"
+#include "caf/launch_thread.hpp"
 #include "caf/thread_owner.hpp"
 
 namespace caf::detail {
@@ -17,8 +18,8 @@ private_thread_pool::node::~node() {
 
 void private_thread_pool::start(actor_system& sys) {
   sys_ = &sys;
-  loop_ = sys_->launch_thread("caf.pool", thread_owner::pool,
-                              [this] { run_loop(); });
+  loop_ = caf::launch_thread(sys, "caf.pool", thread_owner::pool,
+                             [this] { run_loop(); });
 }
 
 void private_thread_pool::stop() {

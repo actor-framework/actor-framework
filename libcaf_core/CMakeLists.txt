@@ -121,6 +121,7 @@ caf_add_component(
     caf/behavior.cpp
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
+    caf/byte_buffer.cpp
     caf/blocking_actor.cpp
     caf/blocking_actor.test.cpp
     caf/byte_reader.cpp

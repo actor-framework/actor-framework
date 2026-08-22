@@ -105,7 +105,10 @@ public:
 
   bool disposed() const noexcept override {
     std::unique_lock guard{mtx_};
-    return !std::holds_alternative<none_t>(value_);
+    if (auto* err = std::get_if<error>(&value_)) {
+      return *err == sec::disposed;
+    }
+    return false;
   }
 
   /// Tries to set the dispose callback.

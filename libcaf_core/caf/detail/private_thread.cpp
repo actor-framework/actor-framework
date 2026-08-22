@@ -8,6 +8,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/set_thread_name.hpp"
+#include "caf/launch_thread.hpp"
 #include "caf/log/core.hpp"
 #include "caf/resumable.hpp"
 #include "caf/thread_owner.hpp"
@@ -57,7 +58,7 @@ std::pair<resumable_ptr, bool> private_thread::await() {
 private_thread* private_thread::launch(actor_system* sys) {
   auto ptr = std::make_unique<private_thread>();
   auto raw_ptr = ptr.get();
-  ptr->thread_ = sys->launch_thread("caf.thread", thread_owner::pool,
+  ptr->thread_ = caf::launch_thread(*sys, "caf.thread", thread_owner::pool,
                                     [raw_ptr, sys] { raw_ptr->run(sys); });
   return ptr.release();
 }

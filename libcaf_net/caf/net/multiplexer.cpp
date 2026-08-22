@@ -20,6 +20,7 @@
 #include "caf/detail/panic.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/log/net.hpp"
 #include "caf/log/system.hpp"
 #include "caf/make_counted.hpp"
@@ -53,7 +54,8 @@ namespace {
 
 template <class T>
 concept has_intrusive_ptr_release
-  = requires(T* ptr) { intrusive_ptr_release(ptr); };
+  = detail::has_intrusive_ptr_free_functions<T>
+    || detail::has_intrusive_ptr_member_functions<T>;
 
 template <class T>
 uintptr_t to_uintptr(T* ptr) noexcept {
@@ -419,6 +421,7 @@ public:
     // need to block the signal at thread level since some APIs (such as
     // OpenSSL) are unsafe to call otherwise.
     block_sigpipe();
+    apply_updates();
     while (!shutting_down_ || pollset_.size() > 1 || !watched_.empty()) {
       poll_once(true);
       disposable::erase_disposed(watched_);
@@ -556,7 +559,7 @@ public:
     }
     if (res <= 0 && ptr) {
       if constexpr (has_intrusive_ptr_release<T>) {
-        intrusive_ptr_release(ptr);
+        intrusive_ptr<T> cleanup{ptr, adopt_ref};
       } else {
         delete ptr;
       }

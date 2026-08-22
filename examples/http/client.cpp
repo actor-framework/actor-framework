@@ -2,31 +2,27 @@
 
 #include "caf/net/http/client.hpp"
 
-#include "caf/net/http/with.hpp"
-#include "caf/net/ip.hpp"
+#include "caf/net/http/method.hpp"
+#include "caf/net/http/status.hpp"
+#include "caf/net/http/with_v2.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/octet_stream/transport.hpp"
-#include "caf/net/tcp_stream_socket.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/caf_main.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/ipv4_address.hpp"
-#include "caf/scheduled_actor/flow.hpp"
-#include "caf/uuid.hpp"
 
 #include <cassert>
 #include <csignal>
-#include <memory>
+#include <string>
+#include <tuple>
 #include <utility>
-
-using namespace std::literals;
 
 namespace http = caf::net::http;
 namespace ssl = caf::net::ssl;
+
 using namespace caf;
+using namespace std::literals;
 
 // -- constants ----------------------------------------------------------------
 
@@ -49,14 +45,7 @@ struct config : actor_system_config {
   }
 };
 
-namespace {
-
-std::atomic<bool> shutdown_flag;
-
-} // namespace
-
 int caf_main(caf::actor_system& sys, const config& cfg) {
-  signal(SIGTERM, [](int) { shutdown_flag = true; });
   // Get URI from config (positional argument).
   auto remainder = cfg.remainder();
   if (remainder.size() != 1) {
@@ -71,60 +60,45 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
   auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");
   auto method = caf::get_or(cfg, "method", default_method);
   auto payload = caf::get_or(cfg, "payload", ""sv);
-  auto result
-    = http::with(sys)
-        // Lazy load TLS when connecting to HTTPS endpoints.
-        .context_factory([ca_file, resource]() {
-          return ssl::emplace_client(ssl::tls::v1_2)()
-            .and_then(ssl::load_verify_file_if(ca_file))
-            .and_then(ssl::use_sni_hostname(resource));
-        })
-        // Connect to the address of the resource.
-        .connect(resource)
-        // If we don't succeed at first, try up to 5 times with 1s delay.
-        .retry_delay(1s)
-        .max_retry_count(5)
-        // Wait up to 250ms for establishing a connection.
-        .connection_timeout(250ms)
-        // After connecting, send a get request.
-        .add_header_field("User-Agent", "CAF-Client")
-        .request(method, payload);
-  if (!result) {
-    sys.println("*** Failed to initiate connection: {}", result.error());
+  auto maybe_response = // Block this thread until the request completes.
+    http::with_v2(sys)
+      .sync()
+      .connect(resource)
+      // Lazy load TLS when connecting to HTTPS endpoints.
+      .context([ca_file, resource]() {
+        return ssl::context::enable()
+          .and_then(ssl::emplace_client(ssl::tls::v1_2))
+          .and_then(ssl::load_verify_file_if(ca_file))
+          .and_then(ssl::use_sni_hostname(resource));
+      })
+      // If we don't succeed at first, try up to 5 times with 1s delay.
+      .retry_delay(1s)
+      .max_retry_count(5)
+      // Wait up to 250ms for establishing a connection.
+      .connection_timeout(250ms)
+      .add_header_field("User-Agent", "CAF Example")
+      // Send a request using the configured HTTP method and payload.
+      .request(method, payload);
+  // If the request failed, we simply print the error and return.
+  if (!maybe_response) {
+    sys.println("*** HTTP request failed: {}", maybe_response.error());
     return EXIT_FAILURE;
   }
-  sys.spawn([res = result->first](event_based_actor* self) {
-    res.bind_to(self).then(
-      [self](const http::response& r) {
-        self->println("Server responded with HTTP {}: {}",
-                      static_cast<uint16_t>(r.code()), phrase(r.code()));
-        self->println("Header fields:");
-        for (const auto& [key, value] : r.header_fields())
-          self->println("- {}: {}", key, value);
-        if (r.body().empty())
-          return;
-        if (is_valid_utf8(r.body())) {
-          self->println("Payload: {}", to_string_view(r.body()));
-        } else {
-          auto split_at = [](const_byte_span bytes, size_t at) {
-            if (bytes.size() > at)
-              return std::pair{bytes.subspan(0, at), bytes.subspan(at)};
-            return std::pair{bytes, const_byte_span{}};
-          };
-          // Print 8 bytes per row in hex.
-          self->println("Payload:");
-          auto bytes = r.body();
-          const_byte_span row;
-          while (!bytes.empty()) {
-            std::tie(row, bytes) = split_at(bytes, 8);
-            self->println("{}", to_hex_str(row));
-          }
-        }
-      },
-      [self](const error& err) {
-        self->println("*** HTTP request failed: {}", err);
-      });
-  });
+  // Otherwise, we print the header fields and the received payload.
+  const auto& response = *maybe_response;
+  sys.println("Server responded with HTTP {}: {}",
+              static_cast<uint16_t>(response.code()), phrase(response.code()));
+  sys.println("Header fields:");
+  for (const auto& [key, value] : response.header_fields()) {
+    sys.println("- {}: {}", key, value);
+  }
+  if (auto body = response.body(); !body.empty()) {
+    if (is_valid_utf8(body)) {
+      sys.println("Payload (UTF-8): {}", to_string_view(body));
+    } else {
+      sys.println("Payload (binary): {}", to_hex_str(body));
+    }
+  }
   return EXIT_SUCCESS;
 }
 

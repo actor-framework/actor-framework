@@ -310,4 +310,14 @@ concept has_compare_overload = requires(const Lhs& lhs, const Rhs& rhs) {
   { lhs.compare(rhs) } noexcept -> std::same_as<ptrdiff_t>;
 };
 
+template <class T>
+concept char_or_byte_data = std::convertible_to<T, const char*>
+                            || std::convertible_to<T, const std::byte*>;
+
+template <class T>
+concept char_or_byte_payload = requires(T t) {
+  { t.data() } -> char_or_byte_data;
+  { t.size() } -> std::same_as<size_t>;
+};
+
 } // namespace caf::detail

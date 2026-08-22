@@ -68,8 +68,11 @@ public:
   // -- observers --------------------------------------------------------------
 
   [[nodiscard]] bool disposed() const {
-    auto state = pimpl_->current_state();
-    return state == state::disposed || state == state::deferred_dispose;
+    if (pimpl_) {
+      auto state = pimpl_->current_state();
+      return state == state::disposed || state == state::deferred_dispose;
+    }
+    return true;
   }
 
   [[nodiscard]] bool scheduled() const {
@@ -80,12 +83,15 @@ public:
 
   /// Triggers the action.
   void run() {
+    CAF_ASSERT(pimpl_ != nullptr);
     pimpl_->resume(nullptr, resumable::default_event_id);
   }
 
   /// Cancel the action if it has not been invoked yet.
   void dispose() {
-    pimpl_->dispose();
+    if (pimpl_) {
+      pimpl_->dispose();
+    }
   }
 
   void swap(action& other) noexcept {
