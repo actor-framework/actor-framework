@@ -280,6 +280,7 @@ caf_add_component(
     caf/flow/step/take_last.test.cpp
     caf/flow/string.test.cpp
     caf/flow/subscription.cpp
+    caf/flow/subscription.test.cpp
     caf/forwarding_actor_proxy.cpp
     caf/handles.test.cpp
     caf/hash/fnv.test.cpp
