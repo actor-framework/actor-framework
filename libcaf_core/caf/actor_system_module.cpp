@@ -11,8 +11,8 @@ namespace caf {
 namespace {
 
 const char* module_names[] = {
-  "middleman",  "openssl-manager", "network-manager", "daemons",
-  "extension1", "extension2",      "extension3",      "extension4",
+  "middleman",  "openssl-manager", "network-manager", "extension1",
+  "extension2", "extension3",      "extension4",      "extension5",
 };
 
 static_assert(std::size(module_names) == actor_system_module::num_ids);

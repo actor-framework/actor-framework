@@ -47,9 +47,9 @@ TEST("actor_system_module::name returns a string representation of the ID") {
            "openssl-manager"sv);
   check_eq(mock_module{actor_system_module::network_manager}.name(),
            "network-manager"sv);
-  check_eq(mock_module{actor_system_module::daemons}.name(), "daemons"sv);
   check_eq(mock_module{actor_system_module::extension1}.name(), "extension1"sv);
   check_eq(mock_module{actor_system_module::extension2}.name(), "extension2"sv);
   check_eq(mock_module{actor_system_module::extension3}.name(), "extension3"sv);
   check_eq(mock_module{actor_system_module::extension4}.name(), "extension4"sv);
+  check_eq(mock_module{actor_system_module::extension5}.name(), "extension5"sv);
 }
