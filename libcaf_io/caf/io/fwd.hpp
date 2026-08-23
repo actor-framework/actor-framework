@@ -68,7 +68,7 @@ using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
 namespace network {
 
 class default_multiplexer;
-class multiplexer_base;
+class multiplexer;
 class multiplexer_supervisor;
 class receive_buffer;
 

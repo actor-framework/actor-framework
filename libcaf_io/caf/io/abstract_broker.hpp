@@ -348,7 +348,7 @@ public:
   std::vector<connection_handle> connections() const;
 
   /// Returns the multiplexer running this broker.
-  network::multiplexer_base& backend() {
+  network::multiplexer& backend() {
     return *backend_;
   }
 
@@ -419,7 +419,7 @@ private:
     get_map(hdl).emplace(hdl, std::move(ptr));
   }
 
-  network::multiplexer_base* backend_ = nullptr;
+  network::multiplexer* backend_ = nullptr;
   scribe_map scribes_;
   doorman_map doormen_;
   datagram_servant_map datagram_servants_;

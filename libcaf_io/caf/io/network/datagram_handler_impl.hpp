@@ -15,7 +15,7 @@ namespace caf::io::network {
 
 /// A concrete datagram_handler with a technology-dependent policy.
 template <class ProtocolPolicy>
-class CAF_IO_NETWORK_DEPRECATED datagram_handler_impl
+class CAF_IO_NETWORK_DEPRECATED_CLASS datagram_handler_impl
   : public datagram_handler {
 public:
   template <class... Ts>

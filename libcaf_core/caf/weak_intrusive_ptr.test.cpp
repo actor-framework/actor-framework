@@ -19,8 +19,6 @@
 
 using namespace std::literals;
 
-CAF_PUSH_DEPRECATED_WARNING
-
 using namespace caf;
 
 namespace {
@@ -577,5 +575,3 @@ TEST("to_string") {
   check_eq(ptr2.hash(), wptr.hash());
   check_eq(to_string(ptr2), to_string(wptr));
 }
-
-CAF_POP_WARNINGS

@@ -17,8 +17,6 @@
 #include <cstddef>
 #include <vector>
 
-CAF_PUSH_DEPRECATED_WARNING
-
 using namespace caf;
 
 namespace {
@@ -542,5 +540,3 @@ TEST("intrusive_ptr with free functions") {
   check_eq(ptr1->value, "foo");
   check_eq(ptr2->value, "bar");
 }
-
-CAF_POP_WARNINGS

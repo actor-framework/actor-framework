@@ -6,26 +6,21 @@
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman_actor.hpp"
-#include "caf/io/network/multiplexer_base.hpp"
-#include "caf/io/network/multiplexer_supervisor.hpp"
+#include "caf/io/network/multiplexer.hpp"
 
 #include "caf/actor_system.hpp"
-#include "caf/config_value.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/node_id.hpp"
-#include "caf/send.hpp"
 #include "caf/timespan.hpp"
 #include "caf/version.hpp"
 
 #include <chrono>
-#include <list>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <thread>
 #include <type_traits>
 #include <vector>
@@ -145,7 +140,7 @@ public:
   }
 
   /// Returns the IO backend used by this middleman.
-  virtual network::multiplexer_base& backend() = 0;
+  virtual network::multiplexer& backend() = 0;
 
   /// Returns the actor associated with `name` at `nid` or
   /// `invalid_actor` if `nid` is not connected or has no actor
@@ -177,11 +172,14 @@ public:
                                 timespan{timeout});
   }
 
-  /// Smart pointer for `network::multiplexer_base`.
-  using backend_pointer = std::unique_ptr<network::multiplexer_base>;
+  /// Smart pointer for `network::multiplexer`.
+  using backend_pointer = std::unique_ptr<network::multiplexer>;
 
   /// Used to initialize the backend during construction.
   using backend_factory = std::function<backend_pointer()>;
+
+  using backend_supervisor_ptr
+    = std::unique_ptr<network::multiplexer_supervisor>;
 
   void start() override;
 
@@ -327,7 +325,7 @@ private:
   actor_system& system_;
 
   /// Prevents backend from shutting down unless explicitly requested.
-  network::multiplexer_supervisor_ptr backend_supervisor_;
+  backend_supervisor_ptr backend_supervisor_;
 
   /// Runs the backend.
   std::thread thread_;

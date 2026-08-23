@@ -14,7 +14,7 @@ namespace caf::io::network {
 /// of this class has been called.
 class CAF_IO_EXPORT multiplexer_supervisor {
 public:
-  virtual ~multiplexer_supervisor();
+  virtual ~multiplexer_supervisor() noexcept;
 };
 
 /// Smart pointer for `multiplexer_supervisor`.

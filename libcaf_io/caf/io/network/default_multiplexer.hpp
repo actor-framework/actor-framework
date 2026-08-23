@@ -14,7 +14,7 @@
 #include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
-#include "caf/io/network/multiplexer_base.hpp"
+#include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
 #include "caf/io/network/pipe_reader.hpp"
@@ -83,7 +83,7 @@ CAF_IO_NETWORK_DEPRECATED extern const event_mask_type output_mask;
 CAF_IO_NETWORK_DEPRECATED extern const event_mask_type error_mask;
 
 class CAF_IO_EXPORT CAF_IO_NETWORK_DEPRECATED_CLASS default_multiplexer
-  : public multiplexer_base {
+  : public multiplexer {
 public:
   friend class io::middleman; // disambiguate reference
   friend class multiplexer_supervisor;

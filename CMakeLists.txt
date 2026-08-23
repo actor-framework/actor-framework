@@ -167,17 +167,6 @@ add_custom_target(caf-code-gen COMMENT "Generating enum .cpp files")
 
 # -- utility functions ---------------------------------------------------------
 
-# Turns off deprecation warnings for a target.
-function(caf_silence_deprecation_warnings target)
-  target_compile_definitions(${target} PRIVATE
-                             CAF_SUPPRESS_DEPRECATION_WARNINGS)
-  if(MSVC)
-    target_compile_options(${target} PRIVATE /wd4996)
-  else()
-    target_compile_options(${target} PRIVATE -Wno-deprecated-declarations)
-  endif()
-endfunction()
-
 # generates the implementation file for the enum that contains to_string,
 # from_string and from_integer
 function(caf_add_enum_type target enum_name)
@@ -290,6 +279,7 @@ function(caf_add_component name)
     endif()
     target_compile_definitions(
       "caf-${name}-test" PRIVATE
+      CAF_SUPPRESS_DEPRECATION_WARNINGS
       CAF_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data")
     target_link_libraries("caf-${name}-test" PRIVATE libcaf_test
                           ${CAF_ADD_COMPONENT_DEPENDENCIES} ${lib_target})
@@ -361,6 +351,8 @@ function(caf_add_test_executable name)
     message(FATAL_ERROR "Cannot add a CAF test executable without sources.")
   endif()
   add_executable(${name} ${args_SOURCES})
+  target_compile_definitions("${name}" PRIVATE
+                             CAF_SUPPRESS_DEPRECATION_WARNINGS)
   target_link_libraries(${name} PRIVATE CAF::internal ${args_DEPENDENCIES})
 endfunction()
 

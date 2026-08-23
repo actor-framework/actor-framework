@@ -92,7 +92,7 @@ public:
     // nop
   }
 
-  network::multiplexer_base& backend() override {
+  network::multiplexer& backend() override {
     return backend_;
   }
 
