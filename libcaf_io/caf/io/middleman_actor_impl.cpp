@@ -6,7 +6,6 @@
 
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp_broker.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/system_messages.hpp"
 

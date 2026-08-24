@@ -21,3 +21,6 @@ caf_add_component(
     caf/openssl/publish.cpp
     caf/openssl/remote_actor.cpp
     caf/openssl/session.cpp)
+
+target_compile_definitions(libcaf_openssl PRIVATE
+                           CAF_SUPPRESS_DEPRECATION_WARNINGS)

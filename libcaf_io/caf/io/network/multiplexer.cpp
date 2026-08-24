@@ -8,6 +8,10 @@
 
 namespace caf::io::network {
 
+multiplexer_supervisor::~multiplexer_supervisor() noexcept {
+  // nop
+}
+
 multiplexer::multiplexer(actor_system& sys)
   : tid_(std::this_thread::get_id()), sys_(&sys) {
   // nop
@@ -16,14 +20,6 @@ multiplexer::multiplexer(actor_system& sys)
 multiplexer_ptr multiplexer::make(actor_system& sys) {
   auto lg = log::io::trace("");
   return multiplexer_ptr{new default_multiplexer(sys)};
-}
-
-multiplexer_backend* multiplexer::pimpl() {
-  return nullptr;
-}
-
-multiplexer::supervisor::~supervisor() {
-  // nop
 }
 
 void multiplexer::start() {

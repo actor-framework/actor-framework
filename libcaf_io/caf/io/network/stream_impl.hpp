@@ -6,12 +6,14 @@
 
 #include "caf/io/network/stream.hpp"
 
+#include "caf/detail/io_network_deprecated.hpp"
+
 namespace caf::io::network {
 
 /// A concrete stream with a technology-dependent policy for sending and
 /// receiving data from a socket.
 template <class ProtocolPolicy>
-class stream_impl : public stream {
+class CAF_IO_NETWORK_DEPRECATED_CLASS stream_impl : public stream {
 public:
   template <class... Ts>
   stream_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)

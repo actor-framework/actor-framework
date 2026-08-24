@@ -69,6 +69,7 @@ namespace network {
 
 class default_multiplexer;
 class multiplexer;
+class multiplexer_supervisor;
 class receive_buffer;
 
 using address_listing = std::map<protocol::network, std::vector<std::string>>;

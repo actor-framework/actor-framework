@@ -65,3 +65,5 @@ caf_add_component(
     caf/io/scribe.cpp
     caf/policy/tcp.cpp
     caf/policy/udp.cpp)
+
+target_compile_definitions(libcaf_io PRIVATE CAF_SUPPRESS_DEPRECATION_WARNINGS)

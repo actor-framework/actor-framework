@@ -347,7 +347,7 @@ public:
   /// Returns all handles of all `scribe` instances attached to this broker.
   std::vector<connection_handle> connections() const;
 
-  /// Returns the `multiplexer` running this broker.
+  /// Returns the multiplexer running this broker.
   network::multiplexer& backend() {
     return *backend_;
   }

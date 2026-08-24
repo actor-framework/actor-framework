@@ -107,6 +107,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   before constructing the actor system.
 - The `http::with(...).connect(...)` API is now deprecated in favor of the new
   `http::with_v2(...)` API.
+- Deprecate obsolete members of `caf::io::network`. This namespace contains
+  legacy networking APIs that have been replaced by the `caf::net` module.
 
 ### Added
 

@@ -4,28 +4,21 @@
 
 #pragma once
 
-#include "caf/io/accept_handle.hpp"
-#include "caf/io/connection_handle.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
+#include "caf/io/network/multiplexer_supervisor.hpp"
 #include "caf/io/network/native_socket.hpp"
-#include "caf/io/network/protocol.hpp"
 
 #include "caf/adopt_ref.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/expected.hpp"
-#include "caf/extend.hpp"
-#include "caf/make_counted.hpp"
 #include "caf/resumable.hpp"
 #include "caf/scheduler.hpp"
 
-#include <functional>
 #include <string>
 #include <thread>
 
 namespace caf::io::network {
-
-class multiplexer_backend;
 
 /// Low-level backend for IO multiplexing.
 class CAF_IO_EXPORT multiplexer : public scheduler {
@@ -74,17 +67,8 @@ public:
   new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
                          bool reuse_addr = false) = 0;
 
-  /// Makes sure the multiplier does not exit its event loop until
-  /// the destructor of `supervisor` has been called.
-  class CAF_IO_EXPORT supervisor {
-  public:
-    virtual ~supervisor();
-  };
-
-  using supervisor_ptr = std::unique_ptr<supervisor>;
-
   /// Creates a supervisor to keep the event loop running.
-  virtual supervisor_ptr make_supervisor() = 0;
+  virtual multiplexer_supervisor_ptr make_supervisor() = 0;
 
   /// Creates an instance using the networking backend compiled with CAF.
   static std::unique_ptr<multiplexer> make(actor_system& sys);
@@ -137,10 +121,6 @@ public:
     delay(resumable_ptr{new impl(std::move(fun)), adopt_ref},
           resumable::default_event_id);
   }
-
-  /// Retrieves a pointer to the implementation or `nullptr` if CAF was
-  /// compiled using the default backend.
-  virtual multiplexer_backend* pimpl();
 
   const std::thread::id& thread_id() const {
     return tid_;

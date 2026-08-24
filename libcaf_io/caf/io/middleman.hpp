@@ -9,22 +9,18 @@
 #include "caf/io/network/multiplexer.hpp"
 
 #include "caf/actor_system.hpp"
-#include "caf/config_value.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/node_id.hpp"
-#include "caf/send.hpp"
 #include "caf/timespan.hpp"
 #include "caf/version.hpp"
 
 #include <chrono>
-#include <list>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <thread>
 #include <type_traits>
 #include <vector>
@@ -182,6 +178,9 @@ public:
   /// Used to initialize the backend during construction.
   using backend_factory = std::function<backend_pointer()>;
 
+  using backend_supervisor_ptr
+    = std::unique_ptr<network::multiplexer_supervisor>;
+
   void start() override;
 
   void stop() override;
@@ -326,7 +325,7 @@ private:
   actor_system& system_;
 
   /// Prevents backend from shutting down unless explicitly requested.
-  network::multiplexer::supervisor_ptr backend_supervisor_;
+  backend_supervisor_ptr backend_supervisor_;
 
   /// Runs the backend.
   std::thread thread_;

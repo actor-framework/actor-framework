@@ -525,8 +525,8 @@ void default_multiplexer::wr_dispatch_request(resumable* ptr) {
   }
 }
 
-multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
-  class impl : public multiplexer::supervisor {
+multiplexer_supervisor_ptr default_multiplexer::make_supervisor() {
+  class impl : public multiplexer_supervisor {
   public:
     explicit impl(default_multiplexer* thisptr) : this_(thisptr) {
       // nop
@@ -539,7 +539,7 @@ multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
   private:
     default_multiplexer* this_;
   };
-  return supervisor_ptr{new impl(this)};
+  return multiplexer_supervisor_ptr{new impl(this)};
 }
 
 void default_multiplexer::close_pipe() {

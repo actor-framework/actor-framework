@@ -166,7 +166,7 @@ public:
 
 private:
   network::default_multiplexer mpx_;
-  network::multiplexer::supervisor_ptr mpx_supervisor_;
+  network::multiplexer_supervisor_ptr mpx_supervisor_;
   actor broker_;
   std::thread thread_;
 };
