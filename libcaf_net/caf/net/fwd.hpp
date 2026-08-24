@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/net_export.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -104,6 +105,9 @@ using frame = caf::chunk;
 
 namespace caf::net::web_socket {
 
+class async_client_config;
+class async_client_factory;
+class async_client_factory_builder;
 class client;
 class frame;
 class framing;
@@ -112,8 +116,15 @@ class lower_layer;
 class server;
 class upper_layer;
 class with_t;
+class with_v2_t;
 
 enum class status : uint16_t;
+
+CAF_NET_EXPORT void intrusive_ptr_add_ref(const async_client_config*) noexcept;
+CAF_NET_EXPORT void intrusive_ptr_release(const async_client_config*) noexcept;
+
+using async_client_config_ptr = intrusive_ptr<async_client_config>;
+using const_async_client_config_ptr = intrusive_ptr<const async_client_config>;
 
 } // namespace caf::net::web_socket
 
@@ -142,6 +153,12 @@ class with_v2_t;
 
 enum class method : uint8_t;
 enum class status : uint16_t;
+
+CAF_NET_EXPORT void intrusive_ptr_add_ref(const async_client_config*) noexcept;
+CAF_NET_EXPORT void intrusive_ptr_release(const async_client_config*) noexcept;
+
+CAF_NET_EXPORT void intrusive_ptr_add_ref(const sync_client_config*) noexcept;
+CAF_NET_EXPORT void intrusive_ptr_release(const sync_client_config*) noexcept;
 
 using route_ptr = intrusive_ptr<route>;
 using async_client_config_ptr = intrusive_ptr<async_client_config>;

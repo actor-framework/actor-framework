@@ -38,16 +38,6 @@ public:
 
   async_client_factory() = default;
 
-  // Note: cannot be defaulted because `config_` is an incomplete type
-
-  async_client_factory(const async_client_factory&) noexcept;
-
-  async_client_factory(async_client_factory&&) noexcept;
-
-  async_client_factory& operator=(const async_client_factory&) noexcept;
-
-  async_client_factory& operator=(async_client_factory&&) noexcept;
-
   ~async_client_factory() noexcept;
 
   /// Sends an HTTP request without a payload.
@@ -120,7 +110,10 @@ public:
   }
 
 private:
-  explicit async_client_factory(const_async_client_config_ptr cfg) noexcept;
+  explicit async_client_factory(const_async_client_config_ptr cfg) noexcept
+    : config_(std::move(cfg)) {
+    // nop
+  }
 
   future_t request_impl(method method, byte_buffer payload) const;
 

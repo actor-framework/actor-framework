@@ -51,6 +51,14 @@ public:
   error err;
 };
 
+void intrusive_ptr_add_ref(const sync_client_config* ptr) noexcept {
+  ptr->ref();
+}
+
+void intrusive_ptr_release(const sync_client_config* ptr) noexcept {
+  ptr->deref();
+}
+
 namespace {
 
 std::string host_header_value(const uri& endpoint) {
@@ -346,35 +354,6 @@ void sync_client_factory_builder::do_add_header_field(std::string name,
 void sync_client_factory_builder::set_context_factory(
   unique_callback_ptr<expected<ssl::context>()> fn) {
   config_->context_factory = std::move(fn);
-}
-
-sync_client_factory::sync_client_factory(
-  const sync_client_factory& other) noexcept
-  : config_(other.config_) {
-  // nop
-}
-
-sync_client_factory::sync_client_factory(sync_client_factory&& other) noexcept
-  : config_(std::move(other.config_)) {
-  // nop
-}
-
-sync_client_factory&
-sync_client_factory::operator=(const sync_client_factory& other) noexcept {
-  config_ = other.config_;
-  return *this;
-}
-
-sync_client_factory&
-sync_client_factory::operator=(sync_client_factory&& other) noexcept {
-  config_ = std::move(other.config_);
-  return *this;
-}
-
-sync_client_factory::sync_client_factory(
-  const_sync_client_config_ptr cfg) noexcept
-  : config_(std::move(cfg)) {
-  // nop
 }
 
 sync_client_factory::~sync_client_factory() noexcept {

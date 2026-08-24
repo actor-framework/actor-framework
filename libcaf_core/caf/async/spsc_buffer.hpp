@@ -237,6 +237,11 @@ public:
     }
   }
 
+  bool canceled() const noexcept {
+    lock_type guard{mtx_};
+    return flags_.canceled;
+  }
+
   void set_consumer(consumer_ptr consumer) override {
     CAF_ASSERT(consumer != nullptr);
     lock_type guard{mtx_};
@@ -447,6 +452,11 @@ struct resource_ctrl : ref_counted {
     return res;
   }
 
+  bool canceled() const noexcept {
+    std::unique_lock guard{mtx};
+    return buf == nullptr || buf->canceled();
+  }
+
   mutable std::mutex mtx;
   buffer_ptr buf;
 };
@@ -644,8 +654,9 @@ public:
 
   /// Calls `try_open` and on success immediately calls `cancel` on the buffer.
   void cancel() {
-    if (auto buf = try_open())
+    if (auto buf = try_open()) {
       buf->cancel();
+    }
   }
 
   [[nodiscard]] bool valid() const noexcept {
@@ -922,6 +933,12 @@ public:
 
   [[nodiscard]] bool valid() const noexcept {
     return ctrl_ != nullptr;
+  }
+
+  /// Peeks into the resource without opening it and returns whether the
+  /// consumer has already canceled its resource.
+  bool canceled() const noexcept {
+    return ctrl_ == nullptr || ctrl_->canceled();
   }
 
   explicit operator bool() const noexcept {

@@ -161,12 +161,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   However, the observable result will always be the error `sec::disposed`. Any
   result that the background computation may produce after calling `dispose()`
   will be ignored (#2467).
-- The new `http::with_v2(...)` API is an iteration on the previous
-  `http::with(...)` design. It is easier to use and supports both synchronous
-  and asynchronous operation modes. In async mode, clients now return a single
-  `future` object instead of `expected<pair<future, disposable>>`. Further, it
-  does not block the current thread while establishing new connections. In
-  synchronous mode, the entire communication will run on the calling thread.
+- The new `with_v2(...)` API is an iteration on the previous `with(...)` design.
+  It is easier to use and supports both synchronous and asynchronous operation
+  modes. For example, asynchronous HTTP clients now return a single `future`
+  object instead of `expected<pair<future, disposable>>`. Further, starting
+  asynchronous connections with the new `with_v2` DSL no longer blocks the
+  current thread while establishing new connections. In synchronous
+  mode, the entire communication will run on the calling thread.
 
 ### Fixed
 

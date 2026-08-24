@@ -31,16 +31,6 @@ public:
 
   using result_t = expected<response>;
 
-  // Note: cannot be defaulted because `config_` is an incomplete type
-
-  sync_client_factory(const sync_client_factory&) noexcept;
-
-  sync_client_factory(sync_client_factory&&) noexcept;
-
-  sync_client_factory& operator=(const sync_client_factory&) noexcept;
-
-  sync_client_factory& operator=(sync_client_factory&&) noexcept;
-
   ~sync_client_factory() noexcept;
 
   [[nodiscard]] result_t request(method method) const {
@@ -103,7 +93,10 @@ public:
   }
 
 private:
-  explicit sync_client_factory(const_sync_client_config_ptr cfg) noexcept;
+  explicit sync_client_factory(const_sync_client_config_ptr cfg) noexcept
+    : config_(std::move(cfg)) {
+    // nop
+  }
 
   result_t request_impl(method method, byte_buffer payload) const;
 
