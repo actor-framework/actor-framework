@@ -185,13 +185,16 @@ The operators presented here are available on the template classes
 Buffer
 ++++++
 
-Emits items in buffers of configurable size. Each buffer is emitted as a
-copy-on-write vector (``caf::cow_vector``). The operator will emit "partial"
-buffers if the source observable completes before the buffer is full.
+Emits items in buffers of size ``count`` as copy-on-write vectors
+(``caf::cow_vector``), shipping a smaller "partial" buffer if the source
+completes early. An optional ``period`` argument also forces a buffer out
+after that much time passes, even if it is not yet full.
 
-The operator also takes an optional second argument that specifies the maximum
-time period between two items before the buffer is emitted regardless of its
-size.
+The operator pulls from the source only while the observer has demand and
+never emits a buffer the observer has not requested. If the source finishes
+while a partial buffer is still waiting on demand, ``on_complete``/``on_error``
+is held back until the observer requests again; disposing the subscription
+instead yields ``on_error`` with ``sec::disposed``.
 
 .. image:: op/buffer.svg
 
