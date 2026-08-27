@@ -56,6 +56,14 @@ void connect_job::resume(scheduler*, uint64_t) {
   if (auth.port == 0) {
     auth.port = use_ssl ? ssl.port : plain.port;
   }
+  if (auth.port == 0) {
+    fail(format_to_unexpected(sec::invalid_argument,
+                              "URI scheme {} has no default port: "
+                              "port is mandatory",
+                              endpoint.scheme())
+           .error());
+    return;
+  }
   std::optional<net::ssl::context> ctx;
   if (use_ssl) {
     auto make_ctx = [this] {
