@@ -652,8 +652,6 @@ public:
     clock_ = std::make_unique<deterministic_actor_clock>();
     scheduler_
       = std::make_unique<deterministic_scheduler>(private_data_->events);
-    // Note: not loading the daemons module here on purpose because it is not
-    //       supported in deterministic test mode.
     for (auto& mod : modules_)
       if (mod)
         mod->init(*cfg_);

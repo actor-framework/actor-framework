@@ -16,11 +16,11 @@ public:
     middleman,
     openssl_manager,
     network_manager,
-    daemons,
     extension1,
     extension2,
     extension3,
     extension4,
+    extension5,
     num_ids,
   };
 

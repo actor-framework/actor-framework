@@ -18,7 +18,6 @@
 #include "caf/detail/asynchronous_logger.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/critical.hpp"
-#include "caf/detail/daemons.hpp"
 #include "caf/detail/make_work_sharing.hpp"
 #include "caf/detail/match_wildcard_pattern.hpp"
 #include "caf/detail/meta_object.hpp"
@@ -334,8 +333,6 @@ public:
       auto mod_id = mod_ptr->id();
       modules_[mod_id].reset(mod_ptr);
     }
-    // Let there be daemons.
-    modules_[actor_system_module::daemons].reset(new detail::daemons(owner));
     // Make sure meta objects are loaded.
     auto gmos = detail::global_meta_objects();
     if (gmos.size() < detail::to_underlying(id_block::core_module::end)
@@ -984,16 +981,6 @@ void actor_system_access::node(node_id id) {
 
 detail::mailbox_factory* actor_system_access::mailbox_factory() {
   return impl()->mailbox_factory();
-}
-
-detail::daemons* actor_system_access::daemons() {
-  auto* ptr = impl()->modules()[actor_system_module::daemons].get();
-  if (ptr == nullptr) {
-    // The default actor system implementation does load the daemons module.
-    // However, the deterministic actor system for example does not load it.
-    detail::critical("daemons module is not available on this actor system");
-  }
-  return static_cast<detail::daemons*>(ptr);
 }
 
 void actor_system_access::message_rejected(abstract_actor* ptr) {
