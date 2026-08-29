@@ -15,6 +15,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/actor_system_access.hpp"
 #include "caf/fwd.hpp"
+#include "caf/internal/connect_job.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
@@ -29,32 +30,29 @@ using namespace std::literals;
 
 namespace caf::net::http {
 
-class async_client_config : public ref_counted {
+class async_client_config : public internal::async_client_config_base {
 public:
-  explicit async_client_config(actor_system& owner) : sys(&owner) {
-    // nop
-  }
+  using super = internal::async_client_config_base;
 
-  actor_system* sys;
+  using super::super;
+
+  std::pair<scheme_and_port, scheme_and_port> schemes() const override {
+    return {{"http", defaults::net::http_default_port},
+            {"https", defaults::net::https_default_port}};
+  }
 
   caf::unordered_flat_map<std::string, std::string> fields;
 
-  uri endpoint;
-
   size_t max_response_size = defaults::net::http_max_response_size;
-
-  size_t max_retry_count = 0;
-
-  timespan retry_delay = timespan{1'000'000};
-
-  timespan connection_timeout = infinite;
-
-  unique_callback_ptr<expected<ssl::context>()> context_factory;
-
-  std::unique_ptr<detail::connector> connector;
-
-  error err;
 };
+
+void intrusive_ptr_add_ref(const async_client_config* ptr) noexcept {
+  ptr->ref();
+}
+
+void intrusive_ptr_release(const async_client_config* ptr) noexcept {
+  ptr->deref();
+}
 
 namespace {
 
@@ -103,125 +101,37 @@ void start_request(const_async_client_config_ptr config, http::method method,
   }
 }
 
-class request_starter : public resumable {
+class request_starter : public internal::connect_job {
 public:
   request_starter(const_async_client_config_ptr config, http::method method,
                   byte_buffer payload, caf::async::promise<response> promise)
-    : config_(std::move(config)),
+    : internal::connect_job(config),
+      config_(std::move(config)),
       method_(method),
       payload_(std::move(payload)),
       result_(std::move(promise)) {
     // nop
   }
 
-  void ref() const noexcept override {
-    ref_count_.inc();
+protected:
+  bool canceled() const noexcept override {
+    return result_.disposed();
   }
 
-  void deref() const noexcept override {
-    ref_count_.dec(this);
-  }
-
-  void resume(scheduler*, uint64_t) override {
-    if (result_.disposed()) {
-      return;
-    }
-    const auto& endpoint = config_->endpoint;
-    if (!endpoint.valid() || endpoint.scheme().empty()) {
-      result_.set_error(make_error(
-        sec::invalid_argument, "HTTP client requires a valid URI endpoint"));
-      return;
-    }
-    // Get host and port for the TCP connection.
-    auto auth = endpoint.authority();
-    if (auth.host_str().empty()) {
-      result_.set_error(
-        make_error(sec::invalid_argument, "URI must provide a valid hostname"));
-      return;
-    }
-    if (auth.port == 0) {
-      if (endpoint.scheme() == "http")
-        auth.port = defaults::net::http_default_port;
-      else if (endpoint.scheme() == "https")
-        auth.port = defaults::net::https_default_port;
-      else {
-        result_.set_error(
-          make_error(sec::invalid_argument,
-                     "unsupported URI scheme: expected http or https"));
-        return;
-      }
-    }
-    // Create SSL context if needed.
-    std::optional<ssl::context> ctx;
-    if (endpoint.scheme() == "https") {
-      auto make_ctx = [this] {
-        if (config_->context_factory) {
-          return (*config_->context_factory)();
-        }
-        return net::ssl::context::make_client(net::ssl::tls::v1_2);
-      };
-      if (auto maybe_ctx = make_ctx()) {
-        ctx.emplace(std::move(*maybe_ctx));
-      } else {
-        result_.set_error(std::move(maybe_ctx.error()));
-        return;
-      }
-    }
-    // Connect to the server.
-    auto try_connect = [this, &auth]() -> expected<stream_socket> {
-      if (config_->connector) {
-        return config_->connector->connect(auth.host_str(), auth.port,
-                                           config_->connection_timeout,
-                                           config_->max_retry_count,
-                                           config_->retry_delay);
-      }
-      auto fd = net::make_connected_tcp_stream_socket(
-        auth, config_->connection_timeout);
-      if (!fd) {
-        return caf::unexpected{std::move(fd.error())};
-      }
-      return stream_socket{*fd};
-    };
-    auto maybe_fd = try_connect();
-    // Connection attempts may take a while: check one more time if the
-    // connection is still needed before sending the HTTP request.
-    if (result_.disposed()) {
-      if (maybe_fd) {
-        net::close(*maybe_fd);
-      }
-      return;
-    }
-    // Try again later if the connection attempt failed.
-    if (!maybe_fd) {
-      if (++attempts_ <= config_->max_retry_count) {
-        auto self = resumable_ptr{this, add_ref};
-        auto when = config_->sys->clock().now() + config_->retry_delay;
-        config_->sys->clock().schedule(
-          when, make_single_shot_action([self, sys = config_->sys]() mutable {
-            auto* impl = detail::actor_system_access{*sys}.impl();
-            impl->async_workers().schedule(std::move(self), 0);
-          }));
-        return;
-      }
-      result_.set_error(std::move(maybe_fd.error()));
-      return;
-    }
-    // Launch the actual HTTP request; move work to the caf.net multiplexer.
-    if (ctx) {
-      auto conn = ctx->new_connection(*maybe_fd);
-      if (!conn) {
-        result_.set_error(std::move(conn.error()));
-        return;
-      }
-      start_request(config_, method_, std::move(payload_), result_,
-                    std::move(*conn));
-    } else {
-      start_request(config_, method_, std::move(payload_), result_, *maybe_fd);
-    }
+  void fail(error reason) override {
+    result_.set_error(std::move(reason));
   }
 
 private:
-  mutable detail::atomic_ref_count ref_count_;
+  void handover(net::stream_socket fd) override {
+    start_request(config_, method_, std::move(payload_), result_,
+                  std::move(fd));
+  }
+
+  void handover(net::ssl::connection conn) override {
+    start_request(config_, method_, std::move(payload_), result_,
+                  std::move(conn));
+  }
 
   const_async_client_config_ptr config_;
 
@@ -230,8 +140,6 @@ private:
   byte_buffer payload_;
 
   caf::async::promise<response> result_;
-
-  size_t attempts_ = 0;
 };
 
 async_client_factory::future_t
@@ -329,36 +237,6 @@ void async_client_factory_builder::do_add_header_field(std::string name,
 void async_client_factory_builder::set_context_factory(
   unique_callback_ptr<expected<ssl::context>()> fn) {
   config_->context_factory = std::move(fn);
-}
-
-async_client_factory::async_client_factory(
-  const async_client_factory& other) noexcept
-  : config_(other.config_) {
-  // nop
-}
-
-async_client_factory::async_client_factory(
-  async_client_factory&& other) noexcept
-  : config_(std::move(other.config_)) {
-  // nop
-}
-
-async_client_factory&
-async_client_factory::operator=(const async_client_factory& other) noexcept {
-  config_ = other.config_;
-  return *this;
-}
-
-async_client_factory&
-async_client_factory::operator=(async_client_factory&& other) noexcept {
-  config_ = std::move(other.config_);
-  return *this;
-}
-
-async_client_factory::async_client_factory(
-  const_async_client_config_ptr cfg) noexcept
-  : config_(std::move(cfg)) {
-  // nop
 }
 
 async_client_factory::~async_client_factory() noexcept {
