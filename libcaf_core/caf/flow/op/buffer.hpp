@@ -47,7 +47,10 @@ struct buffer_interval_trait {
   }
 };
 
-///
+/// The subscription for the `buffer` operator. Requests items only while the
+/// observer has demand and buffers at most one batch. Whenever a terminal
+/// event arrives while a partial batch is buffered and the observer has no
+/// demand, the event is deferred until the observer requests again.
 template <class Trait>
 class buffer_sub : public subscription::impl_base {
 public:
@@ -92,7 +95,8 @@ public:
   }
 
   bool can_emit() const noexcept {
-    return buf_.size() == max_buf_size_ || has_shut_down(state_);
+    return buf_.size() == max_buf_size_ || has_shut_down(state_)
+           || pending_flush_;
   }
 
   // -- callbacks for the parent -----------------------------------------------
@@ -120,7 +124,7 @@ public:
       return;
     }
     value_sub_ = std::move(sub);
-    value_sub_.request(max_buf_size_);
+    pull();
   }
 
   void fwd_on_complete(buffer_input_t) {
@@ -135,6 +139,8 @@ public:
   }
 
   void fwd_on_next(buffer_input_t, const input_type& item) {
+    if (in_flight_ > 0)
+      --in_flight_;
     if (running()) {
       buf_.push_back(item);
       if (buf_.size() == max_buf_size_)
@@ -168,9 +174,9 @@ public:
   void fwd_on_next(buffer_emit_t, select_token_type) {
     if constexpr (Trait::skip_empty) {
       if (!buf_.empty())
-        do_emit();
+        force_emit();
     } else {
-      do_emit();
+      force_emit();
     }
     control_sub_.request(1);
   }
@@ -189,6 +195,7 @@ public:
       parent_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{
                            this, add_ref}] { strong_this->on_request(); });
     }
+    pull();
   }
 
   // -- reference counting -----------------------------------------------------
@@ -244,7 +251,7 @@ private:
     if (demand_ == 0 || !can_emit())
       return;
     if (running()) {
-      CAF_ASSERT(buf_.size() == max_buf_size_);
+      CAF_ASSERT(buf_.size() == max_buf_size_ || pending_flush_);
       do_emit();
       return;
     }
@@ -254,6 +261,15 @@ private:
       out_.on_complete();
     else
       out_.on_error(err_);
+    state_ = state::disposed;
+  }
+
+  void force_emit() {
+    if (demand_ == 0) {
+      pending_flush_ = true;
+      return;
+    }
+    do_emit();
   }
 
   void do_emit() {
@@ -261,11 +277,21 @@ private:
       return;
     Trait f;
     --demand_;
-    auto buffered = buf_.size();
     out_.on_next(f(buf_));
     buf_.clear();
-    if (value_sub_ && buffered > 0)
-      value_sub_.request(buffered);
+    pending_flush_ = false;
+    pull();
+  }
+
+  void pull() {
+    if (!running() || demand_ == 0 || !value_sub_ || pending_flush_)
+      return;
+    auto reserved = buf_.size() + in_flight_;
+    if (reserved >= max_buf_size_)
+      return;
+    auto n = max_buf_size_ - reserved;
+    in_flight_ += n;
+    value_sub_.request(n);
   }
 
   mutable detail::atomic_ref_count ref_count_;
@@ -282,9 +308,8 @@ private:
   /// Stores a handle to the subscribed observer.
   observer<output_type> out_;
 
-  /// Our subscription for the values. We request `max_buf_size_` items and
-  /// whenever we emit a batch, we request whatever amount we have shipped. That
-  /// way, we should always have enough demand at the source to fill up a batch.
+  /// Our subscription for the values. We only request items while the observer
+  /// has demand and we never have more than one batch requested or buffered.
   subscription value_sub_;
 
   /// Our subscription for the control tokens. We always request 1 item.
@@ -292,6 +317,13 @@ private:
 
   /// Demand signaled by the observer.
   size_t demand_ = 0;
+
+  /// Items requested from the value source that have not arrived yet.
+  size_t in_flight_ = 0;
+
+  /// Set when a forced flush finds no demand; the next `request` emits it
+  /// before pulling more.
+  bool pending_flush_ = false;
 
   /// Our current state.
   /// - running: alive and ready to emit batches.
@@ -343,6 +375,7 @@ public:
       }
       return super::fail_subscription(out, err);
     }
+    super::parent_->watch(ptr->as_disposable());
     out.on_subscribe(subscription{ptr});
     return ptr->as_disposable();
   }
