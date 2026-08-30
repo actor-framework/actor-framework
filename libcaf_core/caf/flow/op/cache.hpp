@@ -45,6 +45,8 @@ public:
   }
 
   void request(size_t n) override {
+    if (n == 0)
+      return;
     if (demand_ > 0) {
       demand_ += n;
       return;

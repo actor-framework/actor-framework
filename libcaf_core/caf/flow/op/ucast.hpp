@@ -125,6 +125,8 @@ public:
   }
 
   void request(size_t n) {
+    if (n == 0)
+      return;
     // If we have data buffered, we need to schedule a call to do_run in order
     // to have a safe context for calling on_next. Otherwise, we can simply
     // increment our demand counter. We can also increment the demand counter if

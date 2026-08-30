@@ -189,7 +189,7 @@ public:
   }
 
   void request(size_t n) override {
-    if (!out_)
+    if (n == 0 || !out_)
       return;
     if (buffered_ == 0)
       demand_ += n;

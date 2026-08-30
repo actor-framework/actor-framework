@@ -40,6 +40,8 @@ public:
   }
 
   void request(size_t n) override {
+    if (n == 0)
+      return;
     demand_ += n;
     if (!pending_) {
       if (val_ == 0)
@@ -63,6 +65,7 @@ public:
 
   void fire() {
     if (out_) {
+      CAF_ASSERT(demand_ > 0);
       --demand_;
       out_.on_next(val_);
       if (++val_ == max_) {
