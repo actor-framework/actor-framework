@@ -40,6 +40,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   coordinator* parent() const noexcept override {
     return parent_;
   }
@@ -203,6 +207,10 @@ public:
 
   void deref() const noexcept final {
     ref_count_.dec(this);
+  }
+
+  void delete_this() const noexcept final {
+    delete this;
   }
 
 private:

@@ -120,7 +120,7 @@ bool matches(const attachable_predicate::monitored_by_state& pred,
 
 bool matches(const attachable_predicate::monitored_with_callback_state& pred,
              const monitor_action_attachable& what) {
-  return pred.impl == what.impl;
+  return pred.impl == what.impl.get();
 }
 
 bool matches(const attachable_predicate::linked_to_state& pred,

@@ -130,6 +130,10 @@ public:
       ref_count_.dec(this);
     }
 
+    void delete_this() const noexcept {
+      delete this;
+    }
+
     size_t strong_reference_count() const noexcept {
       return ref_count_.value();
     }

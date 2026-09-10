@@ -292,6 +292,10 @@ public:
       void deref() const noexcept final {
         ref_count_.dec(this);
       }
+
+      void delete_this() const noexcept final {
+        delete this;
+      }
       shutdown_helper() : last_worker(nullptr) {
         // nop
       }
@@ -495,6 +499,10 @@ public:
       }
       void deref() const noexcept final {
         ref_count_.dec(this);
+      }
+
+      void delete_this() const noexcept final {
+        delete this;
       }
       shutdown_helper() : last_worker(nullptr) {
         // nop

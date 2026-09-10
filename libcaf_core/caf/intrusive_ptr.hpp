@@ -163,6 +163,16 @@ public:
     reset(new T(std::forward<Ts>(xs)...), adopt_ref);
   }
 
+  ptrdiff_t compare(const intrusive_ptr& other) const noexcept {
+    if (ptr_ < other.ptr_) {
+      return -1;
+    }
+    if (ptr_ > other.ptr_) {
+      return 1;
+    }
+    return 0;
+  }
+
   intrusive_ptr& operator=(std::nullptr_t) noexcept {
     reset();
     return *this;
@@ -202,18 +212,6 @@ public:
 
   explicit operator bool() const noexcept {
     return ptr_ != nullptr;
-  }
-
-  ptrdiff_t compare(const_pointer ptr) const noexcept {
-    return static_cast<ptrdiff_t>(ptr_ - ptr);
-  }
-
-  ptrdiff_t compare(const intrusive_ptr& other) const noexcept {
-    return compare(other.ptr_);
-  }
-
-  ptrdiff_t compare(std::nullptr_t) const noexcept {
-    return reinterpret_cast<ptrdiff_t>(ptr_);
   }
 
   size_t hash() const noexcept {
@@ -274,91 +272,97 @@ private:
 
 /// @relates intrusive_ptr
 template <class T>
-bool operator==(const intrusive_ptr<T>& x, std::nullptr_t) {
-  return !x;
+constexpr bool
+operator==(const intrusive_ptr<T>& lhs, std::nullptr_t) noexcept {
+  return !lhs;
 }
 
 /// @relates intrusive_ptr
 template <class T>
-bool operator==(std::nullptr_t, const intrusive_ptr<T>& x) {
-  return !x;
+constexpr bool
+operator==(std::nullptr_t, const intrusive_ptr<T>& rhs) noexcept {
+  return !rhs;
 }
 
 /// @relates intrusive_ptr
 template <class T>
-bool operator!=(const intrusive_ptr<T>& x, std::nullptr_t) {
-  return static_cast<bool>(x);
+constexpr bool
+operator!=(const intrusive_ptr<T>& lhs, std::nullptr_t) noexcept {
+  return static_cast<bool>(lhs);
 }
 
 /// @relates intrusive_ptr
 template <class T>
-bool operator!=(std::nullptr_t, const intrusive_ptr<T>& x) {
-  return static_cast<bool>(x);
+constexpr bool
+operator!=(std::nullptr_t, const intrusive_ptr<T>& rhs) noexcept {
+  return static_cast<bool>(rhs);
 }
 
 // -- comparison to raw pointer ------------------------------------------------
 
 /// @relates intrusive_ptr
-template <class T, class U>
-  requires detail::is_comparable<T*, U*>
-bool operator==(const intrusive_ptr<T>& lhs, const U* rhs) {
+template <class T>
+constexpr bool operator==(const intrusive_ptr<T>& lhs, const T* rhs) noexcept {
   return lhs.get() == rhs;
 }
 
 /// @relates intrusive_ptr
-template <class T, class U>
-  requires detail::is_comparable<T*, U*>
-bool operator==(const T* lhs, const intrusive_ptr<U>& rhs) {
+template <class T>
+constexpr bool operator==(const T* lhs, const intrusive_ptr<T>& rhs) noexcept {
   return lhs == rhs.get();
 }
 
 /// @relates intrusive_ptr
-template <class T, class U>
-  requires detail::is_comparable<T*, U*>
-bool operator!=(const intrusive_ptr<T>& lhs, const U* rhs) {
+template <class T>
+constexpr bool operator!=(const intrusive_ptr<T>& lhs, const T* rhs) noexcept {
   return lhs.get() != rhs;
 }
 
 /// @relates intrusive_ptr
-template <class T, class U>
-  requires detail::is_comparable<T*, U*>
-bool operator!=(const T* lhs, const intrusive_ptr<U>& rhs) {
+template <class T>
+constexpr bool operator!=(const T* lhs, const intrusive_ptr<T>& rhs) noexcept {
   return lhs != rhs.get();
+}
+
+/// @relates intrusive_ptr
+template <class T>
+constexpr bool operator<(const intrusive_ptr<T>& lhs, const T* rhs) noexcept {
+  return lhs.get() < rhs;
+}
+
+/// @relates intrusive_ptr
+template <class T>
+constexpr bool operator<(const T* lhs, const intrusive_ptr<T>& rhs) noexcept {
+  return lhs < rhs.get();
 }
 
 // -- comparison to intrusive_pointer ------------------------------------------
 
 /// @relates intrusive_ptr
-template <class T, class U>
-  requires detail::is_comparable<T*, U*>
-bool operator==(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
-  return x.get() == y.get();
+template <class Left, class Right>
+constexpr auto operator==(const intrusive_ptr<Left>& lhs,
+                          const intrusive_ptr<Right>& rhs) noexcept
+  -> decltype(lhs.get() == rhs.get()) {
+  return lhs.get() == rhs.get();
 }
 
 /// @relates intrusive_ptr
-template <class T, class U>
-  requires detail::is_comparable<T*, U*>
-bool operator!=(const intrusive_ptr<T>& x, const intrusive_ptr<U>& y) {
-  return x.get() != y.get();
+template <class Left, class Right>
+constexpr auto operator!=(const intrusive_ptr<Left>& lhs,
+                          const intrusive_ptr<Right>& rhs) noexcept
+  -> decltype(lhs.get() != rhs.get()) {
+  return lhs.get() != rhs.get();
 }
 
 /// @relates intrusive_ptr
-template <class T>
-bool operator<(const intrusive_ptr<T>& x, const intrusive_ptr<T>& y) {
-  return x.get() < y.get();
+template <class Left, class Right>
+constexpr auto operator<(const intrusive_ptr<Left>& lhs,
+                         const intrusive_ptr<Right>& rhs) noexcept
+  -> decltype(lhs.get() < rhs.get()) {
+  return lhs.get() < rhs.get();
 }
 
 /// @relates intrusive_ptr
-template <class T>
-bool operator<(const intrusive_ptr<T>& x, const T* y) {
-  return x.get() < y;
-}
-/// @relates intrusive_ptr
-template <class T>
-bool operator<(const T* x, const intrusive_ptr<T>& y) {
-  return x < y.get();
-}
-
 template <class T>
 std::string to_string(const intrusive_ptr<T>& x) {
   std::string result;

@@ -4,16 +4,11 @@
 
 #pragma once
 
-#include "caf/detail/aligned_alloc.hpp"
-#include "caf/detail/control_block_traits.hpp"
 #include "caf/detail/critical.hpp"
-#include "caf/detail/memory_interface.hpp"
 
 #include <atomic>
 #include <cstddef>
 #include <cstdlib>
-#include <memory>
-#include <type_traits>
 
 namespace caf::detail {
 
@@ -84,8 +79,7 @@ public:
   template <class ControlBlock>
   void dec_strong(ControlBlock* control_block) noexcept {
     if (strong_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      using traits = control_block_traits<ControlBlock>;
-      std::destroy_at(traits::managed_ptr(control_block));
+      control_block->destroy_managed();
       dec_weak(control_block);
     }
   }
@@ -128,21 +122,7 @@ public:
   template <class ControlBlock>
   void dec_weak(ControlBlock* control_block) noexcept {
     if (weak_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      using control_block_type = std::remove_const_t<ControlBlock>;
-      if constexpr (uses_new_and_delete<control_block_type>) {
-        delete control_block;
-      } else if constexpr (uses_malloc_and_free<control_block_type>) {
-        static_assert(!std::is_const_v<ControlBlock>,
-                      "free() does not accept const pointers");
-        control_block->~control_block_type();
-        free(control_block);
-      } else {
-        static_assert(uses_aligned_alloc_and_free<control_block_type>);
-        static_assert(!std::is_const_v<ControlBlock>,
-                      "aligned_free() does not accept const pointers");
-        control_block->~control_block_type();
-        aligned_free(control_block);
-      }
+      control_block->delete_this();
     }
   }
 

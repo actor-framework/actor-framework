@@ -29,6 +29,8 @@ public:
 
   void deref() const noexcept final;
 
+  void delete_this() const noexcept final;
+
 private:
   // -- member variables -------------------------------------------------------
 

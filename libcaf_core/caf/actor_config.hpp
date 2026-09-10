@@ -27,6 +27,7 @@ public:
 
   // -- member variables -------------------------------------------------------
 
+  actor_control_block* ctrl = nullptr;
   scheduler* sched;
   local_actor* parent;
   int flags = 0;

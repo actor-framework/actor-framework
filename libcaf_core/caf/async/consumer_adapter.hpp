@@ -114,6 +114,10 @@ public:
       ref_count_.dec(this);
     }
 
+    void delete_this() const noexcept final {
+      delete this;
+    }
+
   private:
     mutable detail::atomic_ref_count ref_count_;
     spsc_buffer_ptr<T> buf_;

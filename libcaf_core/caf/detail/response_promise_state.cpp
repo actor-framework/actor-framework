@@ -35,7 +35,7 @@ void response_promise_state::deliver_impl(message msg) {
   // Even though we are holding a weak pointer, we can access the pointer
   // without any additional check here because only the actor itself is allowed
   // to call this function.
-  auto selfptr = static_cast<local_actor*>(self->get());
+  auto selfptr = static_cast<local_actor*>(self->managed());
   if (msg.empty() && id.is_async()) {
     log::core::debug("drop response: empty response to asynchronous input");
   } else if (source != nullptr) {
@@ -52,7 +52,7 @@ void response_promise_state::delegate_impl(abstract_actor* receiver,
                                            message msg) {
   auto lg = log::core::trace("msg = {}", msg);
   if (receiver != nullptr) {
-    auto selfptr = static_cast<local_actor*>(self->get());
+    auto selfptr = static_cast<local_actor*>(self->managed());
     auto element = make_mailbox_element(source, id, std::move(msg));
     receiver->enqueue(std::move(element), selfptr->context());
   } else {

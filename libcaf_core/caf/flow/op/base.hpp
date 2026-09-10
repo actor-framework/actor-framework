@@ -30,6 +30,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept override {
+    delete this;
+  }
+
   /// The type of observed values.
   using output_type = T;
 

@@ -108,6 +108,10 @@ public:
 
   class2& operator=(const class2&) = delete;
 
+  void delete_this() const noexcept {
+    delete this;
+  }
+
   std::string value;
 
 private:

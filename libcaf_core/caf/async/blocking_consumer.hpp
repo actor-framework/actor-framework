@@ -101,6 +101,10 @@ public:
       ref_count_.dec(this);
     }
 
+    void delete_this() const noexcept final {
+      delete this;
+    }
+
     const error& abort_reason() const {
       return abort_reason_;
     }

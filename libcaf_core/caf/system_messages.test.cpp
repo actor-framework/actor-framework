@@ -160,8 +160,7 @@ TEST("stream_open_msg is serializable") {
     auto dummy = sys.spawn([] { return behavior{[](int) {}}; });
     auto dummy_guard = make_actor_scope_guard(dummy);
     auto dummy_abstract_ptr = actor_cast<abstract_actor*>(dummy);
-    auto msg1
-      = stream_open_msg{42, actor_control_block::from(dummy_abstract_ptr), 43};
+    auto msg1 = stream_open_msg{42, dummy_abstract_ptr->ctrl(), 43};
     auto msg2 = serialization_roundtrip(msg1);
     if (check(msg2.has_value())) {
       check_eq(msg1.id, msg2->id);
@@ -202,8 +201,7 @@ TEST("stream_ack_msg is serializable") {
     auto dummy = sys.spawn([] { return behavior{[](int) {}}; });
     auto dummy_guard = make_actor_scope_guard(dummy);
     auto dummy_abstract_ptr = actor_cast<abstract_actor*>(dummy);
-    auto msg1 = stream_ack_msg{actor_control_block::from(dummy_abstract_ptr),
-                               42, 43, 44};
+    auto msg1 = stream_ack_msg{dummy_abstract_ptr->ctrl(), 42, 43, 44};
     auto msg2 = serialization_roundtrip(msg1);
     if (check(msg2.has_value())) {
       check_eq(msg1.source, msg2->source);

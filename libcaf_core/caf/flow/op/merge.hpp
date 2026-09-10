@@ -127,6 +127,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   // -- callbacks for the forwarders -------------------------------------------
 
   void fwd_on_subscribe(input_key key, subscription sub) {

@@ -493,6 +493,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   bool open_file() {
     if (file_verbosity() == log::level::quiet || file_name_.empty())
       return false;

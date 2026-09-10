@@ -4,12 +4,8 @@
 
 #pragma once
 
-#include "caf/detail/concepts.hpp"
-#include "caf/detail/core_export.hpp"
-
 #include <cstddef>
-#include <string>
-#include <type_traits>
+#include <cstdint>
 
 namespace caf::detail {
 
@@ -23,7 +19,7 @@ void append_hex(Buf& result, const void* vptr, size_t n) {
   using value_type = typename Buf::value_type;
   if (n == 0)
     return;
-  auto xs = reinterpret_cast<const uint8_t*>(vptr);
+  const auto* xs = static_cast<const uint8_t*>(vptr);
   const char* tbl;
   if constexpr (format == hex_format::uppercase)
     tbl = "0123456789ABCDEF";
@@ -36,8 +32,8 @@ void append_hex(Buf& result, const void* vptr, size_t n) {
   }
 }
 
-template <hex_format format = hex_format::uppercase, class T>
-void append_hex(std::string& result, const T& x) {
+template <hex_format format = hex_format::uppercase, class Buf, class T>
+void append_hex(Buf& result, const T& x) {
   append_hex<format>(result, &x, sizeof(T));
 }
 

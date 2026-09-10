@@ -21,6 +21,8 @@ public:
 
   void deref() const noexcept final;
 
+  void delete_this() const noexcept final;
+
   /// Incremented whenever `on_producer_wakeup` is called.
   std::atomic<size_t> wakeups = 0;
 

@@ -26,7 +26,7 @@ void manager::set_parent(abstract_broker* ptr) {
 }
 
 abstract_broker* manager::parent() {
-  return parent_ ? static_cast<abstract_broker*>(parent_->get()) : nullptr;
+  return parent_ ? static_cast<abstract_broker*>(parent_->managed()) : nullptr;
 }
 
 void manager::detach(scheduler* ctx, bool invoke_disconnect_message) {

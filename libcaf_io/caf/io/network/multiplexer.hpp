@@ -117,6 +117,9 @@ public:
       void deref() const noexcept final {
         ref_count.dec(this);
       }
+      void delete_this() const noexcept final {
+        delete this;
+      }
     };
     delay(resumable_ptr{new impl(std::move(fun)), adopt_ref},
           resumable::default_event_id);

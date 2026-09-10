@@ -7,14 +7,13 @@
 #include "caf/test/test.hpp"
 
 #include "caf/adopt_ref.hpp"
-#include "caf/config.hpp"
-#include "caf/defaults.hpp"
+#include "caf/detail/concepts.hpp"
 #include "caf/detail/control_block_ref_count.hpp"
-#include "caf/detail/control_block_traits.hpp"
-#include "caf/detail/memory_interface.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include <cstddef>
+#include <memory_resource>
+#include <new>
 #include <string>
 
 using namespace std::literals;
@@ -23,18 +22,18 @@ using namespace caf;
 
 namespace {
 
-template <class T>
+class class0;
+
+class class1;
+
+class class2;
+
+template <class Managed>
 class custom_control_block {
 public:
-  /// Specifies the memory interface used to allocate the actor control block.
-  static constexpr auto memory_interface
-    = detail::memory_interface::aligned_alloc_and_free;
-
-  static constexpr size_t allocation_size = CAF_CACHE_LINE_SIZE;
-
-  static constexpr size_t alignment = CAF_CACHE_LINE_SIZE;
-
-  using managed_type = T;
+  virtual ~custom_control_block() noexcept {
+    // nop
+  }
 
   void ref() noexcept {
     ref_count_.inc_strong();
@@ -64,87 +63,112 @@ public:
     return ref_count_.weak_reference_count();
   }
 
-private:
+  virtual void destroy_managed() noexcept = 0;
+
+  virtual void delete_this() noexcept = 0;
+
+  virtual Managed* managed() noexcept = 0;
+
+protected:
   detail::control_block_ref_count ref_count_;
 };
 
-template <class T, class... Args>
-intrusive_ptr<T> make_custom(Args&&... args) {
-  using managed_type = typename T::managed_type;
-  using control_block_type = custom_control_block<managed_type>;
-  using traits = detail::control_block_traits<control_block_type>;
-  auto* mem = traits::template allocate<T>();
-  traits::construct_ctrl(mem);
-  auto* ptr
-    = traits::template construct_managed<T>(mem, std::forward<Args>(args)...);
-  return intrusive_ptr<T>(ptr, adopt_ref);
-}
+template <class T, class Base = T>
+class custom_control_block_impl final : public custom_control_block<Base> {
+public:
+  using super = custom_control_block<Base>;
+
+  template <class... Args>
+  custom_control_block_impl(std::pmr::memory_resource* res, Args&&... args)
+    : resource_(res) {
+    new (&storage_.managed) T(this, std::forward<Args>(args)...);
+  }
+
+  ~custom_control_block_impl() noexcept override {
+    // nop; managed object destroyed in destroy_managed()
+  }
+
+  void destroy_managed() noexcept override {
+    storage_.managed.~T();
+  }
+
+  void delete_this() noexcept override {
+    auto* res = resource_;
+    this->~custom_control_block_impl();
+    res->deallocate(this, sizeof(custom_control_block_impl),
+                    alignof(custom_control_block_impl));
+  }
+
+  T* managed() noexcept override {
+    return &storage_.managed;
+  }
+
+private:
+  struct storage {
+    union {
+      T managed;
+    };
+
+    storage() noexcept {
+      // nop
+    }
+
+    ~storage() noexcept {
+      // nop
+    }
+  };
+
+  storage storage_;
+  std::pmr::memory_resource* resource_;
+};
+
+using class0_ctrl = custom_control_block<class0>;
+
+using class2_ctrl = custom_control_block<class2>;
 
 size_t class0_instances = 0;
 
 size_t class1_instances = 0;
-
-class class0;
-
-class class1;
-
-class class2;
 
 } // namespace
 
 namespace caf {
 
 template <>
-struct weak_intrusive_ptr_traits<custom_control_block<class0>> {
+struct weak_intrusive_ptr_traits<class0_ctrl> {
   using managed_type = class0;
-  using control_block_type = custom_control_block<class0>;
+  using control_block_type = class0_ctrl;
 };
 
 template <>
-struct weak_intrusive_ptr_traits<class0> {
-  using managed_type = class0;
-  using control_block_type = custom_control_block<class0>;
-};
-
-template <>
-struct weak_intrusive_ptr_traits<class1> {
-  using managed_type = class0;
-  using control_block_type = custom_control_block<class0>;
-};
-
-template <>
-struct weak_intrusive_ptr_traits<class2> {
+struct weak_intrusive_ptr_traits<class2_ctrl> {
   using managed_type = class2;
-  using control_block_type = custom_control_block<class2>;
+  using control_block_type = class2_ctrl;
 };
 
 } // namespace caf
 
 namespace {
 
-using class0_ptr = intrusive_ptr<class0>;
+using class0_ptr = intrusive_ptr<class0_ctrl>;
 
-using class1_ptr = intrusive_ptr<class1>;
+using class2_ptr = intrusive_ptr<class2_ctrl>;
 
-using class2_ptr = intrusive_ptr<class2>;
+using class0_weak_ptr = weak_intrusive_ptr<class0_ctrl>;
 
-using class0_weak_ptr = weak_intrusive_ptr<class0>;
-
-using class1_weak_ptr = weak_intrusive_ptr<class1>;
-
-using class2_weak_ptr = weak_intrusive_ptr<class2>;
+using class2_weak_ptr = weak_intrusive_ptr<class2_ctrl>;
 
 class class0 {
 public:
-  using managed_type = class0;
-
   using control_block_type = custom_control_block<class0>;
 
-  explicit class0(std::string val) : value(std::move(val)), subtype_(false) {
+  explicit class0(control_block_type* ctrl, std::string val)
+    : value(std::move(val)), ctrl_(ctrl), subtype_(false) {
     ++class0_instances;
   }
 
-  explicit class0(bool subtype = false) : subtype_(subtype) {
+  explicit class0(control_block_type* ctrl, bool subtype = false)
+    : ctrl_(ctrl), subtype_(subtype) {
     if (!subtype) {
       ++class0_instances;
     }
@@ -160,85 +184,64 @@ public:
     return subtype_;
   }
 
+  control_block_type* ctrl() const noexcept {
+    return ctrl_;
+  }
+
   void ref() const noexcept {
-    ctrl()->ref();
+    ctrl_->ref();
   }
 
-  /// Decrements the strong reference count of this actor.
   void deref() const noexcept {
-    ctrl()->deref();
-  }
-
-  size_t strong_reference_count() const noexcept {
-    return ctrl()->strong_reference_count();
-  }
-
-  size_t weak_reference_count() const noexcept {
-    return ctrl()->weak_reference_count();
-  }
-
-  custom_control_block<class0>* ctrl() const noexcept {
-    using traits = detail::control_block_traits<custom_control_block<class0>>;
-    return traits::ctrl_ptr(this);
-  }
-
-  virtual class0_ptr create() const {
-    return make_custom<class0>();
+    ctrl_->deref();
   }
 
   std::string value;
 
 private:
+  control_block_type* ctrl_;
   bool subtype_;
 };
 
 class class1 : public class0 {
 public:
-  class1() : class0(true) {
+  explicit class1(control_block_type* ctrl) : class0(ctrl, true) {
     ++class1_instances;
   }
 
   ~class1() override {
     --class1_instances;
   }
-
-  class0_ptr create() const override {
-    return make_custom<class1>();
-  }
 };
 
-class class2 {};
+template <class T, class... Args>
+auto make_custom(Args&&... args) {
+  static_assert(std::is_same_v<T, class0> || std::is_same_v<T, class1>);
+  using block = custom_control_block_impl<T, class0>;
+  auto* res = std::pmr::get_default_resource();
+  auto* mem = res->allocate(sizeof(block), alignof(block));
+  auto* ctrl = new (mem) block(res, std::forward<Args>(args)...);
+  return intrusive_ptr<class0_ctrl>(ctrl, adopt_ref);
+}
 
 } // namespace
 
 // Comparable to itself.
 static_assert(detail::has_compare_overload<class0_weak_ptr, class0_weak_ptr>);
 
-// Pointers between base and derived types are comparable.
-static_assert(detail::has_compare_overload<class1_weak_ptr, class0_weak_ptr>);
-
-// Pointers between base and derived types are comparable.
-static_assert(detail::has_compare_overload<class0_weak_ptr, class1_weak_ptr>);
-
 // Weak pointers are comparable to intrusive pointers.
 static_assert(detail::has_compare_overload<class0_weak_ptr, class0_ptr>);
 
-// Weak pointers are comparable to intrusive pointers.
-static_assert(detail::has_compare_overload<class0_weak_ptr, class1_ptr>);
-
-// Weak pointers are comparable to intrusive pointers.
-static_assert(detail::has_compare_overload<class1_weak_ptr, class0_ptr>);
-
-// Unrelated pointers are not comparable.
+// class2 pointers are not comparable.
 static_assert(!detail::has_compare_overload<class0_weak_ptr, class2_weak_ptr>);
 
-// Unrelated pointers are not comparable.
+// class2 pointers are not comparable.
 static_assert(!detail::has_compare_overload<class0_weak_ptr, class2_ptr>);
 
-// Unrelated pointers are not comparable.
+// class2 pointers are not comparable.
 static_assert(!detail::has_compare_overload<class2_weak_ptr, class0_weak_ptr>);
 
-// Unrelated pointers are not comparable.
+// class2 pointers are not comparable.
 static_assert(!detail::has_compare_overload<class2_weak_ptr, class0_ptr>);
 
 TEST("default constructor") {
@@ -254,17 +257,39 @@ TEST("construction from nullptr") {
 }
 
 TEST("construction from intrusive_ptr") {
-  auto ptr = make_custom<class0>();
-  check_eq(class0_instances, 1u);
-  check_eq(ptr->strong_reference_count(), 1u);
-  check_eq(ptr->weak_reference_count(), 1u);
-  {
+  SECTION("from null strong pointer") {
+    class0_ptr ptr;
     auto wptr = class0_weak_ptr{ptr};
-    check_eq(ptr->strong_reference_count(), 1u);
-    check_eq(ptr->weak_reference_count(), 2u);
+    check_eq(wptr, nullptr);
+    check(!wptr);
   }
-  check_eq(ptr->strong_reference_count(), 1u);
-  check_eq(ptr->weak_reference_count(), 1u);
+  SECTION("from managed type") {
+    using ptr_t = intrusive_ptr<class0>;
+    auto ptr = ptr_t{make_custom<class0>()->managed(), add_ref};
+    check_eq(class0_instances, 1u);
+    check_eq(ptr->ctrl()->strong_reference_count(), 1u);
+    check_eq(ptr->ctrl()->weak_reference_count(), 1u);
+    {
+      auto wptr = class0_weak_ptr{ptr};
+      check_eq(ptr->ctrl()->strong_reference_count(), 1u);
+      check_eq(ptr->ctrl()->weak_reference_count(), 2u);
+    }
+    check_eq(ptr->ctrl()->strong_reference_count(), 1u);
+    check_eq(ptr->ctrl()->weak_reference_count(), 1u);
+  }
+  SECTION("from control block type") {
+    auto ptr = make_custom<class0>();
+    check_eq(class0_instances, 1u);
+    check_eq(ptr->strong_reference_count(), 1u);
+    check_eq(ptr->weak_reference_count(), 1u);
+    {
+      auto wptr = class0_weak_ptr{ptr};
+      check_eq(ptr->strong_reference_count(), 1u);
+      check_eq(ptr->weak_reference_count(), 2u);
+    }
+    check_eq(ptr->strong_reference_count(), 1u);
+    check_eq(ptr->weak_reference_count(), 1u);
+  }
 }
 
 TEST("weak pointers can promote to strong pointers") {
@@ -306,7 +331,7 @@ TEST("reset") {
 
 TEST("construction with add_ref") {
   auto ptr = make_custom<class0>();
-  auto wptr = class0_weak_ptr{ptr->ctrl(), add_ref};
+  auto wptr = class0_weak_ptr{ptr.get(), add_ref};
   check_eq(ptr->strong_reference_count(), 1u);
   check_eq(ptr->weak_reference_count(), 2u);
 }
@@ -316,7 +341,7 @@ TEST("construction with adopt_ref") {
   auto wptr1 = class0_weak_ptr{ptr};
   check_eq(ptr->strong_reference_count(), 1u);
   check_eq(ptr->weak_reference_count(), 2u);
-  auto* ctrl = ptr->ctrl();
+  auto* ctrl = ptr.get();
   ctrl->ref_weak();
   auto wptr2 = class0_weak_ptr{ctrl, adopt_ref};
   check_eq(ptr->strong_reference_count(), 1u);
@@ -339,9 +364,9 @@ TEST("copy constructor") {
   check_eq(ptr->weak_reference_count(), 3u);
 }
 
-TEST("converting constructor from derived type") {
+TEST("converting constructor from derived managed type") {
   auto ptr = make_custom<class1>();
-  auto derived = class1_weak_ptr{ptr};
+  auto derived = class0_weak_ptr{ptr};
   auto base = class0_weak_ptr{std::move(derived)};
   check_eq(derived, nullptr);
   check_ne(base, nullptr);
@@ -354,13 +379,13 @@ TEST("converting constructor from derived type") {
 TEST("swap") {
   auto ptr1 = make_custom<class0>("foo"s);
   auto ptr2 = make_custom<class0>("bar"s);
-  check_eq(ptr1->value, "foo");
-  check_eq(ptr2->value, "bar");
+  check_eq(ptr1->managed()->value, "foo");
+  check_eq(ptr2->managed()->value, "bar");
   auto wptr1 = class0_weak_ptr{ptr1};
   auto wptr2 = class0_weak_ptr{ptr2};
   wptr1.swap(wptr2);
-  check_eq(wptr1.lock()->value, "bar"s);
-  check_eq(wptr2.lock()->value, "foo"s);
+  check_eq(wptr1.lock()->managed()->value, "bar"s);
+  check_eq(wptr2.lock()->managed()->value, "foo"s);
 }
 
 TEST("assignment from nullptr") {
@@ -382,8 +407,8 @@ TEST("move assignment") {
   check_eq(class0_instances, 2u);
   auto wptr1 = class0_weak_ptr{ptr1};
   auto wptr2 = class0_weak_ptr{ptr2};
-  auto* ctrl1 = ptr1->ctrl();
-  auto* ctrl2 = ptr2->ctrl();
+  auto* ctrl1 = ptr1.get();
+  auto* ctrl2 = ptr2.get();
   wptr1 = std::move(wptr2);
   check_eq(wptr2.ctrl(), ctrl1);
   check_eq(wptr1.ctrl(), ctrl2);
@@ -433,8 +458,8 @@ TEST("compare") {
   auto wptr1 = class0_weak_ptr{ptr1};
   auto wptr2 = class0_weak_ptr{ptr2};
   SECTION("compare with raw pointer") {
-    check_eq(wptr1.compare(ptr1->ctrl()), 0);
-    check_ne(wptr1.compare(ptr2->ctrl()), 0);
+    check_eq(wptr1.compare(ptr1.get()), 0);
+    check_ne(wptr1.compare(ptr2.get()), 0);
   }
   SECTION("compare with intrusive_ptr") {
     check_eq(wptr1.compare(ptr1), 0);
@@ -453,8 +478,8 @@ TEST("compare") {
 
 TEST("lock returns same object when alive") {
   auto ptr = make_custom<class1>();
-  auto derived_wptr = class1_weak_ptr{ptr};
-  auto strong = derived_wptr.lock();
+  auto wptr = class0_weak_ptr{ptr};
+  auto strong = wptr.lock();
   check_ne(strong.get(), nullptr);
   check_eq(strong.get(), ptr.get());
   check_eq(ptr->strong_reference_count(), 2u);
@@ -501,17 +526,16 @@ TEST("comparison operators between weak pointers") {
   }
 }
 
-TEST("comparison operators with derived type weak pointers") {
+TEST("comparison operators with derived managed type") {
   SECTION("different objects") {
-    class1_weak_ptr derived = class1_weak_ptr{make_custom<class1>()};
-    class0_weak_ptr base = class0_weak_ptr{make_custom<class0>()};
+    class0_weak_ptr derived{make_custom<class1>()};
+    class0_weak_ptr base{make_custom<class0>()};
     check_ne(base.ctrl(), derived.ctrl());
   }
   SECTION("same objects") {
     auto strong = make_custom<class1>();
-    class1_weak_ptr derived{strong};
-    class0_ptr upcasted = strong;
-    class0_weak_ptr base{upcasted};
+    class0_weak_ptr derived{strong};
+    class0_weak_ptr base{strong};
     check_eq(base.ctrl(), derived.ctrl());
   }
 }
@@ -524,38 +548,33 @@ TEST("hash") {
 }
 
 TEST("weak pointer may point to the control block explicitly") {
-  using ptr_type = weak_intrusive_ptr<custom_control_block<class0>>;
   auto ptr1 = make_custom<class0>();
   check_eq(ptr1->strong_reference_count(), 1u);
   check_eq(ptr1->weak_reference_count(), 1u);
-  auto wptr1 = ptr_type{ptr1};
+  auto wptr1 = class0_weak_ptr{ptr1.get(), add_ref};
   check_eq(ptr1->strong_reference_count(), 1u);
   check_eq(ptr1->weak_reference_count(), 2u);
   auto wptr2 = class0_weak_ptr{ptr1};
   check_eq(ptr1->strong_reference_count(), 1u);
   check_eq(ptr1->weak_reference_count(), 3u);
-  check_eq(ptr1, wptr1);
-  check_eq(wptr1, ptr1);
-  check_eq(ptr1, wptr2);
-  check_eq(wptr2, ptr1);
+  check_eq(ptr1.get(), wptr1.ctrl());
+  check_eq(wptr1.ctrl(), wptr2.ctrl());
   check_eq(wptr1, wptr2);
-  check_eq(wptr2, wptr1);
   check_eq(wptr1.hash(), wptr2.hash());
   // have wptr2 point to a different object
   auto ptr2 = make_custom<class0>();
   wptr2 = ptr2;
-  check_ne(ptr1, wptr2);
-  check_ne(wptr2, ptr1);
-  check_ne(wptr1, wptr2);
-  check_ne(wptr2, wptr1);
+  check_ne(wptr1.ctrl(), wptr2.ctrl());
 }
 
-TEST("weak and strong pointers preserve ordering") {
+TEST("weak and strong pointers use the same ordering") {
   std::vector<class0_ptr> ptrs;
   ptrs.push_back(make_custom<class0>());
   ptrs.push_back(make_custom<class0>());
   ptrs.push_back(make_custom<class0>());
   std::sort(ptrs.begin(), ptrs.end());
+  check_lt(ptrs[0], ptrs[1]);
+  check_lt(ptrs[1], ptrs[2]);
   std::vector<class0_weak_ptr> wptrs;
   for (auto& ptr : ptrs) {
     wptrs.emplace_back(ptr);
@@ -566,12 +585,10 @@ TEST("weak and strong pointers preserve ordering") {
 
 TEST("to_string") {
   auto ptr1 = make_custom<class0>();
-  auto ptr2 = intrusive_ptr<custom_control_block<class0>>{ptr1->ctrl()};
-  auto wptr = weak_intrusive_ptr<custom_control_block<class0>>{ptr2};
-  check_eq(ptr1, wptr);
-  check_eq(wptr, ptr1);
-  check_eq(ptr2, wptr);
-  check_eq(wptr, ptr2);
+  auto ptr2 = class0_ptr{ptr1.get(), add_ref};
+  auto wptr = class0_weak_ptr{ptr2};
+  check_eq(ptr1.get(), wptr.ctrl());
+  check_eq(ptr2.get(), wptr.ctrl());
   check_eq(ptr2.hash(), wptr.hash());
   check_eq(to_string(ptr2), to_string(wptr));
 }

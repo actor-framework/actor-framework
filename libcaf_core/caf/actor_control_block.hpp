@@ -6,11 +6,8 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/control_block_ref_count.hpp"
-#include "caf/detail/control_block_traits.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/critical.hpp"
 #include "caf/detail/formatted.hpp"
-#include "caf/detail/memory_interface.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
@@ -20,55 +17,27 @@
 
 namespace caf {
 
-/// Actors are always allocated with a control block that stores its identity
-/// as well as strong and weak reference counts to it. Unlike
-/// "common" weak pointer designs, the goal is not to allocate the data
-/// separately. Instead, the only goal is to break cycles. For
-/// example, linking two actors automatically creates a cycle when using
-/// strong reference counts only.
+/// Control block for actor instances. Stores the actor's identity as well as
+/// strong and weak reference counts.
 ///
-/// When allocating a new actor, CAF enforces that the actor object will start
-/// exactly `CAF_CACHE_LINE_SIZE` bytes after the start of the control block.
-///
-///      +-----------------+------------------+
-///      |  control block  |  actor data (T)  |
-///      +-----------------+------------------+
-///      | strong refs     | mailbox          |
-///      | weak refs       | ...              |
-///      | actor ID        |                  |
-///      | node ID         |                  |
-///      | ...             |                  |
-///      +-----------------+------------------+
-///
-/// Actors start with a strong reference count of 1. This count is transferred
-/// to the first `actor` or `typed_actor` handle used to store the actor.
-/// Actors will also start with a weak reference count of 1. This count
-/// is decremenated once the strong reference count drops to 0.
+/// When allocating a new actor, CAF embeds the actor object in the control
+/// block to allocate only once. Actors start with a strong reference count of
+/// 1. This count is transferred to the first `actor` or `typed_actor` handle
+/// used to store the actor. Actors will also start with a weak reference count
+/// of 1. This implicit weak reference is released once the strong reference
+/// count drops to 0.
 ///
 /// The actor object is destructed when the last strong reference expires. The
 /// full memory block is destroyed when the last weak reference expires.
 class CAF_CORE_EXPORT actor_control_block {
 public:
-  template <class>
-  friend class detail::control_block_traits;
+  friend class detail::control_block_ref_count;
 
-  /// Specifies the memory interface used to allocate the actor control block.
-  static constexpr auto memory_interface
-    = detail::memory_interface::aligned_alloc_and_free;
-
-  /// Defines the allocation size of the actor control block. The intrusive
-  /// control block design in CAF will allocate the control block and the
-  /// managed object in a single memory block. The managed object will start
-  /// immediately after the allocation size. This allows us to calculate the
-  /// address of the managed object from the address of the control block and
-  /// vice versa.
-  static constexpr size_t allocation_size = CAF_CACHE_LINE_SIZE;
-
-  /// Defines the alignment of the memory region allocated for the actor control
-  /// block and its managed object.
-  static constexpr size_t alignment = CAF_CACHE_LINE_SIZE;
-
-  using managed_type = abstract_actor;
+  actor_control_block(actor_id aid, caf::node_id& nid, actor_system* sys,
+                      const meta::handler_list* ifptr)
+    : aid_(aid), nid_(std::move(nid)), system_(sys), iface_(ifptr) {
+    CAF_ASSERT(system_ != nullptr);
+  }
 
   using control_block_type = actor_control_block;
 
@@ -76,16 +45,16 @@ public:
 
   actor_control_block& operator=(const actor_control_block&) = delete;
 
+  virtual ~actor_control_block() noexcept;
+
   /// Returns a pointer to the actor instance.
-  abstract_actor* get() noexcept {
-    using traits = detail::control_block_traits<actor_control_block>;
-    return traits::managed_ptr(this);
+  abstract_actor* managed() noexcept {
+    return managed_;
   }
 
-  /// Returns a pointer to the control block from a managed object pointer.
-  static actor_control_block* from(const abstract_actor* ptr) noexcept {
-    using traits = detail::control_block_traits<actor_control_block>;
-    return traits::ctrl_ptr(ptr);
+  CAF_DEPRECATED("use managed() instead")
+  abstract_actor* get() noexcept {
+    return managed_;
   }
 
   /// Returns a reference to the actor system that owns this actor.
@@ -157,15 +126,21 @@ public:
     }
   }
 
-private:
-  actor_control_block(actor_id aid, caf::node_id& nid, actor_system* sys,
-                      const meta::handler_list* iface)
-    : aid_(aid), nid_(std::move(nid)), system_(sys), iface_(iface) {
-    CAF_ASSERT(system_ != nullptr);
-  }
+  /// Returns the control block for the given actor instance.
+  static actor_control_block* from(const abstract_actor* ptr) noexcept;
+
+protected:
+  /// Destroys the control block instance and releases the memory.
+  virtual void delete_this() noexcept = 0;
+
+  /// Destroys the managed actor instance.
+  void destroy_managed() noexcept;
 
   /// The intrusive reference count for this control block.
   detail::control_block_ref_count ref_count_;
+
+  /// Stores a pointer to the managed actor instance.
+  abstract_actor* managed_;
 
   /// Stores the actor ID.
   actor_id aid_;
@@ -176,14 +151,9 @@ private:
   /// Stores a pointer to the actor system that created this actor.
   actor_system* system_;
 
-  /// Stores a pointer to the interface of the actor or `nullptr` if the actor
-  /// is dynamically typed.
+  /// Stores a pointer to the messaging interface of this actor.
   const meta::handler_list* iface_;
 };
-
-static_assert(sizeof(actor_control_block)
-                <= actor_control_block::allocation_size,
-              "actor_control_block may not exceed the allocation size");
 
 /// @relates actor_control_block
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;

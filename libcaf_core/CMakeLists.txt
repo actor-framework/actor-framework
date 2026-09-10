@@ -74,7 +74,6 @@ caf_add_component(
     caf/abstract_mailbox.cpp
     caf/abstract_ref_counted.cpp
     caf/abstract_scheduled_actor.cpp
-    caf/actor_handle_codec.cpp
     caf/action.cpp
     caf/action.test.cpp
     caf/actor.cpp
@@ -88,6 +87,7 @@ caf_add_component(
     caf/actor_control_block.cpp
     caf/actor_factory.test.cpp
     caf/actor_from_state.test.cpp
+    caf/actor_handle_codec.cpp
     caf/actor_launcher.cpp
     caf/actor_pool.cpp
     caf/actor_pool.test.cpp
@@ -121,8 +121,8 @@ caf_add_component(
     caf/behavior.cpp
     caf/binary_deserializer.cpp
     caf/binary_serializer.cpp
-    caf/byte_buffer.cpp
     caf/blocking_actor.cpp
+    caf/byte_buffer.cpp
     caf/blocking_actor.test.cpp
     caf/byte_reader.cpp
     caf/byte_span.cpp
@@ -156,7 +156,6 @@ caf_add_component(
     caf/detail/abstract_worker.cpp
     caf/detail/abstract_worker_hub.cpp
     caf/detail/actor_system_impl.cpp
-    caf/detail/aligned_alloc.cpp
     caf/detail/assert.cpp
     caf/detail/asynchronous_actor_clock.cpp
     caf/detail/asynchronous_actor_clock.test.cpp

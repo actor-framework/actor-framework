@@ -389,6 +389,8 @@ public:
 
   void deref() const noexcept override;
 
+  void delete_this() const noexcept override;
+
   void schedule(action what) override;
 
   void delay(action what) override;

@@ -62,6 +62,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
 private:
   void do_dispose(bool from_external) override {
     if (state_) {

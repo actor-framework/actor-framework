@@ -43,6 +43,8 @@ public:
 
   void deref() const noexcept final;
 
+  void delete_this() const noexcept final;
+
   // -- properties -------------------------------------------------------------
 
   /// Returns the number of pending (delayed and scheduled) actions.

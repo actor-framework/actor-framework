@@ -22,6 +22,10 @@ void abstract_monitor_action::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void abstract_monitor_action::delete_this() const noexcept {
+  delete this;
+}
+
 void abstract_monitor_action::on_dispose() {
   if (auto observer = actor_cast<strong_actor_ptr>(observer_)) {
     if (auto observed = actor_cast<strong_actor_ptr>(observed_)) {

@@ -117,7 +117,7 @@ public:
 
   abstract_actor* operator->() const noexcept {
     CAF_ASSERT(ptr_);
-    return ptr_->get();
+    return ptr_->managed();
   }
 
   intptr_t compare(const actor&) const noexcept;

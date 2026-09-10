@@ -39,6 +39,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
 private:
   mutable detail::atomic_ref_count ref_count_;
   intrusive_ptr<counted_disposable> parent_;
@@ -64,6 +68,10 @@ void counted_disposable::ref() const noexcept {
 
 void counted_disposable::deref() const noexcept {
   ref_count_.dec(this);
+}
+
+void counted_disposable::delete_this() const noexcept {
+  delete this;
 }
 
 void counted_disposable::release() {

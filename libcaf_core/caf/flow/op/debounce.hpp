@@ -129,6 +129,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
 private:
   void fire() {
     pending_ = disposable{};

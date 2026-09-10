@@ -27,6 +27,10 @@ void connect_job::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void connect_job::delete_this() const noexcept {
+  delete this;
+}
+
 void connect_job::resume(scheduler*, uint64_t) {
   if (canceled())
     return;
