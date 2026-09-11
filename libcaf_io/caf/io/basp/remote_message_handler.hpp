@@ -116,7 +116,7 @@ public:
         = make_const_typed_message_view<link_atom, strong_actor_ptr>(msg)) {
       const auto& ptr = get<1>(view);
       if (ptr != nullptr)
-        static_cast<actor_proxy*>(ptr->get())->add_link(dst->get());
+        static_cast<actor_proxy*>(ptr->managed())->add_link(dst->managed());
       else
         log::io::warning("received link message with invalid target");
       return;
@@ -125,7 +125,7 @@ public:
         = make_const_typed_message_view<unlink_atom, strong_actor_ptr>(msg)) {
       const auto& ptr = get<1>(view);
       if (ptr != nullptr)
-        static_cast<actor_proxy*>(ptr->get())->remove_link(dst->get());
+        static_cast<actor_proxy*>(ptr->managed())->remove_link(dst->managed());
       else
         log::io::debug("received unlink message with invalid target");
       return;

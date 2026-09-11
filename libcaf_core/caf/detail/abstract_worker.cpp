@@ -26,4 +26,8 @@ void abstract_worker::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void abstract_worker::delete_this() const noexcept {
+  delete this;
+}
+
 } // namespace caf::detail

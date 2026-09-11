@@ -49,6 +49,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   void resume(scheduler*, uint64_t event_id) override {
     CAF_ASSERT(decorated_ != nullptr);
     WorkerPtr tmp;

@@ -87,6 +87,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept override {
+    delete this;
+  }
+
   void dispose() override {
     event on_dispose;
     event_list events;

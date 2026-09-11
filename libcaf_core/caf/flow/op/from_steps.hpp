@@ -70,6 +70,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   // -- properties -------------------------------------------------------------
 
   const error& fail_reason() const {

@@ -5,12 +5,9 @@
 #pragma once
 
 #include "caf/detail/critical.hpp"
-#include "caf/detail/memory_interface.hpp"
 
 #include <atomic>
 #include <cstddef>
-#include <cstdlib>
-#include <type_traits>
 
 namespace caf::detail {
 
@@ -62,21 +59,7 @@ public:
   template <class Owner>
   void dec(Owner* owner) noexcept {
     if (value_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      using owner_type = std::remove_const_t<Owner>;
-      if constexpr (uses_new_and_delete<owner_type>) {
-        delete owner;
-      } else if constexpr (uses_malloc_and_free<owner_type>) {
-        static_assert(!std::is_const_v<Owner>,
-                      "free() does not accept const pointers");
-        owner->~owner_type();
-        free(owner);
-      } else {
-        static_assert(uses_aligned_alloc_and_free<owner_type>);
-        static_assert(!std::is_const_v<Owner>,
-                      "aligned_free() does not accept const pointers");
-        owner->~owner_type();
-        aligned_free(owner);
-      }
+      owner->delete_this();
     }
   }
 

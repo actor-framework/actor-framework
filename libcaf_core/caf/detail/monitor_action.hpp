@@ -28,6 +28,8 @@ public:
 
   void deref() const noexcept final;
 
+  void delete_this() const noexcept final;
+
   const actor_addr& observer() const noexcept {
     return observer_;
   }

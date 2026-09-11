@@ -42,6 +42,10 @@ void stream_bridge_sub::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void stream_bridge_sub::delete_this() const noexcept {
+  delete this;
+}
+
 void stream_bridge_sub::ack(uint64_t src_flow_id,
                             uint32_t max_items_per_batch) {
   auto lg = log::core::trace("src_flow_id = {}, max_items_per_batch = {}",

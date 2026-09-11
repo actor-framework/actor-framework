@@ -67,7 +67,7 @@ intptr_t actor_addr::compare(const actor_addr& other) const noexcept {
 }
 
 intptr_t actor_addr::compare(const abstract_actor* other) const noexcept {
-  return compare(ptr_.ctrl(), actor_control_block::from(other));
+  return compare(ptr_.ctrl(), other != nullptr ? other->ctrl() : nullptr);
 }
 
 intptr_t actor_addr::compare(const actor_control_block* other) const noexcept {

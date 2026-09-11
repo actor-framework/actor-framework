@@ -58,6 +58,8 @@ public:
 
   void deref() const noexcept override = 0; // disambiguation
 
+  void delete_this() const noexcept override = 0; // disambiguation
+
   // -- event loop management --------------------------------------------------
 
   /// Registers the manager for read operations.

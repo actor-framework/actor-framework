@@ -41,6 +41,8 @@ public:
 
     void deref() const noexcept override = 0; // disambiguation
 
+    void delete_this() const noexcept override = 0; // disambiguation
+
     virtual state current_state() const noexcept = 0;
   };
 
@@ -238,6 +240,10 @@ public:
 
   void deref() const noexcept override {
     ref_count_.dec(this);
+  }
+
+  void delete_this() const noexcept override {
+    delete this;
   }
 
   size_t strong_reference_count() const noexcept {

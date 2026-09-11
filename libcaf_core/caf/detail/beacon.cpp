@@ -14,6 +14,10 @@ void beacon::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void beacon::delete_this() const noexcept {
+  delete this;
+}
+
 void beacon::dispose() {
   std::unique_lock guard{mtx_};
   if (state_ == state::waiting) {

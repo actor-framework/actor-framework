@@ -542,6 +542,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept override {
+    delete this;
+  }
+
   bool had_error() const noexcept {
     return had_error_;
   }
@@ -613,11 +617,15 @@ flow::coordinator::steady_time_point scheduled_actor::steady_time() {
 }
 
 void scheduled_actor::ref() const noexcept {
-  abstract_actor::ref();
+  super::ref();
 }
 
 void scheduled_actor::deref() const noexcept {
-  abstract_actor::deref();
+  super::deref();
+}
+
+void scheduled_actor::delete_this() const noexcept {
+  super::delete_this();
 }
 
 void scheduled_actor::schedule(action what) {

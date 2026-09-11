@@ -17,6 +17,8 @@ public:
   virtual void ref() const noexcept = 0;
 
   virtual void deref() const noexcept = 0;
+
+  virtual void delete_this() const noexcept = 0;
 };
 
 } // namespace caf

@@ -103,8 +103,8 @@ public:
   template <class ActorHandle>
   void link_to(const ActorHandle& other) {
     if (other) {
-      if (auto* ptr = other.get()->get(); ptr != this)
-        add_link(other.get()->get());
+      if (auto* ptr = other.get()->managed(); ptr != this)
+        add_link(other.get()->managed());
     }
   }
 
@@ -115,8 +115,8 @@ public:
   template <class ActorHandle>
   void unlink_from(const ActorHandle& other) {
     if (other) {
-      if (auto* ptr = other.get()->get(); ptr != this)
-        remove_link(other.get()->get());
+      if (auto* ptr = other.get()->managed(); ptr != this)
+        remove_link(other.get()->managed());
     }
   }
 
@@ -141,7 +141,9 @@ public:
   actor_system& home_system() const noexcept;
 
   /// Returns the control block for this actor.
-  actor_control_block* ctrl() const;
+  actor_control_block* ctrl() const {
+    return ctrl_;
+  }
 
   /// Returns the logical actor address.
   actor_addr address() const noexcept;
@@ -181,6 +183,8 @@ public:
   void ref() const noexcept override;
 
   void deref() const noexcept override;
+
+  void delete_this() const noexcept override;
 
   // -- here be dragons: end of public interface -------------------------------
 
@@ -372,6 +376,9 @@ protected:
   virtual bool remove_backlink(abstract_actor* other);
 
   // -- member variables -------------------------------------------------------
+
+  /// The control block for this actor.
+  actor_control_block* ctrl_;
 
   /// Holds several state and type flags.
   std::atomic<int> flags_;

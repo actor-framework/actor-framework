@@ -22,4 +22,8 @@ void mock_consumer::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void mock_consumer::delete_this() const noexcept {
+  delete this;
+}
+
 } // namespace caf::async

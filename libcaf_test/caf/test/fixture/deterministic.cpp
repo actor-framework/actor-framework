@@ -326,6 +326,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
 private:
   mutable detail::atomic_ref_count ref_count_;
   bool blocked_ = false;
@@ -400,7 +404,7 @@ private:
     if (!val || !entries_.emplace(key, val).second) {
       return;
     }
-    val->get()->attach_functor([key, this]() { erase(key); });
+    val->managed()->attach_functor([key, this]() { erase(key); });
   }
 
   strong_actor_ptr get_impl(const std::string& key) const override {

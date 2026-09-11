@@ -197,6 +197,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   void schedule(action what) override {
     auto lg = log::net::trace("");
     if (std::this_thread::get_id() == tid_) {

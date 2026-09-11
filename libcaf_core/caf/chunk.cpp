@@ -4,6 +4,8 @@
 
 #include "caf/chunk.hpp"
 
+#include "caf/raise_error.hpp"
+
 #include <algorithm>
 #include <cstring>
 #include <new>

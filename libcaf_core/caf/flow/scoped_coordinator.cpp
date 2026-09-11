@@ -69,6 +69,10 @@ void scoped_coordinator::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void scoped_coordinator::delete_this() const noexcept {
+  delete this;
+}
+
 // -- properties ---------------------------------------------------------------
 
 size_t scoped_coordinator::pending_actions() const noexcept {

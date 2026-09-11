@@ -53,7 +53,7 @@ public:
       auto ctx = async::execution_context_ptr{owner_->mpx_ptr(), add_ref};
       for (auto& hdl : monitored_actors_) {
         CAF_ASSERT(hdl);
-        hdl->get()->attach_functor([ctx, cb = monitor_callback_] {
+        hdl->managed()->attach_functor([ctx, cb = monitor_callback_] {
           if (!cb.disposed())
             ctx->schedule(cb);
         });

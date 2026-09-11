@@ -241,6 +241,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   void schedule(action what) override {
     mpx_->schedule_fn([ptr = strong_this(), f = std::move(what)]() mutable { //
       ptr->exec(f);

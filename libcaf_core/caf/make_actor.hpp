@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include "caf/actor_config.hpp"
+#include "caf/actor_control_block.hpp"
 #include "caf/adopt_ref.hpp"
-#include "caf/detail/aligned_alloc.hpp"
-#include "caf/detail/assert.hpp"
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/pretty_type_name.hpp"
@@ -16,34 +16,64 @@
 #include "caf/logger.hpp"
 #include "caf/meta/handler.hpp"
 
+#include <cstddef>
 #include <cstdlib>
 #include <new>
 
 namespace caf::detail {
 
-// Has access to the required constructors (via friend declarations).
-struct make_actor_util {
-  template <class T, class... Args>
-  static T* create_actor(void* mem, Args&&... args) {
-    using traits = detail::control_block_traits<actor_control_block>;
+template <class Actor>
+class actor_control_block_impl final : public actor_control_block {
+public:
+  using super = actor_control_block;
+
+  template <class... Args>
+  actor_control_block_impl(actor_id aid, caf::node_id& nid, actor_system* sys,
+                           const meta::handler_list* ifptr, actor_config& cfg,
+                           Args&&... args)
+    : super(aid, nid, sys, ifptr) {
+    cfg.ctrl = this;
     // Note: the constructor of abstract_actor sets the current actor to itself.
     //       Hence, we store the pointer to the current actor here and restore
     //       it after creating the new actor at scope exit.
-    detail::scope_guard guard([prev = detail::current_actor()]() noexcept {
-      detail::current_actor(prev);
+    scope_guard guard([prev = current_actor()]() noexcept { //
+      current_actor(prev);
     });
-    auto* ptr = traits::construct_managed<T>(mem, std::forward<Args>(args)...);
+    managed_ = &storage_;
+    auto* ptr = new (&storage_) Actor(cfg, std::forward<Args>(args)...);
+#ifdef CAF_ENABLE_EXCEPTIONS
+    try {
+      ptr->setup_metrics();
+    } catch (...) {
+      ptr->~Actor();
+      throw;
+    }
+#else
     ptr->setup_metrics();
-    return ptr;
+#endif
   }
+
+  ~actor_control_block_impl() noexcept override {
+    // nop
+  }
+
+private:
+  void delete_this() noexcept override {
+    delete this;
+  }
+
+  union {
+    Actor storage_;
+  };
 };
 
 } // namespace caf::detail
 
 namespace caf {
 
-template <class T, class R = infer_handle_from_class_t<T>, class... Ts>
-R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
+template <class T, class R = infer_handle_from_class_t<T>, class... Args>
+R make_actor(actor_id aid, node_id nid, actor_system* sys, actor_config& cfg,
+             Args&&... args) {
   // Get the proper interface for the actor type.
   const meta::handler_list* iface;
   if constexpr (std::is_same_v<R, strong_actor_ptr>
@@ -54,31 +84,30 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
       = meta::handlers_from_signature_list<typename R::signatures>;
     iface = &handlers_t::handlers;
   }
-  using detail::make_actor_util;
-  // Allocate enough memory for the control block and the actor object.
-  using traits = detail::control_block_traits<actor_control_block>;
-  auto* mem = traits::allocate<T>();
-  auto* ctrl = traits::construct_ctrl(mem, aid, nid, sys, iface);
+  // Create the control block and the actor it manages.
+  using block = detail::actor_control_block_impl<T>;
 #ifdef CAF_ENABLE_TRACE_LOGGING
   if (auto* lptr = logger::current_logger();
       lptr && lptr->accepts(log::level::debug, CAF_LOG_FLOW_COMPONENT)) {
-    auto args = deep_to_string(std::forward_as_tuple(xs...));
-    auto* obj = make_actor_util::create_actor<T>(mem, std::forward<Ts>(xs)...);
+    auto args_str = deep_to_string(std::forward_as_tuple(args...));
+    auto* ctrl = new block(aid, nid, sys, iface, cfg,
+                           std::forward<Args>(args)...);
+    auto res = R{ctrl, adopt_ref};
 #  ifdef CAF_ENABLE_RTTI
     lptr->log(log::level::debug, CAF_LOG_FLOW_COMPONENT,
               "SPAWN ; ID = {}; NAME = {}; TYPE = {}; ARGS = {}; NODE = {}",
-              aid, obj->name(), detail::pretty_type_name(typeid(T).name()),
-              args, nid);
+              aid, ctrl->managed()->name(),
+              detail::pretty_type_name(typeid(T).name()), args_str, nid);
 #  else
     lptr->log(log::level::debug, CAF_LOG_FLOW_COMPONENT,
               "SPAWN ; ID = {}; NAME = {}; ARGS = {}; NODE = {}", aid,
-              obj->name(), args, nid);
+              ctrl->managed()->name(), args_str, nid);
 #  endif
-    return {ctrl, adopt_ref};
+    return res;
   }
 #endif
-  detail::make_actor_util::create_actor<T>(mem, std::forward<Ts>(xs)...);
-  return {ctrl, adopt_ref};
+  return {new block(aid, nid, sys, iface, cfg, std::forward<Args>(args)...),
+          adopt_ref};
 }
 
 } // namespace caf

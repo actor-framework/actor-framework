@@ -83,6 +83,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   mutable detail::atomic_ref_count ref_count_;
   bool consumer_ready = false;
   bool consumer_cancel = false;
@@ -110,6 +114,10 @@ public:
 
   void deref() const noexcept final {
     ref_count_.dec(this);
+  }
+
+  void delete_this() const noexcept final {
+    delete this;
   }
 
   mutable detail::atomic_ref_count ref_count_;

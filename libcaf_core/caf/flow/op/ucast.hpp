@@ -201,6 +201,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
 private:
   void do_pull(size_t n) override {
     if (!disposed) {
@@ -274,6 +278,10 @@ public:
 
   void deref() const noexcept final {
     ref_count_.dec(this);
+  }
+
+  void delete_this() const noexcept final {
+    delete this;
   }
 
 private:

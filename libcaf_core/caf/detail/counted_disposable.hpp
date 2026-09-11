@@ -37,6 +37,8 @@ public:
 
   void deref() const noexcept final;
 
+  void delete_this() const noexcept final;
+
 private:
   /// Releases a "reference count" for the disposable.
   void release();

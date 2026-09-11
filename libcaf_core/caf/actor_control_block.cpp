@@ -21,12 +21,25 @@
 
 namespace caf {
 
+actor_control_block::~actor_control_block() noexcept {
+  // nop
+}
+
+void actor_control_block::destroy_managed() noexcept {
+  managed_->~abstract_actor();
+}
+
+actor_control_block*
+actor_control_block::from(const abstract_actor* ptr) noexcept {
+  return ptr != nullptr ? ptr->ctrl() : nullptr;
+}
+
 actor_addr actor_control_block::address() noexcept {
   return {this, add_ref};
 }
 
 bool actor_control_block::enqueue(mailbox_element_ptr what, scheduler* sched) {
-  return get()->enqueue(std::move(what), sched);
+  return managed_->enqueue(std::move(what), sched);
 }
 
 void actor_control_block::deref() noexcept {
@@ -54,7 +67,7 @@ void actor_control_block::deref() noexcept {
       continue;
     }
     // The strong reference count would drop to 0 -> terminate the actor.
-    auto* ptr = get();
+    auto* ptr = managed();
     if (!ptr->is_terminated()) {
 #ifdef CAF_ENABLE_EXCEPTIONS
       try {
@@ -90,7 +103,7 @@ void actor_control_block::deref() noexcept {
                                        std::memory_order_release,
                                        std::memory_order_relaxed)) {
         if (count == 1) {
-          ptr->~abstract_actor();
+          destroy_managed();
           deref_weak();
         }
         return;
@@ -99,7 +112,7 @@ void actor_control_block::deref() noexcept {
   }
   detail::panic("failed to transition an expiring actor to terminated state "
                 "after 100 attempts, id: {}",
-                get()->id());
+                managed()->id());
 }
 
 error_code<sec> load_actor(strong_actor_ptr& ptr, actor_system* sys,

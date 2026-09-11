@@ -51,6 +51,8 @@ public:
 
   void deref() const noexcept final;
 
+  void delete_this() const noexcept final;
+
   size_t ref_count() const noexcept {
     return ref_count_.load();
   }
