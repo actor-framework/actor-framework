@@ -40,8 +40,7 @@ public:
   }
 
   void request(size_t n) override {
-    if (n == 0)
-      return;
+    CAF_ASSERT(n > 0);
     demand_ += n;
     if (!pending_) {
       if (val_ == 0)

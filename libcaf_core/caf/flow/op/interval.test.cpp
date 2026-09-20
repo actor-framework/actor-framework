@@ -104,10 +104,7 @@ SCENARIO("requesting zero items from an interval is a no-op") {
         run_flows(1ms);
         require(snk->subscribed());
         auto pending = pending_actions();
-        // Bypass the guard in subscription::request to make sure that the
-        // operator guards itself as well.
         snk->sub.request(0);
-        snk->sub.ptr()->request(0);
         check_eq(pending_actions(), pending);
         run_flows(50ms);
         check(snk->buf.empty());

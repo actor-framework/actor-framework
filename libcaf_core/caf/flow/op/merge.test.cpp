@@ -423,7 +423,7 @@ SCENARIO("the merge operator emits already buffered data on error") {
 
 SCENARIO("requesting zero items from the merge operator is a no-op") {
   GIVEN("a merge operator with buffered items and no demand") {
-    WHEN("calling request(0) on the implementation") {
+    WHEN("calling request(0) on the subscription") {
       THEN("the operator neither pulls buffered items nor emits them") {
         using snk_t = flow::passive_observer<int>;
         auto src = caf::flow::multicaster<int>{coordinator()};
@@ -437,7 +437,6 @@ SCENARIO("requesting zero items from the merge operator is a no-op") {
         require_eq(uut->demand(), 0u);
         auto pending = pending_actions();
         snk->sub.request(0);
-        snk->sub.ptr()->request(0);
         check_eq(pending_actions(), pending);
         run_flows();
         check_eq(uut->demand(), 0u);

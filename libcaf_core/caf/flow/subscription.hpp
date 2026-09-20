@@ -39,9 +39,8 @@ public:
     /// and thus can clean up the subscription immediately.
     virtual void cancel() = 0;
 
-    /// Signals demand for `n` more items. Calling this member function with
-    /// `n == 0` is a no-op: it neither adds demand nor triggers any observable
-    /// side effect such as arming a timer or scheduling work.
+    /// Signals demand for `n` more items.
+    /// @pre `n > 0`
     virtual void request(size_t n) = 0;
   };
 

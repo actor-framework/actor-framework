@@ -138,10 +138,7 @@ SCENARIO("requesting zero items from a ucast operator is a no-op") {
         uut->push(2);
         require_eq(uut->buffered(), 2u);
         auto pending = pending_actions();
-        // Bypass the guard in subscription::request to make sure that the
-        // operator guards itself as well.
         snk->sub.request(0);
-        snk->sub.ptr()->request(0);
         check_eq(pending_actions(), pending);
         run_flows();
         check_eq(uut->demand(), 0u);
