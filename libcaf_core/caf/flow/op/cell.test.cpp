@@ -175,10 +175,7 @@ SCENARIO("requesting zero items from a cell is a no-op") {
         lift(uut).subscribe(snk->as_observer());
         require(snk->subscribed());
         auto pending = pending_actions();
-        // Bypass the guard in subscription::request to make sure that the
-        // operator guards itself as well.
         snk->sub.request(0);
-        snk->sub.ptr()->request(0);
         check_eq(pending_actions(), pending);
         // A value set now must not reach an observer that never requested it.
         uut->set_value(42);

@@ -139,10 +139,7 @@ SCENARIO("requesting zero items from an mcast operator is a no-op") {
         require_eq(uut->max_buffered(), 2u);
         require_eq(o2->buf, std::vector<int>({0, 1}));
         auto pending = pending_actions();
-        // Bypass the guard in subscription::request to make sure that the
-        // operator guards itself as well.
         o1->sub.request(0);
-        o1->sub.ptr()->request(0);
         check_eq(pending_actions(), pending);
         run_flows();
         check_eq(uut->max_demand(), 0u);
