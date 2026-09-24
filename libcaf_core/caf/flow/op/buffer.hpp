@@ -183,6 +183,7 @@ public:
 
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
+    CAF_ASSERT(n > 0);
     demand_ += n;
     // If we can ship a batch, schedule an event to do so.
     if (demand_ == n && can_emit()) {

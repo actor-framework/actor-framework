@@ -134,6 +134,7 @@ bool stream_bridge_sub::disposed() const noexcept {
 }
 
 void stream_bridge_sub::request(size_t n) {
+  CAF_ASSERT(n > 0);
   demand_ += n;
   if (!buf_.empty()) {
     auto fn = make_action([self = self_, snk_flow_id = snk_flow_id_] {

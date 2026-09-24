@@ -165,4 +165,31 @@ SCENARIO("a failed cell emits zero item") {
   }
 }
 
+SCENARIO("requesting zero items from a cell is a no-op") {
+  GIVEN("an integer cell with an observer that has not requested anything") {
+    WHEN("the observer calls request(0) on the subscription") {
+      THEN("the cell does not register the observer as a listener") {
+        using snk_t = flow::passive_observer<int>;
+        auto snk = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_cell();
+        lift(uut).subscribe(snk->as_observer());
+        require(snk->subscribed());
+        auto pending = pending_actions();
+        snk->sub.request(0);
+        check_eq(pending_actions(), pending);
+        // A value set now must not reach an observer that never requested it.
+        uut->set_value(42);
+        run_flows();
+        check(snk->subscribed());
+        check(snk->buf.empty());
+        // A real request afterwards must still deliver the value.
+        snk->sub.request(1);
+        run_flows();
+        check(snk->completed());
+        check_eq(snk->buf, std::vector<int>{42});
+      }
+    }
+  }
+}
+
 } // WITH_FIXTURE(fixture)

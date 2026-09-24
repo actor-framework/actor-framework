@@ -113,6 +113,7 @@ public:
 
   void request(size_t n) override {
     CAF_ASSERT(out_.valid());
+    CAF_ASSERT(n > 0);
     demand_ += n;
     if (demand_ == n && !pending_) {
       fire();
