@@ -463,12 +463,12 @@ strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
                                                                   &(system()),
                                                                   cfg, this);
   strong_actor_ptr selfptr{ctrl(), add_ref};
-  res->get()->attach_functor([=](const error& rsn) {
+  res->managed()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
       // using res->id() instead of aid keeps this actor instance alive
       // until the original instance terminates, thus preventing subtle
       // bugs with attachables
-      auto self_broker = static_cast<basp_broker*>(selfptr->get());
+      auto self_broker = static_cast<basp_broker*>(selfptr->managed());
       if (!self_broker->getf(abstract_actor::is_terminated_flag))
         self_broker->proxies().erase(nid, res->id(), rsn);
     });

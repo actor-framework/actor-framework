@@ -259,6 +259,10 @@ public:
       ref_count_.dec(this);
     }
 
+    void delete_this() const noexcept final {
+      delete this;
+    }
+
     size_t demand = 0;
 
   private:

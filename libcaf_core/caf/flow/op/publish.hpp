@@ -54,6 +54,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   // -- implementation of base<T> ----------------------------------------------
 
   disposable subscribe(observer<T> out) override {

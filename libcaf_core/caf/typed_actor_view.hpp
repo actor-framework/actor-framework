@@ -294,7 +294,7 @@ public:
   /// @private
   actor_control_block* ctrl() const noexcept {
     CAF_ASSERT(self_ != nullptr);
-    return actor_control_block::from(self_);
+    return self_->ctrl();
   }
 
   /// @private

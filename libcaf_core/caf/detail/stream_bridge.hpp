@@ -34,6 +34,8 @@ public:
 
   void deref() const noexcept final;
 
+  void delete_this() const noexcept final;
+
   // -- callbacks for the actor ------------------------------------------------
 
   void ack(uint64_t src_flow_id, uint32_t max_items_per_batch);

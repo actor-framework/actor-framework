@@ -97,6 +97,10 @@ void default_mailbox::ref() const noexcept {
   ++ref_count_;
 }
 
+void default_mailbox::delete_this() const noexcept {
+  delete this;
+}
+
 void default_mailbox::deref() const noexcept {
   if (--ref_count_ == 0)
     delete this;

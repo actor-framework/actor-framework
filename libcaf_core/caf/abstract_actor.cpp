@@ -12,6 +12,7 @@
 #include "caf/add_ref.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/internal/attachable_factory.hpp"
 #include "caf/internal/attachable_predicate.hpp"
@@ -26,7 +27,9 @@ namespace caf {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-abstract_actor::abstract_actor(actor_config& cfg) : flags_(cfg.flags) {
+abstract_actor::abstract_actor(actor_config& cfg)
+  : ctrl_(cfg.ctrl), flags_(cfg.flags) {
+  CAF_ASSERT(ctrl_ != nullptr);
   detail::current_actor(this);
 }
 
@@ -145,23 +148,19 @@ std::set<std::string> abstract_actor::message_types() const {
 }
 
 actor_id abstract_actor::id() const noexcept {
-  return actor_control_block::from(this)->id();
+  return ctrl_->id();
 }
 
 node_id abstract_actor::node() const noexcept {
-  return actor_control_block::from(this)->node();
+  return ctrl_->node();
 }
 
 actor_system& abstract_actor::home_system() const noexcept {
-  return actor_control_block::from(this)->system();
-}
-
-actor_control_block* abstract_actor::ctrl() const {
-  return actor_control_block::from(this);
+  return ctrl_->system();
 }
 
 actor_addr abstract_actor::address() const noexcept {
-  return actor_addr{actor_control_block::from(this), add_ref};
+  return actor_addr{ctrl_, add_ref};
 }
 
 abstract_actor* abstract_actor::current() noexcept {
@@ -227,6 +226,10 @@ void abstract_actor::ref() const noexcept {
 
 void abstract_actor::deref() const noexcept {
   ctrl()->deref();
+}
+
+void abstract_actor::delete_this() const noexcept {
+  detail::critical("abstract_actor::delete_this called");
 }
 
 void abstract_actor::add_link(abstract_actor* x) {

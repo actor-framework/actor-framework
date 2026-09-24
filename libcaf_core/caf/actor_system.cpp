@@ -256,7 +256,7 @@ private:
     // attach functor without lock
     log::core::debug("added actor: key = {}", key);
     actor_registry* reg = this;
-    val->get()->attach_functor([key, reg]() { reg->erase(key); });
+    val->managed()->attach_functor([key, reg]() { reg->erase(key); });
   }
 
   strong_actor_ptr get_impl(const std::string& key) const override {

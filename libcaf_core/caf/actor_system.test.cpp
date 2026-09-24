@@ -142,6 +142,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept override {
+    delete this;
+  }
+
   void resume(scheduler* context, uint64_t) override {
     if (context->is_system_scheduler()) {
       detail::critical("dummy_worker::resume called on the system scheduler");

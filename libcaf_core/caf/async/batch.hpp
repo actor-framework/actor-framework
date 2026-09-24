@@ -112,9 +112,6 @@ private:
 
   class data {
   public:
-    static constexpr auto memory_interface
-      = detail::memory_interface::malloc_and_free;
-
     friend class batch;
 
     data() = delete;
@@ -145,6 +142,11 @@ private:
 
     void deref() noexcept {
       ref_count_.dec(this);
+    }
+
+    void delete_this() noexcept {
+      this->~data();
+      free(this);
     }
 
     // -- properties -----------------------------------------------------------
@@ -179,8 +181,6 @@ private:
     size_t size_;
     alignas(max_align_t) std::byte storage_[];
   };
-
-  static_assert(detail::uses_malloc_and_free<data>);
 
   explicit batch(intrusive_ptr<data> ptr) : data_(std::move(ptr)) {
     // nop

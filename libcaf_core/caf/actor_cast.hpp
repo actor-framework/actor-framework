@@ -90,7 +90,7 @@ class actor_cast_access<To*, From, raw_ptr_cast> {
 public:
   To* operator()(actor_control_block* x) const {
     if (x != nullptr) {
-      return static_cast<To*>(x->get());
+      return static_cast<To*>(x->managed());
     }
     return nullptr;
   }

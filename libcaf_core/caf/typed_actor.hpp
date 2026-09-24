@@ -192,11 +192,11 @@ public:
   /// @cond
 
   abstract_actor* operator->() const noexcept {
-    return ptr_->get();
+    return ptr_->managed();
   }
 
   abstract_actor& operator*() const noexcept {
-    return *ptr_->get();
+    return *ptr_->managed();
   }
 
   const strong_actor_ptr& ptr() const noexcept {

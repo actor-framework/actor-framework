@@ -27,6 +27,8 @@ public:
 
   void deref() const noexcept override;
 
+  void delete_this() const noexcept override;
+
   void resume(scheduler*, uint64_t) override;
 
 protected:

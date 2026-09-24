@@ -25,6 +25,8 @@ public:
 
   void deref() const noexcept final;
 
+  void delete_this() const noexcept final;
+
   void dispose() override;
 
   bool disposed() const noexcept override;

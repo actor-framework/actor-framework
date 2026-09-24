@@ -26,4 +26,8 @@ void mock_producer::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void mock_producer::delete_this() const noexcept {
+  delete this;
+}
+
 } // namespace caf::async

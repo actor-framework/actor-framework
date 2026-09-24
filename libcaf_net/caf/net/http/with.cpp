@@ -66,6 +66,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   bool push(const net::http::request& item) override {
     return buf_->try_push(item) == async::write_result::ok;
   }
@@ -308,7 +312,7 @@ public:
       auto ctx = async::execution_context_ptr{mpx, add_ref};
       for (const auto& hdl : monitored_actors) {
         CAF_ASSERT(hdl);
-        hdl->get()->attach_functor([ctx, cb] {
+        hdl->managed()->attach_functor([ctx, cb] {
           if (!cb.disposed())
             ctx->schedule(cb);
         });

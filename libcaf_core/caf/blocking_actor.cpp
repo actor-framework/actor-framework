@@ -150,6 +150,10 @@ public:
     delete this;
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
 private:
   blocking_actor* self_;
   detail::private_thread* thread_;
@@ -363,7 +367,7 @@ size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
     return 0;
   actor self{this};
   auto f = [self](const error&) { caf::anon_mail(wait_for_atom_v).send(self); };
-  ptr->get()->attach_functor(std::move(f));
+  ptr->managed()->attach_functor(std::move(f));
   return 1;
 }
 

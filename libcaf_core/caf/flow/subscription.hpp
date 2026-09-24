@@ -50,6 +50,8 @@ public:
 
     void deref() const noexcept override = 0; // disambiguation
 
+    void delete_this() const noexcept override = 0; // disambiguation
+
     void dispose() final;
 
     void cancel() final;
@@ -76,6 +78,8 @@ public:
     void ref() const noexcept final;
 
     void deref() const noexcept final;
+
+    void delete_this() const noexcept final;
 
     coordinator* parent() const noexcept override;
 

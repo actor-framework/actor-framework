@@ -86,6 +86,10 @@ struct thread_pull_consumer : async::consumer {
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   mutable caf::detail::atomic_ref_count ref_count_;
 };
 

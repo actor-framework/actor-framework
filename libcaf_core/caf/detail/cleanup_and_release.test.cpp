@@ -35,6 +35,10 @@ struct mock_base : resumable {
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   mutable detail::atomic_ref_count ref_count_;
   std::shared_ptr<std::atomic<bool>> disposed_flag;
 };

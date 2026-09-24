@@ -40,6 +40,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   bool accepts(unsigned, std::string_view) override {
     return true;
   }

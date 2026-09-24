@@ -35,9 +35,6 @@ class CAF_CORE_EXPORT message_data {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  static constexpr auto memory_interface
-    = detail::memory_interface::malloc_and_free;
-
   message_data() = delete;
 
   message_data(const message_data&) = delete;
@@ -64,6 +61,11 @@ public:
   /// reference count drops to zero.
   void deref() noexcept {
     ref_count_.dec(this);
+  }
+
+  void delete_this() noexcept {
+    this->~message_data();
+    free(this);
   }
 
   // -- properties -------------------------------------------------------------
@@ -187,8 +189,6 @@ private:
   size_t constructed_elements_;
   alignas(max_align_t) std::byte storage_[];
 };
-
-static_assert(detail::uses_malloc_and_free<message_data>);
 
 } // namespace caf::detail
 

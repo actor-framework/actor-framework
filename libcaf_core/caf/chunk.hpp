@@ -4,18 +4,14 @@
 
 #pragma once
 
-#include "caf/async/fwd.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/memory_interface.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/raise_error.hpp"
-#include "caf/type_id.hpp"
 
-#include <atomic>
+#include <cstdlib>
 #include <span>
 
 #ifdef CAF_CLANG
@@ -37,9 +33,6 @@ public:
   // -- member types -----------------------------------------------------------
   class CAF_CORE_EXPORT data {
   public:
-    static constexpr auto memory_interface
-      = detail::memory_interface::malloc_and_free;
-
     data() = delete;
 
     data(const data&) = delete;
@@ -66,6 +59,11 @@ public:
 
     void deref() noexcept {
       ref_count_.dec(this);
+    }
+
+    void delete_this() noexcept {
+      this->~data();
+      free(this);
     }
 
     // -- properties -----------------------------------------------------------
@@ -98,8 +96,6 @@ public:
     size_t size_;
     std::byte storage_[];
   };
-
-  static_assert(detail::uses_malloc_and_free<data>);
 
   // -- constructors, destructors, and assignment operators --------------------
 

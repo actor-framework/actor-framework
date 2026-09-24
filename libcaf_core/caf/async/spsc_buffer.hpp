@@ -537,6 +537,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
   action::state current_state() const noexcept override {
     std::unique_lock guard{mtx_};
     return owner_ ? action::state::scheduled : action::state::disposed;
@@ -793,6 +797,10 @@ public:
 
   void deref() const noexcept final {
     ref_count_.dec(this);
+  }
+
+  void delete_this() const noexcept final {
+    delete this;
   }
 
   action::state current_state() const noexcept override {

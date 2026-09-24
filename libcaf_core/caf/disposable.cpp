@@ -51,6 +51,10 @@ public:
     ref_count_.dec(this);
   }
 
+  void delete_this() const noexcept final {
+    delete this;
+  }
+
 private:
   mutable detail::atomic_ref_count ref_count_;
   std::vector<disposable> entries_;
@@ -86,6 +90,10 @@ public:
 
   void deref() const noexcept final {
     ref_count_.dec(this);
+  }
+
+  void delete_this() const noexcept final {
+    delete this;
   }
 
 private:

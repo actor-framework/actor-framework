@@ -32,6 +32,10 @@ void subscription::trivial_impl::deref() const noexcept {
   ref_count_.dec(this);
 }
 
+void subscription::trivial_impl::delete_this() const noexcept {
+  delete this;
+}
+
 coordinator* subscription::trivial_impl::parent() const noexcept {
   return parent_;
 }
