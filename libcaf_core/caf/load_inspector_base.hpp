@@ -280,10 +280,6 @@ public:
     return impl_->value(what);
   }
 
-  bool value(weak_actor_ptr& what) {
-    return impl_->value(what);
-  }
-
   bool value(std::string& what) {
     return impl_->value(what);
   }

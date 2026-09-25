@@ -15,7 +15,7 @@ namespace caf::internal {
 
 class monitor_attachable : public attachable {
 public:
-  explicit monitor_attachable(actor_addr observer,
+  explicit monitor_attachable(weak_actor_ptr observer,
                               message_priority prio = message_priority::normal)
     : observer(std::move(observer)), priority(prio) {
     // nop
@@ -23,7 +23,7 @@ public:
 
   void actor_exited(abstract_actor* self, const error& rsn,
                     scheduler* sched) override {
-    if (auto sptr = actor_cast<strong_actor_ptr>(observer)) {
+    if (auto sptr = observer.lock()) {
       sptr->enqueue(make_mailbox_element(nullptr, make_message_id(priority),
                                          down_msg{self->address(), rsn}),
                     sched);
@@ -35,13 +35,13 @@ public:
   }
 
   /// Holds a weak reference to the observing actor.
-  actor_addr observer;
+  weak_actor_ptr observer;
 
   /// Defines the priority for the message.
   message_priority priority;
 };
 
-attachable_ptr attachable_factory::make_monitor(actor_addr observer,
+attachable_ptr attachable_factory::make_monitor(weak_actor_ptr observer,
                                                 message_priority prio) {
   using impl = internal::monitor_attachable;
   return std::make_unique<impl>(std::move(observer), prio);
@@ -59,7 +59,7 @@ public:
     if (!impl->set_reason(reason)) {
       return;
     }
-    if (auto sptr = actor_cast<strong_actor_ptr>(impl->observer())) {
+    if (auto sptr = impl->observer().lock()) {
       sptr->enqueue(
         make_mailbox_element(nullptr, make_message_id(), action{impl}), sched);
     }
@@ -81,14 +81,14 @@ attachable_factory::make_monitor(detail::abstract_monitor_action_ptr ptr) {
 
 class link_attachable : public attachable {
 public:
-  explicit link_attachable(actor_addr observer)
+  explicit link_attachable(weak_actor_ptr observer)
     : observer(std::move(observer)) {
     // nop
   }
 
   void actor_exited(abstract_actor* self, const error& reason,
                     scheduler* sched) override {
-    if (auto sptr = actor_cast<strong_actor_ptr>(observer)) {
+    if (auto sptr = observer.lock()) {
       sptr->enqueue(make_mailbox_element(nullptr, make_message_id(),
                                          exit_msg{self->address(), reason}),
                     sched);
@@ -100,10 +100,10 @@ public:
   }
 
   /// Holds a weak reference to the observing actor.
-  actor_addr observer;
+  weak_actor_ptr observer;
 };
 
-attachable_ptr attachable_factory::make_link(actor_addr observer) {
+attachable_ptr attachable_factory::make_link(weak_actor_ptr observer) {
   using impl = internal::link_attachable;
   return std::make_unique<impl>(std::move(observer));
 }
@@ -115,7 +115,7 @@ bool matches(const Predicate&, const Attachable&) { // fallback overload
 
 bool matches(const attachable_predicate::monitored_by_state& pred,
              const monitor_attachable& what) {
-  return pred.observer == what.observer.get();
+  return pred.observer == what.observer.ctrl();
 }
 
 bool matches(const attachable_predicate::monitored_with_callback_state& pred,
@@ -125,22 +125,33 @@ bool matches(const attachable_predicate::monitored_with_callback_state& pred,
 
 bool matches(const attachable_predicate::linked_to_state& pred,
              const link_attachable& what) {
-  return pred.observer == what.observer.get();
+  return pred.observer == what.observer.ctrl();
+}
+
+bool matches(const attachable_predicate::linked_to_state_extractor& pred,
+             const link_attachable& what) {
+  if (*pred.out->addr == what.observer) {
+    if (pred.out->result) {
+      *pred.out->result = what.observer;
+    }
+    return true;
+  }
+  return false;
 }
 
 bool matches(const attachable_predicate::observed_by_state& pred,
              const monitor_attachable& what) {
-  return pred.observer == what.observer.get();
+  return pred.observer == what.observer.ctrl();
 }
 
 bool matches(const attachable_predicate::observed_by_state& pred,
              const monitor_action_attachable& what) {
-  return pred.observer == what.impl->observer().get();
+  return pred.observer == what.impl->observer().ctrl();
 }
 
 bool matches(const attachable_predicate::observed_by_state& pred,
              const link_attachable& what) {
-  return pred.observer == what.observer.get();
+  return pred.observer == what.observer.ctrl();
 }
 
 bool attachable_predicate::operator()(const attachable& what) const {

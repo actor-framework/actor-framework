@@ -256,11 +256,6 @@ struct is_builtin_inspector_type_oracle<strong_actor_ptr, IsLoading> {
 };
 
 template <bool IsLoading>
-struct is_builtin_inspector_type_oracle<weak_actor_ptr, IsLoading> {
-  static constexpr bool value = true;
-};
-
-template <bool IsLoading>
 struct is_builtin_inspector_type_oracle<type_id_list, IsLoading> {
   static constexpr bool value = true;
 };

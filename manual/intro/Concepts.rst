@@ -75,13 +75,15 @@ Address
 +++++++
 
 Each actor has a (network-wide) unique logical address. This identifier is
-represented by ``actor_addr``, which allows to identify and monitor an actor.
-Unlike other actor frameworks, CAF does *not* allow users to send messages to
+represented by ``actor_addr``, which allows to identify a (possibly already
+terminated) actor in messages such as ``down_msg`` and ``exit_msg``. Unlike
+other actor frameworks, CAF does *not* allow users to send messages to
 addresses. This limitation is due to the fact that the address does not contain
 any type information. Hence, it would not be safe to send it a message, because
 the receiving actor might use a statically typed interface that does not accept
-the given message. Because an ``actor_addr`` fills the role of an identifier, it
-has *weak reference semantics* (see :ref:`reference-counting`).
+the given message. ``actor_addr`` is a small value type composed of an
+``actor_id`` and a ``node_id``; it does not keep the actor alive nor does it
+allow upgrading to a live actor handle.
 
 .. _actor-handle:
 

@@ -12,12 +12,12 @@ namespace caf::internal {
 class attachable_factory {
 public:
   static attachable_ptr
-  make_monitor(actor_addr observer,
+  make_monitor(weak_actor_ptr observer,
                message_priority prio = message_priority::normal);
 
   static attachable_ptr make_monitor(detail::abstract_monitor_action_ptr ptr);
 
-  static attachable_ptr make_link(actor_addr observer);
+  static attachable_ptr make_link(weak_actor_ptr observer);
 };
 
 // Note: implemented in attachable.cpp for technical reasons.

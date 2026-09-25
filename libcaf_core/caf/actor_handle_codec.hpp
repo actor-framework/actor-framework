@@ -17,10 +17,6 @@ public:
   virtual bool save(serializer& sink, const strong_actor_ptr& ptr) = 0;
 
   virtual bool load(deserializer& source, strong_actor_ptr& ptr) = 0;
-
-  bool save(serializer& sink, const weak_actor_ptr& ptr);
-
-  bool load(deserializer& source, weak_actor_ptr& ptr);
 };
 
 } // namespace caf

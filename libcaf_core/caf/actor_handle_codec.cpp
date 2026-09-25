@@ -14,17 +14,4 @@ actor_handle_codec::~actor_handle_codec() noexcept {
   // nop
 }
 
-bool actor_handle_codec::save(serializer& sink, const weak_actor_ptr& ptr) {
-  auto tmp = ptr.lock();
-  return save(sink, tmp);
-}
-
-bool actor_handle_codec::load(deserializer& source, weak_actor_ptr& ptr) {
-  strong_actor_ptr tmp;
-  if (!load(source, tmp))
-    return false;
-  ptr = std::move(tmp);
-  return true;
-}
-
 } // namespace caf
