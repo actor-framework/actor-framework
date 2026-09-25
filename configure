@@ -44,9 +44,7 @@ Convenience options:
                               --log-level=TRACE
                               --sanitizers=address,undefined
                               --disable-examples
-                              --disable-tools
                               --disable-shared-libs
-                              --enable-utility-targets
                               --enable-runtime-checks
 
 Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
@@ -59,7 +57,6 @@ Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
   protobuf-examples         build examples with Google Protobuf [OFF]
   qt6-examples              build examples with the Qt6 framework [OFF]
   runtime-checks            build CAF with extra runtime assertions [OFF]
-  utility-targets           include targets like consistency-check [OFF]
   examples                  build small programs showcasing CAF features [ON]
   io-module                 build networking I/O module [ON]
   openssl-module            build OpenSSL module [ON]
@@ -104,7 +101,6 @@ set_build_flag() {
     protobuf-examples)       FlagName='CAF_ENABLE_PROTOBUF_EXAMPLES' ;;
     qt6-examples)            FlagName='CAF_ENABLE_QT6_EXAMPLES' ;;
     runtime-checks)          FlagName='CAF_ENABLE_RUNTIME_CHECKS' ;;
-    utility-targets)         FlagName='CAF_ENABLE_UTILITY_TARGETS' ;;
     examples)                FlagName='CAF_ENABLE_EXAMPLES' ;;
     io-module)               FlagName='CAF_ENABLE_IO_MODULE' ;;
     net-module)              FlagName='CAF_ENABLE_NET_MODULE' ;;
@@ -168,9 +164,7 @@ while [ $# -ne 0 ]; do
       append_cache_entry CMAKE_BUILD_TYPE STRING 'Debug'
       set_build_flag examples OFF
       set_build_flag shared-libs OFF
-      set_build_flag tools OFF
       set_build_flag runtime-checks ON
-      set_build_flag utility-targets ON
       ;;
    --enable-*)
       set_build_flag $optarg ON
