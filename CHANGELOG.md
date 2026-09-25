@@ -5,6 +5,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## Unreleased
 
+## [1.2.0] - 2026-09-25
+
 ### Changed
 
 - We have replaced the actor clock implementation that the actor system uses to
@@ -1535,6 +1537,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
+[1.2.0]: https://github.com/actor-framework/actor-framework/releases/1.2.0
+[1.1.0]: https://github.com/actor-framework/actor-framework/releases/1.1.0
 [1.0.2]: https://github.com/actor-framework/actor-framework/releases/1.0.2
 [1.0.1]: https://github.com/actor-framework/actor-framework/releases/1.0.1
 [1.0.0]: https://github.com/actor-framework/actor-framework/releases/1.0.0
