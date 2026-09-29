@@ -259,8 +259,9 @@ public:
   /// ~~~
   template <class... Ts>
   do_receive_helper do_receive(Ts&&... xs) {
+    using cond_ref = receive_cond&;
     auto cb = [this, tup = std::make_tuple(std::forward<Ts>(xs)...)] //
-      (receive_cond & rc) mutable {
+      (cond_ref rc) mutable {
         varargs_tup_receive(rc, make_message_id(), tup);
       };
     return {cb};
@@ -403,8 +404,6 @@ private:
   void receive_impl(message_id mid, behavior& bhvr, timespan timeout) override;
 
   size_t attach_functor(const actor&);
-
-  size_t attach_functor(const actor_addr&);
 
   size_t attach_functor(const strong_actor_ptr&);
 

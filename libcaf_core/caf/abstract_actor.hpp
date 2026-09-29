@@ -97,9 +97,6 @@ public:
   // -- linking ----------------------------------------------------------------
 
   /// Links this actor to `other`.
-  void link_to(const actor_addr& other);
-
-  /// Links this actor to `other`.
   template <class ActorHandle>
   void link_to(const ActorHandle& other) {
     if (other) {
@@ -108,7 +105,7 @@ public:
     }
   }
 
-  /// Unlinks this actor from `addr`.
+  /// Unlinks this actor from `other`.
   void unlink_from(const actor_addr& other);
 
   /// Links this actor to `hdl`.

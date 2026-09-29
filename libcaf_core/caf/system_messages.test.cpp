@@ -16,9 +16,9 @@ WITH_FIXTURE(test::fixture::deterministic) {
 
 TEST("exit_msg is comparable") {
   SECTION("invalid actor address") {
-    auto msg1 = exit_msg{nullptr, sec::runtime_error};
-    auto msg2 = exit_msg{nullptr, sec::runtime_error};
-    auto msg3 = exit_msg{nullptr, sec::logic_error};
+    auto msg1 = exit_msg{actor_addr{}, sec::runtime_error};
+    auto msg2 = exit_msg{actor_addr{}, sec::runtime_error};
+    auto msg3 = exit_msg{actor_addr{}, sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
@@ -38,16 +38,12 @@ TEST("exit_msg is comparable") {
 
 TEST("exit_msg is serializable") {
   SECTION("invalid actor address") {
-    auto msg1 = exit_msg{nullptr, sec::runtime_error};
+    auto msg1 = exit_msg{actor_addr{}, sec::runtime_error};
     auto msg2 = serialization_roundtrip(msg1);
     check_eq(msg1, msg2);
   }
   SECTION("valid actor address") {
-    // Note: serializing an actor puts it into the registry. Hence, we need to
-    //       shut down the actor manually before the end because its reference
-    //       count will not drop to zero otherwise.
     auto dummy = sys.spawn([] { return behavior{[](int) {}}; });
-    auto dummy_guard = make_actor_scope_guard(dummy);
     auto msg1 = exit_msg{dummy.address(), sec::runtime_error};
     auto msg2 = serialization_roundtrip(msg1);
     check_eq(msg1, msg2);
@@ -56,9 +52,9 @@ TEST("exit_msg is serializable") {
 
 TEST("down_msg is comparable") {
   SECTION("invalid actor address") {
-    auto msg1 = down_msg{nullptr, sec::runtime_error};
-    auto msg2 = down_msg{nullptr, sec::runtime_error};
-    auto msg3 = down_msg{nullptr, sec::logic_error};
+    auto msg1 = down_msg{actor_addr{}, sec::runtime_error};
+    auto msg2 = down_msg{actor_addr{}, sec::runtime_error};
+    auto msg3 = down_msg{actor_addr{}, sec::logic_error};
     check_eq(msg1, msg2);
     check_eq(msg2, msg1);
     check_ne(msg1, msg3);
@@ -78,17 +74,13 @@ TEST("down_msg is comparable") {
 
 TEST("down_msg is serializable") {
   SECTION("invalid actor address") {
-    auto msg1 = down_msg{nullptr, sec::runtime_error};
+    auto msg1 = down_msg{actor_addr{}, sec::runtime_error};
     auto msg2 = serialization_roundtrip(msg1);
     check_eq(msg1, msg2);
   }
   SECTION("valid actor address") {
-    // Note: serializing an actor puts it into the registry. Hence, we need to
-    //       shut down the actor manually before the end because its reference
-    //       count will not drop to zero otherwise.
     auto dummy = sys.spawn([] { return behavior{[](int) {}}; });
-    auto dummy_guard = make_actor_scope_guard(dummy);
-    auto msg1 = exit_msg{dummy.address(), sec::runtime_error};
+    auto msg1 = down_msg{dummy.address(), sec::runtime_error};
     auto msg2 = serialization_roundtrip(msg1);
     check_eq(msg1, msg2);
   }

@@ -35,7 +35,7 @@ actor_control_block::from(const abstract_actor* ptr) noexcept {
 }
 
 actor_addr actor_control_block::address() noexcept {
-  return {this, add_ref};
+  return {id(), node()};
 }
 
 bool actor_control_block::enqueue(mailbox_element_ptr what, scheduler* sched) {
@@ -147,8 +147,12 @@ error_code<sec> save_actor(const strong_actor_ptr& storage, actor_id aid,
 namespace {
 
 void append_to_string_impl(std::string& str, const actor_control_block* ptr) {
-  detail::format_to(std::back_inserter(str), "{}",
-                    detail::formatted{ptr, policy::by_reference});
+  if (ptr) {
+    detail::format_to(std::back_inserter(str), "{}",
+                      detail::formatted{ptr, policy::by_reference});
+    return;
+  }
+  str += "null";
 }
 
 std::string to_string_impl(const actor_control_block* ptr) {

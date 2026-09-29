@@ -101,7 +101,8 @@ actor actor_pool::make(actor_system& sys, size_t num_workers,
   for (size_t i = 0; i < num_workers; ++i) {
     auto worker = fac();
     auto* wptr = actor_cast<abstract_actor*>(worker);
-    self->add_monitor(wptr, attachable_factory::make_monitor(self->address()));
+    self->add_monitor(wptr, attachable_factory::make_monitor(
+                              weak_actor_ptr{self->ctrl(), add_ref}));
     self->workers_.push_back(std::move(worker));
   }
   return res;
@@ -168,7 +169,7 @@ bool actor_pool::filter(guard_type& guard, const strong_actor_ptr& sender,
     using factory = internal::attachable_factory;
     const auto& worker = get<2>(view);
     auto* wptr = actor_cast<abstract_actor*>(worker);
-    add_monitor(wptr, factory::make_monitor(address()));
+    add_monitor(wptr, factory::make_monitor(weak_actor_ptr{ctrl(), add_ref}));
     workers_.push_back(worker);
     return true;
   }

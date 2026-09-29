@@ -188,11 +188,11 @@ SCENARIO("weak idle timeouts do not prevent actors from becoming unreachable") {
             [](const std::string&) {},
           };
         });
-        auto addr = aut.address();
+        auto wptr = actor_cast<weak_actor_ptr>(aut);
         check(has_pending_timeout());
-        check_eq(addr.get()->strong_reference_count(), 1u);
+        check_eq(wptr.ctrl()->strong_reference_count(), 1u);
         aut = nullptr;
-        check_eq(addr.get()->strong_reference_count(), 0u);
+        check_eq(wptr.ctrl()->strong_reference_count(), 0u);
         check(!has_pending_timeout());
       }
     }
@@ -206,11 +206,11 @@ SCENARIO("weak idle timeouts do not prevent actors from becoming unreachable") {
             [](const std::string&) {},
           };
         });
-        auto addr = aut.address();
+        auto wptr = actor_cast<weak_actor_ptr>(aut);
         check(has_pending_timeout());
-        check_eq(addr.get()->strong_reference_count(), 1u);
+        check_eq(wptr.ctrl()->strong_reference_count(), 1u);
         aut = nullptr;
-        check_eq(addr.get()->strong_reference_count(), 0u);
+        check_eq(wptr.ctrl()->strong_reference_count(), 0u);
         check(!has_pending_timeout());
       }
     }
