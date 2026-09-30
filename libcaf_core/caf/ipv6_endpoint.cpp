@@ -25,8 +25,8 @@ size_t ipv6_endpoint::hash_code() const noexcept {
 }
 
 long ipv6_endpoint::compare(ipv6_endpoint x) const noexcept {
-  auto res = address_.compare(x.address());
-  return res == 0 ? port_ - x.port() : res;
+  const auto res = address_.compare(x.address());
+  return res == 0 ? detail::three_way_compare(port_, x.port()) : res;
 }
 
 long ipv6_endpoint::compare(ipv4_endpoint x) const noexcept {

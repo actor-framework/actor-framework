@@ -14,7 +14,6 @@
 
 #include <string>
 #include <system_error>
-#include <type_traits>
 
 namespace caf::net {
 
@@ -36,8 +35,7 @@ struct CAF_NET_EXPORT socket : detail::comparable<socket> {
   socket& operator=(const socket& other) noexcept = default;
 
   constexpr signed_socket_id compare(socket other) const noexcept {
-    return static_cast<signed_socket_id>(id)
-           - static_cast<signed_socket_id>(other.id);
+    return detail::three_way_compare(id, other.id);
   }
 
   constexpr explicit operator bool() const noexcept {

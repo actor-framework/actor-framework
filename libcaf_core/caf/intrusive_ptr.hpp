@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -162,7 +163,7 @@ public:
   }
 
   ptrdiff_t compare(const_pointer ptr) const noexcept {
-    return static_cast<ptrdiff_t>(get() - ptr);
+    return detail::three_way_compare(get(), ptr);
   }
 
   ptrdiff_t compare(const intrusive_ptr& other) const noexcept {
@@ -170,7 +171,7 @@ public:
   }
 
   ptrdiff_t compare(std::nullptr_t) const noexcept {
-    return reinterpret_cast<ptrdiff_t>(get());
+    return compare(static_cast<const_pointer>(nullptr));
   }
 
   template <class C>

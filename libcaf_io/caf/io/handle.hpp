@@ -47,7 +47,7 @@ public:
   }
 
   int64_t compare(const Subtype& other) const {
-    return id_ - other.id();
+    return detail::three_way_compare(id_, other.id());
   }
 
   int64_t compare(const InvalidType&) const {

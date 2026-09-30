@@ -67,7 +67,7 @@ int error::compare(uint8_t code, type_id_t category) const noexcept {
   int x = 0;
   if (data_ != nullptr)
     x = (data_->code << 16) | data_->category;
-  return x - int{(code << 16) | category};
+  return detail::three_way_compare(x, (code << 16) | category);
 }
 
 // -- inspection support -----------------------------------------------------

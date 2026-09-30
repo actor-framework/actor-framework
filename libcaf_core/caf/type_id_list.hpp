@@ -57,14 +57,9 @@ public:
 
   /// Compares this list to `other`.
   int compare(type_id_list other) const noexcept {
-    // These conversions are safe, because the size is stored in 16 bits.
-    int s1 = data_[0];
-    int s2 = other.data_[0];
-    int diff = s1 - s2;
-    if (diff == 0)
-      return memcmp(begin(), other.begin(),
-                    static_cast<unsigned>(s1) * sizeof(type_id_t));
-    return diff;
+    const auto res = detail::three_way_compare(data_[0], other.data_[0]);
+    return res == 0 ? memcmp(begin(), other.begin(), size() * sizeof(type_id_t))
+                    : res;
   }
 
   /// Returns an iterator to the first type ID.

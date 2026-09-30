@@ -141,7 +141,7 @@ public:
   /// Returns a negative value if `*this < other`, zero if `*this == other`,
   /// and a positive value otherwise.
   constexpr int64_t compare(const message_id& other) const noexcept {
-    return static_cast<int64_t>(value_) - static_cast<int64_t>(other.value_);
+    return detail::three_way_compare(value_, other.value_);
   }
 
   /// Sets the flag for marking an incoming message as answered.

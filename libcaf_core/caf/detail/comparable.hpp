@@ -4,7 +4,28 @@
 
 #pragma once
 
+#include <functional>
+
 namespace caf::detail {
+
+/// Three-way comparison using std::less for implementing `compare()` functions.
+/// @returns -1 if `lhs < rhs`, 0 if `lhs == rhs`, and 1 if `lhs > rhs`.
+template <class T, class U>
+constexpr int three_way_compare(T&& lhs, U&& rhs) noexcept {
+  using lhs_t = std::decay_t<T>;
+  using rhs_t = std::decay_t<U>;
+  static_assert(!std::is_floating_point_v<lhs_t>
+                  && !std::is_floating_point_v<rhs_t>,
+                "this algorithm is unsafe for floating points (due to NaN)");
+  std::less<void> is_less;
+  if (is_less(lhs, rhs)) {
+    return -1;
+  }
+  if (is_less(rhs, lhs)) {
+    return 1;
+  }
+  return 0;
+}
 
 /// Barton–Nackman trick implementation.
 /// `Subclass` must provide a compare member function that compares
