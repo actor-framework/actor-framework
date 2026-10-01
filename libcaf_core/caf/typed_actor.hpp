@@ -9,7 +9,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/caf_deprecated.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/compare.hpp"
 #include "caf/detail/to_statically_typed_trait.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
@@ -29,10 +28,7 @@ namespace caf {
 
 /// Identifies a statically typed actor.
 template <class... Ts>
-class typed_actor : detail::comparable<typed_actor<Ts...>>,
-                    detail::comparable<typed_actor<Ts...>, actor>,
-                    detail::comparable<typed_actor<Ts...>, actor_addr>,
-                    detail::comparable<typed_actor<Ts...>, strong_actor_ptr> {
+class typed_actor {
 public:
   // -- static assertions ------------------------------------------------------
 
@@ -207,24 +203,9 @@ public:
     return ptr_;
   }
 
-  intptr_t compare(const actor_control_block* other) const noexcept {
-    return detail::compare(get(), other);
-  }
-
-  intptr_t compare(const typed_actor& other) const noexcept {
-    return detail::compare(get(), other.get());
-  }
-
-  intptr_t compare(const actor& other) const noexcept {
-    return detail::compare(get(), other);
-  }
-
-  intptr_t compare(const actor_addr& other) const noexcept {
-    return detail::compare(get(), other);
-  }
-
-  intptr_t compare(const strong_actor_ptr& other) const noexcept {
-    return detail::compare(get(), other.get());
+  /// Returns the stored strong actor pointer.
+  const strong_actor_ptr& as_intrusive_ptr() const noexcept {
+    return ptr_;
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
@@ -286,45 +267,25 @@ private:
   strong_actor_ptr ptr_;
 };
 
-/// @relates typed_actor
-template <class... Xs, class... Ys>
-bool operator==(const typed_actor<Xs...>& lhs,
-                const typed_actor<Ys...>& rhs) noexcept {
-  return lhs.compare(rhs) == 0;
-}
-
-/// @relates typed_actor
-template <class... Xs, class... Ys>
-bool operator!=(const typed_actor<Xs...>& lhs,
-                const typed_actor<Ys...>& rhs) noexcept {
-  return !(lhs == rhs);
-}
-
-/// @relates typed_actor
-template <class... Xs>
-bool operator==(const typed_actor<Xs...>& lhs, std::nullptr_t) noexcept {
-  return lhs.compare(nullptr) == 0;
-}
-
-/// @relates typed_actor
-template <class... Xs>
-bool operator==(std::nullptr_t, const typed_actor<Xs...>& rhs) noexcept {
-  return rhs.compare(nullptr) == 0;
-}
-
-/// @relates typed_actor
-template <class... Xs>
-bool operator!=(const typed_actor<Xs...>& lhs, std::nullptr_t) noexcept {
-  return !(lhs == nullptr);
-}
-
-/// @relates typed_actor
-template <class... Xs>
-bool operator!=(std::nullptr_t, const typed_actor<Xs...>& rhs) noexcept {
-  return !(rhs == nullptr);
-}
+// Note: comparison for actor handles is implemented in actor.hpp.
 
 } // namespace caf
+
+namespace caf::detail {
+
+/// Customization point for enabling comparison between actor_addr and `Handle`.
+template <class... Sigs>
+struct with_actor_addr_from<typed_actor<Sigs...>> {
+  static constexpr bool specialized = true;
+
+  template <class Visitor>
+  static auto visit(const typed_actor<Sigs...>& hdl, Visitor&& visitor) {
+    auto addr = hdl.address();
+    return std::forward<Visitor>(visitor)(addr);
+  }
+};
+
+} // namespace caf::detail
 
 namespace std {
 

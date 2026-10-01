@@ -5,20 +5,19 @@
 #pragma once
 
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_addr.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
 #include "caf/caf_deprecated.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/compare.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/type_predicates.hpp"
 #include "caf/fwd.hpp"
 #include "caf/hash/fnv.hpp"
 
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <utility>
 
@@ -26,33 +25,32 @@ namespace caf {
 
 /// Identifies an untyped actor. Can be used with derived types
 /// of `event_based_actor`, `blocking_actor`, and `actor_proxy`.
-class CAF_CORE_EXPORT actor : detail::comparable<actor>,
-                              detail::comparable<actor, actor_addr>,
-                              detail::comparable<actor, strong_actor_ptr> {
+class CAF_CORE_EXPORT actor {
 public:
   // -- friends ----------------------------------------------------------------
 
   friend class local_actor;
   friend class abstract_actor;
 
-  using signatures = none_t;
+  template <class>
+  friend struct detail::with_actor_addr_from;
 
   // allow conversion via actor_cast
   template <class, class, int>
   friend class actor_cast_access;
 
+  using signatures = none_t;
+
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
 
-  actor() = default;
-  actor(actor&&) = default;
-  actor(const actor&) = default;
-  actor& operator=(actor&&) = default;
-  actor& operator=(const actor&) = default;
+  constexpr actor() noexcept = default;
 
-  actor(std::nullptr_t);
+  constexpr actor(std::nullptr_t) noexcept {
+    // nop
+  }
 
-  actor(const scoped_actor&);
+  actor(const scoped_actor&) noexcept;
 
   template <class T>
     requires actor_traits<T>::is_dynamically_typed
@@ -90,6 +88,11 @@ public:
     return !ptr_;
   }
 
+  /// Returns the stored strong actor pointer.
+  const strong_actor_ptr& as_intrusive_ptr() const noexcept {
+    return ptr_;
+  }
+
   /// Returns the address of the stored actor.
   actor_addr address() const noexcept;
 
@@ -118,28 +121,16 @@ public:
     return ptr_->managed();
   }
 
-  intptr_t compare(const actor_control_block* other) const noexcept {
-    return detail::compare(get(), other);
-  }
-
-  intptr_t compare(const actor& other) const noexcept {
-    return detail::compare(get(), other.get());
-  }
-
-  intptr_t compare(const actor_addr& other) const noexcept {
-    return detail::compare(get(), other);
-  }
-
-  intptr_t compare(const strong_actor_ptr& other) const noexcept {
-    return detail::compare(get(), other.get());
-  }
-
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
   actor(actor_control_block*, bool);
 
-  actor(actor_control_block*, add_ref_t);
+  actor(actor_control_block* ptr, add_ref_t) noexcept : ptr_(ptr, add_ref) {
+    // nop
+  }
 
-  actor(actor_control_block*, adopt_ref_t);
+  actor(actor_control_block* ptr, adopt_ref_t) noexcept : ptr_(ptr, adopt_ref) {
+    // nop
+  }
 
   /// @endcond
 
@@ -172,24 +163,128 @@ private:
   }
 
   CAF_DEPRECATED("construct using add_ref or adopt_ref instead")
-  actor(actor_control_block*);
+  explicit actor(actor_control_block*) noexcept;
 
   strong_actor_ptr ptr_;
 };
 
-/// @relates actor
-CAF_CORE_EXPORT bool operator==(const actor& lhs, abstract_actor* rhs);
+// Note: `actor` allows implicit conversions from pointers. Simply defaulting
+//       `operator<=>` would result in side effects when comparing actors and
+//       pointers (increasing and then decreasing the reference count). Hence,
+//       we implement comparison manually here in a way that blocks implicit
+//       conversions. Since this code would be the same for `actor` and
+//       `typed_actor` anyways (and we have to use templates regardless), we
+//       implement comparison for both types here (typed_actor.hpp includes this
+//       header). Comparison to `actor_addr` is enabled by specializing
+//       `with_actor_addr_from`.
 
-/// @relates actor
-CAF_CORE_EXPORT bool operator==(abstract_actor* lhs, const actor& rhs);
+template <detail::actor_handle Handle>
+bool operator==(const Handle& hdl, std::nullptr_t) noexcept {
+  return !hdl;
+}
 
-/// @relates actor
-CAF_CORE_EXPORT bool operator!=(const actor& lhs, abstract_actor* rhs);
+template <detail::actor_handle Handle>
+bool operator!=(const Handle& hdl, std::nullptr_t) noexcept {
+  return static_cast<bool>(hdl);
+}
 
-/// @relates actor
-CAF_CORE_EXPORT bool operator!=(abstract_actor* lhs, const actor& rhs);
+template <detail::actor_handle Handle>
+bool operator==(std::nullptr_t, const Handle& hdl) noexcept {
+  return !hdl;
+}
+
+template <detail::actor_handle Handle>
+bool operator!=(std::nullptr_t, const Handle& hdl) noexcept {
+  return static_cast<bool>(hdl);
+}
+
+template <detail::actor_handle Left, detail::actor_handle Right>
+bool operator==(const Left& lhs, const Right& rhs) noexcept {
+  return lhs.as_intrusive_ptr() == rhs.as_intrusive_ptr();
+}
+
+template <detail::actor_handle Left, detail::actor_handle Right>
+auto operator<=>(const Left& lhs, const Right& rhs) noexcept {
+  return lhs.as_intrusive_ptr() <=> rhs.as_intrusive_ptr();
+}
+
+template <detail::actor_handle Left>
+bool operator==(const Left& lhs, const strong_actor_ptr& rhs) noexcept {
+  return lhs.as_intrusive_ptr() == rhs;
+}
+
+template <detail::actor_handle Left>
+auto operator<=>(const Left& lhs, const strong_actor_ptr& rhs) noexcept {
+  return lhs.as_intrusive_ptr() <=> rhs;
+}
+
+template <detail::actor_handle Right>
+bool operator==(const strong_actor_ptr& lhs, const Right& rhs) noexcept {
+  return lhs == rhs.as_intrusive_ptr();
+}
+
+template <detail::actor_handle Right>
+auto operator<=>(const strong_actor_ptr& lhs, const Right& rhs) noexcept {
+  return lhs <=> rhs.as_intrusive_ptr();
+}
+
+template <detail::actor_handle Left, std::derived_from<abstract_actor> Right>
+bool operator==(const Left& lhs, const Right* rhs) noexcept {
+  return lhs.as_intrusive_ptr() == actor_control_block::from(rhs);
+}
+
+template <detail::actor_handle Left, std::derived_from<abstract_actor> Right>
+auto operator<=>(const Left& lhs, const Right* rhs) noexcept {
+  return lhs.as_intrusive_ptr() <=> actor_control_block::from(rhs);
+}
+
+template <std::derived_from<abstract_actor> Left, detail::actor_handle Right>
+bool operator==(const Left* lhs, const Right& rhs) noexcept {
+  return actor_control_block::from(lhs) == rhs.as_intrusive_ptr();
+}
+
+template <std::derived_from<abstract_actor> Left, detail::actor_handle Right>
+auto operator<=>(const Left* lhs, const Right& rhs) noexcept {
+  return actor_control_block::from(lhs) <=> rhs.as_intrusive_ptr();
+}
+
+template <detail::actor_handle Left>
+bool operator==(const Left& lhs, const actor_control_block* rhs) noexcept {
+  return lhs.as_intrusive_ptr() == rhs;
+}
+
+template <detail::actor_handle Left>
+auto operator<=>(const Left& lhs, const actor_control_block* rhs) noexcept {
+  return lhs.as_intrusive_ptr() <=> rhs;
+}
+
+template <detail::actor_handle Right>
+bool operator==(const actor_control_block* lhs, const Right& rhs) noexcept {
+  return lhs == rhs.as_intrusive_ptr();
+}
+
+template <detail::actor_handle Right>
+auto operator<=>(const actor_control_block* lhs, const Right& rhs) noexcept {
+  return lhs <=> rhs.as_intrusive_ptr();
+}
 
 } // namespace caf
+
+namespace caf::detail {
+
+/// Customization point for enabling comparison between actor_addr and `Handle`.
+template <>
+struct with_actor_addr_from<actor> {
+  static constexpr bool specialized = true;
+
+  template <class Visitor>
+  static auto visit(const actor& hdl, Visitor&& visitor) {
+    auto addr = hdl.address();
+    return std::forward<Visitor>(visitor)(addr);
+  }
+};
+
+} // namespace caf::detail
 
 namespace std {
 

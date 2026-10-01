@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/make_copy_on_write.hpp"
 #include "caf/ref_counted.hpp"
@@ -15,8 +14,7 @@ namespace caf {
 
 /// A copy-on-write tuple implementation.
 template <class... Ts>
-class cow_tuple : detail::comparable<cow_tuple<Ts...>>,
-                  detail::comparable<cow_tuple<Ts...>, std::tuple<Ts...>> {
+class cow_tuple {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -80,14 +78,20 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  template <class... Us>
-  int compare(const std::tuple<Us...>& other) const noexcept {
-    return data() < other ? -1 : (data() == other ? 0 : 1);
+  bool operator==(const data_type& other) const noexcept {
+    return data() == other;
   }
 
-  template <class... Us>
-  int compare(const cow_tuple<Us...>& other) const noexcept {
-    return compare(other.data());
+  auto operator<=>(const data_type& other) const noexcept {
+    return data() <=> other;
+  }
+
+  bool operator==(const cow_tuple& other) const noexcept {
+    return data() == other.data();
+  }
+
+  auto operator<=>(const cow_tuple& other) const noexcept {
+    return data() <=> other.data();
   }
 
 private:

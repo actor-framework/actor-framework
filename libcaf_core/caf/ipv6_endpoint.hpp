@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ipv6_address.hpp"
@@ -15,13 +14,14 @@
 namespace caf {
 
 /// An IP endpoint that contains an ::ipv6_address and a port.
-class CAF_CORE_EXPORT ipv6_endpoint
-  : detail::comparable<ipv6_endpoint>,
-    detail::comparable<ipv6_endpoint, ipv4_endpoint> {
+class CAF_CORE_EXPORT ipv6_endpoint {
 public:
   // -- constructors -----------------------------------------------------------
 
-  ipv6_endpoint(ipv6_address address, uint16_t port);
+  ipv6_endpoint(ipv6_address address, uint16_t port) noexcept
+    : address_(address), port_(port) {
+    // nop
+  }
 
   ipv6_endpoint(ipv4_address address, uint16_t port);
 
@@ -30,6 +30,8 @@ public:
   ipv6_endpoint(const ipv6_endpoint&) = default;
 
   ipv6_endpoint& operator=(const ipv6_endpoint&) = default;
+
+  static ipv6_endpoint from(const ipv4_endpoint& other);
 
   // -- properties -------------------------------------------------------------
 
@@ -56,15 +58,7 @@ public:
   /// Returns a hash for this object.
   size_t hash_code() const noexcept;
 
-  /// Compares this endpoint to `x`.
-  /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
-  /// value otherwise.
-  long compare(ipv6_endpoint x) const noexcept;
-
-  /// Compares this endpoint to `x`.
-  /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
-  /// value otherwise.
-  long compare(ipv4_endpoint x) const noexcept;
+  auto operator<=>(const ipv6_endpoint& other) const noexcept = default;
 
   template <class Inspector>
   friend bool inspect(Inspector& f, ipv6_endpoint& x) {
@@ -78,6 +72,22 @@ private:
   /// The port of this endpoint.
   uint16_t port_;
 };
+
+inline bool operator==(const ipv6_endpoint& lhs, const ipv4_endpoint& rhs) {
+  return lhs == ipv6_endpoint::from(rhs);
+}
+
+inline auto operator<=>(const ipv6_endpoint& lhs, const ipv4_endpoint& rhs) {
+  return lhs <=> ipv6_endpoint::from(rhs);
+}
+
+inline bool operator==(const ipv4_endpoint& lhs, const ipv6_endpoint& rhs) {
+  return ipv6_endpoint::from(lhs) == rhs;
+}
+
+inline auto operator<=>(const ipv4_endpoint& lhs, const ipv6_endpoint& rhs) {
+  return ipv6_endpoint::from(lhs) <=> rhs;
+}
 
 CAF_CORE_EXPORT std::string to_string(const ipv6_endpoint& ep);
 

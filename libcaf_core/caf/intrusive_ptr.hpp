@@ -9,12 +9,10 @@
 #include "caf/caf_deprecated.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/build_config.hpp"
-#include "caf/detail/concepts.hpp"
 #include "caf/fwd.hpp"
 
 #include <algorithm>
 #include <cstddef>
-#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -163,16 +161,6 @@ public:
     reset(new T(std::forward<Ts>(xs)...), adopt_ref);
   }
 
-  ptrdiff_t compare(const intrusive_ptr& other) const noexcept {
-    if (ptr_ < other.ptr_) {
-      return -1;
-    }
-    if (ptr_ > other.ptr_) {
-      return 1;
-    }
-    return 0;
-  }
-
   intrusive_ptr& operator=(std::nullptr_t) noexcept {
     reset();
     return *this;
@@ -214,8 +202,8 @@ public:
     return ptr_ != nullptr;
   }
 
-  size_t hash() const noexcept {
-    std::hash<pointer> hasher;
+  [[nodiscard]] size_t hash() const noexcept {
+    std::hash<const_pointer> hasher;
     return hasher(ptr_);
   }
 
@@ -268,42 +256,44 @@ private:
   pointer ptr_;
 };
 
-// -- comparison to nullptr ----------------------------------------------------
-
 /// @relates intrusive_ptr
 template <class T>
 constexpr bool
-operator==(const intrusive_ptr<T>& lhs, std::nullptr_t) noexcept {
-  return !lhs;
+operator==(const intrusive_ptr<T>& ptr, std::nullptr_t) noexcept {
+  return !ptr;
 }
 
 /// @relates intrusive_ptr
 template <class T>
 constexpr bool
-operator==(std::nullptr_t, const intrusive_ptr<T>& rhs) noexcept {
-  return !rhs;
+operator!=(const intrusive_ptr<T>& ptr, std::nullptr_t) noexcept {
+  return static_cast<bool>(ptr);
 }
 
 /// @relates intrusive_ptr
 template <class T>
 constexpr bool
-operator!=(const intrusive_ptr<T>& lhs, std::nullptr_t) noexcept {
-  return static_cast<bool>(lhs);
+operator==(std::nullptr_t, const intrusive_ptr<T>& ptr) noexcept {
+  return !ptr;
 }
 
 /// @relates intrusive_ptr
 template <class T>
 constexpr bool
-operator!=(std::nullptr_t, const intrusive_ptr<T>& rhs) noexcept {
-  return static_cast<bool>(rhs);
+operator!=(std::nullptr_t, const intrusive_ptr<T>& ptr) noexcept {
+  return static_cast<bool>(ptr);
 }
-
-// -- comparison to raw pointer ------------------------------------------------
 
 /// @relates intrusive_ptr
 template <class T>
 constexpr bool operator==(const intrusive_ptr<T>& lhs, const T* rhs) noexcept {
   return lhs.get() == rhs;
+}
+
+/// @relates intrusive_ptr
+template <class T>
+constexpr auto operator<=>(const intrusive_ptr<T>& lhs, const T* rhs) noexcept {
+  return lhs.get() <=> rhs;
 }
 
 /// @relates intrusive_ptr
@@ -314,29 +304,9 @@ constexpr bool operator==(const T* lhs, const intrusive_ptr<T>& rhs) noexcept {
 
 /// @relates intrusive_ptr
 template <class T>
-constexpr bool operator!=(const intrusive_ptr<T>& lhs, const T* rhs) noexcept {
-  return lhs.get() != rhs;
+constexpr auto operator<=>(const T* lhs, const intrusive_ptr<T>& rhs) noexcept {
+  return lhs <=> rhs.get();
 }
-
-/// @relates intrusive_ptr
-template <class T>
-constexpr bool operator!=(const T* lhs, const intrusive_ptr<T>& rhs) noexcept {
-  return lhs != rhs.get();
-}
-
-/// @relates intrusive_ptr
-template <class T>
-constexpr bool operator<(const intrusive_ptr<T>& lhs, const T* rhs) noexcept {
-  return lhs.get() < rhs;
-}
-
-/// @relates intrusive_ptr
-template <class T>
-constexpr bool operator<(const T* lhs, const intrusive_ptr<T>& rhs) noexcept {
-  return lhs < rhs.get();
-}
-
-// -- comparison to intrusive_pointer ------------------------------------------
 
 /// @relates intrusive_ptr
 template <class Left, class Right>
@@ -348,18 +318,10 @@ constexpr auto operator==(const intrusive_ptr<Left>& lhs,
 
 /// @relates intrusive_ptr
 template <class Left, class Right>
-constexpr auto operator!=(const intrusive_ptr<Left>& lhs,
-                          const intrusive_ptr<Right>& rhs) noexcept
-  -> decltype(lhs.get() != rhs.get()) {
-  return lhs.get() != rhs.get();
-}
-
-/// @relates intrusive_ptr
-template <class Left, class Right>
-constexpr auto operator<(const intrusive_ptr<Left>& lhs,
-                         const intrusive_ptr<Right>& rhs) noexcept
-  -> decltype(lhs.get() < rhs.get()) {
-  return lhs.get() < rhs.get();
+constexpr auto operator<=>(const intrusive_ptr<Left>& lhs,
+                           const intrusive_ptr<Right>& rhs) noexcept
+  -> decltype(lhs.get() <=> rhs.get()) {
+  return lhs.get() <=> rhs.get();
 }
 
 /// @relates intrusive_ptr

@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
-
 #include <string>
 
 namespace caf {
@@ -13,7 +11,7 @@ namespace caf {
 /// Unit is analogous to `void`, but can be safely returned, stored, etc.
 /// to enable higher-order abstraction without cluttering code with
 /// exceptions for `void` (which can't be stored, for example).
-struct unit_t : detail::comparable<unit_t> {
+struct unit_t {
   constexpr unit_t() noexcept = default;
 
   constexpr unit_t(const unit_t&) noexcept = default;
@@ -26,9 +24,7 @@ struct unit_t : detail::comparable<unit_t> {
     // nop
   }
 
-  static constexpr int compare(const unit_t&) noexcept {
-    return 0;
-  }
+  constexpr auto operator<=>(const unit_t&) const noexcept = default;
 
   template <class... Ts>
   constexpr unit_t operator()(Ts&&...) const noexcept {

@@ -7,9 +7,17 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Changed
 
+- CAF now requires C++20 to build.
 - `caf::type_id_t` is now an `enum class` instead of a `uint16_t` alias to
   prevent implicit conversions to integer types.
-- CAF now requires C++20 to build.
+- The class `actor_addr` has been redesigned from scratch. Prior to CAF 2.0, an
+  `actor_addr` held a weak pointer to an actor. This made it fundamentally
+  unsafe to send across the network. Since the only use case for `actor_addr` in
+  CAF is to identify an actor from an `exit_msg` or `down_msg`, we have
+  re-implemented it as a simple pair of `actor_id` and `node_id`. With this
+  change, `actor_addr` is now safe to send across the network. This change
+  should be (mostly) transparent to users with the exception of `actor_cast`,
+  which no longer can convert `actor_addr` to other actor handles.
 - When using the HTTP client API, SSL hostname validation is now enabled by
   default. Users can disable it by setting `hostname_validation` to `false` if
   necessary. This change was made to improve security by default.
@@ -67,14 +75,6 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `caf::async::producer::on_consumer_demand` callback now takes a second
   `bool unblocked` argument. Please refer to the documentation of the `producer`
   class for more details.
-- The class `actor_addr` has been redesigned from scratch. Prior to CAF 2.0, an
-  `actor_addr` held a weak pointer to an actor. This made it fundamentally
-  unsafe to send across the network. Since the only use case for `actor_addr` in
-  CAF is to identify an actor from an `exit_msg` or `down_msg`, we have
-  re-implemented it as a simple pair of `actor_id` and `node_id`. With this
-  change, `actor_addr` is now safe to send across the network. This change
-  should be (mostly) transparent to users with the exception of `actor_cast`,
-  which no longer can convert `actor_addr` to other actor handles.
 
 ### Deprecated
 
@@ -117,6 +117,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `http::with_v2(...)` API.
 - Deprecate obsolete members of `caf::io::network`. This namespace contains
   legacy networking APIs that have been replaced by the `caf::net` module.
+- The implicit conversion operator from `cow_string` to `std::string_view` is
+  now deprecated. Users should use the `str()` method explicitly instead.
 
 ### Added
 
@@ -209,6 +211,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Removed
 
+- All `compare` functions on CAF types have been removed in favor of the new C++
+  "spaceship operator", i.e., `<=>`. These functions were an implementation
+  detail for `caf::detail::comparable` that has been removed since C++ can now
+  auto-generate most comparisons by defaulting `operator<=>`.
 - Removed the unused `caf::flow::subscription::fwd_impl` class and its companion
   `subscription::listener` interface. Both were leftovers from earlier flow API
   iterations and had no remaining callers (#2464).
@@ -239,6 +245,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   This means that CAF messages may no longer contain a `weak_actor_ptr`. While
   this is technically a breaking API change, we consider it a bug fix since
   sending a `weak_actor_ptr` silently failed in earlier CAF versions.
+- The class `cow_string` no longer has a constructor taking a `view_type`
+  argument because it introduced ambiguity with the other constructors.
 
 ## [1.1.0] - 2025-07-25
 

@@ -5,10 +5,8 @@
 #pragma once
 
 #include "caf/detail/atomic_ref_count.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/hash/fnv.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ip_address.hpp"
@@ -21,8 +19,7 @@
 namespace caf {
 
 /// A URI according to RFC 3986.
-class CAF_CORE_EXPORT uri : detail::comparable<uri>,
-                            detail::comparable<uri, std::string_view> {
+class CAF_CORE_EXPORT uri {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -210,8 +207,9 @@ public:
   /// encoded URI) with a leading '/'.
   std::string path_query_fragment() const;
 
-  /// Returns a hash code over all components.
-  size_t hash_code() const noexcept;
+  CAF_DEPRECATED("use hash() instead") size_t hash_code() const noexcept {
+    return hash();
+  }
 
   /// Returns a new URI with the `authority` component only.
   /// @returns A new URI in the form @c scheme://authority if the authority
@@ -227,14 +225,17 @@ public:
   std::optional<uri> with_userinfo(std::string name,
                                    std::string password) const;
 
+  /// Returns a hash code over all components.
+  [[nodiscard]] size_t hash() const noexcept;
+
   // -- comparison -------------------------------------------------------------
 
-  auto compare(const uri& other) const noexcept {
-    return str().compare(other.str());
+  bool operator==(const uri& other) const noexcept {
+    return str() == other.str();
   }
 
-  auto compare(std::string_view x) const noexcept {
-    return str().compare(x);
+  auto operator<=>(const uri& other) const noexcept {
+    return str() <=> other.str();
   }
 
   // -- parsing ----------------------------------------------------------------
@@ -252,6 +253,22 @@ public:
 private:
   impl_ptr impl_;
 };
+
+inline bool operator==(const uri& lhs, std::string_view rhs) noexcept {
+  return lhs.str() == rhs;
+}
+
+inline auto operator<=>(const uri& lhs, std::string_view rhs) noexcept {
+  return lhs.str() <=> rhs;
+}
+
+inline bool operator==(std::string_view lhs, const uri& rhs) noexcept {
+  return lhs == rhs.str();
+}
+
+inline auto operator<=>(std::string_view lhs, const uri& rhs) noexcept {
+  return lhs <=> rhs.str();
+}
 
 // -- related free functions ---------------------------------------------------
 
@@ -319,7 +336,7 @@ namespace std {
 template <>
 struct hash<caf::uri> {
   size_t operator()(const caf::uri& x) const noexcept {
-    return caf::hash::fnv<size_t>::compute(x);
+    return x.hash();
   }
 };
 

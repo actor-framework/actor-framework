@@ -6,39 +6,27 @@
 
 #include "caf/net/socket_id.hpp"
 
-#include "caf/config.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/timespan.hpp"
 
 #include <string>
 #include <system_error>
-#include <type_traits>
 
 namespace caf::net {
 
 /// An internal endpoint for sending or receiving data. Can be either a
 /// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct CAF_NET_EXPORT socket : detail::comparable<socket> {
-  socket_id id;
+struct CAF_NET_EXPORT socket {
+  socket_id id = invalid_socket_id;
 
-  constexpr socket() noexcept : id(invalid_socket_id) {
-    // nop
-  }
+  constexpr socket() noexcept = default;
 
   constexpr explicit socket(socket_id id) noexcept : id(id) {
     // nop
   }
 
-  constexpr socket(const socket& other) noexcept = default;
-
-  socket& operator=(const socket& other) noexcept = default;
-
-  constexpr signed_socket_id compare(socket other) const noexcept {
-    return static_cast<signed_socket_id>(id)
-           - static_cast<signed_socket_id>(other.id);
-  }
+  constexpr auto operator<=>(const socket&) const noexcept = default;
 
   constexpr explicit operator bool() const noexcept {
     return id != invalid_socket_id;
@@ -60,7 +48,7 @@ bool inspect(Inspector& f, socket& x) {
 }
 
 /// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
+constexpr auto invalid_socket = socket{};
 
 /// Converts between different socket types.
 template <class To, class From>

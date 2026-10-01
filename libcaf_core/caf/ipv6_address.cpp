@@ -70,12 +70,12 @@ std::array<uint32_t, 3> v4_prefix{{0, 0, net_order_32(0x0000FFFFu)}};
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-ipv6_address::ipv6_address() {
+ipv6_address::ipv6_address() noexcept {
   half_segments_[0] = 0;
   half_segments_[1] = 0;
 }
 
-ipv6_address::ipv6_address(uint16_ilist prefix, uint16_ilist suffix) {
+ipv6_address::ipv6_address(uint16_ilist prefix, uint16_ilist suffix) noexcept {
   CAF_ASSERT((prefix.size() + suffix.size()) <= 8);
   auto addr_fill = [&](uint16_ilist chunks, size_t p) {
     union {
@@ -93,24 +93,13 @@ ipv6_address::ipv6_address(uint16_ilist prefix, uint16_ilist suffix) {
   addr_fill(suffix, num_bytes - (suffix.size() * 2));
 }
 
-ipv6_address::ipv6_address(ipv4_address addr) {
+ipv6_address::ipv6_address(ipv4_address addr) noexcept {
   std::copy(v4_prefix.begin(), v4_prefix.end(), quad_segments_.begin());
   quad_segments_.back() = addr.bits();
 }
 
-ipv6_address::ipv6_address(array_type bytes) {
+ipv6_address::ipv6_address(array_type bytes) noexcept {
   memcpy(bytes_.data(), bytes.data(), bytes.size());
-}
-
-// -- comparison ---------------------------------------------------------------
-
-int ipv6_address::compare(ipv6_address other) const noexcept {
-  return memcmp(bytes().data(), other.bytes().data(), num_bytes);
-}
-
-int ipv6_address::compare(ipv4_address other) const noexcept {
-  ipv6_address tmp{other};
-  return compare(tmp);
 }
 
 // -- properties ---------------------------------------------------------------

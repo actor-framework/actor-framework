@@ -9,8 +9,6 @@
 #include "caf/detail/formatted.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/fwd.hpp"
-#include "caf/hash/fnv.hpp"
-#include "caf/inspector_access.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
@@ -40,9 +38,11 @@ public:
 
   bool valid() const noexcept;
 
+  [[nodiscard]] size_t hash() const noexcept;
+
   // -- comparison -------------------------------------------------------------
 
-  int compare(const hashed_node_id& other) const noexcept;
+  constexpr auto operator<=>(const hashed_node_id&) const noexcept = default;
 
   // -- conversion -------------------------------------------------------------
 
@@ -77,6 +77,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  node_id_data() = default;
+
   explicit node_id_data(variant_type value) : content(std::move(value)) {
     // nop
   }
@@ -90,22 +92,47 @@ public:
     // nop
   }
 
-  node_id_data() = default;
+  ~node_id_data() noexcept override;
 
-  node_id_data(node_id_data&&) = default;
+  bool operator==(const node_id_data& other) const noexcept {
+    return content == other.content;
+  }
 
-  node_id_data(const node_id_data&) = default;
-
-  node_id_data& operator=(node_id_data&&) = default;
-
-  node_id_data& operator=(const node_id_data&) = default;
-
-  ~node_id_data() override;
-
-  // -- member variables -------------------------------------------------------
+  auto operator<=>(const node_id_data& other) const noexcept {
+    return content <=> other.content;
+  }
 
   variant_type content;
 };
+
+} // namespace caf
+
+namespace caf::detail {
+
+template <class>
+struct node_id_index_impl;
+
+template <>
+struct node_id_index_impl<none_t> {
+  static constexpr size_t value = 0;
+};
+
+template <>
+struct node_id_index_impl<uri> {
+  static constexpr size_t value = 1;
+};
+
+template <>
+struct node_id_index_impl<hashed_node_id> {
+  static constexpr size_t value = 2;
+};
+
+template <class T>
+constexpr size_t node_id_index = node_id_index_impl<T>::value;
+
+} // namespace caf::detail
+
+namespace caf {
 
 /// A node ID is an opaque value for representing CAF instances in the network.
 class CAF_CORE_EXPORT node_id {
@@ -144,12 +171,44 @@ public:
     return !data_;
   }
 
-  /// Compares this instance to `other`.
-  /// @returns -1 if `*this < other`, 0 if `*this == other`, and 1 otherwise.
-  int compare(const node_id& other) const noexcept;
+private:
+  template <class Visitor>
+  auto visit(Visitor&& visitor) const noexcept {
+    if (data_) {
+      return std::visit(std::forward<Visitor>(visitor), data_->content);
+    }
+    return std::forward<Visitor>(visitor)(none);
+  }
+
+public:
+  bool operator==(const node_id& other) const noexcept {
+    return visit([&other]<class Left>(const Left& lhs) {
+      return other.visit([&lhs]<class Right>(const Right& rhs) {
+        if constexpr (std::is_same_v<Left, Right>) {
+          return lhs == rhs;
+        } else {
+          return false;
+        }
+      });
+    });
+  }
+
+  auto operator<=>(const node_id& other) const noexcept {
+    return visit([&other]<class Left>(const Left& lhs) {
+      return other.visit([&lhs]<class Right>(const Right& rhs) {
+        if constexpr (std::is_same_v<Left, Right>) {
+          return lhs <=> rhs;
+        } else {
+          return detail::node_id_index<Left> <=> detail::node_id_index<Right>;
+        }
+      });
+    });
+  }
 
   /// Exchanges the value of this object with `other`.
   void swap(node_id& other) noexcept;
+
+  [[nodiscard]] size_t hash() const noexcept;
 
   // -- friend functions -------------------------------------------------------
 
@@ -201,36 +260,6 @@ inline bool wraps_uri(const node_id& x) noexcept {
 }
 
 /// @relates node_id
-inline bool operator==(const node_id& x, const node_id& y) noexcept {
-  return x.compare(y) == 0;
-}
-
-/// @relates node_id
-inline bool operator!=(const node_id& x, const node_id& y) noexcept {
-  return x.compare(y) != 0;
-}
-
-/// @relates node_id
-inline bool operator<(const node_id& x, const node_id& y) noexcept {
-  return x.compare(y) < 0;
-}
-
-/// @relates node_id
-inline bool operator<=(const node_id& x, const node_id& y) noexcept {
-  return x.compare(y) <= 0;
-}
-
-/// @relates node_id
-inline bool operator>(const node_id& x, const node_id& y) noexcept {
-  return x.compare(y) > 0;
-}
-
-/// @relates node_id
-inline bool operator>=(const node_id& x, const node_id& y) noexcept {
-  return x.compare(y) >= 0;
-}
-
-/// @relates node_id
 inline bool operator==(const node_id& x, const none_t&) noexcept {
   return !x;
 }
@@ -238,16 +267,6 @@ inline bool operator==(const node_id& x, const none_t&) noexcept {
 /// @relates node_id
 inline bool operator==(const none_t&, const node_id& x) noexcept {
   return !x;
-}
-
-/// @relates node_id
-inline bool operator!=(const node_id& x, const none_t&) noexcept {
-  return static_cast<bool>(x);
-}
-
-/// @relates node_id
-inline bool operator!=(const none_t&, const node_id& x) noexcept {
-  return static_cast<bool>(x);
 }
 
 /// Appends `x` in human-readable string representation to `str`.
@@ -283,7 +302,7 @@ namespace std {
 template <>
 struct hash<caf::node_id> {
   size_t operator()(const caf::node_id& x) const noexcept {
-    return caf::hash::fnv<size_t>::compute(x);
+    return x.hash();
   }
 };
 

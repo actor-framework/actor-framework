@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/byte_address.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
@@ -15,8 +14,7 @@
 
 namespace caf {
 
-class CAF_CORE_EXPORT ipv4_address : public byte_address<ipv4_address>,
-                                     detail::comparable<ipv4_address> {
+class CAF_CORE_EXPORT ipv4_address : public byte_address<ipv4_address> {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -90,9 +88,13 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  /// Returns a negative number if `*this < other`, zero if `*this == other`
-  /// and a positive number if `*this > other`.
-  int compare(ipv4_address other) const noexcept;
+  bool operator==(ipv4_address other) const noexcept {
+    return bytes() == other.bytes();
+  }
+
+  auto operator<=>(ipv4_address other) const noexcept {
+    return bytes() <=> other.bytes();
+  }
 
   // -- inspection -------------------------------------------------------------
 

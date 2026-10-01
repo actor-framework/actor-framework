@@ -74,7 +74,7 @@ WITH_FIXTURE(fixture) {
 
 TEST("socket creation") {
   ip_endpoint ep;
-  check_eq(parse("0.0.0.0:0", ep), none);
+  check_eq(detail::parse("0.0.0.0:0", ep), none);
   check(static_cast<bool>(make_udp_datagram_socket(ep)));
 }
 

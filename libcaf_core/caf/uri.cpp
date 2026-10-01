@@ -4,9 +4,6 @@
 
 #include "caf/uri.hpp"
 
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/deserializer.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/overload.hpp"
@@ -16,7 +13,6 @@
 #include "caf/expected.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/serializer.hpp"
 
 #include <optional>
 
@@ -106,7 +102,7 @@ std::string uri::path_query_fragment() const {
   return result;
 }
 
-size_t uri::hash_code() const noexcept {
+size_t uri::hash() const noexcept {
   return hash::fnv<size_t>::compute(str());
 }
 
@@ -329,7 +325,7 @@ std::string to_string(const uri::authority_type& x) {
 
 error parse(std::string_view str, uri& dest) {
   string_parser_state ps{str.begin(), str.end()};
-  parse(ps, dest);
+  detail::parse(ps, dest);
   if (ps.code == pec::success)
     return none;
   return ps.error();

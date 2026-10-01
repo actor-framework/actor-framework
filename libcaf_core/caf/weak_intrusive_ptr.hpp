@@ -88,6 +88,8 @@ public:
 
   using control_block_pointer = control_block_type*;
 
+  using const_control_block_pointer = const control_block_type*;
+
   /// Tells `actor_cast` which semantic this type uses.
   static constexpr bool has_weak_ptr_semantics = true;
 
@@ -231,44 +233,21 @@ public:
     return *this;
   }
 
-  ptrdiff_t compare(const weak_intrusive_ptr& other) const noexcept {
-    if (ptr_ < other.ptr_) {
-      return -1;
-    }
-    if (ptr_ > other.ptr_) {
-      return 1;
-    }
-    return 0;
-  }
-
-  template <class U>
-    requires detail::managed_by<control_block_type, U>
-  ptrdiff_t compare(const intrusive_ptr<U>& other) const noexcept {
-    auto* ctrl = detail::get_control_block<control_block_type>(other);
-    if (ptr_ < ctrl) {
-      return -1;
-    }
-    if (ptr_ > ctrl) {
-      return 1;
-    }
-    return 0;
-  }
-
   /// Returns a pointer to the control block.
-  control_block_pointer ctrl() const noexcept {
+  constexpr control_block_pointer ctrl() const noexcept {
     return ptr_;
   }
 
-  bool operator!() const noexcept {
+  constexpr bool operator!() const noexcept {
     return !ptr_;
   }
 
-  explicit operator bool() const noexcept {
+  constexpr explicit operator bool() const noexcept {
     return static_cast<bool>(ptr_);
   }
 
-  size_t hash() const noexcept {
-    std::hash<control_block_pointer> hasher;
+  [[nodiscard]] size_t hash() const noexcept {
+    std::hash<const_control_block_pointer> hasher;
     return hasher(ptr_);
   }
 
@@ -345,29 +324,29 @@ private:
 /// @relates weak_intrusive_ptr
 template <class T>
 constexpr bool
-operator==(const weak_intrusive_ptr<T>& lhs, std::nullptr_t) noexcept {
-  return !lhs;
+operator==(const weak_intrusive_ptr<T>& ptr, std::nullptr_t) noexcept {
+  return !ptr;
 }
 
 /// @relates weak_intrusive_ptr
 template <class T>
 constexpr bool
-operator==(std::nullptr_t, const weak_intrusive_ptr<T>& rhs) noexcept {
-  return !rhs;
+operator!=(const weak_intrusive_ptr<T>& ptr, std::nullptr_t) noexcept {
+  return static_cast<bool>(ptr);
 }
 
 /// @relates weak_intrusive_ptr
 template <class T>
 constexpr bool
-operator!=(const weak_intrusive_ptr<T>& lhs, std::nullptr_t) noexcept {
-  return static_cast<bool>(lhs);
+operator==(std::nullptr_t, const weak_intrusive_ptr<T>& ptr) noexcept {
+  return !ptr;
 }
 
 /// @relates weak_intrusive_ptr
 template <class T>
 constexpr bool
-operator!=(std::nullptr_t, const weak_intrusive_ptr<T>& rhs) noexcept {
-  return static_cast<bool>(rhs);
+operator!=(std::nullptr_t, const weak_intrusive_ptr<T>& ptr) noexcept {
+  return static_cast<bool>(ptr);
 }
 
 /// @relates weak_intrusive_ptr
@@ -380,6 +359,14 @@ operator==(const weak_intrusive_ptr<T>& lhs,
 
 /// @relates weak_intrusive_ptr
 template <class T>
+constexpr auto
+operator<=>(const weak_intrusive_ptr<T>& lhs,
+            typename weak_intrusive_ptr<T>::control_block_type* rhs) noexcept {
+  return lhs.ctrl() <=> rhs;
+}
+
+/// @relates weak_intrusive_ptr
+template <class T>
 constexpr bool
 operator==(typename weak_intrusive_ptr<T>::control_block_type* lhs,
            const weak_intrusive_ptr<T>& rhs) noexcept {
@@ -388,34 +375,10 @@ operator==(typename weak_intrusive_ptr<T>::control_block_type* lhs,
 
 /// @relates weak_intrusive_ptr
 template <class T>
-constexpr bool
-operator!=(const weak_intrusive_ptr<T>& lhs,
-           typename weak_intrusive_ptr<T>::control_block_type* rhs) noexcept {
-  return lhs.ctrl() != rhs;
-}
-
-/// @relates weak_intrusive_ptr
-template <class T>
-constexpr bool
-operator!=(typename weak_intrusive_ptr<T>::control_block_type* lhs,
-           const weak_intrusive_ptr<T>& rhs) noexcept {
-  return lhs != rhs.ctrl();
-}
-
-/// @relates weak_intrusive_ptr
-template <class T>
-constexpr bool
-operator<(const weak_intrusive_ptr<T>& lhs,
-          typename weak_intrusive_ptr<T>::control_block_type* rhs) noexcept {
-  return lhs.ctrl() < rhs;
-}
-
-/// @relates weak_intrusive_ptr
-template <class T>
-constexpr bool
-operator<(typename weak_intrusive_ptr<T>::control_block_type* lhs,
-          const weak_intrusive_ptr<T>& rhs) noexcept {
-  return lhs < rhs.ctrl();
+constexpr auto
+operator<=>(typename weak_intrusive_ptr<T>::control_block_type* lhs,
+            const weak_intrusive_ptr<T>& rhs) noexcept {
+  return lhs <=> rhs.ctrl();
 }
 
 /// @relates weak_intrusive_ptr
@@ -429,17 +392,9 @@ constexpr bool operator==(const weak_intrusive_ptr<Left>& lhs,
 /// @relates weak_intrusive_ptr
 template <class Left, class Right>
   requires detail::same_control_block<Left, Right>
-constexpr bool operator!=(const weak_intrusive_ptr<Left>& lhs,
-                          const weak_intrusive_ptr<Right>& rhs) noexcept {
-  return lhs.ctrl() != rhs.ctrl();
-}
-
-/// @relates weak_intrusive_ptr
-template <class Left, class Right>
-  requires detail::same_control_block<Left, Right>
-constexpr bool operator<(const weak_intrusive_ptr<Left>& lhs,
-                         const weak_intrusive_ptr<Right>& rhs) noexcept {
-  return lhs.ctrl() < rhs.ctrl();
+constexpr auto operator<=>(const weak_intrusive_ptr<Left>& lhs,
+                           const weak_intrusive_ptr<Right>& rhs) noexcept {
+  return lhs.ctrl() <=> rhs.ctrl();
 }
 
 /// @relates weak_intrusive_ptr
@@ -447,53 +402,35 @@ template <class Left, class Right>
   requires detail::managed_by<detail::control_block_of<Left>, Right>
 constexpr bool operator==(const weak_intrusive_ptr<Left>& lhs,
                           const intrusive_ptr<Right>& rhs) noexcept {
-  return lhs.ctrl()
-         == detail::get_control_block<detail::control_block_of<Left>>(rhs);
-}
-
-/// @relates weak_intrusive_ptr
-template <class Left, class Right>
-  requires detail::managed_by<detail::control_block_of<Right>, Left>
-constexpr bool operator==(const intrusive_ptr<Left>& lhs,
-                          const weak_intrusive_ptr<Right>& rhs) noexcept {
-  return detail::get_control_block<detail::control_block_of<Right>>(lhs)
-         == rhs.ctrl();
+  auto* ctrl = detail::get_control_block<detail::control_block_of<Left>>(rhs);
+  return lhs.ctrl() == ctrl;
 }
 
 /// @relates weak_intrusive_ptr
 template <class Left, class Right>
   requires detail::managed_by<detail::control_block_of<Left>, Right>
-constexpr bool operator!=(const weak_intrusive_ptr<Left>& lhs,
-                          const intrusive_ptr<Right>& rhs) noexcept {
-  return lhs.ctrl()
-         != detail::get_control_block<detail::control_block_of<Left>>(rhs);
-}
-
-/// @relates weak_intrusive_ptr
-template <class Left, class Right>
-  requires detail::managed_by<detail::control_block_of<Right>, Left>
-constexpr bool operator!=(const intrusive_ptr<Left>& lhs,
-                          const weak_intrusive_ptr<Right>& rhs) noexcept {
-  return detail::get_control_block<detail::control_block_of<Right>>(lhs)
-         != rhs.ctrl();
+constexpr auto operator<=>(const weak_intrusive_ptr<Left>& lhs,
+                           const intrusive_ptr<Right>& rhs) noexcept {
+  auto* ctrl = detail::get_control_block<detail::control_block_of<Left>>(rhs);
+  return lhs.ctrl() <=> ctrl;
 }
 
 /// @relates weak_intrusive_ptr
 template <class Left, class Right>
   requires detail::managed_by<detail::control_block_of<Left>, Right>
-constexpr bool operator<(const weak_intrusive_ptr<Left>& lhs,
-                         const intrusive_ptr<Right>& rhs) noexcept {
-  return lhs.ctrl()
-         < detail::get_control_block<detail::control_block_of<Left>>(rhs);
+constexpr bool operator==(const intrusive_ptr<Right>& lhs,
+                          const weak_intrusive_ptr<Left>& rhs) noexcept {
+  auto* ctrl = detail::get_control_block<detail::control_block_of<Left>>(lhs);
+  return ctrl == rhs.ctrl();
 }
 
 /// @relates weak_intrusive_ptr
 template <class Left, class Right>
-  requires detail::managed_by<detail::control_block_of<Right>, Left>
-constexpr bool operator<(const intrusive_ptr<Left>& lhs,
-                         const weak_intrusive_ptr<Right>& rhs) noexcept {
-  return detail::get_control_block<detail::control_block_of<Right>>(lhs)
-         < rhs.ctrl();
+  requires detail::managed_by<detail::control_block_of<Left>, Right>
+constexpr auto operator<=>(const intrusive_ptr<Right>& lhs,
+                           const weak_intrusive_ptr<Left>& rhs) noexcept {
+  auto* ctrl = detail::get_control_block<detail::control_block_of<Left>>(lhs);
+  return ctrl <=> rhs.ctrl();
 }
 
 /// @relates weak_intrusive_ptr

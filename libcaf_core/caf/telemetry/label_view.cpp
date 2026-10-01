@@ -8,12 +8,8 @@
 
 namespace caf::telemetry {
 
-int label_view::compare(const label_view& other) const noexcept {
-  return label::compare(*this, other);
-}
-
-int label_view::compare(const label& other) const noexcept {
-  return label::compare(*this, other);
+label_view label_view::from(const label& lbl) noexcept {
+  return {lbl.name(), lbl.value()};
 }
 
 std::string to_string(const label_view& x) {

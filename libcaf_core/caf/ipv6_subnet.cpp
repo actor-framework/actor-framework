@@ -10,23 +10,19 @@ namespace caf {
 
 // -- constructors, destructors, and assignment operators --------------------
 
-ipv6_subnet::ipv6_subnet() : prefix_length_(0) {
-  // nop
-}
-
-ipv6_subnet::ipv6_subnet(ipv4_subnet subnet)
+ipv6_subnet::ipv6_subnet(ipv4_subnet subnet) noexcept
   : address_(ipv6_address{subnet.network_address()}),
     prefix_length_(v4_offset + subnet.prefix_length()) {
   detail::mask_bits(address_.bytes(), prefix_length_);
 }
 
-ipv6_subnet::ipv6_subnet(ipv4_address network_address, uint8_t prefix_length)
-  : address_(network_address), prefix_length_(prefix_length + v4_offset) {
+ipv6_subnet::ipv6_subnet(ipv4_address addr, uint8_t len) noexcept
+  : address_(addr), prefix_length_(len + v4_offset) {
   detail::mask_bits(address_.bytes(), prefix_length_);
 }
 
-ipv6_subnet::ipv6_subnet(ipv6_address network_address, uint8_t prefix_length)
-  : address_(network_address), prefix_length_(prefix_length) {
+ipv6_subnet::ipv6_subnet(ipv6_address addr, uint8_t len) noexcept
+  : address_(addr), prefix_length_(len) {
   detail::mask_bits(address_.bytes(), prefix_length_);
 }
 
@@ -60,14 +56,6 @@ bool ipv6_subnet::contains(ipv4_address addr) const noexcept {
 
 bool ipv6_subnet::contains(ipv4_subnet other) const noexcept {
   return embeds_v4() ? embedded_v4().contains(other) : false;
-}
-
-// -- comparison ---------------------------------------------------------------
-
-int ipv6_subnet::compare(const ipv6_subnet& other) const noexcept {
-  auto sub_res = address_.compare(other.address_);
-  return sub_res != 0 ? sub_res
-                      : static_cast<int>(prefix_length_) - other.prefix_length_;
 }
 
 std::string to_string(ipv6_subnet x) {

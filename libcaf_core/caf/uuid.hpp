@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
@@ -12,7 +11,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <string>
 #include <string_view>
 
@@ -21,7 +19,7 @@ namespace caf {
 /// A universally unique identifier according to
 /// [RFC 4122](https://tools.ietf.org/html/rfc4122). While this implementation
 /// can read all UUID versions, it can only create random-generated ones.
-class CAF_CORE_EXPORT uuid : detail::comparable<uuid> {
+class CAF_CORE_EXPORT uuid {
 public:
   using array_type = std::array<std::byte, 16>;
 
@@ -124,12 +122,7 @@ public:
   /// Returns whether `parse` would produce a valid UUID.
   static bool can_parse(std::string_view str) noexcept;
 
-  /// Lexicographically compares `this` and `other`.
-  /// @returns a negative value if `*this < other`, zero if `*this == other`
-  ///          and a positive number if `*this > other`.
-  int compare(const uuid& other) const noexcept {
-    return memcmp(bytes_.data(), other.bytes_.data(), 16u);
-  }
+  auto operator<=>(const uuid& other) const noexcept = default;
 
 private:
   /// Stores the fields, encoded as 16 octets:
