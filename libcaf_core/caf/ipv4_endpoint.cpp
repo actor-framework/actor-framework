@@ -18,8 +18,8 @@ size_t ipv4_endpoint::hash_code() const noexcept {
 }
 
 long ipv4_endpoint::compare(ipv4_endpoint x) const noexcept {
-  auto res = address_.compare(x.address());
-  return res == 0 ? port_ - x.port() : res;
+  const auto res = address_.compare(x.address());
+  return res == 0 ? detail::three_way_compare(port_, x.port()) : res;
 }
 
 std::string to_string(const ipv4_endpoint& ep) {

@@ -77,3 +77,25 @@ TEST("with_category") {
     check_eq(x.is_answered(), false);
   }
 }
+
+TEST("comparison") {
+  SECTION("sync < async") {
+    const auto lhs = message_id{1}; // a sync ID
+    const auto rhs = message_id{};  // an async ID (default_async_value)
+    check_lt(lhs, rhs);
+    check_lt(lhs.integer_value(), rhs.integer_value());
+  }
+  SECTION("request < response") {
+    const auto lhs = message_id{1};
+    const auto rhs = lhs.response_id();
+    check_lt(lhs, rhs);
+    check_lt(lhs.integer_value(), rhs.integer_value());
+  }
+  SECTION("high-priority async < response") {
+    // Response IDs set the high bit. Order follows the unsigned IDs.
+    const auto lhs = message_id{0};
+    const auto rhs = message_id{1}.response_id();
+    check_lt(lhs, rhs);
+    check_lt(lhs.integer_value(), rhs.integer_value());
+  }
+}

@@ -98,11 +98,11 @@ public:
   // -- comparison -------------------------------------------------------------
 
   ptrdiff_t compare(std::nullptr_t) const noexcept {
-    return reinterpret_cast<ptrdiff_t>(get());
+    return compare(static_cast<const_pointer>(nullptr));
   }
 
   ptrdiff_t compare(const_pointer ptr) const noexcept {
-    return reinterpret_cast<intptr_t>(get()) - reinterpret_cast<intptr_t>(ptr);
+    return detail::three_way_compare(get(), ptr);
   }
 
   ptrdiff_t compare(const counting_pointer& other) const noexcept {

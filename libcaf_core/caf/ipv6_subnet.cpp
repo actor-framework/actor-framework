@@ -65,9 +65,10 @@ bool ipv6_subnet::contains(ipv4_subnet other) const noexcept {
 // -- comparison ---------------------------------------------------------------
 
 int ipv6_subnet::compare(const ipv6_subnet& other) const noexcept {
-  auto sub_res = address_.compare(other.address_);
-  return sub_res != 0 ? sub_res
-                      : static_cast<int>(prefix_length_) - other.prefix_length_;
+  const auto res = address_.compare(other.address_);
+  return res == 0
+           ? detail::three_way_compare(prefix_length_, other.prefix_length_)
+           : res;
 }
 
 std::string to_string(ipv6_subnet x) {

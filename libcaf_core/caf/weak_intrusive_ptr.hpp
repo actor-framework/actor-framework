@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 
@@ -121,7 +122,7 @@ public:
   }
 
   ptrdiff_t compare(const_pointer ptr) const noexcept {
-    return static_cast<ptrdiff_t>(get() - ptr);
+    return detail::three_way_compare(get(), ptr);
   }
 
   ptrdiff_t compare(const weak_intrusive_ptr& other) const noexcept {
@@ -129,7 +130,7 @@ public:
   }
 
   ptrdiff_t compare(std::nullptr_t) const noexcept {
-    return reinterpret_cast<ptrdiff_t>(get());
+    return compare(static_cast<const_pointer>(nullptr));
   }
 
   /// Tries to upgrade this weak reference to a strong reference.

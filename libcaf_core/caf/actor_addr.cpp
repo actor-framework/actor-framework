@@ -42,11 +42,8 @@ intptr_t actor_addr::compare(const actor_control_block* lhs,
   if (lhs == rhs)
     return 0;
   // check for equality (a decorator is equal to the actor it represents)
-  auto x = lhs->id();
-  auto y = rhs->id();
-  if (x == y)
-    return lhs->node().compare(rhs->node());
-  return static_cast<intptr_t>(x) - static_cast<intptr_t>(y);
+  const auto res = detail::three_way_compare(lhs->id(), rhs->id());
+  return res == 0 ? lhs->node().compare(rhs->node()) : res;
 }
 
 intptr_t actor_addr::compare(const actor_addr& other) const noexcept {

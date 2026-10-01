@@ -17,6 +17,7 @@
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
 
+#include <cstdint>
 #include <tuple>
 #include <type_traits>
 
@@ -189,12 +190,11 @@ public:
   }
 
   ptrdiff_t compare(const caf_handle& other) const {
-    return reinterpret_cast<ptrdiff_t>(ptr_)
-           - reinterpret_cast<ptrdiff_t>(other.ptr_);
+    return caf::detail::three_way_compare(ptr_, other.ptr_);
   }
 
   ptrdiff_t compare(std::nullptr_t) const {
-    return reinterpret_cast<ptrdiff_t>(ptr_);
+    return compare(caf_handle{nullptr});
   }
 
 private:
