@@ -135,7 +135,7 @@ void abstract_actor::unlink_from(const actor_addr& other) {
   // If `other` is still alive, unlink by calling remove_link.
   if (auto hdl = other_ptr.lock()) {
     CAF_ASSERT(hdl.get() != ctrl());
-    remove_link(hdl->get());
+    remove_link(hdl->managed());
     return;
   }
   // Promoting weak to strong reference fails if-and-only-if the strong

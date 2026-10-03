@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/byte_address.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ipv4_address.hpp"
@@ -17,10 +16,7 @@
 
 namespace caf {
 
-class CAF_CORE_EXPORT ipv6_address
-  : public byte_address<ipv6_address>,
-    detail::comparable<ipv6_address>,
-    detail::comparable<ipv6_address, ipv4_address> {
+class CAF_CORE_EXPORT ipv6_address : public byte_address<ipv6_address> {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -39,28 +35,18 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   /// Constructs an all-zero address.
-  ipv6_address();
+  ipv6_address() noexcept;
 
   /// Constructs an address from given prefix and suffix.
   /// @pre `prefix.size() + suffix.size() <= 8`
   /// @warning assumes network byte order for prefix and suffix
-  ipv6_address(uint16_ilist prefix, uint16_ilist suffix);
+  ipv6_address(uint16_ilist prefix, uint16_ilist suffix) noexcept;
 
   /// Embeds an IPv4 address into an IPv6 address.
-  explicit ipv6_address(ipv4_address addr);
+  explicit ipv6_address(ipv4_address addr) noexcept;
 
   /// Constructs an IPv6 address from given bytes.
-  explicit ipv6_address(array_type bytes);
-
-  // -- comparison -------------------------------------------------------------
-
-  /// Returns a negative number if `*this < other`, zero if `*this == other`
-  /// and a positive number if `*this > other`.
-  int compare(ipv6_address other) const noexcept;
-
-  /// Returns a negative number if `*this < other`, zero if `*this == other`
-  /// and a positive number if `*this > other`.
-  int compare(ipv4_address other) const noexcept;
+  explicit ipv6_address(array_type bytes) noexcept;
 
   // -- properties -------------------------------------------------------------
 
@@ -99,6 +85,16 @@ public:
     return half_segments_[0] == 0 && half_segments_[1] == 0;
   }
 
+  // -- comparison -------------------------------------------------------------
+
+  bool operator==(const ipv6_address& other) const noexcept {
+    return bytes() == other.bytes();
+  }
+
+  auto operator<=>(const ipv6_address& other) const noexcept {
+    return bytes() <=> other.bytes();
+  }
+
   // -- factories --------------------------------------------------------------
 
   /// Returns `INADDR6_ANY`, i.e., `::`.
@@ -126,6 +122,22 @@ private:
     array_type bytes_;
   };
 };
+
+inline bool operator==(const ipv4_address& lhs, const ipv6_address& rhs) {
+  return ipv6_address{lhs} == rhs;
+}
+
+inline bool operator==(const ipv6_address& lhs, const ipv4_address& rhs) {
+  return lhs == ipv6_address{rhs};
+}
+
+inline auto operator<=>(const ipv4_address& lhs, const ipv6_address& rhs) {
+  return ipv6_address{lhs} <=> rhs;
+}
+
+inline auto operator<=>(const ipv6_address& lhs, const ipv4_address& rhs) {
+  return lhs <=> ipv6_address{rhs};
+}
 
 CAF_CORE_EXPORT error parse(std::string_view str, ipv6_address& dest);
 

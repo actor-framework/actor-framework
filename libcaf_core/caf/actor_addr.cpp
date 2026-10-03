@@ -6,8 +6,8 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
-#include "caf/detail/compare.hpp"
 #include "caf/detail/print.hpp"
+#include "caf/hash/fnv.hpp"
 #include "caf/node_id.hpp"
 
 namespace caf {
@@ -18,33 +18,33 @@ actor_addr::actor_addr(actor_control_block* ptr) noexcept {
     node_ = ptr->node();
   }
 }
-intptr_t actor_addr::compare(const actor_addr& other) const noexcept {
-  return detail::compare(*this, other);
-}
 
-intptr_t actor_addr::compare(const strong_actor_ptr& other) const noexcept {
-  return detail::compare(*this, other.get());
-}
-
-intptr_t actor_addr::compare(const weak_actor_ptr& other) const noexcept {
-  return detail::compare(*this, other.ctrl());
-}
-
-intptr_t actor_addr::compare(const abstract_actor* other) const noexcept {
-  if (other) {
-    return detail::compare(*this, other->ctrl());
+actor_addr actor_addr::from(const strong_actor_ptr& ptr) noexcept {
+  if (ptr) {
+    return ptr->address();
   }
-  return detail::compare(*this, nullptr);
+  return {};
 }
 
-intptr_t actor_addr::compare(const actor_control_block* other) const noexcept {
-  return detail::compare(*this, other);
+actor_addr actor_addr::from(const weak_actor_ptr& ptr) noexcept {
+  if (ptr) {
+    return ptr.ctrl()->address();
+  }
+  return {};
 }
 
 void actor_addr::swap(actor_addr& other) noexcept {
   using std::swap;
   swap(id_, other.id_);
   swap(node_, other.node_);
+}
+
+size_t actor_addr::hash() const noexcept {
+  auto aid = id();
+  if (aid == 0) {
+    return 0;
+  }
+  return caf::hash::fnv<size_t>::compute(aid, node());
 }
 
 std::string to_string(const actor_addr& x) {

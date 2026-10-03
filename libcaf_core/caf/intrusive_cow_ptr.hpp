@@ -10,7 +10,6 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/build_config.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include <cstddef>
@@ -31,11 +30,7 @@ namespace caf {
 /// An intrusive, reference counting smart pointer implementation with
 /// copy-on-write optimization.
 template <class T>
-class intrusive_cow_ptr
-  : detail::comparable<intrusive_cow_ptr<T>>,
-    detail::comparable<intrusive_cow_ptr<T>, T*>,
-    detail::comparable<intrusive_cow_ptr<T>, std::nullptr_t>,
-    detail::comparable<intrusive_cow_ptr<T>, intrusive_ptr<T>> {
+class intrusive_cow_ptr {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -100,24 +95,6 @@ public:
   template <class U = T, class... Ts>
   void emplace(Ts&&... xs) {
     reset(new U(std::forward<Ts>(xs)...), adopt_ref);
-  }
-
-  // -- comparison -------------------------------------------------------------
-
-  ptrdiff_t compare(std::nullptr_t) const noexcept {
-    return reinterpret_cast<ptrdiff_t>(get());
-  }
-
-  ptrdiff_t compare(const_pointer ptr) const noexcept {
-    return reinterpret_cast<intptr_t>(get()) - reinterpret_cast<intptr_t>(ptr);
-  }
-
-  ptrdiff_t compare(const counting_pointer& other) const noexcept {
-    return compare(other.get());
-  }
-
-  ptrdiff_t compare(const intrusive_cow_ptr& other) const noexcept {
-    return compare(other.get());
   }
 
   // -- modifiers --------------------------------------------------------------
@@ -238,6 +215,78 @@ private:
 
   counting_pointer ptr_;
 };
+
+/// @relates intrusive_cow_ptr
+template <class T>
+constexpr bool
+operator==(const intrusive_cow_ptr<T>& ptr, std::nullptr_t) noexcept {
+  return !ptr;
+}
+
+/// @relates intrusive_cow_ptr
+template <class T>
+constexpr bool
+operator!=(const intrusive_cow_ptr<T>& ptr, std::nullptr_t) noexcept {
+  return static_cast<bool>(ptr);
+}
+
+/// @relates intrusive_cow_ptr
+template <class T>
+constexpr bool
+operator==(std::nullptr_t, const intrusive_cow_ptr<T>& ptr) noexcept {
+  return !ptr;
+}
+
+/// @relates intrusive_cow_ptr
+template <class T>
+constexpr bool
+operator!=(std::nullptr_t, const intrusive_cow_ptr<T>& ptr) noexcept {
+  return static_cast<bool>(ptr);
+}
+
+/// @relates intrusive_cow_ptr
+template <class T>
+constexpr bool
+operator==(const intrusive_cow_ptr<T>& lhs, const T* rhs) noexcept {
+  return lhs.get() == rhs;
+}
+
+/// @relates intrusive_cow_ptr
+template <class T>
+constexpr auto
+operator<=>(const intrusive_cow_ptr<T>& lhs, const T* rhs) noexcept {
+  return lhs.get() <=> rhs;
+}
+
+/// @relates intrusive_cow_ptr
+template <class T>
+constexpr bool
+operator==(const T* lhs, const intrusive_cow_ptr<T>& rhs) noexcept {
+  return lhs == rhs.get();
+}
+
+/// @relates intrusive_cow_ptr
+template <class T>
+constexpr auto
+operator<=>(const T* lhs, const intrusive_cow_ptr<T>& rhs) noexcept {
+  return lhs <=> rhs.get();
+}
+
+/// @relates intrusive_cow_ptr
+template <class Left, class Right>
+constexpr auto operator==(const intrusive_cow_ptr<Left>& lhs,
+                          const intrusive_cow_ptr<Right>& rhs) noexcept
+  -> decltype(lhs.get() == rhs.get()) {
+  return lhs.get() == rhs.get();
+}
+
+/// @relates intrusive_cow_ptr
+template <class Left, class Right>
+constexpr auto operator<=>(const intrusive_cow_ptr<Left>& lhs,
+                           const intrusive_cow_ptr<Right>& rhs) noexcept
+  -> decltype(lhs.get() <=> rhs.get()) {
+  return lhs.get() <=> rhs.get();
+}
 
 /// @relates intrusive_cow_ptr
 template <class T>

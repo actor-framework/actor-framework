@@ -5,16 +5,15 @@
 #pragma once
 
 #include "caf/actor_control_block.hpp"
-#include "caf/async/batch.hpp"
 #include "caf/cow_string.hpp"
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/stream.hpp"
 
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <tuple>
 
 namespace caf {
 
@@ -24,28 +23,16 @@ namespace caf {
 /// human-readable names attached to them in order to make help with
 /// observability and logging.
 template <class T>
-class typed_stream : private detail::comparable<typed_stream<T>>,
-                     private detail::comparable<stream> {
+class typed_stream {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  typed_stream() = default;
+  typed_stream() noexcept = default;
 
-  typed_stream(typed_stream&&) noexcept = default;
-
-  typed_stream(const typed_stream&) noexcept = default;
-
-  typed_stream& operator=(typed_stream&&) noexcept = default;
-
-  typed_stream& operator=(const typed_stream&) noexcept = default;
-
-  typed_stream(strong_actor_ptr source, std::string name, uint64_t id)
-    : source_(std::move(source)), name_(std::move(name)), id_(id) {
-    // nop
-  }
-
-  typed_stream(strong_actor_ptr source, cow_string name, uint64_t id)
-    : source_(std::move(source)), name_(std::move(name)), id_(id) {
+  template <class Name>
+    requires std::is_constructible_v<cow_string, Name>
+  typed_stream(strong_actor_ptr source, Name&& name, uint64_t id = 0)
+    : source_(std::move(source)), name_(std::forward<Name>(name)), id_(id) {
     // nop
   }
 
@@ -68,6 +55,11 @@ public:
     return id_;
   }
 
+  /// Convenience function for wrapping the source and ID into a tuple.
+  auto source_and_id() const noexcept {
+    return std::tie(source_, id_);
+  }
+
   // -- conversion -------------------------------------------------------------
 
   /// Returns a dynamically typed version of this stream.
@@ -77,12 +69,16 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  ptrdiff_t compare(const stream& other) const noexcept {
-    return compare_impl(other);
+  /// Returns whether this stream is equal to `other`.
+  /// @note The comparison only considers the source and the ID.
+  bool operator==(const typed_stream& other) const noexcept {
+    return source_and_id() == other.source_and_id();
   }
 
-  ptrdiff_t compare(const typed_stream& other) const noexcept {
-    return compare_impl(other);
+  /// Compares this stream to `other`.
+  /// @note The comparison only considers the source and the ID.
+  std::weak_ordering operator<=>(const typed_stream& other) const noexcept {
+    return source_and_id() <=> other.source_and_id();
   }
 
   // -- serialization ----------------------------------------------------------
@@ -95,22 +91,29 @@ public:
   }
 
 private:
-  template <class OtherStream>
-  ptrdiff_t compare_impl(const OtherStream& other) const noexcept {
-    if (source_ < other.source())
-      return -1;
-    if (source_ == other.source()) {
-      if (id_ < other.id())
-        return -1;
-      if (id_ == other.id())
-        return 0;
-    }
-    return 1;
-  }
-
   strong_actor_ptr source_;
   cow_string name_;
   uint64_t id_ = 0;
 };
+
+template <class T>
+bool operator==(const stream& lhs, const typed_stream<T>& rhs) {
+  return lhs.source_and_id() == rhs.source_and_id();
+}
+
+template <class T>
+bool operator==(const typed_stream<T>& lhs, const stream& rhs) {
+  return lhs.source_and_id() == rhs.source_and_id();
+}
+
+template <class T>
+std::weak_ordering operator<=>(const stream& lhs, const typed_stream<T>& rhs) {
+  return lhs.source_and_id() <=> rhs.source_and_id();
+}
+
+template <class T>
+std::weak_ordering operator<=>(const typed_stream<T>& lhs, const stream& rhs) {
+  return lhs.source_and_id() <=> rhs.source_and_id();
+}
 
 } // namespace caf

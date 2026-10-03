@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/hash/fnv.hpp"
@@ -13,22 +12,19 @@
 
 namespace caf::telemetry {
 
-class CAF_CORE_EXPORT label_view : detail::comparable<label_view>,
-                                   detail::comparable<label_view, label> {
+class CAF_CORE_EXPORT label_view {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
   label_view() = delete;
 
-  label_view(const label_view&) = default;
-
-  label_view& operator=(const label_view&) = default;
-
   /// @pre `key` matches the regex `[a-zA-Z_:][a-zA-Z0-9_:]*`
-  label_view(std::string_view name, std::string_view value)
+  label_view(std::string_view name, std::string_view value) noexcept
     : name_(name), value_(value) {
     // nop
   }
+
+  static label_view from(const label& lbl) noexcept;
 
   // -- properties -------------------------------------------------------------
 
@@ -42,14 +38,28 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  int compare(const label& other) const noexcept;
-
-  int compare(const label_view& other) const noexcept;
+  constexpr auto operator<=>(const label_view&) const noexcept = default;
 
 private:
   std::string_view name_;
   std::string_view value_;
 };
+
+inline bool operator==(const label_view& lhs, const label& rhs) noexcept {
+  return lhs == label_view::from(rhs);
+}
+
+inline auto operator<=>(const label_view& lhs, const label& rhs) noexcept {
+  return lhs <=> label_view::from(rhs);
+}
+
+inline bool operator==(const label& lhs, const label_view& rhs) noexcept {
+  return label_view::from(lhs) == rhs;
+}
+
+inline auto operator<=>(const label& lhs, const label_view& rhs) noexcept {
+  return label_view::from(lhs) <=> rhs;
+}
 
 /// Returns the @ref label_view in `name=value` notation.
 /// @relates label_view

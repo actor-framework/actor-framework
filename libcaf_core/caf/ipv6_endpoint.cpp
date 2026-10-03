@@ -10,28 +10,17 @@
 
 namespace caf {
 
-ipv6_endpoint::ipv6_endpoint(ipv6_address address, uint16_t port)
-  : address_(address), port_(port) {
-  // nop
-}
-
 ipv6_endpoint::ipv6_endpoint(ipv4_address address, uint16_t port)
   : address_(address), port_(port) {
   // nop
 }
 
+ipv6_endpoint ipv6_endpoint::from(const ipv4_endpoint& other) {
+  return {other.address(), other.port()};
+}
+
 size_t ipv6_endpoint::hash_code() const noexcept {
   return hash::fnv<size_t>::compute(address_, port_);
-}
-
-long ipv6_endpoint::compare(ipv6_endpoint x) const noexcept {
-  auto res = address_.compare(x.address());
-  return res == 0 ? port_ - x.port() : res;
-}
-
-long ipv6_endpoint::compare(ipv4_endpoint x) const noexcept {
-  ipv6_endpoint y{x.address(), x.port()};
-  return compare(y);
 }
 
 std::string to_string(const ipv6_endpoint& x) {

@@ -58,20 +58,6 @@ std::string_view error::what() const noexcept {
   return ctx.get_as<std::string>(0);
 }
 
-// -- observers ----------------------------------------------------------------
-
-int error::compare(const error& x) const noexcept {
-  return x.valid() ? compare(x.data_->code, x.data_->category)
-                   : compare(0, type_id_t{0});
-}
-
-int error::compare(uint8_t code, type_id_t category) const noexcept {
-  int x = 0;
-  if (data_ != nullptr)
-    x = (data_->code << 16) | detail::to_underlying(data_->category);
-  return x - int{(code << 16) | detail::to_underlying(category)};
-}
-
 // -- inspection support -----------------------------------------------------
 
 std::string to_string(const error& x) {

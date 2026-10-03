@@ -10,7 +10,6 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/callable_trait.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
@@ -27,7 +26,7 @@ namespace caf::flow {
 
 /// Handle to a consumer of items.
 template <class T>
-class observer : detail::comparable<observer<T>> {
+class observer {
 public:
   /// Internal interface of an `observer`.
   class impl : public coordinated {
@@ -145,9 +144,7 @@ public:
     pimpl_.swap(other.pimpl_);
   }
 
-  intptr_t compare(const observer& other) const noexcept {
-    return pimpl_.compare(other.pimpl_);
-  }
+  auto operator<=>(const observer&) const noexcept = default;
 
   impl* ptr() noexcept {
     return pimpl_.get();

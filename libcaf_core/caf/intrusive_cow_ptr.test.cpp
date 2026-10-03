@@ -267,16 +267,12 @@ TEST("compare") {
     SECTION("null COW pointer") {
       class0_ptr uut;
       check_eq(uut, nullptr);
-      check_ge(uut, nullptr);
-      check_le(nullptr, uut);
+      check_eq(nullptr, uut);
     }
     SECTION("non-null COW pointer") {
       auto uut = class0_ptr::make("hello"s);
       check_ne(uut, nullptr);
-      check_ge(uut, nullptr);
-      check_gt(uut, nullptr);
-      check_le(nullptr, uut);
-      check_lt(nullptr, uut);
+      check_ne(nullptr, uut);
     }
   }
   SECTION("compare with other COW pointer") {

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/ipv4_address.hpp"
 
@@ -12,17 +11,13 @@
 
 namespace caf {
 
-class CAF_CORE_EXPORT ipv4_subnet : detail::comparable<ipv4_subnet> {
+class CAF_CORE_EXPORT ipv4_subnet {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  ipv4_subnet();
+  ipv4_subnet() noexcept = default;
 
-  ipv4_subnet(const ipv4_subnet&) = default;
-
-  ipv4_subnet(ipv4_address network_address, uint8_t prefix_length);
-
-  ipv4_subnet& operator=(const ipv4_subnet&) = default;
+  ipv4_subnet(ipv4_address network_address, uint8_t prefix_length) noexcept;
 
   // -- properties -------------------------------------------------------------
 
@@ -44,7 +39,7 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  int compare(const ipv4_subnet& other) const noexcept;
+  auto operator<=>(const ipv4_subnet& other) const noexcept = default;
 
   // -- inspection -------------------------------------------------------------
 
@@ -58,7 +53,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   ipv4_address address_;
-  uint8_t prefix_length_;
+  uint8_t prefix_length_ = 0;
 };
 
 // -- related free functions ---------------------------------------------------

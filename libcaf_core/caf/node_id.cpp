@@ -14,6 +14,7 @@
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/expected.hpp"
+#include "caf/hash/fnv.hpp"
 #include "caf/log/core.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/parser_state.hpp"
@@ -49,16 +50,12 @@ hashed_node_id::hashed_node_id(uint32_t pid, const host_id_type& host) noexcept
   // nop
 }
 
-bool hashed_node_id::valid() const noexcept {
-  return process_id != 0 && valid(host);
+size_t hashed_node_id::hash() const noexcept {
+  return hash::fnv<size_t>::compute(process_id, host);
 }
 
-int hashed_node_id::compare(const hashed_node_id& other) const noexcept {
-  if (this == &other)
-    return 0;
-  if (process_id != other.process_id)
-    return process_id < other.process_id ? -1 : 1;
-  return memcmp(host.data(), other.host.data(), host.size());
+bool hashed_node_id::valid() const noexcept {
+  return process_id != 0 && valid(host);
 }
 
 void hashed_node_id::print(std::string& dst) const {
@@ -92,7 +89,7 @@ node_id hashed_node_id::local(const actor_system_config&) {
   return make_node_id(detail::get_process_id(), hid);
 }
 
-node_id_data::~node_id_data() {
+node_id_data::~node_id_data() noexcept {
   // nop
 }
 
@@ -101,33 +98,15 @@ node_id& node_id::operator=(const none_t&) {
   return *this;
 }
 
-int node_id::compare(const node_id& other) const noexcept {
-  struct {
-    int operator()(const uri&, const hashed_node_id&) const noexcept {
-      return -1;
-    }
-    int operator()(const hashed_node_id&, const uri&) const noexcept {
-      return 1;
-    }
-    int operator()(const uri& x, const uri& y) const noexcept {
-      return x.compare(y);
-    }
-    int operator()(const hashed_node_id& x,
-                   const hashed_node_id& y) const noexcept {
-      return x.compare(y);
-    }
-  } comparator;
-  if (this == &other || data_ == other.data_)
-    return 0;
-  if (data_ == nullptr)
-    return other.data_ == nullptr ? 0 : -1;
-  return other.data_ == nullptr
-           ? 1
-           : visit(comparator, data_->content, other.data_->content);
-}
-
 void node_id::swap(node_id& x) noexcept {
   data_.swap(x.data_);
+}
+
+size_t node_id::hash() const noexcept {
+  if (data_) {
+    return std::visit([](auto& inner) { return inner.hash(); }, data_->content);
+  }
+  return 0;
 }
 
 void append_to_string(std::string& str, const node_id& x) {

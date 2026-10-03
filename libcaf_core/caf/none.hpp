@@ -4,24 +4,21 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
-
 #include <string>
 
 namespace caf {
 
 /// Represents "nothing", e.g., for clearing an `optional` by assigning `none`.
-struct none_t : detail::comparable<none_t> {
+struct none_t {
   constexpr none_t() {
     // nop
   }
-  constexpr explicit operator bool() const {
+
+  constexpr explicit operator bool() const noexcept {
     return false;
   }
 
-  static constexpr int compare(none_t) {
-    return 0;
-  }
+  constexpr auto operator<=>(const none_t&) const noexcept = default;
 };
 
 static constexpr none_t none = none_t{};

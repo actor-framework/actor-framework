@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
@@ -18,10 +18,7 @@ namespace caf {
 
 /// A copy-on-write string implementation that wraps a `std::basic_string`.
 template <class CharT>
-class basic_cow_string
-  : detail::comparable<basic_cow_string<CharT>>,
-    detail::comparable<basic_cow_string<CharT>, std::basic_string<CharT>>,
-    detail::comparable<basic_cow_string<CharT>, const CharT*> {
+class basic_cow_string {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -37,29 +34,18 @@ public:
 
   // -- constants --------------------------------------------------------------
 
-  static inline const size_type npos = std_type::npos;
+  static constexpr size_type npos = std_type::npos;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  basic_cow_string() {
-    impl_ = make_counted<impl>();
+  basic_cow_string() : impl_(make_counted<impl>()) {
+    // nop
   }
 
-  explicit basic_cow_string(std_type str) {
-    impl_ = make_counted<impl>(std::move(str));
+  explicit basic_cow_string(std_type str)
+    : impl_(make_counted<impl>(std::move(str))) {
+    // nop
   }
-
-  explicit basic_cow_string(view_type str) {
-    impl_ = make_counted<impl>(std_type{str});
-  }
-
-  basic_cow_string(basic_cow_string&&) noexcept = default;
-
-  basic_cow_string(const basic_cow_string&) noexcept = default;
-
-  basic_cow_string& operator=(basic_cow_string&&) noexcept = default;
-
-  basic_cow_string& operator=(const basic_cow_string&) noexcept = default;
 
   // -- properties -------------------------------------------------------------
 
@@ -124,7 +110,7 @@ public:
 
   // -- conversion and copying -------------------------------------------------
 
-  operator view_type() const noexcept {
+  CAF_DEPRECATED("use str() instead") operator view_type() const noexcept {
     return view_type{impl_->str};
   }
 
@@ -238,20 +224,6 @@ public:
     return impl_->str.find(x, pos);
   }
 
-  // -- comparison -------------------------------------------------------------
-
-  int compare(const CharT* x) const noexcept {
-    return str().compare(x);
-  }
-
-  int compare(const std_type& x) const noexcept {
-    return str().compare(x);
-  }
-
-  int compare(const cow_string& x) const noexcept {
-    return impl_ == x.impl_ ? 0 : compare(x.str());
-  }
-
   // -- friends ----------------------------------------------------------------
 
   template <class Inspector>
@@ -267,7 +239,7 @@ private:
   struct impl : ref_counted {
     std_type str;
 
-    impl() = default;
+    impl() noexcept = default;
 
     explicit impl(std_type in) : str(std::move(in)) {
       // nop
@@ -292,5 +264,47 @@ using cow_u16string = basic_cow_string<char16_t>;
 /// A copy-on-write wrapper for a `std::string`;
 /// @relates basic_cow_string
 using cow_u32string = basic_cow_string<char32_t>;
+
+/// @relates basic_cow_string
+template <class CharT, class Right>
+auto operator==(const basic_cow_string<CharT>& lhs, const Right& rhs) noexcept
+  -> decltype(lhs.str() == rhs) {
+  return lhs.str() == rhs;
+}
+
+/// @relates basic_cow_string
+template <class CharT, class Left>
+auto operator==(const Left& lhs, const basic_cow_string<CharT>& rhs) noexcept
+  -> decltype(lhs == rhs.str()) {
+  return lhs == rhs.str();
+}
+
+/// @relates basic_cow_string
+template <class CharT, class Right>
+auto operator<=>(const basic_cow_string<CharT>& lhs, const Right& rhs) noexcept
+  -> decltype(lhs.str() <=> rhs) {
+  return lhs.str() <=> rhs;
+}
+
+/// @relates basic_cow_string
+template <class CharT, class Left>
+auto operator<=>(const Left& lhs, const basic_cow_string<CharT>& rhs) noexcept
+  -> decltype(lhs <=> rhs.str()) {
+  return lhs <=> rhs.str();
+}
+
+/// @relates basic_cow_string
+template <class CharT>
+auto operator==(const basic_cow_string<CharT>& lhs,
+                const basic_cow_string<CharT>& rhs) noexcept {
+  return lhs.str() == rhs.str();
+}
+
+/// @relates basic_cow_string
+template <class CharT>
+auto operator<=>(const basic_cow_string<CharT>& lhs,
+                 const basic_cow_string<CharT>& rhs) noexcept {
+  return lhs.str() <=> rhs.str();
+}
 
 } // namespace caf

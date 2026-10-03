@@ -36,6 +36,8 @@
 
 using namespace std::string_literals;
 
+using caf::detail::unsafe_send_as;
+
 namespace caf {
 
 // -- related free functions ---------------------------------------------------

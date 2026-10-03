@@ -169,7 +169,6 @@ caf_add_component(
     caf/detail/bounds_checker.test.cpp
     caf/detail/cleanup_and_release.cpp
     caf/detail/cleanup_and_release.test.cpp
-    caf/detail/compare.cpp
     caf/detail/config_consumer.cpp
     caf/detail/config_consumer.test.cpp
     caf/detail/counted_disposable.cpp
@@ -373,7 +372,6 @@ caf_add_component(
     caf/settings.test.cpp
     caf/skip.cpp
     caf/stateful_actor.test.cpp
-    caf/stream.cpp
     caf/stream.test.cpp
     caf/string_algorithms.cpp
     caf/string_algorithms.test.cpp

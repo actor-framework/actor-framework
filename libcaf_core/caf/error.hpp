@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/caf_deprecated.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code_enum.hpp"
 #include "caf/fwd.hpp"
@@ -13,6 +12,7 @@
 #include "caf/none.hpp"
 #include "caf/type_id.hpp"
 
+#include <compare>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -47,7 +47,7 @@ namespace caf {
 /// correlate error codes to descriptive strings. However, singletons are a poor
 /// choice when it comes to serialization. CAF uses type IDs and meta objects
 /// instead.
-class CAF_CORE_EXPORT error : detail::comparable<error> {
+class CAF_CORE_EXPORT error {
 public:
   // -- nested classes ---------------------------------------------------------
 
@@ -117,6 +117,14 @@ public:
     return data_->category;
   }
 
+  /// Convenience function to return the category and the code as a pair.
+  std::pair<type_id_t, uint8_t> category_and_code() const noexcept {
+    if (data_) {
+      return {data_->category, data_->code};
+    }
+    return {invalid_type_id, 0};
+  }
+
   /// Returns context information to this error.
   /// @pre `*this != none`
   const message& context() const noexcept {
@@ -151,9 +159,17 @@ public:
     return data_ != nullptr;
   }
 
-  int compare(const error&) const noexcept;
+  /// Returns whether the error codes and categories are equal.
+  /// @note Two errors are considered equal even if the context is different.
+  bool operator==(const error& other) const noexcept {
+    return category_and_code() == other.category_and_code();
+  }
 
-  int compare(uint8_t code, type_id_t category) const noexcept;
+  /// Compares the error codes and categories.
+  /// @note The ordering ignores the context.
+  std::weak_ordering operator<=>(const error& other) const noexcept {
+    return category_and_code() <=> other.category_and_code();
+  }
 
   /// Returns a copy of `this` if `!empty()` or else returns a new error from
   /// given arguments.

@@ -19,6 +19,7 @@
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/spawnable.hpp"
+#include "caf/detail/type_predicates.hpp"
 #include "caf/fwd.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/is_typed_actor.hpp"
@@ -178,7 +179,7 @@ public:
   using mpi = std::set<std::string>;
 
   template <class T>
-    requires(!is_typed_actor_v<T>)
+    requires(!detail::is_typed_actor<T>)
   mpi message_types(type_list<T>) const {
     return mpi{};
   }

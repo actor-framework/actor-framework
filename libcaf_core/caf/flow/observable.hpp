@@ -521,8 +521,8 @@ public:
   template <class U = output_type>
   auto to_typed_stream(std::string name, timespan max_delay,
                        size_t max_items_per_batch) && {
-    return materialize().template to_typed_stream<U>(std::move(name), max_delay,
-                                                     max_items_per_batch);
+    return materialize().template to_typed_stream<U>(
+      cow_string{std::move(name)}, max_delay, max_items_per_batch);
   }
 
   /// @copydoc observable::observe_on
@@ -1173,7 +1173,7 @@ typed_stream<U> observable<T>::to_typed_stream(cow_string name,
                                                timespan max_delay,
                                                size_t max_items_per_batch) {
   auto res = to_stream<U>(std::move(name), max_delay, max_items_per_batch);
-  return {res.source(), res.name(), res.id()};
+  return {res.source(), res.cow_name(), res.id()};
 }
 
 template <class T>

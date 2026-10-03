@@ -6,18 +6,12 @@
 
 #include "caf/test/test.hpp"
 
-#include "caf/actor_system.hpp"
-#include "caf/actor_system_config.hpp"
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
-
 using namespace caf;
 
-TEST("none is serializable") {
+TEST("to_string") {
   check_eq(to_string(none), "none");
 }
 
-TEST("none is comparable") {
-  check(!none);
-  check_eq(none.compare(none), 0);
+TEST("comparison") {
+  check_eq(none, none);
 }

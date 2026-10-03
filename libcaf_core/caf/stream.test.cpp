@@ -70,17 +70,18 @@ TEST("default-constructed streams are invalid") {
 }
 
 TEST("streams are comparable") {
+  auto foo = cow_string{"foo"s};
   auto dummy = sys.spawn([] { return behavior{[](int) {}}; });
   auto dummy_guard = make_actor_scope_guard(dummy);
   auto uut = stream{actor_cast<strong_actor_ptr>(dummy), type_id_v<int32_t>,
-                    "foo", 42};
-  check_eq(uut.compare(uut), 0);
+                    foo, 42};
+  check_eq(uut, uut);
   auto uut2 = stream{actor_cast<strong_actor_ptr>(dummy), type_id_v<int32_t>,
-                     "foo", 43};
-  check_eq(uut.compare(uut2), -1);
+                     foo, 43};
+  check_lt(uut, uut2);
   auto uut3 = stream{actor_cast<strong_actor_ptr>(dummy), type_id_v<int32_t>,
-                     "foo", 41};
-  check_eq(uut.compare(uut3), 1);
+                     foo, 41};
+  check_gt(uut, uut3);
 }
 
 TEST("streams are serializable") {
@@ -88,8 +89,9 @@ TEST("streams are serializable") {
   // Note: we need to terminate the dummy actor manually because the registry
   //       holds a reference to it when we serialize it.
   auto dummy_guard = make_actor_scope_guard(dummy);
+  auto foo = cow_string{"foo"s};
   auto uut = stream{actor_cast<strong_actor_ptr>(dummy), type_id_v<int32_t>,
-                    "foo", 42};
+                    foo, 42};
   check(uut.has_element_type<int32_t>());
   check_eq(uut.id(), 42u);
   check_eq(uut.type(), type_id_v<int32_t>);

@@ -4,16 +4,26 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/hash/fnv.hpp"
 #include "caf/node_id.hpp"
 
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <utility>
+
+namespace caf::detail {
+
+/// Customization point for enabling comparison between actor_addr and `Handle`.
+template <class Handle>
+struct with_actor_addr_from {
+  static constexpr bool specialized = false;
+};
+
+template <class Handle>
+concept has_actor_addr_from = with_actor_addr_from<Handle>::specialized;
+
+} // namespace caf::detail
 
 namespace caf {
 
@@ -21,24 +31,11 @@ namespace caf {
 /// neither keeps the actor alive nor allows resolving it back to an actor
 /// handle. It is used as a lightweight token, e.g., in @ref down_msg and
 /// @ref exit_msg, to identify the source of the message.
-class CAF_CORE_EXPORT actor_addr
-  : detail::comparable<actor_addr>,
-    detail::comparable<actor_addr, strong_actor_ptr>,
-    detail::comparable<actor_addr, weak_actor_ptr>,
-    detail::comparable<actor_addr, abstract_actor*>,
-    detail::comparable<actor_addr, actor_control_block*> {
+class CAF_CORE_EXPORT actor_addr {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  actor_addr() noexcept = default;
-
-  actor_addr(actor_addr&&) noexcept = default;
-
-  actor_addr(const actor_addr&) noexcept = default;
-
-  actor_addr& operator=(actor_addr&&) noexcept = default;
-
-  actor_addr& operator=(const actor_addr&) noexcept = default;
+  constexpr actor_addr() noexcept = default;
 
   /// Constructs an address that identifies an actor with the given ID and
   /// node.
@@ -53,13 +50,19 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  // TODO: return a reference
+  static actor_addr from(const strong_actor_ptr& ptr) noexcept;
+
+  // TODO: return a reference
+  static actor_addr from(const weak_actor_ptr& ptr) noexcept;
+
   /// Returns the ID of the identified actor.
-  actor_id id() const noexcept {
+  constexpr actor_id id() const noexcept {
     return id_;
   }
 
   /// Returns the origin node of the identified actor.
-  const node_id& node() const noexcept {
+  constexpr const node_id& node() const noexcept {
     return node_;
   }
 
@@ -71,19 +74,7 @@ public:
     return id_ != 0;
   }
 
-  // -- comparison -------------------------------------------------------------
-
-  intptr_t compare(const actor_addr& other) const noexcept;
-
-  intptr_t compare(const strong_actor_ptr& other) const noexcept;
-
-  intptr_t compare(const weak_actor_ptr& other) const noexcept;
-
-  intptr_t compare(const abstract_actor* other) const noexcept;
-
-  intptr_t compare(const actor_control_block* other) const noexcept;
-
-  // -- friend functions -------------------------------------------------------
+  auto operator<=>(const actor_addr&) const noexcept = default;
 
   template <class Inspector>
   friend bool inspect(Inspector& f, actor_addr& x) {
@@ -98,6 +89,8 @@ public:
       .fields(f.field("id", x.id_), f.field("node", x.node_));
   }
 
+  size_t hash() const noexcept;
+
 private:
   explicit actor_addr(actor_control_block* ptr) noexcept;
 
@@ -111,6 +104,82 @@ CAF_CORE_EXPORT std::string to_string(const actor_addr& x);
 /// @relates actor_addr
 CAF_CORE_EXPORT void append_to_string(std::string& dst, const actor_addr& x);
 
+/// @relates actor_addr
+inline bool operator==(const actor_addr& lhs,
+                       const strong_actor_ptr& rhs) noexcept {
+  return lhs == actor_addr::from(rhs);
+}
+
+/// @relates actor_addr
+inline auto operator<=>(const actor_addr& lhs,
+                        const strong_actor_ptr& rhs) noexcept {
+  return lhs <=> actor_addr::from(rhs);
+}
+
+/// @relates actor_addr
+inline bool operator==(const strong_actor_ptr& lhs,
+                       const actor_addr& rhs) noexcept {
+  return actor_addr::from(lhs) == rhs;
+}
+
+/// @relates actor_addr
+inline auto operator<=>(const strong_actor_ptr& lhs,
+                        const actor_addr& rhs) noexcept {
+  return actor_addr::from(lhs) <=> rhs;
+}
+
+/// @relates actor_addr
+inline bool operator==(const actor_addr& lhs,
+                       const weak_actor_ptr& rhs) noexcept {
+  return lhs == actor_addr::from(rhs);
+}
+
+/// @relates actor_addr
+inline auto operator<=>(const actor_addr& lhs,
+                        const weak_actor_ptr& rhs) noexcept {
+  return lhs <=> actor_addr::from(rhs);
+}
+
+/// @relates actor_addr
+inline bool operator==(const weak_actor_ptr& lhs,
+                       const actor_addr& rhs) noexcept {
+  return actor_addr::from(lhs) == rhs;
+}
+
+/// @relates actor_addr
+inline auto operator<=>(const weak_actor_ptr& lhs,
+                        const actor_addr& rhs) noexcept {
+  return actor_addr::from(lhs) <=> rhs;
+}
+
+/// @relates actor_addr
+template <detail::has_actor_addr_from Handle>
+auto operator==(const Handle& lhs, const actor_addr& rhs) noexcept {
+  using impl = detail::with_actor_addr_from<Handle>;
+  return impl::visit(lhs, [&rhs](const auto& addr) { return addr == rhs; });
+}
+
+/// @relates actor_addr
+template <detail::has_actor_addr_from Handle>
+auto operator<=>(const Handle& lhs, const actor_addr& rhs) noexcept {
+  using impl = detail::with_actor_addr_from<Handle>;
+  return impl::visit(lhs, [&rhs](const auto& addr) { return addr <=> rhs; });
+}
+
+/// @relates actor_addr
+template <detail::has_actor_addr_from Handle>
+auto operator==(const actor_addr& lhs, const Handle& rhs) noexcept {
+  using impl = detail::with_actor_addr_from<Handle>;
+  return impl::visit(rhs, [&lhs](const auto& addr) { return lhs == addr; });
+}
+
+/// @relates actor_addr
+template <detail::has_actor_addr_from Handle>
+auto operator<=>(const actor_addr& lhs, const Handle& rhs) noexcept {
+  using impl = detail::with_actor_addr_from<Handle>;
+  return impl::visit(rhs, [&lhs](const auto& addr) { return lhs <=> addr; });
+}
+
 } // namespace caf
 
 namespace std {
@@ -118,11 +187,7 @@ namespace std {
 template <>
 struct hash<caf::actor_addr> {
   size_t operator()(const caf::actor_addr& ref) const noexcept {
-    auto aid = ref.id();
-    if (aid == 0) {
-      return 0;
-    }
-    return caf::hash::fnv<size_t>::compute(aid, ref.node());
+    return ref.hash();
   }
 };
 
