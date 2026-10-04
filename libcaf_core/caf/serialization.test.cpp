@@ -13,6 +13,7 @@
 #include "caf/config_value_writer.hpp"
 #include "caf/detail/default_actor_handle_codec.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/inspector_config.hpp"
 #include "caf/json_object.hpp"
 #include "caf/json_reader.hpp"
 #include "caf/json_value.hpp"
@@ -21,6 +22,7 @@
 #include "caf/serializer.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include <limits>
 #include <regex>
 #include <unordered_set>
 #include <variant>
@@ -396,22 +398,95 @@ using namespace caf;
 
 namespace {
 
-using deserializer_ptr = std::variant<std::shared_ptr<binary_deserializer>,
-                                      std::shared_ptr<json_reader>,
-                                      std::shared_ptr<config_value_reader>>;
+using deserializer_ptr = std::variant<
+  std::shared_ptr<binary_deserializer>, std::shared_ptr<binary_deserializer_v2>,
+  std::shared_ptr<json_reader>, std::shared_ptr<config_value_reader>>;
 
-struct binary_serializer_wrapper {
+struct byte_writer_wrapper {
+  virtual ~byte_writer_wrapper() noexcept {
+    // nop
+  }
+
+  virtual byte_writer& get_sink() = 0;
+};
+
+struct byte_reader_wrapper {
+  virtual ~byte_reader_wrapper() noexcept {
+    // nop
+  }
+
+  virtual byte_reader& get_source() = 0;
+};
+
+struct binary_serializer_wrapper : byte_writer_wrapper {
   byte_buffer buffer;
-  detail::default_actor_handle_codec codec;
+  actor_system* system;
   binary_serializer sink;
 
   explicit binary_serializer_wrapper(actor_system& sys)
-    : codec(sys), sink(buffer, &codec) {
+    : system(&sys), sink(sys, buffer) {
     // nop
   }
 
   deserializer_ptr make_deserializer() {
-    return std::make_shared<binary_deserializer>(buffer, &codec);
+    return std::make_shared<binary_deserializer>(*system, buffer);
+  }
+
+  byte_writer& get_sink() override {
+    return sink;
+  }
+};
+
+struct binary_serializer_v2_wrapper : byte_writer_wrapper {
+  byte_buffer buffer;
+  detail::default_actor_handle_codec codec;
+  inspector_config config;
+  binary_serializer_v2<byte_buffer> sink;
+
+  explicit binary_serializer_v2_wrapper(actor_system& sys)
+    : codec(sys),
+      config(inspector_config{}.codec(&codec)),
+      sink(buffer, config) {
+    // nop
+  }
+
+  deserializer_ptr make_deserializer() {
+    return std::make_shared<binary_deserializer_v2>(buffer.data(),
+                                                    buffer.size(), config);
+  }
+
+  byte_writer& get_sink() override {
+    return sink;
+  }
+};
+
+struct binary_deserializer_wrapper : byte_reader_wrapper {
+  binary_deserializer source;
+
+  binary_deserializer_wrapper(actor_system& sys, byte_buffer& buf)
+    : source(sys, buf) {
+    // nop
+  }
+
+  byte_reader& get_source() override {
+    return source;
+  }
+};
+
+struct binary_deserializer_v2_wrapper : byte_reader_wrapper {
+  detail::default_actor_handle_codec codec;
+  inspector_config config;
+  binary_deserializer_v2 source;
+
+  binary_deserializer_v2_wrapper(actor_system& sys, byte_buffer& buf)
+    : codec(sys),
+      config(inspector_config{}.codec(&codec)),
+      source(buf.data(), buf.size(), config) {
+    // nop
+  }
+
+  byte_reader& get_source() override {
+    return source;
   }
 };
 
@@ -449,6 +524,7 @@ struct config_value_writer_wrapper {
 using str_list = std::vector<std::string>;
 using serializer_wrapper
   = std::variant<std::shared_ptr<binary_serializer_wrapper>,
+                 std::shared_ptr<binary_serializer_v2_wrapper>,
                  std::shared_ptr<json_writer_wrapper>,
                  std::shared_ptr<config_value_writer_wrapper>>;
 
@@ -457,6 +533,9 @@ struct fixture : caf::test::fixture::deterministic {
     if (name == "binary_serializer") {
       return std::make_shared<binary_serializer_wrapper>(sys);
     }
+    if (name == "binary_serializer_v2") {
+      return std::make_shared<binary_serializer_v2_wrapper>(sys);
+    }
     if (name == "json_writer") {
       return std::make_shared<json_writer_wrapper>(sys);
     }
@@ -464,6 +543,37 @@ struct fixture : caf::test::fixture::deterministic {
       return std::make_shared<config_value_writer_wrapper>(sys);
     }
     CAF_RAISE_ERROR(std::logic_error, "invalid serializer name");
+  }
+
+  std::shared_ptr<byte_writer_wrapper>
+  byte_writer_by_name(const std::string& name,
+                      const_byte_span initial_bytes = {}) {
+    if (name == "binary_serializer") {
+      auto wrapper = std::make_shared<binary_serializer_wrapper>(sys);
+      if (!initial_bytes.empty()) {
+        wrapper->buffer.assign(initial_bytes.begin(), initial_bytes.end());
+      }
+      return wrapper;
+    }
+    if (name == "binary_serializer_v2") {
+      auto wrapper = std::make_shared<binary_serializer_v2_wrapper>(sys);
+      if (!initial_bytes.empty()) {
+        wrapper->buffer.assign(initial_bytes.begin(), initial_bytes.end());
+      }
+      return wrapper;
+    }
+    CAF_RAISE_ERROR(std::logic_error, "invalid serializer name");
+  }
+
+  std::shared_ptr<byte_reader_wrapper>
+  byte_reader_by_name(const std::string& name, byte_buffer& buf) {
+    if (name == "binary_deserializer") {
+      return std::make_shared<binary_deserializer_wrapper>(sys, buf);
+    }
+    if (name == "binary_deserializer_v2") {
+      return std::make_shared<binary_deserializer_v2_wrapper>(sys, buf);
+    }
+    CAF_RAISE_ERROR(std::logic_error, "invalid deserializer name");
   }
 
   auto make_deserializer(serializer_wrapper& from) {
@@ -735,77 +845,53 @@ OUTLINE("serializing and then deserializing primitive values") {
       }
     }
   }
-  EXAMPLES = R"_(
-    | serializer          | type   | value         |
-    | binary_serializer   | i8     | -7            |
-    | binary_serializer   | i16    | -999          |
-    | binary_serializer   | i32    | -123456       |
-    | binary_serializer   | i64    | -123456789    |
-    | binary_serializer   | u8     | 42            |
-    | binary_serializer   | u16    | 1024          |
-    | binary_serializer   | u32    | 123456        |
-    | binary_serializer   | u64    | 123456789     |
-    | binary_serializer   | ld     | 123.5         |
-    | binary_serializer   | f      | 3.14          |
-    | binary_serializer   | real   | 12.5          |
-    | binary_serializer   | string | Hello, world! |
-    | binary_serializer   | u16str | Hello, world! |
-    | binary_serializer   | u32str | Hello, world! |
-    | binary_serializer   | vector | 1, 42, -31    |
-    | binary_serializer   | v_bool | true, false   |
-    | binary_serializer   | list   | 1, 42, -31    |
-    | binary_serializer   | map    | a:-1, b:42    |
-    | binary_serializer   | umap   | a:-1, b:42    |
-    | binary_serializer   | set    | 1, -42, 3, 3  |
-    | binary_serializer   | uset   | 1, -42, 3, 3  |
-    | binary_serializer   | array  | 1, -42, 3     |
-    | binary_serializer   | tuple  | -42, 1024, 30 |
-    | binary_serializer   | carray | -42, 1, 9, 30 |
-    | json_writer         | i8     | -7            |
-    | json_writer         | i16    | -999          |
-    | json_writer         | i32    | -123456       |
-    | json_writer         | i64    | -123456789    |
-    | json_writer         | u8     | 42            |
-    | json_writer         | u16    | 1024          |
-    | json_writer         | u32    | 123456        |
-    | json_writer         | u64    | 123456789     |
-    | json_writer         | ld     | 123.5         |
-    | json_writer         | f      | 3.14          |
-    | json_writer         | real   | 12.5          |
-    | json_writer         | string | Hello, world! |
-    | json_writer         | vector | 1, 42, -31    |
-    | json_writer         | v_bool | true, false   |
-    | json_writer         | list   | 1, 42, -31    |
-    | json_writer         | map    | a:-1, b:42    |
-    | json_writer         | umap   | a:-1, b:42    |
-    | json_writer         | set    | 1, -42, 3, 3  |
-    | json_writer         | uset   | 1, -42, 3, 3  |
-    | json_writer         | array  | 1, -42, 3     |
-    | json_writer         | tuple  | -42, 1024, 30 |
-    | json_writer         | carray | -42, 1, 9, 30 |
-    | config_value_writer | i8     | -7            |
-    | config_value_writer | i16    | -999          |
-    | config_value_writer | i32    | -123456       |
-    | config_value_writer | i64    | -123456789    |
-    | config_value_writer | u8     | 42            |
-    | config_value_writer | u16    | 1024          |
-    | config_value_writer | u32    | 123456        |
-    | config_value_writer | u64    | 123456789     |
-    | config_value_writer | ld     | 123.5         |
-    | config_value_writer | f      | 3.14          |
-    | config_value_writer | real   | 12.5          |
-    | config_value_writer | string | Hello, world! |
-    | config_value_writer | vector | 1, 42, -31    |
-    | config_value_writer | v_bool | true, false   |
-    | config_value_writer | list   | 1, 42, -31    |
-    | config_value_writer | map    | a:-1, b:42    |
-    | config_value_writer | umap   | a:-1, b:42    |
-    | config_value_writer | set    | 1, -42, 3, 3  |
-    | config_value_writer | uset   | 1, -42, 3, 3  |
-    | config_value_writer | array  | 1, -42, 3     |
-    | config_value_writer | tuple  | -42, 1024, 30 |
-    | config_value_writer | carray | -42, 1, 9, 30 |
-  )_";
+  constexpr std::pair<std::string_view, std::string_view> tbl[] = {
+    {"i8", "-7"},
+    {"i16", "-999"},
+    {"i32", "-123456"},
+    {"i64", "-123456789"},
+    {"u8", "42"},
+    {"u16", "1024"},
+    {"u32", "123456"},
+    {"u64", "123456789"},
+    {"ld", "123.5"},
+    {"f", "3.14"},
+    {"real", "12.5"},
+    {"string", "Hello, world!"},
+    {"u16str", "Hello, world!"},
+    {"u32str", "Hello, world!"},
+    {"vector", "1, 42, -31"},
+    {"v_bool", "true, false"},
+    {"list", "1, 42, -31"},
+    {"map", "a:-1, b:42"},
+    {"umap", "a:-1, b:42"},
+    {"set", "1, -42, 3, 3"},
+    {"uset", "1, -42, 3, 3"},
+    {"array", "1, -42, 3"},
+    {"tuple", "-42, 1024, 30"},
+    {"carray", "-42, 1, 9, 30"},
+  };
+  constexpr std::string_view serializers[] = {
+    "binary_serializer",
+    "binary_serializer_v2",
+    "json_writer",
+    "config_value_writer",
+  };
+  if (auto examples = make_examples_setter()) {
+    for (auto serializer : serializers) {
+      for (auto [type, value] : tbl) {
+        if (type == "u16str" || type == "u32str") {
+          if (serializer == "json_writer"
+              || serializer == "config_value_writer") {
+            continue;
+          }
+        }
+        examples.append({{"serializer"s, std::string{serializer}},
+                         {"type"s, std::string{type}},
+                         {"value"s, std::string{value}}});
+      }
+    }
+  }
 }
 
 OUTLINE("serializing and then deserializing the 'nasty' type") {
@@ -838,10 +924,11 @@ OUTLINE("serializing and then deserializing the 'nasty' type") {
     }
   }
   EXAMPLES = R"_(
-    | serializer          |
-    | binary_serializer   |
-    | json_writer         |
-    | config_value_writer |
+    | serializer           |
+    | binary_serializer    |
+    | binary_serializer_v2 |
+    | json_writer          |
+    | config_value_writer  |
   )_";
 }
 
@@ -878,10 +965,11 @@ OUTLINE("serializing a type that initializes members to a non-empty state") {
     }
   }
   EXAMPLES = R"_(
-    | serializer          |
-    | binary_serializer   |
-    | json_writer         |
-    | config_value_writer |
+    | serializer           |
+    | binary_serializer    |
+    | binary_serializer_v2 |
+    | json_writer          |
+    | config_value_writer  |
   )_";
 }
 
@@ -902,10 +990,11 @@ OUTLINE("serializing and then deserializing an empty message") {
     }
   }
   EXAMPLES = R"_(
-    | serializer          |
-    | binary_serializer   |
-    | json_writer         |
-    | config_value_writer |
+    | serializer           |
+    | binary_serializer    |
+    | binary_serializer_v2 |
+    | json_writer          |
+    | config_value_writer  |
   )_";
 }
 
@@ -930,10 +1019,11 @@ OUTLINE("serializing and then deserializing a non-empty message") {
     }
   }
   EXAMPLES = R"_(
-    | serializer          |
-    | binary_serializer   |
-    | json_writer         |
-    | config_value_writer |
+    | serializer           |
+    | binary_serializer    |
+    | binary_serializer_v2 |
+    | json_writer          |
+    | config_value_writer  |
   )_";
 }
 
@@ -981,10 +1071,11 @@ OUTLINE("serializing and then deserializing errors") {
     }
   }
   EXAMPLES = R"_(
-    | serializer          |
-    | binary_serializer   |
-    | json_writer         |
-    | config_value_writer |
+    | serializer           |
+    | binary_serializer    |
+    | binary_serializer_v2 |
+    | json_writer          |
+    | config_value_writer  |
   )_";
 }
 
@@ -1001,7 +1092,7 @@ SCENARIO("binary serializer and deserializer handle vectors of booleans") {
         check_eq(sink.buffer.size(), 2u);
       }
       AND_THEN("deserializing the result produces the value again") {
-        auto source = binary_deserializer{sink.buffer, &sink.codec};
+        auto source = binary_deserializer{sink.buffer};
         auto copy = std::vector<bool>{};
         check(source.apply(copy));
         check_eq(copy, val);
@@ -1012,7 +1103,7 @@ SCENARIO("binary serializer and deserializer handle vectors of booleans") {
                                    false, true,  false, true};
       check(sink.sink.apply(val));
       THEN("deserializing the result produces the value again") {
-        auto source = binary_deserializer{sink.buffer, &sink.codec};
+        auto source = binary_deserializer{sink.buffer};
         auto copy = std::vector<bool>{};
         check(source.apply(copy));
         check_eq(copy, val);
@@ -1022,7 +1113,7 @@ SCENARIO("binary serializer and deserializer handle vectors of booleans") {
       auto val = std::vector<bool>{true};
       check(sink.sink.apply(val));
       THEN("deserializing the result produces the value again") {
-        auto source = binary_deserializer{sink.buffer, &sink.codec};
+        auto source = binary_deserializer{sink.buffer};
         auto copy = std::vector<bool>{};
         check(source.apply(copy));
         check_eq(copy, val);
@@ -1032,13 +1123,113 @@ SCENARIO("binary serializer and deserializer handle vectors of booleans") {
       auto val = std::vector<bool>{};
       check(sink.sink.apply(val));
       THEN("deserializing the result produces the value again") {
-        auto source = binary_deserializer{sink.buffer, &sink.codec};
+        auto source = binary_deserializer{sink.buffer};
         auto copy = std::vector<bool>{};
         check(source.apply(copy));
         check_eq(copy, val);
       }
     }
   }
+}
+
+OUTLINE("binary deserializers reject malformed sequence lengths") {
+  GIVEN("a <deserializer> and an overlong varbyte-encoded empty string") {
+    auto bytes = byte_buffer{std::byte{0x80}, std::byte{0x80}, std::byte{0x80},
+                             std::byte{0x80}, std::byte{0x00}};
+    auto wrapper = byte_reader_by_name(block_parameters<std::string>(), bytes);
+    auto& source = wrapper->get_source();
+    WHEN("deserializing the bytes as a string") {
+      auto result = std::string{};
+      THEN("the deserializer yields an empty string") {
+        check(source.apply(result));
+        check_eq(result, "");
+      }
+    }
+  }
+  GIVEN("a <deserializer> and a fifth varbyte that does not fit into 32 bits") {
+    auto bytes = byte_buffer{std::byte{0x80}, std::byte{0x80}, std::byte{0x80},
+                             std::byte{0x80}, std::byte{0x10}};
+    auto wrapper = byte_reader_by_name(block_parameters<std::string>(), bytes);
+    auto& source = wrapper->get_source();
+    WHEN("deserializing the bytes as a string") {
+      auto result = std::string{};
+      THEN("the deserializer rejects the length") {
+        check(!source.apply(result));
+        check_eq(source.get_error(), sec::invalid_argument);
+      }
+    }
+  }
+  GIVEN("a <deserializer> and varbyte-length ending in the continuation bit") {
+    auto bytes = byte_buffer{std::byte{0x80}, std::byte{0x80}, std::byte{0x80},
+                             std::byte{0x80}, std::byte{0x80}, std::byte{0x00}};
+    auto wrapper = byte_reader_by_name(block_parameters<std::string>(), bytes);
+    auto& source = wrapper->get_source();
+    WHEN("deserializing the bytes as a string") {
+      auto result = std::string{};
+      THEN("the deserializer rejects the length") {
+        check(!source.apply(result));
+        check_eq(source.get_error(), sec::invalid_argument);
+      }
+    }
+  }
+  GIVEN("a <deserializer> and a truncated payload") {
+    auto bytes = byte_buffer{std::byte{0xFF}, std::byte{0xFF}, std::byte{0xFF},
+                             std::byte{0xFF}, std::byte{0x0F}};
+    auto wrapper = byte_reader_by_name(block_parameters<std::string>(), bytes);
+    auto& source = wrapper->get_source();
+    WHEN("deserializing the bytes as a string") {
+      auto result = std::string{};
+      THEN("the deserializer stops at the end of the buffer") {
+        check(!source.apply(result));
+        check_eq(source.get_error(), sec::end_of_stream);
+      }
+    }
+  }
+  EXAMPLES = R"_(
+    | deserializer           |
+    | binary_deserializer    |
+    | binary_deserializer_v2 |
+  )_";
+}
+
+OUTLINE("binary serializers reject updates that would overflow the buffer") {
+  const auto initial_buf = byte_buffer{std::byte{1}, std::byte{2},
+                                       std::byte{3}};
+  GIVEN("a <serializer> and a three-byte buffer") {
+    auto wrapper = byte_writer_by_name(block_parameters<std::string>(),
+                                       initial_buf);
+    auto& sink = wrapper->get_sink();
+    WHEN("replacing bytes inside the buffer") {
+      auto content = std::array{std::byte{4}, std::byte{5}};
+      THEN("the update succeeds and writes the new bytes") {
+        check(sink.update(1, content));
+        auto buf = sink.bytes();
+        require_eq(buf.size(), 3u);
+        check_eq(buf[0], std::byte{1});
+        check_eq(buf[1], std::byte{4});
+        check_eq(buf[2], std::byte{5});
+      }
+    }
+    WHEN("the new bytes would run past the end of the buffer") {
+      auto content = std::array{std::byte{4}, std::byte{5}};
+      THEN("the update fails") {
+        check(!sink.update(2, content));
+        check_eq(sink.get_error(), sec::end_of_stream);
+      }
+    }
+    WHEN("adding the offset and the content size would wrap") {
+      auto content = std::array{std::byte{9}};
+      THEN("the update fails") {
+        check(!sink.update(std::numeric_limits<size_t>::max(), content));
+        check_eq(sink.get_error(), sec::end_of_stream);
+      }
+    }
+  }
+  EXAMPLES = R"_(
+    | serializer           |
+    | binary_serializer    |
+    | binary_serializer_v2 |
+  )_";
 }
 
 SCENARIO("custom type ID mapper is respected for caf::message serialization") {

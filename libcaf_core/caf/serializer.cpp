@@ -4,8 +4,6 @@
 
 #include "caf/serializer.hpp"
 
-#include "caf/actor_control_block.hpp"
-#include "caf/actor_handle_codec.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/type_id.hpp"
 #include "caf/type_id_list.hpp"
@@ -34,13 +32,6 @@ bool serializer::begin_associative_array(size_t size) {
 
 bool serializer::end_associative_array() {
   return end_sequence();
-}
-
-bool serializer::value(const strong_actor_ptr& ptr) {
-  if (auto* codec = actor_handle_codec())
-    return codec->save(*this, ptr);
-  set_error(make_error(sec::no_actor_handle_codec));
-  return false;
 }
 
 bool serializer::value(const std::vector<bool>& xs) {

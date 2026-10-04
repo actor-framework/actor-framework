@@ -101,11 +101,11 @@ public:
     field_type_suffix_ = suffix;
   }
 
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept override {
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
     return mapper_;
   }
 
-  void mapper(const type_id_mapper* ptr) noexcept override {
+  void mapper(const type_id_mapper* ptr) noexcept {
     mapper_ = ptr;
   }
 
@@ -494,8 +494,12 @@ public:
     }
   }
 
-  caf::actor_handle_codec* actor_handle_codec() override {
-    return codec_;
+  bool value(const strong_actor_ptr& ptr) override {
+    if (codec_ == nullptr) {
+      emplace_error(sec::no_actor_handle_codec);
+      return false;
+    }
+    return codec_->save(*this, ptr);
   }
 
 private:
@@ -710,6 +714,14 @@ json_writer::json_writer(caf::actor_handle_codec* codec)
 
 json_writer::~json_writer() noexcept {
   // nop
+}
+
+const type_id_mapper* json_writer::mapper() const noexcept {
+  return static_cast<json_writer_impl&>(*impl_).mapper();
+}
+
+void json_writer::mapper(const type_id_mapper* ptr) noexcept {
+  static_cast<json_writer_impl&>(*impl_).mapper(ptr);
 }
 
 } // namespace caf

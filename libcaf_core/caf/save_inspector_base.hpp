@@ -248,10 +248,6 @@ public:
     return value(x);
   }
 
-  caf::actor_handle_codec* actor_handle_codec() {
-    return impl_->actor_handle_codec();
-  }
-
   SubtypeInterface& as_serializer() noexcept {
     return *impl_;
   }

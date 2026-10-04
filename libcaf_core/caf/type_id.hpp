@@ -135,6 +135,8 @@ public:
   type_id_t operator()(std::string_view name) const override;
 };
 
+CAF_CORE_EXPORT const type_id_mapper& get_default_type_id_mapper() noexcept;
+
 } // namespace caf
 
 // -- CAF_BEGIN_TYPE_ID_BLOCK --------------------------------------------------

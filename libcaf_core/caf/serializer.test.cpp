@@ -38,8 +38,8 @@ public:
     return err_;
   }
 
-  caf::actor_handle_codec* actor_handle_codec() override {
-    return nullptr;
+  bool value(const strong_actor_ptr&) override {
+    return state_;
   }
 
   bool has_human_readable_format() const noexcept override {

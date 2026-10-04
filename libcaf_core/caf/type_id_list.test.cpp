@@ -11,10 +11,10 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/init_global_meta_objects.hpp"
+#include "caf/inspector_config.hpp"
 #include "caf/json_reader.hpp"
 #include "caf/json_writer.hpp"
 #include "caf/message.hpp"
-#include "caf/policy/use_type_names.hpp"
 #include "caf/sec.hpp"
 #include "caf/type_id.hpp"
 
@@ -148,17 +148,22 @@ SCENARIO("type ID lists are serializable") {
         check_eq(xs, ys);
       }
       AND_THEN("a deserializer with policy::use_type_names fails") {
-        binary_deserializer source{buf, policy::use_type_names};
+        binary_deserializer_v2 source{buf.data(), buf.size(),
+                                      inspector_config{}.encoding(
+                                        object_type_encoding::type_name)};
         type_id_list ys = make_type_id_list();
         check(!source.value(ys));
       }
     }
-    WHEN("serializing with policy::use_type_names") {
+    WHEN("serializing type names") {
       byte_buffer buf;
-      binary_serializer sink{buf, policy::use_type_names};
+      binary_serializer_v2 sink{buf, inspector_config{}.encoding(
+                                       object_type_encoding::type_name)};
       check(sink.value(xs));
       THEN("a matching binary deserializer reproduces the list") {
-        binary_deserializer source{buf, policy::use_type_names};
+        binary_deserializer_v2 source{buf.data(), buf.size(),
+                                      inspector_config{}.encoding(
+                                        object_type_encoding::type_name)};
         type_id_list ys = make_type_id_list();
         check(source.value(ys));
         check_eq(xs, ys);
@@ -170,7 +175,7 @@ SCENARIO("type ID lists are serializable") {
         check(!ok || ys != xs);
       }
     }
-    WHEN("serializing with policy::use_type_names and a custom mapper") {
+    WHEN("serializing type names with a custom mapper") {
       struct alias_mapper : type_id_mapper {
         std::string_view operator()(type_id_t type) const override {
           if (type == type_id_v<int32_t>)
@@ -185,18 +190,25 @@ SCENARIO("type ID lists are serializable") {
       };
       alias_mapper mapper;
       byte_buffer buf;
-      binary_serializer sink{buf, policy::use_type_names};
-      sink.mapper(&mapper);
+      binary_serializer_v2 sink{buf,
+                                inspector_config{}
+                                  .encoding(object_type_encoding::type_name)
+                                  .mapper(&mapper)};
       check(sink.value(xs));
       THEN("a deserializer with the same mapper reproduces the list") {
-        binary_deserializer source{buf, policy::use_type_names};
-        source.mapper(&mapper);
+        binary_deserializer_v2 source{buf.data(), buf.size(),
+                                      inspector_config{}
+                                        .encoding(
+                                          object_type_encoding::type_name)
+                                        .mapper(&mapper)};
         type_id_list ys = make_type_id_list();
         check(source.value(ys));
         check_eq(xs, ys);
       }
       AND_THEN("a deserializer without the mapper fails") {
-        binary_deserializer source{buf, policy::use_type_names};
+        binary_deserializer_v2 source{buf.data(), buf.size(),
+                                      inspector_config{}.encoding(
+                                        object_type_encoding::type_name)};
         type_id_list ys = make_type_id_list();
         check(!source.value(ys));
       }
@@ -217,22 +229,32 @@ SCENARIO("type ID lists are serializable") {
       alias_mapper mapper;
       auto ys = make_type_id_list<int32_t>();
       byte_buffer buf;
-      binary_serializer sink{buf, policy::use_type_names};
-      sink.mapper(&mapper);
+      binary_serializer_v2 sink{buf,
+                                inspector_config{}
+                                  .encoding(object_type_encoding::type_name)
+                                  .mapper(&mapper)};
       check(sink.value(ys));
       THEN("a deserializer with the same mapper roundtrips") {
-        binary_deserializer source{buf, policy::use_type_names};
-        source.mapper(&mapper);
+        binary_deserializer_v2 source{buf.data(), buf.size(),
+                                      inspector_config{}
+                                        .encoding(
+                                          object_type_encoding::type_name)
+                                        .mapper(&mapper)};
         type_id_list zs = make_type_id_list();
         check(source.value(zs));
         check_eq(ys, zs);
       }
       AND_THEN("mismatched mappers fail to roundtrip") {
         byte_buffer std_buf;
-        binary_serializer std_sink{std_buf, policy::use_type_names};
+        binary_serializer_v2 std_sink{std_buf,
+                                      inspector_config{}.encoding(
+                                        object_type_encoding::type_name)};
         check(std_sink.value(ys));
-        binary_deserializer source{std_buf, policy::use_type_names};
-        source.mapper(&mapper);
+        binary_deserializer_v2 source{std_buf.data(), std_buf.size(),
+                                      inspector_config{}
+                                        .encoding(
+                                          object_type_encoding::type_name)
+                                        .mapper(&mapper)};
         type_id_list zs = make_type_id_list();
         check(!source.value(zs));
       }

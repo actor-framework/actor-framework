@@ -14,7 +14,6 @@
 #include "caf/config.hpp"
 #include "caf/const_typed_message_view.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/default_actor_handle_codec.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/log/io.hpp"
@@ -42,8 +41,7 @@ public:
     strong_actor_ptr dst;
     message msg;
     auto mid = make_message_id(dref.hdr_.operation_data);
-    detail::default_actor_handle_codec codec{sys};
-    binary_deserializer source{dref.payload_, &codec};
+    binary_deserializer source{sys, dref.payload_};
     // Make sure to drop the message in case we return abnormally.
     auto guard = detail::scope_guard{
       [&]() noexcept { dref.queue_->drop(ctx, dref.msg_id_); }};
