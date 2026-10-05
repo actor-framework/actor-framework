@@ -402,7 +402,7 @@ template <class Left, class Right>
   requires detail::managed_by<detail::control_block_of<Left>, Right>
 constexpr bool operator==(const weak_intrusive_ptr<Left>& lhs,
                           const intrusive_ptr<Right>& rhs) noexcept {
-  auto* ctrl = detail::get_control_block<detail::control_block_of<Left>>(rhs);
+  auto* ctrl = detail::get_control_block<detail::control_block_of<Right>>(rhs);
   return lhs.ctrl() == ctrl;
 }
 
@@ -411,7 +411,7 @@ template <class Left, class Right>
   requires detail::managed_by<detail::control_block_of<Left>, Right>
 constexpr auto operator<=>(const weak_intrusive_ptr<Left>& lhs,
                            const intrusive_ptr<Right>& rhs) noexcept {
-  auto* ctrl = detail::get_control_block<detail::control_block_of<Left>>(rhs);
+  auto* ctrl = detail::get_control_block<detail::control_block_of<Right>>(rhs);
   return lhs.ctrl() <=> ctrl;
 }
 
