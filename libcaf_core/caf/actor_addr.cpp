@@ -12,6 +12,12 @@
 
 namespace caf {
 
+namespace {
+
+constinit const actor_addr null_addr = actor_addr{};
+
+} // namespace
+
 actor_addr::actor_addr(actor_control_block* ptr) noexcept {
   if (ptr != nullptr) {
     id_ = ptr->id();
@@ -19,18 +25,32 @@ actor_addr::actor_addr(actor_control_block* ptr) noexcept {
   }
 }
 
-actor_addr actor_addr::from(const strong_actor_ptr& ptr) noexcept {
+const actor_addr& actor_addr::from(const abstract_actor* ptr) noexcept {
   if (ptr) {
     return ptr->address();
   }
-  return {};
+  return null_addr;
 }
 
-actor_addr actor_addr::from(const weak_actor_ptr& ptr) noexcept {
+const actor_addr& actor_addr::from(const actor_control_block* ptr) noexcept {
+  if (ptr) {
+    return ptr->address();
+  }
+  return null_addr;
+}
+
+const actor_addr& actor_addr::from(const strong_actor_ptr& ptr) noexcept {
+  if (ptr) {
+    return ptr->address();
+  }
+  return null_addr;
+}
+
+const actor_addr& actor_addr::from(const weak_actor_ptr& ptr) noexcept {
   if (ptr) {
     return ptr.ctrl()->address();
   }
-  return {};
+  return null_addr;
 }
 
 void actor_addr::swap(actor_addr& other) noexcept {

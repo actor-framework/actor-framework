@@ -39,13 +39,6 @@ void actor::swap(actor& other) noexcept {
   ptr_.swap(other.ptr_);
 }
 
-actor_addr actor::address() const noexcept {
-  if (ptr_) {
-    return {ptr_->id(), ptr_->node()};
-  }
-  return {};
-}
-
 bool operator==(const actor& lhs, abstract_actor* rhs) {
   return lhs ? actor_cast<abstract_actor*>(lhs) == rhs : rhs == nullptr;
 }

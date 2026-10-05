@@ -162,11 +162,8 @@ public:
   }
 
   /// Queries the address of the stored actor.
-  actor_addr address() const noexcept {
-    if (ptr_) {
-      return {id(), node()};
-    }
-    return {};
+  const actor_addr& address() const noexcept {
+    return actor_addr::from(ptr_);
   }
 
   /// Returns the ID of this actor.
@@ -280,8 +277,7 @@ struct with_actor_addr_from<typed_actor<Sigs...>> {
 
   template <class Visitor>
   static auto visit(const typed_actor<Sigs...>& hdl, Visitor&& visitor) {
-    auto addr = hdl.address();
-    return std::forward<Visitor>(visitor)(addr);
+    return std::forward<Visitor>(visitor)(hdl.address());
   }
 };
 

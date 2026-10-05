@@ -94,7 +94,9 @@ public:
   }
 
   /// Returns the address of the stored actor.
-  actor_addr address() const noexcept;
+  const actor_addr& address() const noexcept {
+    return actor_addr::from(ptr_);
+  }
 
   /// Returns the ID of this actor.
   actor_id id() const noexcept {
@@ -168,15 +170,18 @@ private:
   strong_actor_ptr ptr_;
 };
 
-// Note: `actor` allows implicit conversions from pointers. Simply defaulting
-//       `operator<=>` would result in side effects when comparing actors and
-//       pointers (increasing and then decreasing the reference count). Hence,
-//       we implement comparison manually here in a way that blocks implicit
-//       conversions. Since this code would be the same for `actor` and
-//       `typed_actor` anyways (and we have to use templates regardless), we
-//       implement comparison for both types here (typed_actor.hpp includes this
-//       header). Comparison to `actor_addr` is enabled by specializing
-//       `with_actor_addr_from`.
+// Notes:
+// - `actor` allows implicit conversions from pointers. Simply defaulting
+//   `operator<=>` would result in side effects when comparing actors and
+//   pointers (increasing and then decreasing the reference count). Hence, we
+//   implement comparison manually here in a way that blocks implicit
+//   conversions.
+// - Since this code is the same for `actor` and `typed_actor` (and we have to
+//   use templates regardless), we implement comparison for both types here
+//   (typed_actor.hpp includes this header).
+// - Comparison to `actor_addr` is enabled by specializing
+//   `with_actor_addr_from`.
+// - We compare actors by their address to have a stable sort order.
 
 template <detail::actor_handle Handle>
 bool operator==(const Handle& hdl, std::nullptr_t) noexcept {
@@ -200,72 +205,72 @@ bool operator!=(std::nullptr_t, const Handle& hdl) noexcept {
 
 template <detail::actor_handle Left, detail::actor_handle Right>
 bool operator==(const Left& lhs, const Right& rhs) noexcept {
-  return lhs.as_intrusive_ptr() == rhs.as_intrusive_ptr();
+  return lhs.address() == rhs.address();
 }
 
 template <detail::actor_handle Left, detail::actor_handle Right>
 auto operator<=>(const Left& lhs, const Right& rhs) noexcept {
-  return lhs.as_intrusive_ptr() <=> rhs.as_intrusive_ptr();
+  return lhs.address() <=> rhs.address();
 }
 
 template <detail::actor_handle Left>
 bool operator==(const Left& lhs, const strong_actor_ptr& rhs) noexcept {
-  return lhs.as_intrusive_ptr() == rhs;
+  return lhs.address() == actor_addr::from(rhs);
 }
 
 template <detail::actor_handle Left>
 auto operator<=>(const Left& lhs, const strong_actor_ptr& rhs) noexcept {
-  return lhs.as_intrusive_ptr() <=> rhs;
+  return lhs.address() <=> actor_addr::from(rhs);
 }
 
 template <detail::actor_handle Right>
 bool operator==(const strong_actor_ptr& lhs, const Right& rhs) noexcept {
-  return lhs == rhs.as_intrusive_ptr();
+  return actor_addr::from(lhs) == rhs.address();
 }
 
 template <detail::actor_handle Right>
 auto operator<=>(const strong_actor_ptr& lhs, const Right& rhs) noexcept {
-  return lhs <=> rhs.as_intrusive_ptr();
+  return actor_addr::from(lhs) <=> rhs.address();
 }
 
-template <detail::actor_handle Left, std::derived_from<abstract_actor> Right>
-bool operator==(const Left& lhs, const Right* rhs) noexcept {
-  return lhs.as_intrusive_ptr() == actor_control_block::from(rhs);
+template <detail::actor_handle Left>
+bool operator==(const Left& lhs, const abstract_actor* rhs) noexcept {
+  return lhs.address() == actor_addr::from(rhs);
 }
 
-template <detail::actor_handle Left, std::derived_from<abstract_actor> Right>
-auto operator<=>(const Left& lhs, const Right* rhs) noexcept {
-  return lhs.as_intrusive_ptr() <=> actor_control_block::from(rhs);
+template <detail::actor_handle Left>
+auto operator<=>(const Left& lhs, const abstract_actor* rhs) noexcept {
+  return lhs.address() <=> actor_addr::from(rhs);
 }
 
-template <std::derived_from<abstract_actor> Left, detail::actor_handle Right>
-bool operator==(const Left* lhs, const Right& rhs) noexcept {
-  return actor_control_block::from(lhs) == rhs.as_intrusive_ptr();
+template <detail::actor_handle Right>
+bool operator==(const abstract_actor* lhs, const Right& rhs) noexcept {
+  return actor_addr::from(lhs) == rhs.address();
 }
 
-template <std::derived_from<abstract_actor> Left, detail::actor_handle Right>
-auto operator<=>(const Left* lhs, const Right& rhs) noexcept {
-  return actor_control_block::from(lhs) <=> rhs.as_intrusive_ptr();
+template <detail::actor_handle Right>
+auto operator<=>(const abstract_actor* lhs, const Right& rhs) noexcept {
+  return actor_addr::from(lhs) <=> rhs.address();
 }
 
 template <detail::actor_handle Left>
 bool operator==(const Left& lhs, const actor_control_block* rhs) noexcept {
-  return lhs.as_intrusive_ptr() == rhs;
+  return lhs.address() == actor_addr::from(rhs);
 }
 
 template <detail::actor_handle Left>
 auto operator<=>(const Left& lhs, const actor_control_block* rhs) noexcept {
-  return lhs.as_intrusive_ptr() <=> rhs;
+  return lhs.address() <=> actor_addr::from(rhs);
 }
 
 template <detail::actor_handle Right>
 bool operator==(const actor_control_block* lhs, const Right& rhs) noexcept {
-  return lhs == rhs.as_intrusive_ptr();
+  return actor_addr::from(lhs) == rhs.address();
 }
 
 template <detail::actor_handle Right>
 auto operator<=>(const actor_control_block* lhs, const Right& rhs) noexcept {
-  return lhs <=> rhs.as_intrusive_ptr();
+  return actor_addr::from(lhs) <=> rhs.address();
 }
 
 } // namespace caf
@@ -279,8 +284,7 @@ struct with_actor_addr_from<actor> {
 
   template <class Visitor>
   static auto visit(const actor& hdl, Visitor&& visitor) {
-    auto addr = hdl.address();
-    return std::forward<Visitor>(visitor)(addr);
+    return std::forward<Visitor>(visitor)(hdl.address());
   }
 };
 

@@ -102,7 +102,7 @@ public:
     static_assert(std::is_convertible_v<Y*, T*>, "Y* is not assignable to T*");
   }
 
-  ~intrusive_ptr() {
+  ~intrusive_ptr() noexcept {
     if (ptr_) {
       do_deref(ptr_);
     }

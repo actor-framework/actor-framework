@@ -167,8 +167,8 @@ actor_system& abstract_actor::home_system() const noexcept {
   return ctrl_->system();
 }
 
-actor_addr abstract_actor::address() const noexcept {
-  return {id(), node()};
+const actor_addr& abstract_actor::address() const noexcept {
+  return ctrl_->address();
 }
 
 abstract_actor* abstract_actor::current() noexcept {

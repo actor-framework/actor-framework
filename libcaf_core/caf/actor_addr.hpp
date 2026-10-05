@@ -50,11 +50,13 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  // TODO: return a reference
-  static actor_addr from(const strong_actor_ptr& ptr) noexcept;
+  static const actor_addr& from(const abstract_actor* ptr) noexcept;
 
-  // TODO: return a reference
-  static actor_addr from(const weak_actor_ptr& ptr) noexcept;
+  static const actor_addr& from(const actor_control_block* ptr) noexcept;
+
+  static const actor_addr& from(const strong_actor_ptr& ptr) noexcept;
+
+  static const actor_addr& from(const weak_actor_ptr& ptr) noexcept;
 
   /// Returns the ID of the identified actor.
   constexpr actor_id id() const noexcept {

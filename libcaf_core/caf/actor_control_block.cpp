@@ -34,10 +34,6 @@ actor_control_block::from(const abstract_actor* ptr) noexcept {
   return ptr != nullptr ? ptr->ctrl() : nullptr;
 }
 
-actor_addr actor_control_block::address() noexcept {
-  return {id(), node()};
-}
-
 bool actor_control_block::enqueue(mailbox_element_ptr what, scheduler* sched) {
   return managed_->enqueue(std::move(what), sched);
 }
