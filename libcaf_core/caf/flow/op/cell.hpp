@@ -128,7 +128,8 @@ public:
     return !state_;
   }
 
-  void request(size_t) override {
+  void request([[maybe_unused]] size_t n) override {
+    CAF_ASSERT(n > 0);
     if (!listening_) {
       listening_ = true;
       auto self = cell_listener_ptr<T>{this, add_ref};
