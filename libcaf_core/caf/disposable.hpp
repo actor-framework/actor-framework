@@ -7,7 +7,6 @@
 #include "caf/abstract_ref_counted.hpp"
 #include "caf/add_ref.hpp"
 #include "caf/adopt_ref.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive_ptr.hpp"
 
@@ -16,7 +15,7 @@
 namespace caf {
 
 /// Represents a disposable resource.
-class CAF_CORE_EXPORT disposable : detail::comparable<disposable> {
+class CAF_CORE_EXPORT disposable {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -129,10 +128,7 @@ public:
 
   // -- comparisons ------------------------------------------------------------
 
-  /// Compares the internal pointers.
-  [[nodiscard]] intptr_t compare(const disposable& other) const noexcept {
-    return pimpl_.compare(other.pimpl_);
-  }
+  constexpr auto operator<=>(const disposable&) const noexcept = default;
 
   // -- utility ----------------------------------------------------------------
 

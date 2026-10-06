@@ -143,7 +143,7 @@ public:
   }
 
   /// Returns the logical actor address.
-  actor_addr address() const noexcept;
+  const actor_addr& address() const noexcept;
 
   /// Returns the actor currently associated to the calling thread or `nullptr`
   /// if none is associated.

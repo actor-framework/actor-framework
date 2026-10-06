@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/ipv4_address.hpp"
 
@@ -14,17 +13,16 @@
 namespace caf {
 
 /// An IP endpoint that contains an ::ipv4_address and a port.
-class CAF_CORE_EXPORT ipv4_endpoint : detail::comparable<ipv4_endpoint> {
+class CAF_CORE_EXPORT ipv4_endpoint {
 public:
   // -- constructors -----------------------------------------------------------
 
-  ipv4_endpoint(ipv4_address address, uint16_t port);
+  ipv4_endpoint(ipv4_address address, uint16_t port) noexcept
+    : address_(address), port_(port) {
+    // nop
+  }
 
-  ipv4_endpoint() = default;
-
-  ipv4_endpoint(const ipv4_endpoint&) = default;
-
-  ipv4_endpoint& operator=(const ipv4_endpoint&) = default;
+  ipv4_endpoint() noexcept = default;
 
   // -- properties -------------------------------------------------------------
 
@@ -51,10 +49,7 @@ public:
   /// Returns a hash for this object
   size_t hash_code() const noexcept;
 
-  /// Compares this endpoint to `x`.
-  /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
-  /// value otherwise.
-  long compare(ipv4_endpoint x) const noexcept;
+  auto operator<=>(const ipv4_endpoint&) const noexcept = default;
 
   template <class Inspector>
   friend bool inspect(Inspector& f, ipv4_endpoint& x) {

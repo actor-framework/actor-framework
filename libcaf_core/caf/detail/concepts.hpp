@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/async/fwd.hpp"
+#include "caf/detail/type_predicates.hpp"
 #include "caf/fwd.hpp"
 
 #include <array>
@@ -19,6 +20,9 @@ namespace caf::detail {
 
 template <class T, class... Ts>
 concept one_of = (std::is_same_v<T, Ts> || ...);
+
+template <class T>
+concept actor_handle = is_actor<T> || is_typed_actor<T>;
 
 /// Checks whether `T` is a `stream` or `typed_stream`.
 template <class T>
@@ -299,11 +303,6 @@ template <class Enum>
 [[nodiscard]] constexpr auto to_underlying(Enum e) noexcept {
   return static_cast<std::underlying_type_t<Enum>>(e);
 }
-
-template <class Lhs, class Rhs>
-concept has_compare_overload = requires(const Lhs& lhs, const Rhs& rhs) {
-  { lhs.compare(rhs) } noexcept -> std::same_as<ptrdiff_t>;
-};
 
 template <class T>
 concept char_or_byte_data = std::convertible_to<T, const char*>

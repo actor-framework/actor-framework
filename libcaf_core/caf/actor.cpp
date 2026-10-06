@@ -9,15 +9,12 @@
 
 namespace caf {
 
-actor::actor(std::nullptr_t) : ptr_(nullptr) {
+actor::actor(const scoped_actor& x) noexcept
+  : ptr_(actor_cast<strong_actor_ptr>(x)) {
   // nop
 }
 
-actor::actor(const scoped_actor& x) : ptr_(actor_cast<strong_actor_ptr>(x)) {
-  // nop
-}
-
-actor::actor(actor_control_block* ptr) : ptr_(ptr, add_ref) {
+actor::actor(actor_control_block* ptr) noexcept : ptr_(ptr, add_ref) {
   // nop
 }
 
@@ -27,14 +24,6 @@ actor::actor(actor_control_block* ptr, bool increase_ref_count)
   // nop
 }
 CAF_POP_WARNINGS
-
-actor::actor(actor_control_block* ptr, add_ref_t) : ptr_(ptr, add_ref) {
-  // nop
-}
-
-actor::actor(actor_control_block* ptr, adopt_ref_t) : ptr_(ptr, adopt_ref) {
-  // nop
-}
 
 actor& actor::operator=(std::nullptr_t) {
   ptr_.reset();
@@ -48,13 +37,6 @@ actor& actor::operator=(const scoped_actor& x) {
 
 void actor::swap(actor& other) noexcept {
   ptr_.swap(other.ptr_);
-}
-
-actor_addr actor::address() const noexcept {
-  if (ptr_) {
-    return {ptr_->id(), ptr_->node()};
-  }
-  return {};
 }
 
 bool operator==(const actor& lhs, abstract_actor* rhs) {

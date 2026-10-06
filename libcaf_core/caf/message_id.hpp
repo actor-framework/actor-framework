@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/config.hpp"
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
@@ -18,7 +17,7 @@
 namespace caf {
 
 /// Bundles various flags along with an optional request ID.
-class message_id : detail::comparable<message_id> {
+class message_id {
 public:
   // -- constants -------------------------------------------------------------
 
@@ -138,16 +137,12 @@ public:
     return value_;
   }
 
-  /// Returns a negative value if `*this < other`, zero if `*this == other`,
-  /// and a positive value otherwise.
-  constexpr int64_t compare(const message_id& other) const noexcept {
-    return static_cast<int64_t>(value_) - static_cast<int64_t>(other.value_);
-  }
-
   /// Sets the flag for marking an incoming message as answered.
   void mark_as_answered() noexcept {
     value_ |= answered_flag_mask;
   }
+
+  constexpr auto operator<=>(const message_id&) const noexcept = default;
 
   // -- operators -------------------------------------------------------------
 

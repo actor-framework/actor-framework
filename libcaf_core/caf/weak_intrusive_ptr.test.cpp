@@ -7,7 +7,6 @@
 #include "caf/test/test.hpp"
 
 #include "caf/adopt_ref.hpp"
-#include "caf/detail/concepts.hpp"
 #include "caf/detail/control_block_ref_count.hpp"
 #include "caf/intrusive_ptr.hpp"
 
@@ -21,6 +20,11 @@ using namespace std::literals;
 using namespace caf;
 
 namespace {
+
+template <class Lhs, class Rhs>
+concept can_compare_to = requires(const Lhs& lhs, const Rhs& rhs) {
+  { lhs == rhs } noexcept -> std::same_as<bool>;
+};
 
 class class0;
 
@@ -227,22 +231,22 @@ auto make_custom(Args&&... args) {
 } // namespace
 
 // Comparable to itself.
-static_assert(detail::has_compare_overload<class0_weak_ptr, class0_weak_ptr>);
+static_assert(can_compare_to<class0_weak_ptr, class0_weak_ptr>);
 
 // Weak pointers are comparable to intrusive pointers.
-static_assert(detail::has_compare_overload<class0_weak_ptr, class0_ptr>);
+static_assert(can_compare_to<class0_weak_ptr, class0_ptr>);
 
 // class2 pointers are not comparable.
-static_assert(!detail::has_compare_overload<class0_weak_ptr, class2_weak_ptr>);
+static_assert(!can_compare_to<class0_weak_ptr, class2_weak_ptr>);
 
 // class2 pointers are not comparable.
-static_assert(!detail::has_compare_overload<class0_weak_ptr, class2_ptr>);
+static_assert(!can_compare_to<class0_weak_ptr, class2_ptr>);
 
 // class2 pointers are not comparable.
-static_assert(!detail::has_compare_overload<class2_weak_ptr, class0_weak_ptr>);
+static_assert(!can_compare_to<class2_weak_ptr, class0_weak_ptr>);
 
 // class2 pointers are not comparable.
-static_assert(!detail::has_compare_overload<class2_weak_ptr, class0_ptr>);
+static_assert(!can_compare_to<class2_weak_ptr, class0_ptr>);
 
 TEST("default constructor") {
   class0_weak_ptr ptr;
@@ -458,21 +462,21 @@ TEST("compare") {
   auto wptr1 = class0_weak_ptr{ptr1};
   auto wptr2 = class0_weak_ptr{ptr2};
   SECTION("compare with raw pointer") {
-    check_eq(wptr1.compare(ptr1.get()), 0);
-    check_ne(wptr1.compare(ptr2.get()), 0);
+    check_eq(wptr1, ptr1.get());
+    check_ne(wptr1, ptr2.get());
   }
   SECTION("compare with intrusive_ptr") {
-    check_eq(wptr1.compare(ptr1), 0);
-    check_ne(wptr1.compare(ptr2), 0);
+    check_eq(wptr1, ptr1);
+    check_ne(wptr1, ptr2);
   }
   SECTION("compare with weak_intrusive_ptr") {
-    check_eq(wptr1.compare(wptr1), 0);
-    check_ne(wptr1.compare(wptr2), 0);
+    check_eq(wptr1, wptr1);
+    check_ne(wptr1, wptr2);
   }
   SECTION("compare with nullptr_t") {
     class0_weak_ptr null_wptr;
-    check_eq(null_wptr.compare(nullptr), 0);
-    check_ne(wptr1.compare(nullptr), 0);
+    check_eq(null_wptr, nullptr);
+    check_ne(wptr1, nullptr);
   }
 }
 

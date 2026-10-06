@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ipv4_address.hpp"
@@ -15,7 +14,7 @@
 
 namespace caf {
 
-class CAF_CORE_EXPORT ipv6_subnet : detail::comparable<ipv6_subnet> {
+class CAF_CORE_EXPORT ipv6_subnet {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -26,17 +25,13 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  ipv6_subnet();
+  ipv6_subnet() noexcept = default;
 
-  ipv6_subnet(const ipv6_subnet&) = default;
+  explicit ipv6_subnet(ipv4_subnet subnet) noexcept;
 
-  explicit ipv6_subnet(ipv4_subnet subnet);
+  ipv6_subnet(ipv4_address network_address, uint8_t prefix_length) noexcept;
 
-  ipv6_subnet(ipv4_address network_address, uint8_t prefix_length);
-
-  ipv6_subnet(ipv6_address network_address, uint8_t prefix_length);
-
-  ipv6_subnet& operator=(const ipv6_subnet&) = default;
+  ipv6_subnet(ipv6_address network_address, uint8_t prefix_length) noexcept;
 
   // -- properties -------------------------------------------------------------
 
@@ -71,7 +66,7 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  int compare(const ipv6_subnet& other) const noexcept;
+  auto operator<=>(const ipv6_subnet& other) const noexcept = default;
 
   // -- inspection -------------------------------------------------------------
 
@@ -85,7 +80,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   ipv6_address address_;
-  uint8_t prefix_length_;
+  uint8_t prefix_length_ = 0;
 };
 
 // -- related free functions ---------------------------------------------------

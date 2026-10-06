@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/type_id.hpp"
 
+#include <algorithm>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <span>
 #include <string>
@@ -19,7 +18,7 @@
 namespace caf {
 
 /// A list of type IDs, stored in a size-prefix, contiguous memory block.
-class CAF_CORE_EXPORT type_id_list : detail::comparable<type_id_list> {
+class CAF_CORE_EXPORT type_id_list {
 public:
   using pointer = const type_id_t*;
 
@@ -28,10 +27,6 @@ public:
   constexpr explicit type_id_list(pointer data) noexcept : data_(data) {
     // nop
   }
-
-  constexpr type_id_list(const type_id_list&) noexcept = default;
-
-  type_id_list& operator=(const type_id_list&) noexcept = default;
 
   /// Queries whether this type list contains data, i.e, `data() != nullptr`.
   constexpr operator bool() const noexcept {
@@ -58,18 +53,6 @@ public:
     return data_[index + 1];
   }
 
-  /// Compares this list to `other`.
-  int compare(type_id_list other) const noexcept {
-    // These conversions are safe, because the size is stored in 16 bits.
-    int s1 = detail::to_underlying(data_[0]);
-    int s2 = detail::to_underlying(other.data_[0]);
-    int diff = s1 - s2;
-    if (diff == 0)
-      return memcmp(begin(), other.begin(),
-                    static_cast<unsigned>(s1) * sizeof(type_id_t));
-    return diff;
-  }
-
   /// Returns an iterator to the first type ID.
   pointer begin() const noexcept {
     return data_ + 1;
@@ -93,6 +76,15 @@ public:
   concat(type_id_list list1, type_id_list list2, Ts... lists) {
     type_id_list arr[] = {list1, list2, lists...};
     return concat(arr);
+  }
+
+  bool operator==(type_id_list other) const noexcept {
+    return std::equal(begin(), end(), other.begin(), other.end());
+  }
+
+  auto operator<=>(type_id_list other) const noexcept {
+    return std::lexicographical_compare_three_way(begin(), end(), other.begin(),
+                                                  other.end());
   }
 
 private:

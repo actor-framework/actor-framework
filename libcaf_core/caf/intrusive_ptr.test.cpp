@@ -380,21 +380,21 @@ TEST("boolean conversion") {
   }
 }
 
-TEST("compare") {
+TEST("three-way comparison") {
   auto ptr1 = make_counted<class0>();
   auto ptr2 = make_counted<class0>();
   SECTION("compare with raw pointer") {
-    check_eq(ptr1.compare(ptr1.get()), 0);
-    check_ne(ptr1.compare(ptr2.get()), 0);
+    check_eq(ptr1, ptr1.get());
+    check_ne(ptr1, ptr2.get());
   }
   SECTION("compare with intrusive_ptr") {
-    check_eq(ptr1.compare(ptr1), 0);
-    check_ne(ptr1.compare(ptr2), 0);
+    check_eq(ptr1, ptr1);
+    check_ne(ptr1, ptr2);
   }
   SECTION("compare with nullptr_t") {
     class0_ptr null_ptr;
-    check_eq(null_ptr.compare(nullptr), 0);
-    check_ne(ptr1.compare(nullptr), 0);
+    check_eq(null_ptr, nullptr);
+    check_ne(ptr1, nullptr);
   }
 }
 
@@ -504,7 +504,7 @@ TEST("comparison operators between intrusive pointers") {
     auto less_result = ptr1 < ptr2;
     auto greater_result = ptr2 < ptr1;
     // exactly one should be true, or they're equal (which they're not)
-    check(less_result != greater_result);
+    check_ne(less_result, greater_result);
   }
 }
 

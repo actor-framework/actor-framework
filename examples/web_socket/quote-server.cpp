@@ -210,7 +210,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
                        .for_each([self](const auto& ev) mutable {
                          // Forward the quotes to the client.
                          auto [pull, push, name] = ev.data();
-                         auto quotes = quotes_by_name(name);
+                         auto quotes = quotes_by_name(name.str());
                          self->make_observable()
                            .from_container(quotes)
                            .map([](std::string_view quote) {

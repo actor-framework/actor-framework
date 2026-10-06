@@ -4,57 +4,42 @@
 
 #pragma once
 
-#include "caf/detail/comparable.hpp"
+#include "caf/caf_deprecated.hpp"
 
 #include <cstdint>
 #include <string>
 
-namespace caf {
+namespace caf::io {
 
 /// Base class for IO handles such as `accept_handle` or `connection_handle`.
 template <class Subtype, class InvalidType, int64_t InvalidId = -1>
-class handle : detail::comparable<Subtype>,
-               detail::comparable<Subtype, InvalidType> {
+class handle {
 public:
-  constexpr handle() : id_(InvalidId) {
-    // nop
-  }
-
-  explicit handle(const Subtype& other) {
-    id_ = other.id();
-  }
-
-  handle(const handle& other) = default;
-
-  handle& operator=(const handle& other) {
-    id_ = other.id();
-    return *this;
-  }
-
-  handle& operator=(const InvalidType&) {
-    id_ = InvalidId;
-    return *this;
-  }
+  constexpr handle() noexcept = default;
 
   /// Returns the unique identifier of this handle.
-  int64_t id() const {
+  int64_t id() const noexcept {
     return id_;
   }
 
   /// Sets the unique identifier of this handle.
-  void set_id(int64_t value) {
+  void set_id(int64_t value) noexcept {
     id_ = value;
   }
 
-  int64_t compare(const Subtype& other) const {
-    return id_ - other.id();
+  constexpr bool operator==(const handle&) const noexcept = default;
+
+  constexpr auto operator<=>(const handle&) const noexcept = default;
+
+  constexpr bool operator==(const InvalidType&) const noexcept {
+    return id_ == InvalidId;
   }
 
-  int64_t compare(const InvalidType&) const {
-    return invalid() ? 0 : 1;
+  constexpr auto operator<=>(const InvalidType&) const noexcept {
+    return id_ <=> InvalidId;
   }
 
-  bool invalid() const {
+  constexpr bool invalid() const noexcept {
     return id_ == InvalidId;
   }
 
@@ -75,7 +60,7 @@ protected:
     // nop
   }
 
-  int64_t id_;
+  int64_t id_ = InvalidId;
 };
 
-} // namespace caf
+} // namespace caf::io

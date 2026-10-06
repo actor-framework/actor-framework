@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/actor_addr.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/control_block_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
@@ -35,7 +36,7 @@ public:
 
   actor_control_block(actor_id aid, caf::node_id& nid, actor_system* sys,
                       const meta::handler_list* ifptr)
-    : aid_(aid), nid_(std::move(nid)), system_(sys), iface_(ifptr) {
+    : addr_(aid, std::move(nid)), system_(sys), iface_(ifptr) {
     CAF_ASSERT(system_ != nullptr);
   }
 
@@ -63,16 +64,18 @@ public:
   }
 
   /// Returns an actor address for this actor.
-  actor_addr address() noexcept;
+  const actor_addr& address() const noexcept {
+    return addr_;
+  }
 
   /// Returns the local ID of this actor.
   actor_id id() const noexcept {
-    return aid_;
+    return addr_.id();
   }
 
   /// Returns the node ID of this actor.
   const node_id& node() const noexcept {
-    return nid_;
+    return addr_.node();
   }
 
   /// Returns the messaging interface of this actor.
@@ -118,12 +121,7 @@ public:
 
   /// Returns a hash value for this actor.
   size_t hash() const noexcept {
-    if constexpr (sizeof(size_t) == sizeof(caf::actor_id)) {
-      return static_cast<size_t>(aid_);
-    } else {
-      std::hash<caf::actor_id> hasher;
-      return hasher(aid_);
-    }
+    return addr_.hash();
   }
 
   /// Returns the control block for the given actor instance.
@@ -142,11 +140,8 @@ protected:
   /// Stores a pointer to the managed actor instance.
   abstract_actor* managed_;
 
-  /// Stores the actor ID.
-  actor_id aid_;
-
-  /// Stores the node ID, i.e., the identifier of the actor's host.
-  node_id nid_;
+  /// Stores the actor and node IDs for this actor.
+  actor_addr addr_;
 
   /// Stores a pointer to the actor system that created this actor.
   actor_system* system_;

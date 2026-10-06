@@ -41,26 +41,39 @@ TEST("actor_cast converts between strong and weak pointers") {
     SECTION("actor") {
       auto hdl = sys.spawn(dummy_impl);
       auto ptr = actor_cast<weak_actor_ptr>(hdl);
-      check_eq(hdl.compare(ptr.ctrl()), 0);
+      check_eq(hdl, ptr.ctrl());
     }
     SECTION("typed_actor") {
       auto hdl = sys.spawn(typed_dummy_impl);
       auto ptr = actor_cast<weak_actor_ptr>(hdl);
-      check_eq(hdl.compare(ptr.ctrl()), 0);
+      check_eq(hdl, ptr.ctrl());
     }
   }
   SECTION("invalid handle") {
     SECTION("actor") {
       auto hdl = actor{};
       auto ptr = actor_cast<weak_actor_ptr>(hdl);
-      check_eq(ptr.compare(nullptr), 0);
+      check_eq(ptr, nullptr);
     }
     SECTION("typed_actor") {
       auto hdl = dummy_actor{};
       auto ptr = actor_cast<weak_actor_ptr>(hdl);
-      check_eq(ptr.compare(nullptr), 0);
+      check_eq(ptr, nullptr);
     }
   }
+}
+
+TEST("actor handles compare to actor pointers") {
+  auto testee = [this](event_based_actor* self) {
+    auto hdl = actor{self};
+    check_eq(hdl, self);
+    check_eq(self, hdl);
+    check_le(hdl, self);
+    check_le(self, hdl);
+    check_ge(hdl, self);
+    check_ge(self, hdl);
+  };
+  sys.spawn(testee);
 }
 
 TEST("actor_cast converts a weak pointer back to a handle") {
@@ -69,27 +82,27 @@ TEST("actor_cast converts a weak pointer back to a handle") {
       auto hdl = sys.spawn(dummy_impl);
       auto wptr = actor_cast<weak_actor_ptr>(hdl);
       auto hdl2 = actor_cast<actor>(wptr);
-      check_eq(hdl.compare(wptr.ctrl()), 0);
-      check_eq(hdl2.compare(hdl), 0);
+      check_eq(hdl, wptr.ctrl());
+      check_eq(hdl2, hdl);
     }
     SECTION("typed_actor") {
       auto hdl = sys.spawn(typed_dummy_impl);
       auto wptr = actor_cast<weak_actor_ptr>(hdl);
       auto hdl2 = actor_cast<dummy_actor>(wptr);
-      check_eq(hdl.compare(wptr.ctrl()), 0);
-      check_eq(hdl2.compare(hdl), 0);
+      check_eq(hdl, wptr.ctrl());
+      check_eq(hdl2, hdl);
     }
   }
   SECTION("expired handle") {
     SECTION("actor") {
       auto wptr = actor_cast<weak_actor_ptr>(sys.spawn(dummy_impl));
       auto hdl2 = actor_cast<actor>(wptr);
-      check_eq(hdl2.compare(nullptr), 0);
+      check_eq(hdl2, nullptr);
     }
     SECTION("typed_actor") {
       auto wptr = actor_cast<weak_actor_ptr>(sys.spawn(typed_dummy_impl));
       auto hdl2 = actor_cast<dummy_actor>(wptr);
-      check_eq(hdl2.compare(nullptr), 0);
+      check_eq(hdl2, nullptr);
     }
   }
 }
@@ -98,23 +111,23 @@ TEST("actor_cast converts a self pointer to a handle type") {
   SECTION("actor") {
     sys.spawn([this](event_based_actor* self) {
       auto hdl = actor_cast<actor>(self);
-      check_eq(hdl.compare(self->ctrl()), 0);
+      check_eq(hdl, self->ctrl());
     });
     auto* ptr = static_cast<event_based_actor*>(nullptr);
     auto hdl = actor_cast<actor>(ptr);
-    check_eq(hdl.compare(nullptr), 0);
+    check_eq(hdl, nullptr);
   }
   SECTION("typed_actor") {
     sys.spawn([this](dummy_actor::pointer self) {
       auto hdl = actor_cast<dummy_actor>(self);
-      check_eq(hdl.compare(self->ctrl()), 0);
+      check_eq(hdl, self->ctrl());
       return dummy_actor::behavior_type{
         [](int x) { return x; },
       };
     });
     auto* ptr = static_cast<dummy_actor::pointer>(nullptr);
     auto hdl = actor_cast<actor>(ptr);
-    check_eq(hdl.compare(nullptr), 0);
+    check_eq(hdl, nullptr);
   }
 }
 

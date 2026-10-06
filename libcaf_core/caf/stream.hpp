@@ -5,15 +5,15 @@
 #pragma once
 
 #include "caf/actor_control_block.hpp"
-#include "caf/async/batch.hpp"
 #include "caf/cow_string.hpp"
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <tuple>
+#include <type_traits>
 
 namespace caf {
 
@@ -21,27 +21,19 @@ namespace caf {
 /// actor. Each stream is uniquely identified by the address of the hosting
 /// actor plus an integer value. Further, streams have human-readable names
 /// attached to them in order to make help with observability and logging.
-class CAF_CORE_EXPORT stream : private detail::comparable<stream> {
+class stream {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream() = default;
+  stream() noexcept = default;
 
-  stream(stream&&) noexcept = default;
-
-  stream(const stream&) noexcept = default;
-
-  stream& operator=(stream&&) noexcept = default;
-
-  stream& operator=(const stream&) noexcept = default;
-
-  stream(strong_actor_ptr source, type_id_t type, std::string name, uint64_t id)
-    : source_(std::move(source)), type_(type), name_(std::move(name)), id_(id) {
-    // nop
-  }
-
-  stream(strong_actor_ptr source, type_id_t type, cow_string name, uint64_t id)
-    : source_(std::move(source)), type_(type), name_(std::move(name)), id_(id) {
+  template <class Name>
+    requires std::is_constructible_v<cow_string, Name>
+  stream(strong_actor_ptr source, type_id_t type, Name&& name, uint64_t id = 0)
+    : source_(std::move(source)),
+      type_(type),
+      name_(std::forward<Name>(name)),
+      id_(id) {
     // nop
   }
 
@@ -70,14 +62,35 @@ public:
     return name_.str();
   }
 
+  /// Returns the human-readable name for this stream, as announced by the
+  /// source.
+  const cow_string& cow_name() const noexcept {
+    return name_;
+  }
+
   /// Returns the source-specific identifier for this stream.
   uint64_t id() const noexcept {
     return id_;
   }
 
+  /// Convenience function for wrapping the source and ID into a tuple.
+  auto source_and_id() const noexcept {
+    return std::tie(source_, id_);
+  }
+
   // -- comparison -------------------------------------------------------------
 
-  ptrdiff_t compare(const stream& other) const noexcept;
+  /// Returns whether this stream is equal to `other`.
+  /// @note The comparison only considers the source and the ID.
+  bool operator==(const stream& other) const noexcept {
+    return source_and_id() == other.source_and_id();
+  }
+
+  /// Compares this stream to `other`.
+  /// @note The comparison only considers the source and the ID.
+  std::weak_ordering operator<=>(const stream& other) const noexcept {
+    return source_and_id() <=> other.source_and_id();
+  }
 
   // -- serialization ----------------------------------------------------------
 
