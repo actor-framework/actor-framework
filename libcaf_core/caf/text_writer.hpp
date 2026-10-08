@@ -12,8 +12,6 @@
 
 namespace caf {
 
-class type_id_mapper;
-
 /// Serializes inspectable objects to a text-based format.
 class CAF_CORE_EXPORT text_writer : public serializer {
 public:
@@ -57,12 +55,6 @@ public:
   /// Configures the suffix for generating type annotation fields for variant
   /// fields.
   virtual void field_type_suffix(std::string_view suffix) noexcept = 0;
-
-  /// Returns the type ID mapper used by the writer.
-  [[nodiscard]] virtual const type_id_mapper* mapper() const noexcept = 0;
-
-  /// Changes the type ID mapper for the writer.
-  virtual void mapper(const type_id_mapper* ptr) noexcept = 0;
 
   /// Clears any buffered data and resets the writer to its initial state.
   virtual void reset() = 0;

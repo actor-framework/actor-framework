@@ -443,8 +443,12 @@ public:
     return push(config_value{std::move(str)});
   }
 
-  caf::actor_handle_codec* actor_handle_codec() override {
-    return codec_;
+  bool value(const strong_actor_ptr& ptr) override {
+    if (codec_ == nullptr) {
+      emplace_error(sec::no_actor_handle_codec);
+      return false;
+    }
+    return codec_->save(*this, ptr);
   }
 
 private:

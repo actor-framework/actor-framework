@@ -7,6 +7,7 @@
 #include "caf/test/runnable.hpp"
 
 #include "caf/detail/test_export.hpp"
+#include "caf/raise_error.hpp"
 
 namespace caf::test {
 
@@ -16,17 +17,32 @@ public:
 
   class CAF_TEST_EXPORT examples_setter {
   public:
-    using examples_t = std::vector<std::map<std::string, std::string>>;
+    using example_t = std::map<std::string, std::string>;
 
-    explicit examples_setter(examples_t* examples) : examples_(examples) {
+    using examples_t = std::vector<example_t>;
+
+    constexpr explicit examples_setter(examples_t* examples) noexcept
+      : examples_(examples) {
       // nop
     }
 
-    examples_setter(const examples_setter&) = default;
+    constexpr examples_setter(const examples_setter&) noexcept = default;
 
-    examples_setter& operator=(const examples_setter&) = default;
+    constexpr examples_setter& operator=(const examples_setter&) noexcept
+      = default;
 
     examples_setter& operator=(std::string_view str);
+
+    void append(example_t what) {
+      if (!examples_) {
+        CAF_RAISE_ERROR("examples_setter is not initialized");
+      }
+      examples_->emplace_back(std::move(what));
+    }
+
+    explicit operator bool() const {
+      return examples_ != nullptr;
+    }
 
   private:
     examples_t* examples_;

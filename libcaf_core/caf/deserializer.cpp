@@ -71,14 +71,6 @@ bool deserializer::end_associative_array() {
   return end_sequence();
 }
 
-bool deserializer::value(strong_actor_ptr& ptr) {
-  if (auto* codec = actor_handle_codec()) {
-    return codec->load(*this, ptr);
-  }
-  set_error(make_error(sec::no_actor_handle_codec));
-  return false;
-}
-
 bool deserializer::value(std::vector<bool>& x) {
   x.clear();
   size_t size = 0;
