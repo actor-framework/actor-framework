@@ -92,14 +92,24 @@ enum class errc;
 
 namespace caf::net::lp {
 
+class async_client_config;
+class async_client_factory;
+class async_client_factory_builder;
 class client;
 class framing;
 class lower_layer;
 class server;
 class upper_layer;
 class with_t;
+class with_v2_t;
 
 using frame = caf::chunk;
+
+CAF_NET_EXPORT void intrusive_ptr_add_ref(const async_client_config*) noexcept;
+CAF_NET_EXPORT void intrusive_ptr_release(const async_client_config*) noexcept;
+
+using async_client_config_ptr = intrusive_ptr<async_client_config>;
+using const_async_client_config_ptr = intrusive_ptr<const async_client_config>;
 
 } // namespace caf::net::lp
 
