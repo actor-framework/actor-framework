@@ -36,9 +36,12 @@ public:
 
   using super::super;
 
-  std::pair<scheme_and_port, scheme_and_port> schemes() const override {
-    return {{"http", defaults::net::http_default_port},
-            {"https", defaults::net::https_default_port}};
+  std::span<const scheme_and_port> schemes() const override {
+    static constexpr scheme_and_port result[] = {
+      {"http", defaults::net::http_default_port, false},
+      {"https", defaults::net::https_default_port, true},
+    };
+    return result;
   }
 
   caf::unordered_flat_map<std::string, std::string> fields;

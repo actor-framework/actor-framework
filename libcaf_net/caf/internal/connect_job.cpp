@@ -14,10 +14,29 @@
 #include "caf/scheduler.hpp"
 #include "caf/sec.hpp"
 
+#include <algorithm>
 #include <optional>
+#include <span>
+#include <string>
 #include <utility>
 
 namespace caf::internal {
+
+namespace {
+
+/// Renders the accepted URI schemes of `config` as a human-readable list.
+std::string
+scheme_list(std::span<const async_client_config_base::scheme_and_port> xs) {
+  std::string result;
+  for (const auto& x : xs) {
+    if (!result.empty())
+      result += " or ";
+    result += x.scheme;
+  }
+  return result;
+}
+
+} // namespace
 
 void connect_job::ref() const noexcept {
   ref_count_.inc();
@@ -46,19 +65,28 @@ void connect_job::resume(scheduler*, uint64_t) {
       make_error(sec::invalid_argument, "URI must provide a valid hostname"));
     return;
   }
-  auto [plain, ssl] = config_->schemes();
-  auto use_ssl = false;
-  if (endpoint.scheme() == ssl.scheme) {
-    use_ssl = true;
-  } else if (endpoint.scheme() != plain.scheme) {
+  auto schemes = config_->schemes();
+  auto scheme = std::ranges::find_if(schemes, [&](const auto& entry) {
+    return endpoint.scheme() == entry.scheme;
+  });
+  if (scheme == schemes.end()) {
     fail(format_to_unexpected(sec::invalid_argument,
-                              "unsupported URI scheme: expected {} or {}",
-                              plain.scheme, ssl.scheme)
+                              "unsupported URI scheme: expected {}",
+                              scheme_list(schemes))
            .error());
     return;
   }
+  auto use_ssl = scheme->secure;
   if (auth.port == 0) {
-    auth.port = use_ssl ? ssl.port : plain.port;
+    auth.port = scheme->port;
+  }
+  if (auth.port == 0) {
+    fail(format_to_unexpected(sec::invalid_argument,
+                              "port is mandatory: "
+                              "URI scheme {} has no default port",
+                              endpoint.scheme())
+           .error());
+    return;
   }
   std::optional<net::ssl::context> ctx;
   if (use_ssl) {
