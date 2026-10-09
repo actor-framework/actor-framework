@@ -84,6 +84,8 @@ caf_add_component(
     caf/net/http/with.test.cpp
     caf/net/ip.cpp
     caf/net/ip.test.cpp
+    caf/net/lp/async_client.test.cpp
+    caf/net/lp/async_client_factory.cpp
     caf/net/lp/framing.cpp
     caf/net/lp/framing.test.cpp
     caf/net/lp/lower_layer.cpp

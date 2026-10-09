@@ -50,7 +50,7 @@ Start Chat Client
     [Arguments]    ${name}  ${size}
     ${process}    Start Process
     ...  ${CLIENT_PATH}
-    ...  -p    ${SERVER_PORT}
+    ...  -u    lpf://${SERVER_HOST}:${SERVER_PORT}
     ...  -n    ${name}
     ...  -s    ${size}
     ...  --caf.logger.file.verbosity  trace
