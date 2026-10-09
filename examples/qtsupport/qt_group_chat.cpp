@@ -4,10 +4,10 @@
 //
 // Setup for a minimal chat between "alice" and "bob":
 // - chat-server -p 4242
-// - qt_group_chat -H localhost -p 4242 -n alice
-// - qt_group_chat -H localhost -p 4242 -n bob
+// - qt_group_chat -u lpf://localhost:4242 -n alice
+// - qt_group_chat -u lpf://localhost:4242 -n bob
 
-#include "caf/net/lp/with.hpp"
+#include "caf/net/lp/with_v2.hpp"
 #include "caf/net/middleman.hpp"
 
 #include "caf/all.hpp"
@@ -18,6 +18,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <string>
 #include <vector>
 
 CAF_PUSH_WARNINGS
@@ -33,9 +34,7 @@ using namespace caf;
 
 // -- constants ----------------------------------------------------------------
 
-static constexpr uint16_t default_port = 7788;
-
-static constexpr std::string_view default_host = "localhost";
+static constexpr std::string_view default_uri = "lpf://localhost:7788";
 
 // -- configuration setup ------------------------------------------------------
 
@@ -43,8 +42,7 @@ class config : public actor_system_config {
 public:
   config() {
     opt_group{custom_options_, "global"}
-      .add<uint16_t>("port,p", "port of the server")
-      .add<std::string>("host,H", "host of the server")
+      .add<caf::uri>("uri,u", "URI of the server, e.g., lpf://localhost:7788")
       .add<std::string>("name,n", "set name");
   }
 };
@@ -53,8 +51,7 @@ public:
 
 int caf_main(actor_system& sys, const config& cfg) {
   // Read the configuration.
-  auto port = caf::get_or(cfg, "port", default_port);
-  auto host = caf::get_or(cfg, "host", default_host);
+  auto uri = caf::get_or<caf::uri>(cfg, "uri", *caf::make_uri(default_uri));
   auto name = caf::get_or(cfg, "name", "");
   if (name.empty()) {
     sys.println("*** mandatory parameter 'name' missing or empty");
@@ -67,24 +64,16 @@ int caf_main(actor_system& sys, const config& cfg) {
   QMainWindow mw;
   Ui::ChatWindow helper;
   helper.setupUi(&mw);
-  // Connect to the server.
-  auto conn = caf::net::lp::with(sys)
-                .connect(host, port)
-                .start([&](auto pull, auto push) {
-                  sys.println("*** connected to {}:{}", host, port);
-                  helper.chatwidget->init(sys, name, std::move(pull),
-                                          std::move(push));
-                });
-  if (!conn) {
-    sys.println("*** unable to connect to {}:{}: {}", host, port, conn.error());
-    mw.close();
-    return app.exec();
-  }
+  // Start an asynchronous connection to the server. This does not block the
+  // calling thread (and thus the GUI) while establishing the connection. The
+  // URI scheme selects the transport: `lpf` for plain TCP and `lpfs` for TLS.
+  sys.println("*** connecting to {}", uri.str());
+  auto [pull, push]
+    = caf::net::lp::with_v2(sys).async().connect(std::move(uri)).start();
+  helper.chatwidget->init(sys, name, std::move(pull), std::move(push));
   // Setup and run.
   mw.show();
-  auto result = app.exec();
-  conn->dispose();
-  return result;
+  return app.exec();
 }
 
 CAF_MAIN(caf::id_block::qtsupport, caf::net::middleman)
