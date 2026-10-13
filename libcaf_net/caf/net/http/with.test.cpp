@@ -7,7 +7,9 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
-#include "caf/net/http/response_header.hpp"
+#include "caf/net/http/response.hpp"
+#include "caf/net/http/status.hpp"
+#include "caf/net/http/with_v2.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_guard.hpp"
@@ -27,8 +29,8 @@
 #include <chrono>
 #include <future>
 #include <latch>
-#include <source_location>
 #include <thread>
+#include <vector>
 
 using namespace caf;
 using namespace std::literals;
@@ -78,43 +80,6 @@ private:
 using error_log_ptr = std::shared_ptr<error_log>;
 
 using latch_ptr = std::shared_ptr<std::latch>;
-
-struct http_response {
-  net::http::response_header header;
-  std::string body;
-};
-
-http_response read_http_response(net::stream_socket fd,
-                                 const std::source_location& loc
-                                 = std::source_location::current()) {
-  auto& self = test::runnable::current();
-  auto require_readable = [&self, fd, loc] {
-    auto err = net::receive_timeout(fd, 1s);
-    self.require(!err.valid(), loc);
-  };
-  std::string raw_header;
-  auto buf = std::byte{};
-  while (raw_header.find("\r\n\r\n") == std::string::npos) {
-    require_readable();
-    auto bytes_read = net::read(fd, std::span{&buf, 1});
-    self.require_eq(bytes_read, 1, loc);
-    raw_header.push_back(std::to_integer<char>(buf));
-  }
-  http_response result;
-  auto parse_result = result.header.parse(raw_header);
-  self.require_eq(parse_result.first, net::http::status::ok, loc);
-  auto content_length = result.header.content_length().value_or(0);
-  result.body.reserve(content_length);
-  byte_buffer body_buf;
-  while (result.body.size() < content_length) {
-    require_readable();
-    body_buf.resize(content_length - result.body.size());
-    auto bytes_read = net::read(fd, body_buf);
-    self.require_gt(bytes_read, 0, loc);
-    result.body.append(to_string_view(body_buf));
-  }
-  return result;
-}
 
 // std::latch has no timed wait; poll try_wait() until timeout.
 static bool latch_count_down_and_wait_for(latch_ptr lptr,
@@ -415,59 +380,84 @@ TEST("GH-2226 regression") {
 
 SCENARIO("a server responds with status 503 on queue overloads") {
   GIVEN("a HTTP server queueing incoming requests asynchronously") {
+    auto capacity = defaults::flow::buffer_size;
     auto overflow_count = size_t{2};
-    auto [server_fd, client_fd] = unbox(net::make_stream_socket_pair());
-    net::socket_guard client_guard{client_fd};
+    auto acceptor = unbox(net::make_tcp_accept_socket(0));
+    auto port = unbox(net::local_port(acceptor));
+    auto host = std::string{net::is_ipv4(acceptor) ? "127.0.0.1" : "[::1]"};
     async::consumer_resource<net::http::request> requests;
-    auto hdl = net::http::with(sys) //
-                 .serve(server_fd)
+    auto hdl = net::http::with(sys)
+                 .accept(acceptor)
+                 .max_connections(capacity + overflow_count + 32)
                  .start([&requests](auto pull) { requests = std::move(pull); });
     require_has_value(hdl);
     detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
-    WHEN("filling the queue capacity and overflowing by two requests") {
-      // When configuring HTTP with a stream socket, all requests are
-      // exchanged via the connected socket pair. This might change with
-      // future connection keepalive changes.
-      auto request_count = defaults::flow::buffer_size + overflow_count;
-      // Fill the queue, and send two requests that overflow the queue.
-      for (auto i = size_t{0}; i < request_count; ++i) {
-        auto req = detail::format("GET /{} HTTP/1.1\r\nHost: localhost\r\n\r\n",
-                                  i);
-        require_eq(net::write(client_fd, as_bytes(std::span{req})),
-                   static_cast<ptrdiff_t>(req.size()));
+    require(requests.valid());
+    auto request_buffer = requests.try_open();
+    require(request_buffer != nullptr);
+    auto send_get = [this, &host, port](int i) {
+      uri u;
+      auto err = parse(detail::format("http://{}:{}/{}", host, port, i), u);
+      require(err.empty());
+      return net::http::with_v2(sys)
+        .async()
+        .connect(std::move(u))
+        .connection_timeout(1s)
+        .max_retry_count(1)
+        .get();
+    };
+    WHEN("filling the queue capacity") {
+      std::vector<async::future<net::http::response>> futures;
+      futures.reserve(capacity);
+      for (auto i = size_t{0}; i < capacity; ++i)
+        futures.push_back(send_get(i));
+      // Wait until the server has queued all requests (without draining).
+      auto deadline = std::chrono::steady_clock::now() + 5s;
+      while (request_buffer->available() < capacity
+             && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(10ms);
       }
-      THEN("the two overflow requests receive 503 responses") {
-        for (auto i = size_t{0}; i < overflow_count; ++i) {
-          auto response = read_http_response(client_fd);
-          check_eq(response.header.status(), uint16_t{503});
-          check_eq(response.header.status_text(), "Service Unavailable");
-          check_eq(response.body,
-                   "service unavailable: request could not be queued");
+      require_eq(request_buffer->available(), capacity);
+      THEN("the queued futures are pending") {
+        for (auto& fut : futures) {
+          require(fut.valid());
+          check(fut.pending());
         }
       }
-      AND_THEN("the remaining requests are processed in order") {
-        // Respond 200 to each earlier request.
-        require(requests.valid());
-        auto request_buffer = requests.try_open();
-        require(request_buffer != nullptr);
+      AND_THEN("any subsequent request fails with 503") {
+        std::vector<async::future<net::http::response>> overflow;
+        overflow.reserve(overflow_count);
+        for (auto i = size_t{0}; i < overflow_count; ++i)
+          overflow.push_back(send_get(capacity + i));
+        for (auto& fut : overflow) {
+          auto res = fut.get(2s);
+          require_has_value(res);
+          check_eq(res->code(), net::http::status::service_unavailable);
+          check_eq(to_string_view(res->body()),
+                   "service unavailable: request could not be queued"sv);
+        }
+      }
+      AND_THEN("the queued requests resolve with matching responses") {
+        // Echo the request path so each future can be matched.
         async::blocking_consumer<net::http::request> consumer{request_buffer};
-        for (auto i = size_t{0}; i < defaults::flow::buffer_size; ++i) {
+        for (auto i = size_t{0}; i < capacity; ++i) {
           net::http::request req;
-          auto result = consumer.pull(async::delay_errors, req, 1s);
+          auto result = consumer.pull(async::delay_errors, req, 5s);
           require_eq(result, async::read_result::ok);
-          req.respond(net::http::status::ok, "text/plain", "ok");
+          auto echo = std::string{req.header().path()};
+          req.respond(net::http::status::ok, "text/plain", echo);
         }
-        request_buffer->close();
-        net::http::request dummy;
-        require_eq(consumer.pull(async::delay_errors, dummy, 1s),
-                   async::read_result::stop);
-        for (auto i = size_t{0}; i < defaults::flow::buffer_size; ++i) {
-          auto response = read_http_response(client_fd);
-          check_eq(response.header.status(), uint16_t{200});
-          check_eq(response.body, "ok");
+        for (auto i = size_t{0}; i < capacity; ++i) {
+          auto res = futures[i].get(5s);
+          require_has_value(res);
+          check_eq(res->code(), net::http::status::ok);
+          check_eq(to_string_view(res->body()), detail::format("/{}", i));
         }
       }
     }
+    // Break the producer/buffer cycle and let the managers shut down before
+    // teardown.
+    request_buffer->close();
   }
 }
 
