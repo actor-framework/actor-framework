@@ -79,41 +79,39 @@ using error_log_ptr = std::shared_ptr<error_log>;
 
 using latch_ptr = std::shared_ptr<std::latch>;
 
-struct raw_http_response {
+struct http_response {
   net::http::response_header header;
   std::string body;
 };
 
-raw_http_response read_http_response(net::stream_socket fd,
-                                     const std::source_location& loc
-                                     = std::source_location::current()) {
+http_response read_http_response(net::stream_socket fd,
+                                 const std::source_location& loc
+                                 = std::source_location::current()) {
   auto& self = test::runnable::current();
   auto require_readable = [&self, fd, loc] {
     auto err = net::receive_timeout(fd, 1s);
     self.require(!err.valid(), loc);
   };
   std::string raw_header;
-  byte_buffer buf;
-  buf.resize(1);
+  auto buf = std::byte{};
   while (raw_header.find("\r\n\r\n") == std::string::npos) {
     require_readable();
-    auto bytes_read = net::read(fd, buf);
-    self.require_eq(bytes_read, ptrdiff_t{1}, loc);
-    raw_header.push_back(
-      static_cast<char>(std::to_integer<unsigned char>(buf[0])));
+    auto bytes_read = net::read(fd, std::span{&buf, 1});
+    self.require_eq(bytes_read, 1, loc);
+    raw_header.push_back(std::to_integer<char>(buf));
   }
-  raw_http_response result;
+  http_response result;
   auto parse_result = result.header.parse(raw_header);
   self.require_eq(parse_result.first, net::http::status::ok, loc);
-  auto content_length = result.header.content_length().value_or(size_t{0});
+  auto content_length = result.header.content_length().value_or(0);
   result.body.reserve(content_length);
+  byte_buffer body_buf;
   while (result.body.size() < content_length) {
     require_readable();
-    buf.resize(content_length - result.body.size());
-    auto bytes_read = net::read(fd, buf);
-    self.require_gt(bytes_read, ptrdiff_t{0}, loc);
-    result.body.append(reinterpret_cast<const char*>(buf.data()),
-                       static_cast<size_t>(bytes_read));
+    body_buf.resize(content_length - result.body.size());
+    auto bytes_read = net::read(fd, body_buf);
+    self.require_gt(bytes_read, 0, loc);
+    result.body.append(to_string_view(body_buf));
   }
   return result;
 }
@@ -415,16 +413,15 @@ TEST("GH-2226 regression") {
   check_eq(elog->errors(), std::vector<error>{});
 }
 
-SCENARIO("server responds with 503 unavailable when queue is overloaded") {
+SCENARIO("a server responds with status 503 on queue overloads") {
   GIVEN("a HTTP server queueing incoming requests asynchronously") {
     auto overflow_count = size_t{2};
     auto [server_fd, client_fd] = unbox(net::make_stream_socket_pair());
     net::socket_guard client_guard{client_fd};
-    std::optional<async::consumer_resource<net::http::request>> requests;
-    auto hdl
-      = net::http::with(sys) //
-          .serve(server_fd)
-          .start([&requests](auto pull) { requests.emplace(std::move(pull)); });
+    async::consumer_resource<net::http::request> requests;
+    auto hdl = net::http::with(sys) //
+                 .serve(server_fd)
+                 .start([&requests](auto pull) { requests = std::move(pull); });
     require_has_value(hdl);
     detail::scope_guard hdl_guard{[hdl]() mutable noexcept { hdl->dispose(); }};
     WHEN("filling the queue capacity and overflowing by two requests") {
@@ -450,8 +447,8 @@ SCENARIO("server responds with 503 unavailable when queue is overloaded") {
       }
       AND_THEN("the remaining requests are processed in order") {
         // Respond 200 to each earlier request.
-        require(requests.has_value());
-        auto request_buffer = requests->try_open();
+        require(requests.valid());
+        auto request_buffer = requests.try_open();
         require(request_buffer != nullptr);
         async::blocking_consumer<net::http::request> consumer{request_buffer};
         for (auto i = size_t{0}; i < defaults::flow::buffer_size; ++i) {
