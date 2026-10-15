@@ -5,6 +5,7 @@
 #include "caf/actor_system_config.hpp"
 
 #include "caf/test/approx.hpp"
+#include "caf/test/outline.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
@@ -309,20 +310,11 @@ TEST("basic and basic containers options") {
   CHECK_SYNCED(some_string_map, {"a", "1"}, {"b", "2"}, {"c", "3"});
 }
 
-SCENARIO("config files allow both nested and dot-separated values") {
+OUTLINE("config files allow both nested and dot-separated values") {
   GIVEN("the option my.answer.value") {
     config_option_adder{cfg.custom_options(), "my.answer"}
       .add<int32_t>("first", "the first answer")
       .add<int32_t>("second", "the second answer");
-    std::vector<std::string> allowed_input_strings{
-      "my { answer { first = 1, second = 2 } }",
-      "my.answer { first = 1, second = 2 }",
-      "my { answer.first = 1, answer.second = 2  }",
-      "my.answer.first = 1, my.answer.second = 2",
-      "my { answer { first = 1 }, answer.second = 2 }",
-      "my { answer.first = 1, answer { second = 2} }",
-      "my.answer.first = 1, my { answer { second = 2 } }",
-    };
     auto make_result = [] {
       settings answer;
       answer["first"] = 1;
@@ -334,19 +326,28 @@ SCENARIO("config files allow both nested and dot-separated values") {
       return result;
     };
     auto result = make_result();
-    for (const auto& input_string : allowed_input_strings) {
-      WHEN("parsing the file input '" + input_string + "'") {
-        std::istringstream input{input_string};
-        auto err = cfg.parse(string_list{}, input);
-        THEN("the actor system contains values for my.answer.(first|second)") {
-          check_eq(err, error{});
-          check_eq(get_or(cfg, "my.answer.first", -1), 1);
-          check_eq(get_or(cfg, "my.answer.second", -1), 2);
-          check_eq(content(cfg), result);
-        }
+    WHEN("parsing the file input '<input>'") {
+      auto input_string = block_parameters<std::string>();
+      std::istringstream input{input_string};
+      auto err = cfg.parse(string_list{}, input);
+      THEN("the actor system contains values for my.answer.(first|second)") {
+        check_eq(err, error{});
+        check_eq(get_or(cfg, "my.answer.first", -1), 1);
+        check_eq(get_or(cfg, "my.answer.second", -1), 2);
+        check_eq(content(cfg), result);
       }
     }
   }
+  EXAMPLES = R"_(
+    | input                                             |
+    | my { answer { first = 1, second = 2 } }           |
+    | my.answer { first = 1, second = 2 }               |
+    | my { answer.first = 1, answer.second = 2  }       |
+    | my.answer.first = 1, my.answer.second = 2         |
+    | my { answer { first = 1 }, answer.second = 2 }    |
+    | my { answer.first = 1, answer { second = 2} }     |
+    | my.answer.first = 1, my { answer { second = 2 } } |
+  )_";
 }
 
 } // WITH_FIXTURE(fixture)

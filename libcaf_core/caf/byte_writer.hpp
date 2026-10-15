@@ -30,14 +30,7 @@ public:
   /// Overrides the buffer at `offset` with `content`.
   /// @returns `true` if the buffer had enough space to hold `content`, `false`
   ///          otherwise.
-  [[nodiscard]] virtual bool update(size_t offset,
-                                    const_byte_span content) noexcept = 0;
-
-  /// Returns the type ID mapper used by the writer.
-  [[nodiscard]] virtual const type_id_mapper* mapper() const noexcept = 0;
-
-  /// Changes the type ID mapper for the writer.
-  virtual void mapper(const type_id_mapper* ptr) noexcept = 0;
+  [[nodiscard]] virtual bool update(size_t offset, const_byte_span content) = 0;
 };
 
 } // namespace caf

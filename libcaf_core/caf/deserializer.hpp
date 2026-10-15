@@ -198,13 +198,9 @@ public:
   }
 
   /// @copydoc value
-  bool value(strong_actor_ptr& ptr);
+  virtual bool value(strong_actor_ptr& ptr) = 0;
 
-  virtual caf::actor_handle_codec* actor_handle_codec() = 0;
-
-  /// Returns a reference to the deserializer. Convenience member function for
-  /// compatibility with other deserializer types that expose the implementation
-  /// object via this getter.
+  /// Returns a reference to this deserializer.
   deserializer& as_deserializer() noexcept {
     return *this;
   }

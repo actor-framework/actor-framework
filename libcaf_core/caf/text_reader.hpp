@@ -38,12 +38,6 @@ public:
 
   /// Configures the suffix for generating type annotation fields.
   virtual void field_type_suffix(std::string_view suffix) noexcept = 0;
-
-  /// Returns the type ID mapper used by the reader.
-  [[nodiscard]] virtual const type_id_mapper* mapper() const noexcept = 0;
-
-  /// Changes the type ID mapper for the reader.
-  virtual void mapper(const type_id_mapper* ptr) noexcept = 0;
 };
 
 } // namespace caf

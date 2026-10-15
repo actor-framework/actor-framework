@@ -67,13 +67,11 @@ public:
     impl_->field_type_suffix(suffix);
   }
 
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
-    return impl_->mapper();
-  }
+  /// Returns the type ID mapper used by the writer.
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
 
-  void mapper(const type_id_mapper* ptr) noexcept {
-    impl_->mapper(ptr);
-  }
+  /// Changes the type ID mapper for the writer.
+  void mapper(const type_id_mapper* ptr) noexcept;
 
   /// Removes all characters from the buffer and restores the writer to its
   /// initial state.

@@ -304,14 +304,43 @@ template <class Enum>
   return static_cast<std::underlying_type_t<Enum>>(e);
 }
 
+/// Matches any type that provides const access to a contiguous sequence of `T`
+/// values via `data()` and `size()`.
+template <class Container, class T>
+concept contiguous_sequence_of = requires(const Container& container) {
+  { container.data() } -> std::same_as<const T*>;
+  { container.size() } -> std::same_as<size_t>;
+};
+
+/// Matches any type that provides mutable access to a contiguous sequence of
+/// `T` values via `data()` and `size()`.
+template <class Container, class T>
+concept mutable_contiguous_sequence_of = requires(Container& container) {
+  { container.data() } -> std::same_as<T*>;
+  { container.size() } -> std::same_as<size_t>;
+};
+
 template <class T>
 concept char_or_byte_data = std::convertible_to<T, const char*>
                             || std::convertible_to<T, const std::byte*>;
 
-template <class T>
-concept char_or_byte_payload = requires(T t) {
+/// Matches any type that provides `data()` and `size()` member functions
+/// returning pointers to `char` or `std::byte`.
+template <class Container>
+concept char_or_byte_payload = requires(Container t) {
   { t.data() } -> char_or_byte_data;
   { t.size() } -> std::same_as<size_t>;
 };
+
+/// Matches any type that provides an `insert` member function that can append
+/// items to the end of the container. The items-to-be-appended can be a range
+/// of `Item` values or a number of copies of the same `Item` value.
+template <class Container, class Item>
+concept back_insertable
+  = requires(Container& sink, const Item* begin, const Item* end) {
+      sink.insert(sink.end(), begin, end);
+    } && requires(Container& sink, size_t num, Item what) {
+      sink.insert(sink.end(), num, what);
+    };
 
 } // namespace caf::detail

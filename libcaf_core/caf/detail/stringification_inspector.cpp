@@ -268,8 +268,8 @@ public:
     return true;
   }
 
-  caf::actor_handle_codec* actor_handle_codec() override {
-    return &codec_;
+  bool value(const strong_actor_ptr& ptr) override {
+    return codec_.save(*this, ptr);
   }
 
   // -- stringification_inspector extensions -----------------------------------

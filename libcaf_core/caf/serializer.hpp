@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/actor_handle_codec.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
@@ -164,9 +163,8 @@ public:
     return value(x);
   }
 
-  bool value(const strong_actor_ptr& ptr);
-
-  virtual caf::actor_handle_codec* actor_handle_codec() = 0;
+  /// @copydoc value
+  virtual bool value(const strong_actor_ptr& ptr) = 0;
 
   /// Returns a reference to the serializer. Convenience member function for
   /// compatibility with other serializer types that expose the implementation

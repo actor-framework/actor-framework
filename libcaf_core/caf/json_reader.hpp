@@ -40,13 +40,11 @@ public:
     impl_->field_type_suffix(suffix);
   }
 
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
-    return impl_->mapper();
-  }
+  /// Returns the type ID mapper used by the reader.
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
 
-  void mapper(const type_id_mapper* ptr) noexcept {
-    impl_->mapper(ptr);
-  }
+  /// Changes the type ID mapper for the reader.
+  void mapper(const type_id_mapper* ptr) noexcept;
 
   /// Parses @p json_text into an internal representation. After loading the
   /// JSON input, the reader is ready for attempting to deserialize inspectable

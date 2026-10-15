@@ -31,6 +31,7 @@ template <class> class [[nodiscard]] error_code;
 
 template <class> class actor_from_state_t;
 template <class> class basic_cow_string;
+template <class> class binary_serializer_v2;
 template <class> class callback;
 template <class> class cow_vector;
 template <class> class dictionary;
@@ -115,6 +116,7 @@ class actor_system_module;
 class attachable;
 class behavior;
 class binary_deserializer;
+class binary_deserializer_v2;
 class binary_serializer;
 class blocking_actor;
 class chunk;
@@ -236,6 +238,9 @@ using expected = std::expected<T, E>;
 
 /// @relates actor_system_config
 CAF_CORE_EXPORT const settings& content(const actor_system_config&);
+
+/// @relates type_id_mapper
+CAF_CORE_EXPORT const type_id_mapper& get_default_type_id_mapper() noexcept;
 
 // -- free template functions --------------------------------------------------
 

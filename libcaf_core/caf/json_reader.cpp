@@ -205,12 +205,12 @@ public:
   }
 
   /// Returns the type ID mapper used by the writer.
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept override {
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
     return mapper_;
   }
 
   /// Changes the type ID mapper for the writer.
-  void mapper(const type_id_mapper* ptr) noexcept override {
+  void mapper(const type_id_mapper* ptr) noexcept {
     mapper_ = ptr;
   }
 
@@ -732,8 +732,12 @@ public:
     return false;
   }
 
-  caf::actor_handle_codec* actor_handle_codec() override {
-    return codec_;
+  bool value(strong_actor_ptr& ptr) override {
+    if (codec_ == nullptr) {
+      emplace_error(sec::no_actor_handle_codec);
+      return false;
+    }
+    return codec_->load(*this, ptr);
   }
 
   static json_reader_impl& downcast(text_reader& ptr) {
@@ -902,6 +906,14 @@ json_reader::json_reader(caf::actor_handle_codec* codec) : super(nullptr) {
 
 json_reader::~json_reader() noexcept {
   // nop
+}
+
+const type_id_mapper* json_reader::mapper() const noexcept {
+  return json_reader_impl::downcast(*impl_).mapper();
+}
+
+void json_reader::mapper(const type_id_mapper* ptr) noexcept {
+  json_reader_impl::downcast(*impl_).mapper(ptr);
 }
 
 bool json_reader::load_from(std::istream& input) {

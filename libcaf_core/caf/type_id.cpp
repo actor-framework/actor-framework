@@ -45,4 +45,14 @@ type_id_t default_type_id_mapper::operator()(std::string_view name) const {
   return query_type_id(name);
 }
 
+namespace {
+
+constinit const default_type_id_mapper default_type_id_mapper_singleton{};
+
+}
+
+const type_id_mapper& get_default_type_id_mapper() noexcept {
+  return default_type_id_mapper_singleton;
+}
+
 } // namespace caf

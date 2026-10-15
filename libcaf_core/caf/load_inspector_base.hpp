@@ -308,10 +308,6 @@ public:
     return value(x);
   }
 
-  caf::actor_handle_codec* actor_handle_codec() {
-    return impl_->actor_handle_codec();
-  }
-
   SubtypeInterface& as_deserializer() noexcept {
     return *impl_;
   }
