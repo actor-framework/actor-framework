@@ -1079,6 +1079,42 @@ OUTLINE("serializing and then deserializing errors") {
   )_";
 }
 
+SCENARIO("binary serializer and deserializer encode char values as one byte") {
+  GIVEN("a binary serializer with an empty buffer") {
+    auto buf = byte_buffer{};
+    auto sink = binary_serializer{buf};
+    WHEN("writing a char value") {
+      require(sink.value('A'));
+      THEN("the buffer contains a single byte") {
+        check_eq(buf.size(), size_t{1});
+      }
+      AND_THEN("deserializing the byte produces the same char") {
+        auto source = binary_deserializer{buf};
+        auto copy = char{'\0'};
+        require(source.value(copy));
+        check_eq(copy, 'A');
+      }
+    }
+  }
+  GIVEN("a binary serializer v2 with an empty buffer") {
+    auto buf = byte_buffer{};
+    auto config = inspector_config{};
+    auto sink = binary_serializer_v2<byte_buffer>{buf, config};
+    WHEN("writing a char value") {
+      require(sink.value('A'));
+      THEN("the buffer contains a single byte") {
+        check_eq(buf.size(), size_t{1});
+      }
+      AND_THEN("deserializing the byte produces the same char") {
+        auto source = binary_deserializer_v2{buf.data(), buf.size(), config};
+        auto copy = char{'\0'};
+        require(source.value(copy));
+        check_eq(copy, 'A');
+      }
+    }
+  }
+}
+
 SCENARIO("binary serializer and deserializer handle vectors of booleans") {
   GIVEN("a binary serializer") {
     auto sink = binary_serializer_wrapper{sys};

@@ -74,6 +74,8 @@ public:
 
   bool value(bool x) override;
 
+  using byte_writer::value;
+
   bool value(int8_t x) override;
 
   bool value(uint8_t x) override;

@@ -77,6 +77,8 @@ public:
 
   bool value(bool& x) noexcept override;
 
+  using byte_reader::value;
+
   bool value(int8_t& x) noexcept override;
 
   bool value(uint8_t& x) noexcept override;
