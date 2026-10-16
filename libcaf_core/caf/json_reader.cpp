@@ -7,19 +7,99 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_handle_codec.hpp"
 #include "caf/byte_span.hpp"
-#include "caf/deserializer.hpp"
 #include "caf/detail/assert.hpp"
 #include "caf/detail/bounds_checker.hpp"
+#include "caf/detail/default_actor_handle_codec.hpp"
 #include "caf/detail/json.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/string_algorithms.hpp"
 
 #include <fstream>
 #include <memory_resource>
+#include <variant>
+#include <vector>
+
+namespace caf::internal {
+
+class json_reader_stack {
+public:
+  struct sequence {
+    detail::json::array::const_iterator pos;
+
+    detail::json::array::const_iterator end;
+
+    bool at_end() const noexcept {
+      return pos == end;
+    }
+
+    auto& current() {
+      return *pos;
+    }
+
+    void advance() {
+      ++pos;
+    }
+  };
+
+  struct members {
+    detail::json::object::const_iterator pos;
+
+    detail::json::object::const_iterator end;
+
+    bool at_end() const noexcept {
+      return pos == end;
+    }
+
+    auto& current() {
+      return *pos;
+    }
+
+    void advance() {
+      ++pos;
+    }
+  };
+
+  using json_key = std::string_view;
+
+  using value_type
+    = std::variant<const detail::json::value*, const detail::json::object*,
+                   detail::json::null_t, json_key, sequence, members>;
+
+  using allocator_type = std::pmr::polymorphic_allocator<value_type>;
+
+  using data_type = std::vector<value_type, allocator_type>;
+
+  explicit json_reader_stack(std::pmr::memory_resource* resource)
+    : data(allocator_type{resource}), fields(resource) {
+    // nop
+  }
+
+  data_type data;
+
+  std::pmr::vector<std::string_view> fields;
+};
+
+} // namespace caf::internal
 
 namespace {
 
-static constexpr const char class_name[] = "caf::json_reader";
+static constexpr const char class_name[] = "caf::json_reader_base";
+
+using sequence = caf::internal::json_reader_stack::sequence;
+
+using members = caf::internal::json_reader_stack::members;
+
+/// Denotes the type at the current position.
+enum class position {
+  value,
+  object,
+  null,
+  key,
+  sequence,
+  members,
+  past_the_end,
+  invalid,
+};
 
 std::string_view type_name_from(const caf::detail::json::value& got) {
   using namespace std::literals;
@@ -69,6 +149,11 @@ std::string_view field_type(const caf::detail::json::object* obj,
   return {};
 }
 
+const caf::detail::json::member*
+find_type_member(const caf::detail::json::object& obj) {
+  return find_member(&obj, "@type");
+}
+
 } // namespace
 
 #define FN_DECL static constexpr const char* fn = __func__
@@ -77,786 +162,164 @@ std::string_view field_type(const caf::detail::json::object* obj,
   case position::invalid:                                                      \
     err_ = format_to_error(sec::runtime_error,                                 \
                            "{}::{}: found an invalid position in field {}",    \
-                           class_name, fn, current_field_name());              \
+                           class_name, fn, util::current_field_name(*this));   \
     return false;                                                              \
   case position::past_the_end:                                                 \
     err_ = format_to_error(sec::runtime_error,                                 \
                            "{}::{}: unexpected end of input in field {}",      \
-                           class_name, fn, current_field_name());              \
+                           class_name, fn, util::current_field_name(*this));   \
     return false;
 
 #define SCOPE(expected_position)                                               \
-  if (auto got = pos(); got != expected_position) {                            \
-    err_ = format_to_error(sec::runtime_error,                                 \
-                           "{}::{}: expected type {}, got {} in field {}",     \
-                           class_name, __func__,                               \
-                           pretty_name(expected_position), pretty_name(got),   \
-                           current_field_name());                              \
+  if (auto got = util::pos(*this); got != expected_position) {                 \
+    err_ = format_to_error(                                                    \
+      sec::runtime_error, "{}::{}: expected type {}, got {} in field {}",      \
+      class_name, __func__, util::pretty_name(expected_position),              \
+      util::pretty_name(got), util::current_field_name(*this));                \
     return false;                                                              \
   }
 
-namespace caf {
+namespace caf::internal {
 
-class json_reader_impl : public text_reader {
+class json_reader_util {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = text_reader;
-
-  struct sequence {
-    detail::json::array::const_iterator pos;
-
-    detail::json::array::const_iterator end;
-
-    bool at_end() const noexcept {
-      return pos == end;
-    }
-
-    auto& current() {
-      return *pos;
-    }
-
-    void advance() {
-      ++pos;
-    }
-  };
-
-  struct members {
-    detail::json::object::const_iterator pos;
-
-    detail::json::object::const_iterator end;
-
-    bool at_end() const noexcept {
-      return pos == end;
-    }
-
-    auto& current() {
-      return *pos;
-    }
-
-    void advance() {
-      ++pos;
-    }
-  };
-
-  using json_key = std::string_view;
-
-  using value_type
-    = std::variant<const detail::json::value*, const detail::json::object*,
-                   detail::json::null_t, json_key, sequence, members>;
-
-  using stack_allocator = std::pmr::polymorphic_allocator<value_type>;
-
-  using stack_type = std::vector<value_type, stack_allocator>;
-
-  /// Denotes the type at the current position.
-  enum class position {
-    value,
-    object,
-    null,
-    key,
-    sequence,
-    members,
-    past_the_end,
-    invalid,
-  };
-
-  template <position P>
-  auto& top() noexcept {
-    return std::get<static_cast<size_t>(P)>(st_->back());
-  }
-
-  template <position P>
-  const auto& top() const noexcept {
-    return std::get<static_cast<size_t>(P)>(st_->back());
-  }
-
-  // -- constants --------------------------------------------------------------
-
-  /// The value value for `field_type_suffix()`.
-  static constexpr std::string_view field_type_suffix_default = "-type";
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit json_reader_impl(caf::actor_handle_codec* codec) : codec_(codec) {
-    field_.reserve(8);
-  }
-
-  json_reader_impl(const json_reader_impl&) = delete;
-
-  json_reader_impl& operator=(const json_reader_impl&) = delete;
-
-  ~json_reader_impl() override {
-    // nop
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  /// Returns the suffix for generating type annotation fields for variant
-  /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
-  /// for a variant field called "foo".
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept override {
-    return field_type_suffix_;
-  }
-
-  /// Configures whether the writer omits empty fields.
-  void field_type_suffix(std::string_view suffix) noexcept override {
-    field_type_suffix_ = suffix;
-  }
-
-  /// Returns the type ID mapper used by the writer.
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
-    return mapper_;
-  }
-
-  /// Changes the type ID mapper for the writer.
-  void mapper(const type_id_mapper* ptr) noexcept {
-    mapper_ = ptr;
-  }
-
-  // -- modifiers --------------------------------------------------------------
-
-  void set_error(error stop_reason) override {
-    err_ = std::move(stop_reason);
-  }
-
-  error& get_error() noexcept override {
-    return err_;
-  }
-
-  bool load(std::string_view json_text) override {
-    reset();
-    string_parser_state ps{json_text.begin(), json_text.end()};
-    root_ = detail::json::parse_shallow(ps, &buf_);
-    if (ps.code != pec::success) {
-      err_ = ps.error();
-      st_ = nullptr;
-      return false;
-    }
-    err_.reset();
-    std::pmr::polymorphic_allocator<stack_type> alloc{&buf_};
-    st_ = new (alloc.allocate(1)) stack_type(alloc);
-    st_->reserve(16);
-    st_->emplace_back(root_);
-    return true;
-  }
-
-  bool load_bytes(const_byte_span bytes) override {
-    return load(to_string_view(bytes));
-  }
-
-  /// Reads the input stream @p input and parses the content into an internal
-  /// representation. After loading the JSON input, the reader is ready for
-  /// attempting to deserialize inspectable objects.
-  /// @note Implicitly calls `reset`.
-  bool load_from(std::istream& input) {
-    reset();
-    using iterator_t = std::istreambuf_iterator<char>;
-    detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
-    root_ = detail::json::parse(ps, &buf_);
-    if (ps.code != pec::success) {
-      err_ = ps.error();
-      st_ = nullptr;
-      return false;
-    }
-    err_.reset();
-    std::pmr::polymorphic_allocator<stack_type> alloc{&buf_};
-    st_ = new (alloc.allocate(1)) stack_type(alloc);
-    st_->reserve(16);
-    st_->emplace_back(root_);
-    return true;
-  }
-
-  /// Parses the content of the file under the given @p path. After loading the
-  /// content of the JSON file, the reader is ready for attempting to
-  /// deserialize inspectable objects.
-  /// @note Implicitly calls `reset`.
-  bool load_file(const char* path) {
-    std::ifstream input{path};
-    if (!input.is_open()) {
-      err_ = sec::cannot_open_file;
-      return false;
-    }
-    return load_from(input);
-  }
-
-  /// @copydoc load_file
-  bool load_file(const std::string& path) {
-    return load_file(path.c_str());
-  }
-
-  /// Reverts the state of the reader back to where it was after calling `load`.
-  /// @post The reader is ready for attempting to deserialize another
-  ///       inspectable object.
-  void revert() override {
-    if (st_) {
-      CAF_ASSERT(root_ != nullptr);
-      err_.reset();
-      st_->clear();
-      st_->emplace_back(root_);
-      field_.clear();
-    }
-  }
-
-  /// Removes any loaded JSON data and reclaims memory resources.
-  void reset() override {
-    buf_.release();
-    st_ = nullptr;
-    err_.reset();
-    field_.clear();
-  }
-
-  // -- overrides --------------------------------------------------------------
-
-  bool has_human_readable_format() const noexcept override {
-    return true;
-  }
-
-  type_id_t to_type_id(std::string_view name) const override {
-    return (*mapper_)(name);
-  }
-
-  bool fetch_next_object_type(type_id_t& type) override {
-    std::string_view type_name;
-    if (fetch_next_object_name(type_name)) {
-      if (auto id = to_type_id(type_name); id != invalid_type_id) {
-        type = id;
-        return true;
-      } else {
-        std::string what = "no type ID available for @type: ";
-        what.insert(what.end(), type_name.begin(), type_name.end());
-        err_ = format_to_error(
-          sec::runtime_error,
-          "{}::{}: no type ID available for @type: {} in field {}", class_name,
-          __func__, type_name, current_field_name());
-        return false;
-      }
-    } else {
-      return false;
-    }
-  }
-
-  bool fetch_next_object_name(std::string_view& type_name) override {
-    FN_DECL;
-    return consume<false>(fn, [this,
-                               &type_name](const detail::json::value& val) {
-      if (val.data.index() == detail::json::value::object_index) {
-        const auto& obj = std::get<detail::json::object>(val.data);
-        if (auto mem_ptr = find_member(&obj, "@type")) {
-          if (mem_ptr->val->data.index() == detail::json::value::string_index) {
-            type_name = std::get<std::string_view>(mem_ptr->val->data);
-            return true;
-          }
-          err_ = format_to_error(
-            sec::runtime_error,
-            "{}::{}: expected a string argument to @type in field {}",
-            class_name, fn, current_field_name());
-          return false;
-        }
-        err_ = format_to_error(sec::runtime_error, class_name, fn,
-                               current_field_name(), "found no @type member");
-        return false;
-      }
-      err_ = format_to_error(
-        sec::runtime_error,
-        "{}::{}: expected type json::object, got {} in field {}", class_name,
-        fn, type_name_from(val), current_field_name());
-      return false;
-    });
-  }
-
-  bool begin_object(type_id_t, std::string_view) override {
-    FN_DECL;
-    return consume<false>(fn, [this](const detail::json::value& val) {
-      if (val.data.index() == detail::json::value::object_index) {
-        push(&std::get<detail::json::object>(val.data));
-        return true;
-      } else {
-        err_ = format_to_error(
-          sec::runtime_error,
-          "{}::{}: expected type json::object, got {} in field {}", class_name,
-          fn, type_name_from(val), current_field_name());
-        return false;
-      }
-    });
-  }
-
-  bool end_object() override {
-    FN_DECL;
-    SCOPE(position::object);
-    pop();
-    auto current_pos = pos();
-    switch (current_pos) {
-      INVALID_AND_PAST_THE_END_CASES
-      case position::value:
-        pop();
-        return true;
-      case position::sequence:
-        top<position::sequence>().advance();
-        return true;
-      default:
-        err_ = format_to_error(sec::runtime_error,
-                               "{}::{}: expected type json::value or "
-                               "json::array, got {} in field {}",
-                               class_name, fn, pretty_name(current_pos),
-                               current_field_name());
-        return false;
-    }
-  }
-
-  bool begin_field(std::string_view name) override {
-    SCOPE(position::object);
-    field_.push_back(name);
-    if (auto member = find_member(top<position::object>(), name)) {
-      push(member->val);
-      return true;
-    } else {
-      err_ = format_to_error(sec::runtime_error,
-                             "{}::{}: mandatory key {} missing in field {}",
-                             class_name, __func__, name, current_field_name());
-      return false;
-    }
-  }
-
-  bool begin_field(std::string_view name, bool& is_present) override {
-    SCOPE(position::object);
-    field_.push_back(name);
-    if (auto member = find_member(top<position::object>(), name);
-        member != nullptr
-        && member->val->data.index() != detail::json::value::null_index) {
-      push(member->val);
-      is_present = true;
-    } else {
-      is_present = false;
-    }
-    return true;
-  }
-
-  bool begin_field(std::string_view name, std::span<const type_id_t> types,
-                   size_t& index) override {
-    bool is_present = false;
-    if (begin_field(name, is_present, types, index)) {
-      if (is_present) {
-        return true;
-      } else {
-        err_ = format_to_error(sec::runtime_error,
-                               "{}::{}: mandatory key {} missing in field {}",
-                               class_name, __func__, name,
-                               current_field_name());
-        return false;
-      }
-    } else {
-      return false;
-    }
-  }
-
-  bool begin_field(std::string_view name, bool& is_present,
-                   std::span<const type_id_t> types, size_t& index) override {
-    SCOPE(position::object);
-    field_.push_back(name);
-    if (auto member = find_member(top<position::object>(), name);
-        member != nullptr
-        && member->val->data.index() != detail::json::value::null_index) {
-      auto ft = field_type(top<position::object>(), name, field_type_suffix_);
-      if (auto id = to_type_id(ft); id != invalid_type_id) {
-        if (auto i = std::ranges::find(types, id); i != types.end()) {
-          index = static_cast<size_t>(std::distance(types.begin(), i));
-          push(member->val);
-          is_present = true;
-          return true;
-        }
-      }
-    }
-    is_present = false;
-    return true;
-  }
-
-  bool end_field() override {
-    SCOPE(position::object);
-    // Note: no pop() here, because the value(s) were already consumed. Only
-    //       update the field_ for debugging.
-    if (!field_.empty())
-      field_.pop_back();
-    return true;
-  }
-
-  bool begin_tuple(size_t size) override {
-    size_t list_size = 0;
-    if (begin_sequence(list_size)) {
-      if (list_size == size) {
-        return true;
-      } else {
-        err_ = format_to_error(sec::conversion_failed,
-                               "{}::{}: expected tuple of size {} in field {}, "
-                               "got a list of size {}",
-                               class_name, __func__, size, current_field_name(),
-                               list_size);
-        return false;
-      }
-    } else {
-      return false;
-    }
-  }
-
-  bool end_tuple() override {
-    return end_sequence();
-  }
-
-  bool begin_key_value_pair() override {
-    SCOPE(position::members);
-    if (auto& xs = top<position::members>(); !xs.at_end()) {
-      auto& current = xs.current();
-      push(current.val);
-      push(current.key);
-      return true;
-    } else {
-      err_ = format_to_error(
-        sec::runtime_error,
-        "{}::{}: tried reading a JSON::object sequentially past its end",
-        class_name, __func__);
-      return false;
-    }
-  }
-
-  bool end_key_value_pair() override {
-    SCOPE(position::members);
-    top<position::members>().advance();
-    return true;
-  }
-
-  bool begin_sequence(size_t& size) override {
-    FN_DECL;
-    return consume<false>(fn, [this, &size](const detail::json::value& val) {
-      if (val.data.index() == detail::json::value::array_index) {
-        auto& ls = std::get<detail::json::array>(val.data);
-        size = ls.size();
-        push(sequence{ls.begin(), ls.end()});
-        return true;
-      } else {
-        err_ = format_to_error(
-          sec::runtime_error,
-          "{}::{}: expected type json::array, got {} in field {}", class_name,
-          fn, type_name_from(val), current_field_name());
-        return false;
-      }
-    });
-  }
-
-  bool end_sequence() override {
-    SCOPE(position::sequence);
-    if (top<position::sequence>().at_end()) {
-      pop();
-      // We called consume<false> at first, so we need to call it again with
-      // <true> for advancing the position now.
-      return consume<true>(__func__,
-                           [](const detail::json::value&) { return true; });
-    } else {
-      err_ = format_to_error(
-        sec::runtime_error,
-        "{}::{}: failed to consume all elements from json::array", class_name,
-        class_name, __func__);
-      return false;
-    }
-  }
-
-  bool begin_associative_array(size_t& size) override {
-    FN_DECL;
-    return consume<false>(fn, [this, &size](const detail::json::value& val) {
-      if (val.data.index() == detail::json::value::object_index) {
-        auto* obj = std::addressof(std::get<detail::json::object>(val.data));
-        pop();
-        size = obj->size();
-        push(members{obj->begin(), obj->end()});
-        return true;
-      } else {
-        err_ = format_to_error(
-          sec::runtime_error,
-          "{}::{}: expected type json::object, got {} in field {}", class_name,
-          fn, type_name_from(val), current_field_name());
-        return false;
-      }
-    });
-  }
-
-  bool end_associative_array() override {
-    SCOPE(position::members);
-    if (top<position::members>().at_end()) {
-      pop();
-      return true;
-    } else {
-      err_ = format_to_error(
-        sec::runtime_error,
-        "{}::{}: failed to consume all elements in an associative array",
-        class_name, __func__);
-      return false;
-    }
-  }
-
-  bool value(std::byte& x) override {
-    auto tmp = uint8_t{0};
-    if (value(tmp)) {
-      x = static_cast<std::byte>(tmp);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  bool value(bool& x) override {
-    FN_DECL;
-    return consume<true>(fn, [this, &x](const detail::json::value& val) {
-      if (val.data.index() == detail::json::value::bool_index) {
-        x = std::get<bool>(val.data);
-        return true;
-      } else {
-        err_ = format_to_error(
-          sec::runtime_error,
-          "{}::{}: expected type json::boolean, got {} in field {}", class_name,
-          fn, type_name_from(val), current_field_name());
-        return false;
-      }
-    });
-  }
-
-  bool value(int8_t& x) override {
-    return integer(x);
-  }
-
-  bool value(uint8_t& x) override {
-    return integer(x);
-  }
-
-  bool value(int16_t& x) override {
-    return integer(x);
-  }
-
-  bool value(uint16_t& x) override {
-    return integer(x);
-  }
-
-  bool value(int32_t& x) override {
-    return integer(x);
-  }
-
-  bool value(uint32_t& x) override {
-    return integer(x);
-  }
-
-  bool value(int64_t& x) override {
-    return integer(x);
-  }
-
-  bool value(uint64_t& x) override {
-    return integer(x);
-  }
-
-  bool value(float& x) override {
-    auto tmp = 0.0;
-    if (value(tmp)) {
-      x = static_cast<float>(tmp);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  bool value(double& x) override {
-    FN_DECL;
-    return consume<true>(fn, [this, &x](const detail::json::value& val) {
-      switch (val.data.index()) {
-        case detail::json::value::double_index:
-          x = std::get<double>(val.data);
-          return true;
-        case detail::json::value::integer_index:
-          x = static_cast<double>(std::get<int64_t>(val.data));
-          return true;
-        case detail::json::value::unsigned_index:
-          x = static_cast<double>(std::get<uint64_t>(val.data));
-          return true;
-        default:
-          err_ = format_to_error(sec::runtime_error,
-                                 "{}::{}: expected type json::real, "
-                                 "got {} in field {}",
-                                 class_name, fn, type_name_from(val),
-                                 current_field_name());
-          return false;
-      }
-    });
-  }
-
-  bool value(long double& x) override {
-    auto tmp = 0.0;
-    if (value(tmp)) {
-      x = static_cast<long double>(tmp);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  bool value(std::string& x) override {
-    FN_DECL;
-    return consume<true>(fn, [this, &x](const detail::json::value& val) {
-      if (val.data.index() == detail::json::value::string_index) {
-        x = std::get<std::string_view>(val.data);
-        return true;
-      } else {
-        err_ = format_to_error(sec::runtime_error,
-                               "{}::{}: expected type json::string, "
-                               "got {} in field {}",
-                               class_name, fn, type_name_from(val),
-                               current_field_name());
-        return false;
-      }
-    });
-  }
-
-  bool value(std::u16string&) override {
-    err_ = format_to_error(sec::runtime_error,
-                           "{}::{}: u16string support not implemented yet",
-                           class_name, __func__);
-    return false;
-  }
-
-  bool value(std::u32string&) override {
-    err_ = format_to_error(sec::runtime_error,
-                           "{}::{}: u32string support not implemented yet",
-                           class_name, __func__);
-    return false;
-  }
-
-  bool value(byte_span) override {
-    err_ = format_to_error(sec::runtime_error,
-                           "{}::{}: byte span support not implemented yet",
-                           class_name, __func__);
-    return false;
-  }
-
-  bool value(strong_actor_ptr& ptr) override {
-    if (codec_ == nullptr) {
-      emplace_error(sec::no_actor_handle_codec);
-      return false;
-    }
-    return codec_->load(*this, ptr);
-  }
-
-  static json_reader_impl& downcast(text_reader& ptr) {
-    return static_cast<json_reader_impl&>(ptr);
-  }
-
-private:
-  [[nodiscard]] position pos() const noexcept {
-    if (st_ == nullptr)
+  [[nodiscard]] static position pos(const json_reader_base& reader) noexcept {
+    if (reader.st_ == nullptr)
       return position::invalid;
-    else if (st_->empty())
+    if (reader.st_->data.empty())
       return position::past_the_end;
-    else
-      return static_cast<position>(st_->back().index());
+    return static_cast<position>(reader.st_->data.back().index());
   }
 
-  void append_current_field_name(std::string& result) {
+  static void append_current_field_name(const json_reader_base& reader,
+                                        std::string& result) {
     result += "ROOT";
-    for (auto& key : field_) {
-      result += '.';
-      result.insert(result.end(), key.begin(), key.end());
+    if (reader.st_ != nullptr) {
+      for (auto& key : reader.st_->fields) {
+        result += '.';
+        result.insert(result.end(), key.begin(), key.end());
+      }
     }
   }
 
-  std::string current_field_name() {
+  static std::string current_field_name(const json_reader_base& reader) {
     std::string result;
-    append_current_field_name(result);
+    append_current_field_name(reader, result);
     return result;
   }
 
   template <bool PopOrAdvanceOnSuccess, class F>
-  bool consume(const char* fn, F f) {
-    auto current_pos = pos();
+  static bool consume(json_reader_base& reader, const char* fn, F f) {
+    auto current_pos = pos(reader);
     switch (current_pos) {
-      INVALID_AND_PAST_THE_END_CASES
+      case position::invalid:
+        reader.err_
+          = format_to_error(sec::runtime_error,
+                            "{}::{}: found an invalid position in field {}",
+                            class_name, fn, current_field_name(reader));
+        return false;
+      case position::past_the_end:
+        reader.err_
+          = format_to_error(sec::runtime_error,
+                            "{}::{}: unexpected end of input in field {}",
+                            class_name, fn, current_field_name(reader));
+        return false;
       case position::value:
-        if (f(*top<position::value>())) {
+        if (f(*top<position::value>(reader))) {
           if constexpr (PopOrAdvanceOnSuccess)
-            pop();
+            pop(reader);
           return true;
         } else {
           return false;
         }
       case position::key:
-        if (f(detail::json::value{top<position::key>()})) {
+        if (f(detail::json::value{top<position::key>(reader)})) {
           if constexpr (PopOrAdvanceOnSuccess)
-            pop();
+            pop(reader);
           return true;
         } else {
           return false;
         }
       case position::sequence:
-        if (auto& ls = top<position::sequence>(); !ls.at_end()) {
+        if (auto& ls = top<position::sequence>(reader); !ls.at_end()) {
           auto& curr = ls.current();
           if constexpr (PopOrAdvanceOnSuccess)
             ls.advance();
           return f(curr);
         } else {
-          err_ = format_to_error(
+          reader.err_ = format_to_error(
             sec::runtime_error,
             "{}::{}: tried reading a json::array past the end", class_name, fn);
           return false;
         }
       default:
-        err_
+        reader.err_
           = format_to_error(sec::runtime_error,
                             "{}::{}: expected type json::value, json::key, or "
                             "json::array, got {} in field {}",
                             class_name, fn, pretty_name(current_pos),
-                            current_field_name());
+                            current_field_name(reader));
         return false;
     }
   }
 
   template <class T>
-  bool integer(T& x) {
+  static bool integer(json_reader_base& reader, T& x) {
     static constexpr const char* fn = "value";
-    return consume<true>(fn, [this, &x](const detail::json::value& val) {
-      if (val.data.index() == detail::json::value::integer_index) {
-        auto i64 = std::get<int64_t>(val.data);
-        if (detail::bounds_checker<T>::check(i64)) {
-          x = static_cast<T>(i64);
-          return true;
+    return consume<true>(
+      reader, fn, [&reader, &x](const detail::json::value& val) {
+        if (val.data.index() == detail::json::value::integer_index) {
+          auto i64 = std::get<int64_t>(val.data);
+          if (detail::bounds_checker<T>::check(i64)) {
+            x = static_cast<T>(i64);
+            return true;
+          }
+          reader.err_
+            = format_to_error(sec::runtime_error,
+                              "{}::{}: integer out of bounds in field {}",
+                              class_name, fn, current_field_name(reader));
+          return false;
+        } else if (val.data.index() == detail::json::value::unsigned_index) {
+          auto u64 = std::get<uint64_t>(val.data);
+          if (detail::bounds_checker<T>::check(u64)) {
+            x = static_cast<T>(u64);
+            return true;
+          }
+          reader.err_
+            = format_to_error(sec::runtime_error,
+                              "{}::{}: integer out of bounds in field {}",
+                              class_name, fn, current_field_name(reader));
+          return false;
+        } else {
+          reader.err_ = format_to_error(
+            sec::runtime_error,
+            "{}::{}: expected type json::integer, got {} in field {}",
+            class_name, fn, type_name_from(val), current_field_name(reader));
+          return false;
         }
-        err_ = format_to_error(sec::runtime_error,
-                               "{}::{}: integer out of bounds in field {}",
-                               class_name, fn, current_field_name());
-        return false;
-      } else if (val.data.index() == detail::json::value::unsigned_index) {
-        auto u64 = std::get<uint64_t>(val.data);
-        if (detail::bounds_checker<T>::check(u64)) {
-          x = static_cast<T>(u64);
-          return true;
-        }
-        err_ = format_to_error(sec::runtime_error,
-                               "{}::{}: integer out of bounds in field {}",
-                               class_name, fn, current_field_name());
-        return false;
-      } else {
-        err_ = format_to_error(sec::runtime_error,
-                               "{}::{}: expected type json::integer, "
-                               "got {} in field {}",
-                               class_name, fn, type_name_from(val),
-                               current_field_name());
-        return false;
-      }
-    });
+      });
   }
 
-  void pop() {
-    st_->pop_back();
+  template <position P>
+  static auto& top(json_reader_base& reader) noexcept {
+    return std::get<static_cast<size_t>(P)>(reader.st_->data.back());
+  }
+
+  template <position P>
+  static const auto& top(const json_reader_base& reader) noexcept {
+    return std::get<static_cast<size_t>(P)>(reader.st_->data.back());
+  }
+
+  static void pop(json_reader_base& reader) {
+    reader.st_->data.pop_back();
   }
 
   template <class T>
-  void push(T&& x) {
-    st_->emplace_back(std::forward<T>(x));
+  static void push(json_reader_base& reader, T&& x) {
+    reader.st_->data.emplace_back(std::forward<T>(x));
   }
 
-  std::string_view pretty_name(position pos) {
+  static std::string_view pretty_name(position pos) {
     switch (pos) {
       default:
         return "invalid input";
@@ -874,58 +337,549 @@ private:
         return "json::members";
     }
   }
-
-  std::pmr::monotonic_buffer_resource buf_;
-
-  stack_type* st_ = nullptr;
-
-  detail::json::value* root_ = nullptr;
-
-  std::string_view field_type_suffix_ = field_type_suffix_default;
-
-  /// Keeps track of the current field for better debugging output.
-  std::vector<std::string_view> field_;
-
-  /// The mapper implementation we use by default.
-  default_type_id_mapper default_mapper_;
-
-  /// Configures which ID mapper we use to translate between type IDs and names.
-  const type_id_mapper* mapper_ = &default_mapper_;
-
-  error err_;
-
-  caf::actor_handle_codec* codec_ = nullptr;
 };
 
-// -- constructors, destructors, and assignment operators ----------------------
+} // namespace caf::internal
 
-json_reader::json_reader(caf::actor_handle_codec* codec) : super(nullptr) {
-  static_assert(sizeof(json_reader_impl) <= impl_storage_size);
-  impl_.reset(new (impl_storage_) json_reader_impl(codec));
-}
+namespace caf {
 
-json_reader::~json_reader() noexcept {
+json_reader_base::json_reader_base() = default;
+
+json_reader_base::json_reader_base(const type_id_mapper& mapper)
+  : mapper_(&mapper) {
   // nop
 }
 
-const type_id_mapper* json_reader::mapper() const noexcept {
-  return json_reader_impl::downcast(*impl_).mapper();
+json_reader_base::~json_reader_base() {
+  // nop
 }
 
-void json_reader::mapper(const type_id_mapper* ptr) noexcept {
-  json_reader_impl::downcast(*impl_).mapper(ptr);
+std::string_view json_reader_base::field_type_suffix() const noexcept {
+  return field_type_suffix_;
 }
 
-bool json_reader::load_from(std::istream& input) {
-  return json_reader_impl::downcast(*impl_).load_from(input);
+void json_reader_base::field_type_suffix(std::string_view suffix) noexcept {
+  field_type_suffix_ = suffix;
 }
 
-bool json_reader::load_file(const char* path) {
-  return json_reader_impl::downcast(*impl_).load_file(path);
+void json_reader_base::mapper(const type_id_mapper* ptr) noexcept {
+  mapper_ = ptr ? ptr : &get_default_type_id_mapper();
 }
 
-bool json_reader::load_file(const std::string& path) {
-  return json_reader_impl::downcast(*impl_).load_file(path);
+void json_reader_base::set_error(error stop_reason) {
+  err_ = std::move(stop_reason);
+}
+
+error& json_reader_base::get_error() noexcept {
+  return err_;
+}
+
+bool json_reader_base::load(std::string_view json_text) {
+  reset();
+  string_parser_state ps{json_text.begin(), json_text.end()};
+  root_ = detail::json::parse_shallow(ps, &buf_);
+  if (ps.code != pec::success) {
+    err_ = ps.error();
+    st_ = nullptr;
+    return false;
+  }
+  err_.reset();
+  std::pmr::polymorphic_allocator<internal::json_reader_stack> alloc{&buf_};
+  st_ = new (alloc.allocate(1)) internal::json_reader_stack(&buf_);
+  st_->data.reserve(16);
+  st_->fields.reserve(8);
+  st_->data.emplace_back(root_);
+  return true;
+}
+
+bool json_reader_base::load_bytes(const_byte_span bytes) {
+  return load(to_string_view(bytes));
+}
+
+bool json_reader_base::load_from(std::istream& input) {
+  reset();
+  using iterator_t = std::istreambuf_iterator<char>;
+  detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
+  root_ = detail::json::parse(ps, &buf_);
+  if (ps.code != pec::success) {
+    err_ = ps.error();
+    st_ = nullptr;
+    return false;
+  }
+  err_.reset();
+  std::pmr::polymorphic_allocator<internal::json_reader_stack> alloc{&buf_};
+  st_ = new (alloc.allocate(1)) internal::json_reader_stack(&buf_);
+  st_->data.reserve(16);
+  st_->fields.reserve(8);
+  st_->data.emplace_back(root_);
+  return true;
+}
+
+bool json_reader_base::load_file(const char* path) {
+  std::ifstream input{path};
+  if (!input.is_open()) {
+    err_ = sec::cannot_open_file;
+    return false;
+  }
+  return load_from(input);
+}
+
+void json_reader_base::revert() {
+  if (st_) {
+    CAF_ASSERT(root_ != nullptr);
+    err_.reset();
+    st_->data.clear();
+    st_->data.emplace_back(root_);
+    st_->fields.clear();
+  }
+}
+
+void json_reader_base::reset() {
+  buf_.release();
+  st_ = nullptr;
+  err_.reset();
+}
+
+bool json_reader_base::has_human_readable_format() const noexcept {
+  return true;
+}
+
+type_id_t json_reader_base::to_type_id(std::string_view name) const {
+  return (*mapper_)(name);
+}
+
+bool json_reader_base::fetch_next_object_type(type_id_t& type) {
+  std::string_view type_name;
+  if (fetch_next_object_name(type_name)) {
+    if (auto id = to_type_id(type_name); id != invalid_type_id) {
+      type = id;
+      return true;
+    }
+    err_ = format_to_error(
+      sec::runtime_error,
+      "{}::{}: no type ID available for @type: {} in field {}", class_name,
+      __func__, type_name, util::current_field_name(*this));
+  }
+  return false;
+}
+
+bool json_reader_base::fetch_next_object_name(std::string_view& type_name) {
+  FN_DECL;
+  return util::consume<false>(
+    *this, fn, [this, &type_name](const detail::json::value& val) {
+      if (val.data.index() == detail::json::value::object_index) {
+        const auto& obj = std::get<detail::json::object>(val.data);
+        if (auto mem_ptr = find_type_member(obj)) {
+          if (mem_ptr->val->data.index() == detail::json::value::string_index) {
+            type_name = std::get<std::string_view>(mem_ptr->val->data);
+            return true;
+          }
+          err_ = format_to_error(
+            sec::runtime_error,
+            "{}::{}: expected a string argument to @type in field {}",
+            class_name, fn, util::current_field_name(*this));
+          return false;
+        }
+        err_ = format_to_error(sec::runtime_error,
+                               "{}::{}: found no @type member in field {}",
+                               class_name, fn, util::current_field_name(*this));
+        return false;
+      }
+      err_ = format_to_error(
+        sec::runtime_error,
+        "{}::{}: expected type json::object, got {} in field {}", class_name,
+        fn, type_name_from(val), util::current_field_name(*this));
+      return false;
+    });
+}
+
+bool json_reader_base::begin_object(type_id_t, std::string_view) {
+  FN_DECL;
+  return util::consume<false>(
+    *this, fn, [this](const detail::json::value& val) {
+      if (val.data.index() == detail::json::value::object_index) {
+        util::push(*this, &std::get<detail::json::object>(val.data));
+        return true;
+      } else {
+        err_ = format_to_error(
+          sec::runtime_error,
+          "{}::{}: expected type json::object, got {} in field {}", class_name,
+          fn, type_name_from(val), util::current_field_name(*this));
+        return false;
+      }
+    });
+}
+
+bool json_reader_base::end_object() {
+  FN_DECL;
+  SCOPE(position::object);
+  util::pop(*this);
+  auto current_pos = util::pos(*this);
+  switch (current_pos) {
+    INVALID_AND_PAST_THE_END_CASES
+    case position::value:
+      util::pop(*this);
+      return true;
+    case position::sequence:
+      util::top<position::sequence>(*this).advance();
+      return true;
+    default:
+      err_ = format_to_error(sec::runtime_error,
+                             "{}::{}: expected type json::value or "
+                             "json::array, got {} in field {}",
+                             class_name, fn, util::pretty_name(current_pos),
+                             util::current_field_name(*this));
+      return false;
+  }
+}
+
+bool json_reader_base::begin_field(std::string_view name) {
+  SCOPE(position::object);
+  st_->fields.push_back(name);
+  if (auto member = find_member(util::top<position::object>(*this), name)) {
+    util::push(*this, member->val);
+    return true;
+  }
+  err_ = format_to_error(sec::runtime_error,
+                         "{}::{}: mandatory key {} missing in field {}",
+                         class_name, __func__, name,
+                         util::current_field_name(*this));
+  return false;
+}
+
+bool json_reader_base::begin_field(std::string_view name, bool& is_present) {
+  SCOPE(position::object);
+  st_->fields.push_back(name);
+  if (auto* member = find_member(util::top<position::object>(*this), name);
+      member != nullptr
+      && member->val->data.index() != detail::json::value::null_index) {
+    util::push(*this, member->val);
+    is_present = true;
+    return true;
+  }
+  is_present = false;
+  return true;
+}
+
+bool json_reader_base::begin_field(std::string_view name,
+                                   std::span<const type_id_t> types,
+                                   size_t& index) {
+  bool is_present = false;
+  if (begin_field(name, is_present, types, index)) {
+    if (is_present) {
+      return true;
+    }
+    err_ = format_to_error(sec::runtime_error,
+                           "{}::{}: mandatory key {} missing in field {}",
+                           class_name, __func__, name,
+                           util::current_field_name(*this));
+  }
+  return false;
+}
+
+bool json_reader_base::begin_field(std::string_view name, bool& is_present,
+                                   std::span<const type_id_t> types,
+                                   size_t& index) {
+  SCOPE(position::object);
+  st_->fields.push_back(name);
+  if (auto member = find_member(util::top<position::object>(*this), name);
+      member != nullptr
+      && member->val->data.index() != detail::json::value::null_index) {
+    auto ft = field_type(util::top<position::object>(*this), name,
+                         field_type_suffix_);
+    if (auto id = to_type_id(ft); id != invalid_type_id) {
+      if (auto i = std::ranges::find(types, id); i != types.end()) {
+        index = static_cast<size_t>(std::distance(types.begin(), i));
+        util::push(*this, member->val);
+        is_present = true;
+        return true;
+      }
+    }
+  }
+  is_present = false;
+  return true;
+}
+
+bool json_reader_base::end_field() {
+  SCOPE(position::object);
+  // Note: no pop() here, because the value(s) were already consumed. Only
+  //       update the field path for debugging.
+  if (!st_->fields.empty())
+    st_->fields.pop_back();
+  return true;
+}
+
+bool json_reader_base::begin_tuple(size_t size) {
+  size_t list_size = 0;
+  if (begin_sequence(list_size)) {
+    if (list_size == size) {
+      return true;
+    } else {
+      err_ = format_to_error(sec::conversion_failed,
+                             "{}::{}: expected tuple of size {} in field {}, "
+                             "got a list of size {}",
+                             class_name, __func__, size,
+                             util::current_field_name(*this), list_size);
+      return false;
+    }
+  } else {
+    return false;
+  }
+}
+
+bool json_reader_base::end_tuple() {
+  return end_sequence();
+}
+
+bool json_reader_base::begin_key_value_pair() {
+  SCOPE(position::members);
+  if (auto& xs = util::top<position::members>(*this); !xs.at_end()) {
+    auto& current = xs.current();
+    util::push(*this, current.val);
+    util::push(*this, current.key);
+    return true;
+  } else {
+    err_ = format_to_error(
+      sec::runtime_error,
+      "{}::{}: tried reading a JSON::object sequentially past its end",
+      class_name, __func__);
+    return false;
+  }
+}
+
+bool json_reader_base::end_key_value_pair() {
+  SCOPE(position::members);
+  util::top<position::members>(*this).advance();
+  return true;
+}
+
+bool json_reader_base::begin_sequence(size_t& size) {
+  FN_DECL;
+  return util::consume<false>(
+    *this, fn, [this, &size](const detail::json::value& val) {
+      if (val.data.index() == detail::json::value::array_index) {
+        auto& ls = std::get<detail::json::array>(val.data);
+        size = ls.size();
+        util::push(*this, sequence{ls.begin(), ls.end()});
+        return true;
+      } else {
+        err_ = format_to_error(
+          sec::runtime_error,
+          "{}::{}: expected type json::array, got {} in field {}", class_name,
+          fn, type_name_from(val), util::current_field_name(*this));
+        return false;
+      }
+    });
+}
+
+bool json_reader_base::end_sequence() {
+  SCOPE(position::sequence);
+  if (util::top<position::sequence>(*this).at_end()) {
+    util::pop(*this);
+    // We called consume<false> at first, so we need to call it again with
+    // <true> for advancing the position now.
+    return util::consume<true>(*this, __func__,
+                               [](const detail::json::value&) { return true; });
+  } else {
+    err_ = format_to_error(
+      sec::runtime_error,
+      "{}::{}: failed to consume all elements from json::array", class_name,
+      class_name, __func__);
+    return false;
+  }
+}
+
+bool json_reader_base::begin_associative_array(size_t& size) {
+  FN_DECL;
+  return util::consume<false>(
+    *this, fn, [this, &size](const detail::json::value& val) {
+      if (val.data.index() == detail::json::value::object_index) {
+        auto* obj = std::addressof(std::get<detail::json::object>(val.data));
+        util::pop(*this);
+        size = obj->size();
+        util::push(*this, members{obj->begin(), obj->end()});
+        return true;
+      } else {
+        err_ = format_to_error(
+          sec::runtime_error,
+          "{}::{}: expected type json::object, got {} in field {}", class_name,
+          fn, type_name_from(val), util::current_field_name(*this));
+        return false;
+      }
+    });
+}
+
+bool json_reader_base::end_associative_array() {
+  SCOPE(position::members);
+  if (util::top<position::members>(*this).at_end()) {
+    util::pop(*this);
+    return true;
+  } else {
+    err_ = format_to_error(
+      sec::runtime_error,
+      "{}::{}: failed to consume all elements in an associative array",
+      class_name, __func__);
+    return false;
+  }
+}
+
+bool json_reader_base::value(std::byte& x) {
+  auto tmp = uint8_t{0};
+  if (value(tmp)) {
+    x = static_cast<std::byte>(tmp);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool json_reader_base::value(bool& x) {
+  FN_DECL;
+  return util::consume<true>(
+    *this, fn, [this, &x](const detail::json::value& val) {
+      if (val.data.index() == detail::json::value::bool_index) {
+        x = std::get<bool>(val.data);
+        return true;
+      } else {
+        err_ = format_to_error(
+          sec::runtime_error,
+          "{}::{}: expected type json::boolean, got {} in field {}", class_name,
+          fn, type_name_from(val), util::current_field_name(*this));
+        return false;
+      }
+    });
+}
+
+bool json_reader_base::value(int8_t& x) {
+  return util::integer(*this, x);
+}
+
+bool json_reader_base::value(uint8_t& x) {
+  return util::integer(*this, x);
+}
+
+bool json_reader_base::value(int16_t& x) {
+  return util::integer(*this, x);
+}
+
+bool json_reader_base::value(uint16_t& x) {
+  return util::integer(*this, x);
+}
+
+bool json_reader_base::value(int32_t& x) {
+  return util::integer(*this, x);
+}
+
+bool json_reader_base::value(uint32_t& x) {
+  return util::integer(*this, x);
+}
+
+bool json_reader_base::value(int64_t& x) {
+  return util::integer(*this, x);
+}
+
+bool json_reader_base::value(uint64_t& x) {
+  return util::integer(*this, x);
+}
+
+bool json_reader_base::value(float& x) {
+  auto tmp = 0.0;
+  if (value(tmp)) {
+    x = static_cast<float>(tmp);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool json_reader_base::value(double& x) {
+  FN_DECL;
+  return util::consume<true>(
+    *this, fn, [this, &x](const detail::json::value& val) {
+      switch (val.data.index()) {
+        case detail::json::value::double_index:
+          x = std::get<double>(val.data);
+          return true;
+        case detail::json::value::integer_index:
+          x = static_cast<double>(std::get<int64_t>(val.data));
+          return true;
+        case detail::json::value::unsigned_index:
+          x = static_cast<double>(std::get<uint64_t>(val.data));
+          return true;
+        default:
+          err_ = format_to_error(sec::runtime_error,
+                                 "{}::{}: expected type json::real, "
+                                 "got {} in field {}",
+                                 class_name, fn, type_name_from(val),
+                                 util::current_field_name(*this));
+          return false;
+      }
+    });
+}
+
+bool json_reader_base::value(long double& x) {
+  auto tmp = 0.0;
+  if (value(tmp)) {
+    x = static_cast<long double>(tmp);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool json_reader_base::value(std::string& x) {
+  FN_DECL;
+  return util::consume<true>(
+    *this, fn, [this, &x](const detail::json::value& val) {
+      if (val.data.index() == detail::json::value::string_index) {
+        x = std::get<std::string_view>(val.data);
+        return true;
+      } else {
+        err_ = format_to_error(sec::runtime_error,
+                               "{}::{}: expected type json::string, "
+                               "got {} in field {}",
+                               class_name, fn, type_name_from(val),
+                               util::current_field_name(*this));
+        return false;
+      }
+    });
+}
+
+bool json_reader_base::value(std::u16string&) {
+  err_ = format_to_error(sec::runtime_error,
+                         "{}::{}: u16string support not implemented yet",
+                         class_name, __func__);
+  return false;
+}
+
+bool json_reader_base::value(std::u32string&) {
+  err_ = format_to_error(sec::runtime_error,
+                         "{}::{}: u32string support not implemented yet",
+                         class_name, __func__);
+  return false;
+}
+
+bool json_reader_base::value(byte_span) {
+  err_ = format_to_error(sec::runtime_error,
+                         "{}::{}: byte span support not implemented yet",
+                         class_name, __func__);
+  return false;
+}
+
+bool json_reader::value(strong_actor_ptr& ptr) {
+  if (context_ != nullptr) {
+    detail::default_actor_handle_codec codec{*context_};
+    return codec.load(*this, ptr);
+  }
+  emplace_error(sec::no_context);
+  return false;
+}
+
+bool json_reader_v2::value(strong_actor_ptr& ptr) {
+  if (codec_ != nullptr)
+    return codec_->load(*this, ptr);
+  emplace_error(sec::no_actor_handle_codec);
+  return false;
 }
 
 } // namespace caf

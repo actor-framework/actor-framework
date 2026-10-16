@@ -283,6 +283,33 @@ SCENARIO("type ID lists are serializable") {
         check_eq(xs, ys);
       }
     }
+    WHEN("configuring a JSON writer v2 to use type IDs") {
+      json_writer_v2 sink{
+        inspector_config{}.encoding(object_type_encoding::type_id)};
+      check(sink.value(xs));
+      THEN("the JSON still contains type names") {
+        auto json = sink.str();
+        check(json.find("int32_t") != std::string::npos);
+        check(json.find("string") != std::string::npos);
+        check(json.find("double") != std::string::npos);
+      }
+      AND_THEN("a JSON reader v2 also ignores the encoding flag") {
+        auto config
+          = inspector_config{}.encoding(object_type_encoding::type_id);
+        json_reader_v2 source{config};
+        type_id_list ys = make_type_id_list();
+        check(source.load(sink.str()));
+        check(source.value(ys));
+        check_eq(xs, ys);
+      }
+      AND_THEN("a JSON reader without the encoding flag reproduces the list") {
+        json_reader source;
+        type_id_list ys = make_type_id_list();
+        check(source.load(sink.str()));
+        check(source.value(ys));
+        check_eq(xs, ys);
+      }
+    }
   }
   GIVEN("an empty type ID list") {
     auto xs = make_type_id_list();

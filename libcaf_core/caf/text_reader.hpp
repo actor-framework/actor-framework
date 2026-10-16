@@ -17,10 +17,13 @@ public:
 
   /// Resets the reader and loads a sequence of bytes to deserialize from.
   /// Usually interprets the bytes as UTF-8 encoded text.
-  virtual bool load_bytes(const_byte_span bytes) = 0;
+  [[nodiscard]] virtual bool load_bytes(const_byte_span bytes) = 0;
 
   /// Resets the reader and loads a string to deserialize from.
-  virtual bool load(std::string_view text) = 0;
+  /// @warning The reader may keep pointers into @p text. Hence, the buffer
+  ///          pointed to by the string view must remain valid until either
+  ///          destroying this reader or calling `reset`.
+  [[nodiscard]] virtual bool load(std::string_view text) = 0;
 
   /// Reverts the state of the reader back to where it was after calling
   /// `load_bytes`.
