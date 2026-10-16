@@ -175,7 +175,7 @@ private:
   /// Buffers the generated JSON text output.
   std::vector<char> buf_;
 
-  /// Maintains the state of the JSON writer while travesing the JSON structure.
+  /// Maintains the state of the JSON writer while traversing the JSON nodes.
   std::vector<internal::json_writer_stack_entry> stack_;
 
   /// Configuration flags for the JSON writer.
