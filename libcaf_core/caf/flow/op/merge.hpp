@@ -193,6 +193,7 @@ public:
   }
 
   void request(size_t n) override {
+    CAF_ASSERT(n > 0);
     if (!out_)
       return;
     if (buffered_ == 0)

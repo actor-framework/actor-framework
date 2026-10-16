@@ -40,6 +40,7 @@ public:
     virtual void cancel() = 0;
 
     /// Signals demand for `n` more items.
+    /// @pre `n > 0`
     virtual void request(size_t n) = 0;
   };
 
@@ -137,10 +138,12 @@ public:
     }
   }
 
-  /// Signals demand for @p n more items.
+  /// Signals demand for @p n more items. Passing `0` is a no-op, i.e., it adds
+  /// no demand and has no observable side effects.
   /// @pre `valid()`
   void request(size_t n) {
-    pimpl_->request(n);
+    if (n > 0)
+      pimpl_->request(n);
   }
 
   // -- properties -------------------------------------------------------------

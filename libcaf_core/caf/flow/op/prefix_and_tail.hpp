@@ -118,6 +118,7 @@ public:
 
   void request(size_t demand) override {
     // Only called by out_, never by sink_ (triggers on_sink_demand_change()).
+    CAF_ASSERT(demand > 0);
     prefix_demand_ += demand;
     if (sub_ && !requested_prefix_) {
       sub_.request(prefix_size_);

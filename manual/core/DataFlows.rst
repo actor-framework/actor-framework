@@ -33,6 +33,9 @@ and ``subscription``.
 ``subscription``
   Manages the flow of items between an observable and an observer. An observer
   calls ``request`` to ask for more items or ``dispose`` to stop receiving data.
+  An observable may only emit as many items as the observer has requested, and
+  calling ``request(0)`` is a no-op: it adds no demand and has no other
+  observable effect.
 
 When working with data flows, these interfaces usually remain hidden and
 applications leverage high-level *operators* that either generate or transform
