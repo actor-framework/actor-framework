@@ -477,6 +477,35 @@ TEST("json baselines") {
   }
 }
 
+SCENARIO("JSON readers have builtin support for vector<bool>") {
+  GIVEN("a JSON reader") {
+    json_reader reader;
+    WHEN("loading a JSON array of booleans") {
+      require(reader.load("[true, false]"));
+      THEN("calling value() with a vector deserializes the JSON array") {
+        std::vector<bool> result;
+        require(reader.value(result));
+        require_eq(result.size(), 2u);
+        check_eq(result[0], true);
+        check_eq(result[1], false);
+      }
+    }
+  }
+  GIVEN("a JSON reader v2") {
+    json_reader_v2 reader{inspector_config{}};
+    WHEN("loading a JSON array of booleans") {
+      require(reader.load("[true, false]"));
+      THEN("calling value() with a vector deserializes the JSON array") {
+        std::vector<bool> result;
+        require(reader.value(result));
+        require_eq(result.size(), 2u);
+        check_eq(result[0], true);
+        check_eq(result[1], false);
+      }
+    }
+  }
+}
+
 SCENARIO("mappers enable custom type names in JSON input") {
   GIVEN("a custom mapper") {
     class custom_mapper : public type_id_mapper {

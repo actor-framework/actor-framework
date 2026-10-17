@@ -398,9 +398,11 @@ using namespace caf;
 
 namespace {
 
-using deserializer_ptr = std::variant<
-  std::shared_ptr<binary_deserializer>, std::shared_ptr<binary_deserializer_v2>,
-  std::shared_ptr<json_reader>, std::shared_ptr<config_value_reader>>;
+using deserializer_ptr
+  = std::variant<std::shared_ptr<binary_deserializer>,
+                 std::shared_ptr<binary_deserializer_v2>,
+                 std::shared_ptr<json_reader>, std::shared_ptr<json_reader_v2>,
+                 std::shared_ptr<config_value_reader>>;
 
 struct byte_writer_wrapper {
   virtual ~byte_writer_wrapper() noexcept {
@@ -491,15 +493,38 @@ struct binary_deserializer_v2_wrapper : byte_reader_wrapper {
 };
 
 struct json_writer_wrapper {
-  detail::default_actor_handle_codec codec;
+  actor_system* system;
   json_writer sink;
 
-  explicit json_writer_wrapper(actor_system& sys) : codec(sys), sink(&codec) {
+  explicit json_writer_wrapper(actor_system& sys) : system(&sys), sink(sys) {
     // nop
   }
 
   deserializer_ptr make_deserializer() {
-    auto reader = std::make_shared<json_reader>(&codec);
+    auto reader = std::make_shared<json_reader>(*system);
+    if (!reader->load(sink.str())) {
+      test::runnable::current().fail("failed to load JSON: {}",
+                                     reader->get_error());
+    }
+    return reader;
+  }
+};
+
+struct json_writer_v2_wrapper {
+  detail::default_actor_handle_codec codec;
+  inspector_config config;
+  json_writer_v2 sink;
+
+  explicit json_writer_v2_wrapper(actor_system& sys)
+    : codec(sys),
+      config(inspector_config{}.codec(&codec).encoding(
+        object_type_encoding::type_id)),
+      sink(config) {
+    // nop
+  }
+
+  deserializer_ptr make_deserializer() {
+    auto reader = std::make_shared<json_reader_v2>(config);
     if (!reader->load(sink.str())) {
       test::runnable::current().fail("failed to load JSON: {}",
                                      reader->get_error());
@@ -526,6 +551,7 @@ using serializer_wrapper
   = std::variant<std::shared_ptr<binary_serializer_wrapper>,
                  std::shared_ptr<binary_serializer_v2_wrapper>,
                  std::shared_ptr<json_writer_wrapper>,
+                 std::shared_ptr<json_writer_v2_wrapper>,
                  std::shared_ptr<config_value_writer_wrapper>>;
 
 struct fixture : caf::test::fixture::deterministic {
@@ -538,6 +564,9 @@ struct fixture : caf::test::fixture::deterministic {
     }
     if (name == "json_writer") {
       return std::make_shared<json_writer_wrapper>(sys);
+    }
+    if (name == "json_writer_v2") {
+      return std::make_shared<json_writer_v2_wrapper>(sys);
     }
     if (name == "config_value_writer") {
       return std::make_shared<config_value_writer_wrapper>(sys);
@@ -872,16 +901,14 @@ OUTLINE("serializing and then deserializing primitive values") {
     {"carray", "-42, 1, 9, 30"},
   };
   constexpr std::string_view serializers[] = {
-    "binary_serializer",
-    "binary_serializer_v2",
-    "json_writer",
-    "config_value_writer",
+    "binary_serializer", "binary_serializer_v2", "json_writer",
+    "json_writer_v2",    "config_value_writer",
   };
   if (auto examples = make_examples_setter()) {
     for (auto serializer : serializers) {
       for (auto [type, value] : tbl) {
         if (type == "u16str" || type == "u32str") {
-          if (serializer == "json_writer"
+          if (serializer == "json_writer" || serializer == "json_writer_v2"
               || serializer == "config_value_writer") {
             continue;
           }
@@ -928,6 +955,7 @@ OUTLINE("serializing and then deserializing the 'nasty' type") {
     | binary_serializer    |
     | binary_serializer_v2 |
     | json_writer          |
+    | json_writer_v2       |
     | config_value_writer  |
   )_";
 }
@@ -969,6 +997,7 @@ OUTLINE("serializing a type that initializes members to a non-empty state") {
     | binary_serializer    |
     | binary_serializer_v2 |
     | json_writer          |
+    | json_writer_v2       |
     | config_value_writer  |
   )_";
 }
@@ -994,6 +1023,7 @@ OUTLINE("serializing and then deserializing an empty message") {
     | binary_serializer    |
     | binary_serializer_v2 |
     | json_writer          |
+    | json_writer_v2       |
     | config_value_writer  |
   )_";
 }
@@ -1023,6 +1053,7 @@ OUTLINE("serializing and then deserializing a non-empty message") {
     | binary_serializer    |
     | binary_serializer_v2 |
     | json_writer          |
+    | json_writer_v2       |
     | config_value_writer  |
   )_";
 }
@@ -1075,6 +1106,7 @@ OUTLINE("serializing and then deserializing errors") {
     | binary_serializer    |
     | binary_serializer_v2 |
     | json_writer          |
+    | json_writer_v2       |
     | config_value_writer  |
   )_";
 }
@@ -1283,15 +1315,15 @@ SCENARIO("custom type ID mapper is respected for caf::message serialization") {
       }
     };
     alias_mapper mapper;
-    auto wrapper = json_writer_wrapper{sys};
-    wrapper.sink.mapper(&mapper);
+    json_writer sink;
+    sink.mapper(&mapper);
     WHEN("serializing a message containing a weekday and an int32_t") {
       auto original = make_message(weekday::tuesday, int32_t{42});
-      require(wrapper.sink.apply(original));
+      require(sink.apply(original));
       THEN("deserializing with the same mapper produces the original message") {
-        auto source = json_reader{&wrapper.codec};
+        json_reader source{sys};
         source.mapper(&mapper);
-        require(source.load(wrapper.sink.str()));
+        require(source.load(sink.str()));
         auto copy = message{};
         require(source.apply(copy));
         require(copy.match_elements<weekday, int32_t>());
@@ -1299,8 +1331,8 @@ SCENARIO("custom type ID mapper is respected for caf::message serialization") {
       }
       AND_THEN(
         "deserializing without the mapper fails due to the unknown alias") {
-        auto source = json_reader{&wrapper.codec};
-        require(source.load(wrapper.sink.str()));
+        json_reader source;
+        require(source.load(sink.str()));
         auto copy = message{};
         check(!source.apply(copy));
       }

@@ -4,62 +4,58 @@
 
 #pragma once
 
-#include "caf/caf_deprecated.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/json.hpp"
 #include "caf/fwd.hpp"
-#include "caf/load_inspector_base.hpp"
+#include "caf/inspector_config.hpp"
 #include "caf/text_reader.hpp"
+#include "caf/type_id.hpp"
 
-#include <cstddef>
+#include <iosfwd>
+#include <memory_resource>
+#include <span>
+#include <string>
+#include <string_view>
+
+namespace caf::internal {
+
+class json_reader_util;
+class json_reader_stack;
+
+} // namespace caf::internal
 
 namespace caf {
 
-/// Deserializes an inspectable object from a JSON-formatted string.
-class CAF_CORE_EXPORT json_reader final
-  : public load_inspector_base<json_reader, text_reader> {
+/// Base class for JSON readers.
+class CAF_CORE_EXPORT json_reader_base : public text_reader {
 public:
-  using super = load_inspector_base<json_reader, text_reader>;
+  friend class json_reader;
 
-  // -- constructors, destructors, and assignment operators --------------------
+  friend class json_reader_v2;
 
-  explicit json_reader(caf::actor_handle_codec* codec = nullptr);
+  friend class internal::json_reader_util;
 
-  json_reader(const json_reader&) = delete;
+  // -- member types -----------------------------------------------------------
 
-  json_reader& operator=(const json_reader&) = delete;
+  using super = text_reader;
 
-  ~json_reader() noexcept override;
+  json_reader_base(const json_reader_base&) = delete;
 
-  // -- properties -------------------------------------------------------------
+  json_reader_base& operator=(const json_reader_base&) = delete;
 
-  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
-    return impl_->field_type_suffix();
+  ~json_reader_base() override;
+
+  /// Returns the type ID mapper used by the writer.
+  const type_id_mapper* mapper() const noexcept {
+    return mapper_;
   }
 
-  void field_type_suffix(std::string_view suffix) noexcept {
-    impl_->field_type_suffix(suffix);
-  }
-
-  /// Returns the type ID mapper used by the reader.
-  [[nodiscard]] const type_id_mapper* mapper() const noexcept;
-
-  /// Changes the type ID mapper for the reader.
+  /// Changes the type ID mapper for the writer.
   void mapper(const type_id_mapper* ptr) noexcept;
 
-  /// Parses @p json_text into an internal representation. After loading the
-  /// JSON input, the reader is ready for attempting to deserialize inspectable
-  /// objects.
-  /// @warning The internal data structure keeps pointers into @p json_text.
-  ///          Hence, the buffer pointed to by the string view must remain valid
-  ///          until either destroying this reader or calling `reset`.
-  /// @note Implicitly calls `reset`.
-  bool load(std::string_view json_text) {
-    return impl_->load(json_text);
-  }
+  bool load(std::string_view json_text) override;
 
-  bool load_bytes(const_byte_span bytes) {
-    return impl_->load_bytes(bytes);
-  }
+  bool load_bytes(const_byte_span bytes) override;
 
   /// Reads the input stream @p input and parses the content into an internal
   /// representation. After loading the JSON input, the reader is ready for
@@ -73,42 +69,160 @@ public:
   /// @note Implicitly calls `reset`.
   bool load_file(const char* path);
 
-  /// @copydoc load_file
-  bool load_file(const std::string& path);
-
-  /// Reverts the state of the reader back to where it was after calling `load`.
-  /// @post The reader is ready for attempting to deserialize another
-  ///       inspectable object.
-  void revert() {
-    impl_->revert();
+  /// Parses the content of the file under the given @p path. After loading the
+  /// content of the JSON file, the reader is ready for attempting to
+  /// deserialize inspectable objects.
+  /// @note Implicitly calls `reset`.
+  bool load_file(const std::string& path) {
+    return load_file(path.c_str());
   }
 
-  /// Removes any loaded JSON data and reclaims memory resources.
-  void reset() {
-    impl_->reset();
-  }
+  void revert() override;
 
-  bool fetch_next_object_name(std::string_view& type_name) {
-    return impl_->fetch_next_object_name(type_name);
-  }
+  void reset() override;
 
-  bool next_object_name_matches(std::string_view type_name) {
-    return impl_->next_object_name_matches(type_name);
-  }
+  std::string_view field_type_suffix() const noexcept override;
 
-  bool assert_next_object_name(std::string_view type_name) {
-    return impl_->assert_next_object_name(type_name);
-  }
+  void field_type_suffix(std::string_view suffix) noexcept override;
 
-  bool has_human_readable_format() const noexcept {
-    return true;
-  }
+  void set_error(error stop_reason) override;
+
+  error& get_error() noexcept override;
+
+  bool has_human_readable_format() const noexcept override;
+
+  type_id_t to_type_id(std::string_view name) const override;
+
+  bool fetch_next_object_type(type_id_t& type) override;
+
+  bool fetch_next_object_name(std::string_view& type_name) override;
+
+  bool begin_object(type_id_t type, std::string_view name) override;
+
+  bool end_object() override;
+
+  bool begin_field(std::string_view name) override;
+
+  bool begin_field(std::string_view name, bool& is_present) override;
+
+  bool begin_field(std::string_view name, std::span<const type_id_t> types,
+                   size_t& index) override;
+
+  bool begin_field(std::string_view name, bool& is_present,
+                   std::span<const type_id_t> types, size_t& index) override;
+
+  bool end_field() override;
+
+  bool begin_tuple(size_t size) override;
+
+  bool end_tuple() override;
+
+  bool begin_key_value_pair() override;
+
+  bool end_key_value_pair() override;
+
+  bool begin_sequence(size_t& size) override;
+
+  bool end_sequence() override;
+
+  bool begin_associative_array(size_t& size) override;
+
+  bool end_associative_array() override;
+
+  using super::value;
+
+  bool value(std::byte& x) override;
+
+  bool value(bool& x) override;
+
+  bool value(int8_t& x) override;
+
+  bool value(uint8_t& x) override;
+
+  bool value(int16_t& x) override;
+
+  bool value(uint16_t& x) override;
+
+  bool value(int32_t& x) override;
+
+  bool value(uint32_t& x) override;
+
+  bool value(int64_t& x) override;
+
+  bool value(uint64_t& x) override;
+
+  bool value(float& x) override;
+
+  bool value(double& x) override;
+
+  bool value(long double& x) override;
+
+  bool value(std::string& x) override;
+
+  bool value(std::u16string& x) override;
+
+  bool value(std::u32string& x) override;
+
+  bool value(byte_span x) override;
+
+protected:
+  json_reader_base();
+
+  explicit json_reader_base(const type_id_mapper& mapper);
 
 private:
-  static constexpr size_t impl_storage_size = 196;
+  using util = internal::json_reader_util;
 
-  /// Storage for the implementation object.
-  alignas(std::max_align_t) std::byte impl_storage_[impl_storage_size];
+  std::pmr::monotonic_buffer_resource buf_;
+
+  internal::json_reader_stack* st_ = nullptr;
+
+  detail::json::value* root_ = nullptr;
+
+  std::string_view field_type_suffix_ = "-type";
+
+  const type_id_mapper* mapper_ = &get_default_type_id_mapper();
+
+  error err_;
+};
+
+/// Deserializes an inspectable object from a JSON-formatted string.
+class CAF_CORE_EXPORT json_reader final : public json_reader_base {
+public:
+  using super = json_reader_base;
+
+  json_reader() = default;
+
+  explicit json_reader(actor_system& sys) : context_(&sys) {
+    // nop
+  }
+
+  using super::value;
+
+  bool value(strong_actor_ptr& ptr) override;
+
+private:
+  actor_system* context_ = nullptr;
+};
+
+/// Deserializes an inspectable object from a JSON-formatted string.
+class CAF_CORE_EXPORT json_reader_v2 final : public json_reader_base {
+public:
+  using super = json_reader_base;
+
+  json_reader_v2() = default;
+
+  explicit json_reader_v2(const inspector_config& config)
+    : json_reader_base(config.mapper()), codec_(config.codec()) {
+    // nop
+  }
+
+  using super::value;
+
+  bool value(strong_actor_ptr& ptr) override;
+
+private:
+  actor_handle_codec* codec_ = nullptr;
 };
 
 } // namespace caf
