@@ -11,7 +11,7 @@ Test Teardown       Stop Server And Clients
 
 *** Variables ***
 ${SERVER_HOST}      localhost
-${SERVER_PORT}      55520
+${SERVER_PORT}      11122
 ${SERVER_PATH}      /path/to/the/server
 ${CLIENT_PATH}      /path/to/the/client
 

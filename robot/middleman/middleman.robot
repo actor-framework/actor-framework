@@ -10,48 +10,48 @@ Library           String
 
 *** Variables ***
 # Remote Actor.
-${RA_SERVER_PORT}    55508
+${RA_SERVER_PORT}    11108
 ${RA_BASELINE}=      SEPARATOR=
 ...                  cell value 1: 42\n
 ...                  cell value 2: 49\n
 ...                  cell down\n
 
 # Remote Spawn.
-${RS_SERVER_PORT}    55509
+${RS_SERVER_PORT}    11109
 ${RS_BASELINE}=      SEPARATOR=
 ...                  cell value 1: 7\n
 ...                  cell value 2: 14\n
 ...                  cell down\n
 
 # Remote Lookup.
-${RL_SERVER_PORT}    55510
+${RL_SERVER_PORT}    11110
 ${RL_BASELINE}=      SEPARATOR=
 ...                  cell value 1: 23\n
 ...                  cell value 2: 30\n
 ...                  cell down\n
 
 # Unpublish.
-${UN_SERVER_PORT}    55511
+${UN_SERVER_PORT}    11111
 ${UN_BASELINE}=      SEPARATOR=
 ...                  unpublish success\n
 
 # Monitor Node.
-${MN_SERVER_PORT}    55512
+${MN_SERVER_PORT}    11112
 ${MN_BASELINE}=      SEPARATOR=
 ...                  server down\n
 
 # Deserialization Error.
-${DE_SERVER_PORT}    55513
+${DE_SERVER_PORT}    11113
 ${DE_BASELINE}=      SEPARATOR=
 ...                  error: malformed_message\n
 
 # Prometheus.
-${PR_SERVER_PORT}    55514
-${PR_HTTP_URL}       http://localhost:55514/metrics
-${PR_HTTP_BAD_URL}   http://localhost:55514/foobar
+${PR_SERVER_PORT}    11114
+${PR_HTTP_URL}       http://localhost:11114/metrics
+${PR_HTTP_BAD_URL}   http://localhost:11114/foobar
 
 # Ping-Pong.
-${PP_SERVER_PORT}    55515
+${PP_SERVER_PORT}    11115
 ${PP_BASELINE}=      SEPARATOR=
 ...                  got pong\n
 ...                  pong down\n
