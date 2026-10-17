@@ -9,20 +9,20 @@ Suite Setup       Start Servers
 Suite Teardown    Stop Servers
 
 *** Variables ***
-${HTTP_URL}             http://localhost:55501
-${HTTPS_URL}            https://localhost:55502
+${HTTP_URL}             http://localhost:11101
+${HTTPS_URL}            https://localhost:11102
 ${BINARY_PATH}          /path/to/the/server
 ${SSL_PATH}             /path/to/the/pem/files
 ${MAX_REQUEST_SIZE}     2048
 
 # Prometheus variables
-${PR_SERVER_PORT}       55517
-${PR_HTTP_URL}          http://localhost:55517/metrics
-${PR_HTTP_BAD_URL}      http://localhost:55517/foobar
+${PR_SERVER_PORT}       11117
+${PR_HTTP_URL}          http://localhost:11117/metrics
+${PR_HTTP_BAD_URL}      http://localhost:11117/foobar
 
-${PR_SSL_SERVER_PORT}       55518
-${PR_HTTPS_URL}          https://localhost:55518/metrics
-${PR_HTTPS_BAD_URL}      https://localhost:55518/foobar
+${PR_SSL_SERVER_PORT}       11118
+${PR_HTTPS_URL}          https://localhost:11118/metrics
+${PR_HTTPS_BAD_URL}      https://localhost:11118/foobar
 
 *** Test Cases ***
 HTTP Test Add Key Value Pair
@@ -80,8 +80,8 @@ HTTPS Prometheus Endpoint
 
 *** Keywords ***
 Start Servers
-    Start Process  ${BINARY_PATH}  -p  55501  -r  ${MAX_REQUEST_SIZE}  --caf.net.prometheus-http.port  ${PR_SERVER_PORT}
-    Start Process  ${BINARY_PATH}  -p  55502  -r  ${MAX_REQUEST_SIZE}  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
+    Start Process  ${BINARY_PATH}  -p  11101  -r  ${MAX_REQUEST_SIZE}  --caf.net.prometheus-http.port  ${PR_SERVER_PORT}
+    Start Process  ${BINARY_PATH}  -p  11102  -r  ${MAX_REQUEST_SIZE}  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     ...    --caf.net.prometheus-http.port  ${PR_SSL_SERVER_PORT}  --caf.net.prometheus-http.tls.key-file  ${SSL_PATH}/key.pem
     ...    --caf.net.prometheus-http.tls.cert-file  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable

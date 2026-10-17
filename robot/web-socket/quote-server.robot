@@ -9,10 +9,10 @@ Suite Setup       Start Servers
 Suite Teardown    Stop Servers
 
 *** Variables ***
-${HTTP_URL}       http://localhost:55505
-${HTTPS_URL}      https://localhost:55506
-${WS_URL}         ws://localhost:55505/ws/quotes/seneca
-${WSS_URL}        wss://localhost:55506/ws/quotes/seneca
+${HTTP_URL}       http://localhost:11105
+${HTTPS_URL}      https://localhost:11106
+${WS_URL}         ws://localhost:11105/ws/quotes/seneca
+${WSS_URL}        wss://localhost:11106/ws/quotes/seneca
 ${FRAME_COUNT}    ${10}
 ${BINARY_PATH}    /path/to/the/server
 ${SSL_PATH}       /path/to/the/pem/files
@@ -45,8 +45,8 @@ Test WebSocket Over SSL Server Quotes
 
 *** Keywords ***
 Start Servers
-    Start Process    ${BINARY_PATH}  -p  55505
-    Start Process    ${BINARY_PATH}  -p  55506  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
+    Start Process    ${BINARY_PATH}  -p  11105
+    Start Process    ${BINARY_PATH}  -p  11106  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
 

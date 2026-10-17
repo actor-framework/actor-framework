@@ -9,10 +9,10 @@ Suite Setup       Start Servers
 Suite Teardown    Stop Servers
 
 *** Variables ***
-${HTTP_URL}              http://localhost:55503
-${HTTPS_URL}             https://localhost:55504
-${WS_URL}                ws://localhost:55503
-${WSS_URL}               wss://localhost:55504
+${HTTP_URL}              http://localhost:11103
+${HTTPS_URL}             https://localhost:11104
+${WS_URL}                ws://localhost:11103
+${WSS_URL}               wss://localhost:11104
 ${FRAME_COUNT}           ${10}
 ${BINARY_PATH}           /path/to/the/server
 ${SSL_PATH}              /path/to/the/pem/files
@@ -46,8 +46,8 @@ Test WebSocket Single Close Frame On Client Initiated Close
 
 *** Keywords ***
 Start Servers
-    Start Process    ${BINARY_PATH}  -p  55503
-    Start Process    ${BINARY_PATH}  -p  55504  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
+    Start Process    ${BINARY_PATH}  -p  11103
+    Start Process    ${BINARY_PATH}  -p  11104  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
 

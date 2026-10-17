@@ -7,7 +7,7 @@ Library           OperatingSystem
 
 
 *** Variables ***
-${SERVER_PORT}    55507
+${SERVER_PORT}    11107
 ${BASELINE}=      SEPARATOR=
 ...               point(1, 1)\n
 ...               point(2, 4)\n
