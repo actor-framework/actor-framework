@@ -49,7 +49,6 @@ public:
   }
 
   void request(size_t n) override {
-    CAF_ASSERT(n > 0);
     if (demand_ > 0) {
       demand_ += n;
       return;

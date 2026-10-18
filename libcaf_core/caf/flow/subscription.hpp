@@ -140,6 +140,8 @@ public:
 
   /// Signals demand for @p n more items. Passing `0` is a no-op, i.e., it adds
   /// no demand and has no observable side effects.
+  /// Demand does not saturate. The caller must ensure that outstanding demand,
+  /// including pending requests, does not overflow `size_t`.
   /// @pre `valid()`
   void request(size_t n) {
     if (n > 0)
