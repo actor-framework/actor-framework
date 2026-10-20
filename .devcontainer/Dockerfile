@@ -22,7 +22,9 @@ COPY robot/dependencies.txt /tmp/robot-dependencies.txt
 RUN python3 -m pip install -r /tmp/robot-dependencies.txt --break-system-packages
 
 # Install clang-format 22 (same version as used in CI).
-RUN python3 -m pip install --break-system-package clang-format==22.1.5
+RUN python3 -m pip install --break-system-package \
+      clang-format==22.1.5 \
+      clang-tidy==22.1.8
 
 # Have CMake use Ninja as the default generator
 ENV CMAKE_GENERATOR=Ninja
