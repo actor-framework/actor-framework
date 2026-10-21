@@ -219,6 +219,7 @@ caf_add_component(
     caf/detail/ring_buffer.test.cpp
     caf/detail/set_thread_name.cpp
     caf/detail/stream_bridge.cpp
+    caf/detail/stream_bridge.test.cpp
     caf/detail/stringification_inspector.cpp
     caf/detail/stringification_inspector.test.cpp
     caf/detail/sync_request_bouncer.cpp
@@ -423,6 +424,10 @@ caf_add_component(
 
 # Additional log component for (potentially critical) system-wide events.
 caf_add_log_component(system)
+
+if(CAF_ENABLE_TESTING)
+  target_sources(caf-core-test PRIVATE caf/detail/stream_bridge.cpp)
+endif()
 
 # Bandaid: currently produces an internal compiler error on MSVC. Disable until
 # further investigation.
