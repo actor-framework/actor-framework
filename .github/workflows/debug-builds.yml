@@ -7,6 +7,8 @@ on:
       - '**/*.hpp'
       - '**/CMakeLists.txt'
       - 'cmake/**'
+      - 'robot/**/*.robot'
+      - 'scripts/websocket-close-frame-test.py'
       - '.github/workflows/**'
   push:
     branches:

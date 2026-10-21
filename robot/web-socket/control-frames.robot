@@ -6,10 +6,10 @@ Library           RequestsLibrary
 Library           WebSocketClient
 
 *** Variables ***
-${HTTP_URL}       http://localhost:55520
-${HTTPS_URL}      https://localhost:55521
-${WS_URL}         ws://localhost:55520
-${WSS_URL}        wss://localhost:55521
+${HTTP_URL}       http://localhost:11120
+${HTTPS_URL}      https://localhost:11121
+${WS_URL}         ws://localhost:11120
+${WSS_URL}        wss://localhost:11121
 ${FRAME_COUNT}    ${10}
 ${BINARY_PATH}    /path/to/the/server
 ${SSL_PATH}       /path/to/the/pem/files
@@ -45,12 +45,12 @@ Test WebSocket Close Frame On SSL Server Shutdown
 
 *** Keywords ***
 Start HTTP Server
-    ${result}=    Start Process    ${BINARY_PATH}  -p  55520
+    ${result}=    Start Process    ${BINARY_PATH}  -p  11120
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTP Server Is Reachable
     RETURN    ${result}
 
 Start HTTPS Server
-    ${result}=    Start Process    ${BINARY_PATH}  -p  55521  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
+    ${result}=    Start Process    ${BINARY_PATH}  -p  11121  -k  ${SSL_PATH}/key.pem  -c  ${SSL_PATH}/cert.pem
     Wait Until Keyword Succeeds    5s    125ms    Check If HTTPS Server Is Reachable
     RETURN    ${result}
 

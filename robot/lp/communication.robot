@@ -11,7 +11,7 @@ Test Teardown       Terminate All Processes
 
 *** Variables ***
 ${SERVER_HOST}      localhost
-${SERVER_PORT}      55519
+${SERVER_PORT}      11119
 ${SERVER_PATH}      /path/to/the/server
 ${CLIENT_PATH}      /path/to/the/client
 

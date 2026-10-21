@@ -9,6 +9,7 @@ on:
       - '**/*.txt'
       - '**/CMakeLists.txt'
       - 'cmake/**'
+      - 'robot/**'
       - '.github/workflows/**'
   push:
     branches:
