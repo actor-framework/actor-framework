@@ -49,8 +49,8 @@ struct buffer_interval_trait {
 
 /// The subscription for the `buffer` operator. Requests items only while the
 /// observer has demand and buffers at most one batch. Whenever a terminal
-/// event arrives while a partial batch is buffered and the observer has no
-/// demand, the event is deferred until the observer requests again.
+/// event arrives while items are buffered and the observer has no demand, the
+/// event is deferred until the observer requests again.
 template <class Trait>
 class buffer_sub : public subscription::impl_base {
 public:
@@ -83,7 +83,7 @@ public:
   }
 
   bool running() const noexcept {
-    return state_ == state::running;
+    return state_ == state::running || state_ == state::awaiting_demand;
   }
 
   const error& err() const noexcept {
@@ -95,8 +95,8 @@ public:
   }
 
   bool can_emit() const noexcept {
-    return buf_.size() == max_buf_size_ || has_shut_down(state_)
-           || pending_flush_;
+    return (state_ == state::running && buf_.size() == max_buf_size_)
+           || state_ == state::awaiting_demand || has_shut_down(state_);
   }
 
   // -- callbacks for the parent -----------------------------------------------
@@ -159,7 +159,7 @@ public:
 
   void fwd_on_complete(buffer_emit_t) {
     control_sub_.release_later();
-    if (state_ == state::running)
+    if (running())
       err_ = make_error(sec::end_of_stream,
                         "buffer: unexpected end of the control stream");
     shutdown();
@@ -172,13 +172,16 @@ public:
   }
 
   void fwd_on_next(buffer_emit_t, select_token_type) {
+    if (!running())
+      return;
     if constexpr (Trait::skip_empty) {
       if (!buf_.empty())
         force_emit();
     } else {
       force_emit();
     }
-    control_sub_.request(1);
+    if (control_sub_)
+      control_sub_.request(1);
   }
 
   // -- implementation of subscription -----------------------------------------
@@ -225,16 +228,20 @@ private:
     value_sub_.cancel();
     control_sub_.cancel();
     switch (state_) {
+      case state::awaiting_demand:
       case state::running: {
         if (!buf_.empty()) {
           if (demand_ == 0) {
             state_ = err_.valid() ? state::aborted : state::completed;
             return;
           }
-          Trait f;
+          auto f = Trait{};
           out_.on_next(f(buf_));
           buf_.clear();
         }
+        // The observer may cancel its subscription from on_next.
+        if (!out_)
+          return;
         if (err_.empty())
           out_.on_complete();
         else
@@ -251,12 +258,15 @@ private:
     if (demand_ == 0 || !can_emit())
       return;
     if (running()) {
-      CAF_ASSERT(buf_.size() == max_buf_size_ || pending_flush_);
+      CAF_ASSERT(buf_.size() == max_buf_size_
+                 || state_ == state::awaiting_demand);
       do_emit();
       return;
     }
     if (!buf_.empty())
       do_emit();
+    if (!out_)
+      return;
     if (err_.empty())
       out_.on_complete();
     else
@@ -266,7 +276,7 @@ private:
 
   void force_emit() {
     if (demand_ == 0) {
-      pending_flush_ = true;
+      state_ = state::awaiting_demand;
       return;
     }
     do_emit();
@@ -275,16 +285,17 @@ private:
   void do_emit() {
     if (demand_ == 0)
       return;
-    Trait f;
+    if (state_ == state::awaiting_demand)
+      state_ = state::running;
+    auto f = Trait{};
     --demand_;
     out_.on_next(f(buf_));
     buf_.clear();
-    pending_flush_ = false;
     pull();
   }
 
   void pull() {
-    if (!running() || demand_ == 0 || !value_sub_ || pending_flush_)
+    if (state_ != state::running || demand_ == 0 || !value_sub_)
       return;
     auto reserved = buf_.size() + in_flight_;
     if (reserved >= max_buf_size_)
@@ -321,12 +332,9 @@ private:
   /// Items requested from the value source that have not arrived yet.
   size_t in_flight_ = 0;
 
-  /// Set when a forced flush finds no demand; the next `request` emits it
-  /// before pulling more.
-  bool pending_flush_ = false;
-
   /// Our current state.
   /// - running: alive and ready to emit batches.
+  /// - awaiting_demand: a forced batch is waiting for downstream demand.
   /// - completed: on_complete was called but some data is still buffered.
   /// - aborted: on_error was called but some data is still buffered.
   /// - disposed: inactive.

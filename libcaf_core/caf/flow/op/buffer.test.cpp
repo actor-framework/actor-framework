@@ -6,12 +6,15 @@
 
 #include "caf/test/fixture/deterministic.hpp"
 #include "caf/test/fixture/flow.hpp"
+#include "caf/test/outline.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/event_based_actor.hpp"
 #include "caf/flow/multicaster.hpp"
 #include "caf/log/test.hpp"
+
+#include <string>
 
 using namespace caf;
 using namespace std::literals;
@@ -372,115 +375,99 @@ SCENARIO("buffers emit final items after an on_complete event") {
   }
 }
 
-SCENARIO("buffers defer terminal events for items that arrive without demand") {
-  GIVEN("an initialized buffer operator with pending data and no demand") {
-    WHEN("calling on_complete(data)") {
-      THEN("the buffer withholds on_complete until the observer requests") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, make_observable().never<int>(),
-                           make_observable().never<int64_t>(),
-                           snk->as_observer());
-        run_flows();
-        uut->fwd_on_next(fwd_data, 1);
-        uut->fwd_on_next(fwd_data, 2);
-        check_eq(uut->pending(), 2u);
-        uut->fwd_on_complete(fwd_data);
-        check(!uut->running());
-        check(uut->can_emit());
-        run_flows();
-        check(snk->subscribed());
-        check(snk->buf.empty());
-        snk->request(1);
-        run_flows();
-        check_eq(snk->buf, std::vector{cow_vector<int>({1, 2})});
-        check(snk->completed());
-        check(uut->disposed());
-        check(!uut->can_emit());
-      }
+OUTLINE("buffers deliver pending items before terminal events") {
+  GIVEN("a buffer in the <mode> case") {
+    auto mode = block_parameters<std::string>();
+    auto snk = make_passive_observer<cow_vector<int>>();
+    auto uut = raw_sub(3, make_observable().never<int>(),
+                       make_observable().never<int64_t>(), snk->as_observer());
+    auto expected = std::vector<cow_vector<int>>{};
+    auto pending = cow_vector<int>{};
+    if (mode == "partial") {
+      // An empty flush spends demand while the requested items are in flight.
+      snk->request(1);
+      uut->fwd_on_next(fwd_ctrl, 1);
+      uut->fwd_on_next(fwd_data, 1);
+      uut->fwd_on_next(fwd_data, 2);
+      expected.emplace_back();
+      pending = cow_vector<int>{1, 2};
+    } else if (mode == "forced_partial" || mode == "remaining_demand") {
+      snk->request(mode == "remaining_demand" ? 2 : 1);
+      uut->fwd_on_next(fwd_data, 1);
+      uut->fwd_on_next(fwd_ctrl, 1);
+      uut->fwd_on_next(fwd_data, 2);
+      if (mode == "forced_partial")
+        uut->fwd_on_next(fwd_ctrl, 2);
+      expected.emplace_back(cow_vector<int>{1});
+      pending = cow_vector<int>{2};
+    } else {
+      require_eq(mode, "forced_empty");
+      uut->fwd_on_next(fwd_ctrl, 1);
     }
-    WHEN("calling on_error(data)") {
-      THEN("the buffer withholds on_error until the observer requests") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, make_observable().never<int>(),
-                           make_observable().never<int64_t>(),
-                           snk->as_observer());
-        run_flows();
-        uut->fwd_on_next(fwd_data, 1);
-        uut->fwd_on_next(fwd_data, 2);
-        check_eq(uut->pending(), 2u);
-        uut->fwd_on_error(fwd_data, sec::runtime_error);
-        check(!uut->running());
-        check(uut->can_emit());
-        run_flows();
-        check(snk->subscribed());
-        check(snk->buf.empty());
-        snk->request(1);
-        run_flows();
-        check_eq(snk->buf, std::vector{cow_vector<int>({1, 2})});
-        check(snk->aborted());
-        check_eq(snk->err, sec::runtime_error);
-        check(uut->disposed());
-        check(!uut->can_emit());
+    check_eq(uut->pending(), pending.size());
+    check_eq(snk->buf, expected);
+    WHEN("the <source> source sends <event>") {
+      auto [source, event] = block_parameters<std::string, std::string>();
+      auto expected_error = sec::none;
+      if (event == "error")
+        expected_error = sec::runtime_error;
+      else if (source == "control")
+        expected_error = sec::end_of_stream;
+      if (source == "data") {
+        if (event == "complete")
+          uut->fwd_on_complete(fwd_data);
+        else
+          uut->fwd_on_error(fwd_data, sec::runtime_error);
+      } else {
+        if (event == "complete")
+          uut->fwd_on_complete(fwd_ctrl);
+        else
+          uut->fwd_on_error(fwd_ctrl, sec::runtime_error);
       }
-    }
-    WHEN("calling on_complete(control)") {
-      THEN("the buffer withholds the error until the observer requests") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, make_observable().never<int>(),
-                           make_observable().never<int64_t>(),
-                           snk->as_observer());
-        run_flows();
-        uut->fwd_on_next(fwd_data, 1);
-        uut->fwd_on_next(fwd_data, 2);
-        check_eq(uut->pending(), 2u);
-        uut->fwd_on_complete(fwd_ctrl);
+      THEN("buffered items precede the terminal event and late tokens are "
+           "ignored") {
         check(!uut->running());
-        check(uut->can_emit());
-        run_flows();
-        check(snk->subscribed());
-        check(snk->buf.empty());
-        snk->request(1);
-        run_flows();
-        check_eq(snk->buf, std::vector{cow_vector<int>({1, 2})});
-        check(snk->aborted());
-        check_eq(snk->err, sec::end_of_stream);
+        uut->fwd_on_next(fwd_ctrl, 99);
+        if (!pending.empty() && mode != "remaining_demand") {
+          check(uut->can_emit());
+          check(snk->subscribed());
+          check_eq(snk->buf, expected);
+          snk->request(1);
+          run_flows();
+        }
+        if (!pending.empty())
+          expected.emplace_back(pending);
+        check_eq(snk->buf, expected);
+        if (expected_error == sec::none) {
+          check(snk->completed());
+        } else {
+          check(snk->aborted());
+          check_eq(snk->err, expected_error);
+        }
         check(uut->disposed());
         check(!uut->can_emit());
       }
     }
   }
-}
-
-SCENARIO("buffers emit terminal events without demand when idle") {
-  GIVEN("an initialized buffer operator without pending data and no demand") {
-    WHEN("calling on_complete(data)") {
-      THEN("the buffer forwards on_complete immediately") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, make_observable().never<int>(),
-                           make_observable().never<int64_t>(),
-                           snk->as_observer());
-        run_flows();
-        check_eq(uut->pending(), 0u);
-        uut->fwd_on_complete(fwd_data);
-        check(snk->completed());
-        check(snk->buf.empty());
-      }
-    }
-    WHEN("calling on_error(data)") {
-      THEN("the buffer forwards on_error immediately") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto uut = raw_sub(3, make_observable().never<int>(),
-                           make_observable().never<int64_t>(),
-                           snk->as_observer());
-        run_flows();
-        check_eq(uut->pending(), 0u);
-        uut->fwd_on_error(fwd_data, sec::runtime_error);
-        check(snk->aborted());
-        check_eq(snk->err, sec::runtime_error);
-        check(snk->buf.empty());
-      }
-    }
-  }
+  EXAMPLES = R"(
+    | mode             | source  | event    |
+    | partial          | data    | complete |
+    | partial          | data    | error    |
+    | partial          | control | complete |
+    | partial          | control | error    |
+    | forced_partial   | data    | complete |
+    | forced_partial   | data    | error    |
+    | forced_partial   | control | complete |
+    | forced_partial   | control | error    |
+    | forced_empty     | data    | complete |
+    | forced_empty     | data    | error    |
+    | forced_empty     | control | complete |
+    | forced_empty     | control | error    |
+    | remaining_demand | data    | complete |
+    | remaining_demand | data    | error    |
+    | remaining_demand | control | complete |
+    | remaining_demand | control | error    |
+  )";
 }
 
 SCENARIO("buffers pull items from the source only against demand") {
@@ -513,39 +500,21 @@ SCENARIO("buffers pull items from the source only against demand") {
       }
     }
   }
-}
-
-SCENARIO("buffers ship the final partial batch with the terminal event") {
-  GIVEN("a source that ends before it fills a batch") {
+  GIVEN("a finite source with fewer items than the batch size") {
     WHEN("the observer requests one batch") {
-      THEN("it receives the partial batch and on_complete in one go") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto inputs = std::vector<int>{1, 2};
-        make_observable().from_container(inputs).buffer(3).subscribe(
-          snk->as_observer());
+      THEN("the partial batch and completion arrive without another request") {
+        auto snk = make_passive_observer<cow_vector<int>>();
+        make_observable()
+          .from_container(std::vector{1, 2})
+          .buffer(3)
+          .subscribe(snk->as_observer());
         run_flows();
         check(snk->buf.empty());
-        check(!snk->completed());
+        check(snk->subscribed());
         snk->request(1);
         run_flows();
-        check_eq(snk->buf, std::vector{cow_vector<int>({1, 2})});
+        check_eq(snk->buf, std::vector{cow_vector<int>{1, 2}});
         check(snk->completed());
-      }
-    }
-    WHEN("the observer disposes instead of requesting") {
-      THEN("it receives on_error with sec::disposed") {
-        auto snk = flow::make_passive_observer<cow_vector<int>>();
-        auto pub = caf::flow::multicaster<int>{coordinator()};
-        auto sub = pub.as_observable().buffer(3).subscribe(snk->as_observer());
-        run_flows();
-        pub.push({1, 2});
-        pub.close();
-        run_flows();
-        check(snk->subscribed());
-        sub.dispose();
-        run_flows();
-        check(snk->aborted());
-        check_eq(snk->err, sec::disposed);
       }
     }
   }
@@ -572,7 +541,7 @@ SCENARIO("the interval overload spends demand on timer-forced batches") {
         dispatch_messages();
         auto snk = *snk_hdl;
         require(snk != nullptr);
-        snk->request(1);
+        snk->parent()->schedule_fn([snk] { snk->request(1); });
         dispatch_messages();
         pub.push({1, 2});
         run_flows();
@@ -589,10 +558,8 @@ SCENARIO("the interval overload spends demand on timer-forced batches") {
         advance_time(1s);
         dispatch_messages();
         check_eq(snk->buf.size(), 1u);
-        snk->request(1);
+        snk->parent()->schedule_fn([snk] { snk->request(1); });
         run_flows();
-        dispatch_messages();
-        advance_time(1s);
         dispatch_messages();
         check_eq(snk->buf.size(), 2u);
         check_eq(snk->buf.back(), cow_vector<int>({3}));
@@ -607,6 +574,143 @@ SCENARIO("the interval overload spends demand on timer-forced batches") {
       }
     }
   }
+}
+
+TEST("forced batches resume before pulling more items") {
+  using sub_type = caf::flow::op::buffer_sub<noskip_trait>;
+  auto snk = make_passive_observer<cow_vector<int>>();
+  auto input = make_counting_sub();
+  auto control = make_counting_sub();
+  auto uut = make_counted<sub_type>(coordinator(), 3, snk->as_observer());
+  uut->fwd_on_subscribe(fwd_data, caf::flow::subscription{input});
+  uut->fwd_on_subscribe(fwd_ctrl, caf::flow::subscription{control});
+  snk->on_subscribe(caf::flow::subscription{uut});
+  check_eq(input->demand, 0u);
+  SECTION("partial batches") {
+    // Spend demand on a partial batch, leaving two items in flight.
+    snk->request(1);
+    check_eq(input->demand, 3u);
+    uut->fwd_on_next(fwd_data, 1);
+    uut->fwd_on_next(fwd_ctrl, 1);
+    uut->fwd_on_next(fwd_data, 2);
+    uut->fwd_on_next(fwd_ctrl, 2);
+    check(uut->can_emit());
+    // Resume the forced batch without requesting more source items.
+    snk->request(1);
+    check_eq(input->demand, 3u);
+    run_flows();
+    check_eq(snk->buf, std::vector{cow_vector<int>{1}, cow_vector<int>{2}});
+    check(!uut->can_emit());
+    check_eq(input->demand, 3u);
+    // Account for the remaining in-flight item when filling the next batch.
+    snk->request(1);
+    check_eq(input->demand, 5u);
+    uut->fwd_on_next(fwd_data, 3);
+    uut->fwd_on_next(fwd_data, 4);
+    uut->fwd_on_next(fwd_data, 5);
+    check_eq(snk->buf.back(), cow_vector<int>({3, 4, 5}));
+  }
+  SECTION("empty batches leave a full batch in flight") {
+    snk->request(1);
+    check_eq(input->demand, 3u);
+    uut->fwd_on_next(fwd_ctrl, 1);
+    uut->fwd_on_next(fwd_ctrl, 2);
+    require(uut->can_emit());
+    snk->request(1);
+    check_eq(input->demand, 3u);
+    run_flows();
+    check_eq(snk->buf, std::vector{cow_vector<int>{}, cow_vector<int>{}});
+    check(!uut->can_emit());
+    // Both empty batches spent demand without consuming any source items.
+    uut->fwd_on_next(fwd_data, 1);
+    uut->fwd_on_next(fwd_data, 2);
+    uut->fwd_on_next(fwd_data, 3);
+    check_eq(uut->pending(), 3u);
+    check_eq(snk->buf.size(), 2u);
+    snk->request(1);
+    run_flows();
+    check_eq(snk->buf, std::vector{cow_vector<int>{}, cow_vector<int>{},
+                                   cow_vector<int>{1, 2, 3}});
+    check_eq(input->demand, 3u);
+  }
+  snk->unsubscribe();
+  run_flows();
+}
+
+TEST("cancellation stops pending and final batches") {
+  SECTION("a forced batch is pending") {
+    auto snk = make_passive_observer<cow_vector<int>>();
+    auto uut = raw_sub(3, make_observable().never<int>(),
+                       make_observable().never<int64_t>(), snk->as_observer());
+    // Exhaust demand, then receive and force items that were already in flight.
+    snk->request(1);
+    uut->fwd_on_next(fwd_ctrl, 1);
+    uut->fwd_on_next(fwd_data, 1);
+    uut->fwd_on_next(fwd_data, 2);
+    uut->fwd_on_next(fwd_ctrl, 2);
+    require_eq(uut->pending(), 2u);
+    require(uut->can_emit());
+    SECTION("the observer cancels a queued flush") {
+      auto before = pending_actions();
+      snk->request(1);
+      require_eq(pending_actions(), before + 1);
+      snk->unsubscribe();
+      run_flows();
+      check(snk->idle());
+    }
+    SECTION("external disposal overrides a deferred terminal event") {
+      uut->fwd_on_complete(fwd_data);
+      require(!uut->running());
+      require_eq(uut->pending(), 2u);
+      require(snk->subscribed());
+      uut->dispose();
+      run_flows();
+      check(snk->aborted());
+      check_eq(snk->err, sec::disposed);
+    }
+    check_eq(snk->buf, std::vector{cow_vector<int>{}});
+    check(uut->disposed());
+    check(!uut->can_emit());
+  }
+  SECTION("the observer cancels while receiving the final batch") {
+    auto snk = make_canceling_observer<cow_vector<int>>(true, false);
+    auto uut = raw_sub(3, make_observable().never<int>(),
+                       make_observable().never<int64_t>(), snk->as_observer());
+    uut->fwd_on_next(fwd_data, 1);
+    SECTION("demand arrives before completion") {
+      snk->sub.request(1);
+      uut->fwd_on_complete(fwd_data);
+    }
+    SECTION("demand arrives after completion") {
+      uut->fwd_on_complete(fwd_data);
+      snk->sub.request(1);
+    }
+    SECTION("the control source forces the batch") {
+      snk->sub.request(1);
+      uut->fwd_on_next(fwd_ctrl, 1);
+    }
+    run_flows();
+    check_eq(snk->buf, std::vector{cow_vector<int>{1}});
+    check_eq(snk->on_complete_calls, 0);
+    check_eq(snk->on_error_calls, 0);
+    check(uut->disposed());
+  }
+}
+
+TEST("buffer subscriptions keep actors alive until canceled") {
+  auto snk = intrusive_ptr<passive_observer<cow_vector<int>>>{};
+  auto aut = sys.spawn([&snk](event_based_actor* self) {
+    snk
+      = self->add_child(std::in_place_type<passive_observer<cow_vector<int>>>);
+    self->make_observable().never<int>().buffer(3).subscribe(
+      snk->as_observer());
+  });
+  dispatch_messages();
+  require(snk != nullptr);
+  require(!terminated(aut));
+  snk->parent()->schedule_fn([snk] { snk->unsubscribe(); });
+  dispatch_messages();
+  check(terminated(aut));
 }
 
 SCENARIO("skip policies suppress empty batches") {
