@@ -565,7 +565,7 @@ public:
       return;
     std::string msg;
     msg.reserve(128);
-    auto set_message = [&](int level, const auto& filter) {
+    auto set_message = [&](unsigned level, const auto& filter) {
       auto lvl_str = log_level_names_[level];
       msg = "verbosity = ";
       msg.insert(msg.end(), lvl_str.begin(), lvl_str.end());
