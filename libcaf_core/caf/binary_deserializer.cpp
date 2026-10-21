@@ -151,17 +151,18 @@ bool binary_deserializer_base::begin_field(std::string_view, bool& is_present,
   auto f = [&](auto tmp) {
     if (!value(tmp))
       return false;
+    auto utmp = static_cast<std::make_unsigned_t<decltype(tmp)>>(tmp);
     if (tmp < 0) {
       is_present = false;
       return true;
     }
-    if (static_cast<size_t>(tmp) >= types.size()) {
+    if (utmp >= types.size()) {
       emplace_error(sec::invalid_field_type,
                     "received type index out of bounds");
       return false;
     }
     is_present = true;
-    index = static_cast<size_t>(tmp);
+    index = utmp;
     return true;
   };
   if (types.size() < max_value<int8_t>) {
