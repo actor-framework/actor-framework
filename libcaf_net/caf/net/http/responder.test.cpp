@@ -112,7 +112,7 @@ struct fixture {
   receive_response(std::source_location loc = std::source_location::current()) {
     auto& ctx = test::runnable::current();
     byte_buffer buf;
-    buf.resize(1024 * 1024);
+    buf.resize(size_t{1024} * 1024);
     auto n = net::read(sguard1.get(), buf);
     ctx.require_gt(n, 0, loc);
     buf.resize(static_cast<size_t>(n));

@@ -122,7 +122,7 @@ struct fixture {
 
   template <class Callback>
   void run_client(Callback cb, async::promise<response_t> res = {},
-                  size_t max_response_size = 10 * 1024) {
+                  size_t max_response_size = size_t{10} * 1024) {
     auto app = app_t::make(std::move(cb), std::move(res));
     auto client = net::http::client::make(std::move(app));
     client->max_response_size(max_response_size);
