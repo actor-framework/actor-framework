@@ -12,7 +12,6 @@ Checks: >
   -bugprone-forward-declaration-namespace,
   -bugprone-macro-parentheses,
   -bugprone-move-forwarding-reference,
-  -bugprone-posix-return,
   -bugprone-signed-char-misuse,
   -bugprone-std-namespace-modification,
   -bugprone-suspicious-stringview-data-usage,
