@@ -119,8 +119,10 @@ void stream_bridge_sub::push() {
   auto lg = log::core::trace("");
   while (!buf_.empty() && demand_ > 0) {
     --demand_;
-    out_.on_next(buf_.front());
+    // The observer may cancel the subscription and clear buf_ from on_next.
+    auto input = std::move(buf_.front());
     buf_.pop_front();
+    out_.on_next(input);
   }
   do_check_credit();
 }
@@ -130,7 +132,7 @@ flow::coordinator* stream_bridge_sub::parent() const noexcept {
 }
 
 bool stream_bridge_sub::disposed() const noexcept {
-  return src_ == nullptr;
+  return !out_;
 }
 
 void stream_bridge_sub::request(size_t n) {
@@ -143,8 +145,8 @@ void stream_bridge_sub::request(size_t n) {
   }
 }
 
-void stream_bridge_sub::do_dispose(bool) {
-  if (!src_)
+void stream_bridge_sub::do_dispose(bool from_external) {
+  if (!out_)
     return;
   unsafe_send_as(self_, src_, stream_cancel_msg{src_flow_id_});
   auto fn = make_action([self = self_, snk_flow_id = snk_flow_id_] {
@@ -152,6 +154,12 @@ void stream_bridge_sub::do_dispose(bool) {
   });
   self_->delay(std::move(fn));
   src_ = nullptr;
+  demand_ = 0;
+  buf_.clear();
+  if (from_external)
+    out_.on_error(make_error(sec::disposed));
+  else
+    out_.release_later();
 }
 
 void stream_bridge_sub::do_abort(const error& reason) {
@@ -165,6 +173,8 @@ void stream_bridge_sub::do_abort(const error& reason) {
 }
 
 void stream_bridge_sub::do_check_credit() {
+  if (!src_)
+    return;
   auto capacity = max_in_flight_batches_ - in_flight_batches_ - buf_.size();
   if (capacity >= low_batches_threshold_) {
     in_flight_batches_ += capacity;
