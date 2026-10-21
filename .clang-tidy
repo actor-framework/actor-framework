@@ -10,7 +10,6 @@ Checks: >
   -bugprone-empty-catch,
   -bugprone-exception-escape,
   -bugprone-forward-declaration-namespace,
-  -bugprone-inc-dec-in-conditions,
   -bugprone-macro-parentheses,
   -bugprone-move-forwarding-reference,
   -bugprone-narrowing-conversions,
