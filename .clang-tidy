@@ -19,7 +19,6 @@ Checks: >
   -bugprone-unchecked-optional-access,
   -bugprone-unchecked-string-to-number-conversion,
   -bugprone-unhandled-exception-at-new,
-  -bugprone-unhandled-self-assignment,
   -bugprone-unused-local-non-trivial-variable,
   -bugprone-use-after-move
 WarningsAsErrors: ''
