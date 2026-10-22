@@ -474,7 +474,7 @@ type_id_t binary_deserializer_v2::to_type_id(std::string_view name) const {
 
 bool binary_deserializer_v2::value(type_id_list& xs) {
   if (use_type_names_)
-    return byte_reader::value(xs);
+    return byte_reader::value(xs); // NOLINT(bugprone-parent-virtual-call)
   return super::value(xs);
 }
 
