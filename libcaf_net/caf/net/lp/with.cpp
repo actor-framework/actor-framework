@@ -10,16 +10,18 @@
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/async/blocking_producer.hpp"
 #include "caf/chunk.hpp"
+#include "caf/cow_tuple.hpp"
 #include "caf/detail/accept_handler.hpp"
 #include "caf/detail/connection_acceptor.hpp"
 #include "caf/detail/critical.hpp"
-#include "caf/flow/observable.hpp"
-#include "caf/flow/op/mcast.hpp"
 #include "caf/internal/get_fd.hpp"
 #include "caf/internal/lp_flow_bridge.hpp"
 #include "caf/internal/make_transport.hpp"
 #include "caf/internal/net_config.hpp"
+
+#include <memory>
 
 namespace caf::net::lp {
 
@@ -30,12 +32,16 @@ class connection_acceptor_impl : public detail::connection_acceptor {
 public:
   using event_type = net::accept_event<chunk>;
 
+  using producer_type = async::blocking_producer<event_type>;
+
+  using shared_producer_type = std::shared_ptr<producer_type>;
+
   connection_acceptor_impl(Acceptor acceptor, size_t max_consecutive_reads,
                            async::producer_resource<event_type> events,
                            size_t max_message_size, size_field_type size_type)
     : acceptor_(std::move(acceptor)),
       max_consecutive_reads_(max_consecutive_reads),
-      events_(std::move(events)),
+      producer_(std::make_shared<producer_type>(events.try_open())),
       max_message_size_(max_message_size),
       size_type_(size_type) {
     // nop
@@ -44,15 +50,13 @@ public:
   error start(net::socket_manager* parent, action on_conn_close) override {
     parent_ = parent;
     on_conn_close_ = std::move(on_conn_close);
-    mcast_ = parent->add_child(std::in_place_type<flow::op::mcast<event_type>>);
-    flow::observable<event_type>{mcast_}.subscribe(events_);
     return none;
   }
 
   void abort(const error& what) override {
-    if (mcast_) {
-      mcast_->abort(what);
-      mcast_ = nullptr;
+    if (producer_) {
+      producer_->abort(what);
+      producer_ = nullptr;
     }
   }
 
@@ -61,7 +65,7 @@ public:
   }
 
   expected<net::socket_manager_ptr> try_accept() override {
-    if (!mcast_ || !mcast_->has_observers())
+    if (!producer_ || producer_->canceled())
       return expected<net::socket_manager_ptr>{unexpect, sec::runtime_error,
                                                "client has disconnected"};
     // Accept a new connection.
@@ -69,14 +73,9 @@ public:
     if (!conn)
       return expected<net::socket_manager_ptr>{unexpect,
                                                std::move(conn.error())};
-    // Create socket-to-application and application-to-socket buffers.
-    auto [s2a_pull, s2a_push] = async::make_spsc_buffer_resource<chunk>();
-    auto [a2s_pull, a2s_push] = async::make_spsc_buffer_resource<chunk>();
-    // Push buffers to the client.
-    mcast_->push(event_type{std::move(s2a_pull), std::move(a2s_push)});
-    // Create the flow bridge.
-    auto bridge = internal::make_lp_flow_bridge(std::move(a2s_pull),
-                                                std::move(s2a_push));
+    // Create the flow bridge. The bridge pushes the application-side
+    // resources to the server via the blocking producer.
+    auto bridge = internal::make_lp_flow_bridge(producer_);
     // Create the socket manager.
     auto impl = framing::make(std::move(bridge), size_type_, max_message_size_);
     auto transport = internal::make_transport(std::move(*conn),
@@ -96,9 +95,7 @@ private:
 
   size_t max_consecutive_reads_;
 
-  intrusive_ptr<flow::op::mcast<event_type>> mcast_;
-
-  async::producer_resource<event_type> events_;
+  shared_producer_type producer_;
 
   size_t max_message_size_;
 
