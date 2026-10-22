@@ -33,6 +33,8 @@ and ``subscription``.
 ``subscription``
   Manages the flow of items between an observable and an observer. An observer
   calls ``request`` to ask for more items or ``dispose`` to stop receiving data.
+  Calling ``request(0)`` is a no-op. Demand does not saturate: callers must
+  ensure outstanding demand, including pending requests, fits in ``size_t``.
 
 When working with data flows, these interfaces usually remain hidden and
 applications leverage high-level *operators* that either generate or transform
