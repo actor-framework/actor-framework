@@ -17,6 +17,7 @@ enum class state {
   completed = 0b0000'0100,
   aborted = 0b0000'1000,
   disposed = 0b0001'0000,
+  awaiting_demand = 0b0010'0000,
 };
 
 /// Checks whether `x` is either `completed` or `aborted`.
