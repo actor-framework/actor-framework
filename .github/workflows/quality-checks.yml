@@ -10,6 +10,8 @@ on:
       - '**/CMakeLists.txt'
       - 'cmake/**'
       - 'robot/**'
+      - 'scripts/run-clang-tidy.sh'
+      - '.clang-tidy'
       - '.github/workflows/**'
   push:
     branches:
@@ -31,6 +33,20 @@ jobs:
         run: sudo pip install --break-system-package clang-format==22.1.5
       - name: Run clang-format
         run: find libcaf* -name '*.[ch]pp' | xargs clang-format --dry-run --Werror
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: install-clang-tidy
+        run: sudo pip install --break-system-package clang-tidy==22.1.8
+      - name: configure
+        run: ./configure
+      - name: run-clang-tidy
+        env:
+          # Use the pip package instead of the preinstalled run-clang-tidy.
+          RUN_CLANG_TIDY: run-clang-tidy.py
+        run: scripts/run-clang-tidy.sh -j "$(nproc)" -quiet -hide-progress
 
   spell-checking:
     runs-on: ubuntu-latest
