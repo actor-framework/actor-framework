@@ -95,7 +95,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit framing_impl(upper_layer_ptr up) : up_(std::move(up)) {
+  explicit framing_impl(upper_layer_ptr up)
+    : up_(std::move(up)), rng_(std::random_device{}()) {
     // nop
   }
 
@@ -108,8 +109,6 @@ public:
   // -- octet_stream::upper_layer implementation -------------------------------
 
   error start(octet_stream::lower_layer* down) override {
-    std::random_device rd;
-    rng_.seed(rd());
     down_ = down;
     down_->configure_read(default_receive_policy);
     return up_->start(this);
