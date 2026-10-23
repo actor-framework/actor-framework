@@ -30,11 +30,11 @@ testee_actor::behavior_type delegator(testee_actor::pointer self,
   return {
     [=](int x, int y) {
       auto promise = self->make_response_promise<int>();
-      return promise.delegate(worker, x, y);
+      return promise.mail(x, y).delegate(worker);
     },
     [=](ok_atom) {
       auto promise = self->make_response_promise<void>();
-      return promise.delegate(worker, ok_atom_v);
+      return promise.mail(ok_atom_v).delegate(worker);
     },
   };
 }

@@ -10,6 +10,7 @@
 
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/sec.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -27,11 +28,11 @@ behavior delegator(event_based_actor* self, actor worker) {
   return {
     [=](int x, int y) {
       auto promise = self->make_response_promise();
-      return promise.delegate(worker, x, y);
+      return promise.mail(x, y).delegate(worker);
     },
     [=](ok_atom) {
       auto promise = self->make_response_promise();
-      return promise.delegate(worker, ok_atom_v);
+      return promise.mail(ok_atom_v).delegate(worker);
     },
   };
 }
@@ -65,6 +66,39 @@ behavior requester_v1(event_based_actor* self, actor worker) {
             rp.deliver(std::move(err));
           });
       return rp;
+    },
+  };
+}
+
+behavior nullary_adder() {
+  return {
+    [] { return 42; },
+  };
+}
+
+behavior nullary_delegator(event_based_actor* self, actor worker) {
+  return {
+    [=](ok_atom) {
+      auto promise = self->make_response_promise();
+      return promise.mail().delegate(worker);
+    },
+  };
+}
+
+behavior urgent_delegator(event_based_actor* self, actor worker) {
+  return {
+    [=](int x, int y) {
+      auto promise = self->make_response_promise();
+      return promise.mail(x, y).urgent().delegate(worker);
+    },
+  };
+}
+
+behavior invalid_delegator(event_based_actor* self) {
+  return {
+    [=](int x) {
+      auto promise = self->make_response_promise();
+      return promise.mail(x).delegate(actor{});
     },
   };
 }
@@ -188,6 +222,85 @@ SCENARIO("response promises allow delegation") {
         self->receive([this, received](int received_int) {
           *received = true;
           check_eq(received_int, 7);
+        });
+        check(*received);
+      }
+    }
+    WHEN("sending ok_atom to the dispatcher synchronously") {
+      auto res = self->mail(ok_atom_v).request(hdl, infinite);
+      auto fetch_result = [&] {
+        message result;
+        std::move(res).receive([] {}, // void result
+                               [&](const error& reason) {
+                                 result = make_message(reason);
+                               });
+        return result;
+      };
+      THEN("clients receive an empty response from the adder") {
+        expect<ok_atom>().from(self).to(hdl);
+        expect<ok_atom>().from(self).to(adder_hdl);
+        dispatch_message();
+        check(fetch_result().empty());
+      }
+    }
+  }
+}
+
+SCENARIO("response promises allow delegation without arguments") {
+  GIVEN("a dispatcher that delegates an empty message") {
+    scoped_actor self{sys};
+    auto adder_hdl = sys.spawn(nullary_adder);
+    auto hdl = sys.spawn(nullary_delegator, adder_hdl);
+    WHEN("sending a request to the dispatcher") {
+      inject().with(ok_atom_v).from(self).to(hdl);
+      THEN("clients receive the response from the nullary adder") {
+        expect<>().from(self).to(adder_hdl);
+        auto received = std::make_shared<bool>(false);
+        self->receive([this, received](int received_int) {
+          *received = true;
+          check_eq(received_int, 42);
+        });
+        check(*received);
+      }
+    }
+  }
+}
+
+SCENARIO("response promises allow urgent delegation") {
+  GIVEN("a dispatcher that delegates with high priority") {
+    scoped_actor self{sys};
+    auto adder_hdl = sys.spawn(adder);
+    auto hdl = sys.spawn(urgent_delegator, adder_hdl);
+    WHEN("sending a request to the dispatcher") {
+      inject().with(3, 4).from(self).to(hdl);
+      THEN("the delegated message inherits the high priority") {
+        expect<int, int>()
+          .with(3, 4)
+          .priority(message_priority::high)
+          .from(self)
+          .to(adder_hdl);
+        auto received = std::make_shared<bool>(false);
+        self->receive([this, received](int received_int) {
+          *received = true;
+          check_eq(received_int, 7);
+        });
+        check(*received);
+      }
+    }
+  }
+}
+
+SCENARIO("response promises report invalid delegation targets") {
+  GIVEN("a dispatcher that delegates to an invalid actor") {
+    scoped_actor self{sys};
+    auto hdl = sys.spawn(invalid_delegator);
+    WHEN("sending a request to the dispatcher") {
+      inject().with(42).from(self).to(hdl);
+      THEN("the client receives an invalid_delegate error") {
+        auto received = std::make_shared<bool>(false);
+        self->receive([this, received](const error& reason) {
+          *received = true;
+          check_eq(reason, sec::invalid_delegate);
         });
         check(*received);
       }

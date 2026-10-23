@@ -336,6 +336,19 @@ thereby sends the result to the client:
                   |                  X
                   X
 
+Response promises also support delegation through the fluent message API. The
+following code transfers the responsibility for responding to the original
+sender to another actor:
+
+.. code-block:: cpp
+
+   auto rp = self->make_response_promise();
+   return rp.mail(add_atom_v, x, y).delegate(worker);
+
+Calling ``mail()`` without arguments delegates an empty message. For typed
+response promises, the compiler verifies that the target actor returns the
+promised response type.
+
 Special Message Types
 ---------------------
 
