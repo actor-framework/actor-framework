@@ -119,6 +119,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   legacy networking APIs that have been replaced by the `caf::net` module.
 - The implicit conversion operator from `cow_string` to `std::string_view` is
   now deprecated. Users should use the `str()` method explicitly instead.
+- The `delegate` member functions of `caf::response_promise` and
+  `caf::typed_response_promise` are now deprecated. Users should use
+  `mail(...).delegate(...)` instead.
 
 ### Added
 
@@ -132,6 +135,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The namespace `caf::net::http` now contains two new classes for dealing with
   HTTP multipart requests and responses: `multipart_reader` and
   `multipart_writer`.
+- Response promises now provide a `mail` member function for delegating with
+  the fluent message API, e.g., `rp.mail(x, y).delegate(worker)`. The `mail`
+  API supports empty messages and validates the response type of typed
+  promises at compile time.
 - Users can now set a global default handler for exceptions on the
   `actor_system_config` by calling `exception_handler(my_handler)`. This handler
   then gets passed down to all scheduled actors as the default exception handler
