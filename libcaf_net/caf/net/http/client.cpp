@@ -24,6 +24,7 @@
 #include "caf/unordered_flat_map.hpp"
 
 #include <algorithm>
+#include <cstddef>
 
 namespace caf::net::http {
 
@@ -228,7 +229,8 @@ public:
     }
     // Reset the policy from the previous call to consume.
     down_->configure_read(receive_policy::up_to(max_response_size_));
-    consumed += input.size() - remainder.size() + chunk_size + 2;
+    consumed += static_cast<ptrdiff_t>(input.size() - remainder.size()
+                                       + chunk_size + 2);
     // Check crlf at the end of chunk.
     if (remainder[chunk_size] != std::byte{'\r'}
         || remainder[chunk_size + 1] != std::byte{'\n'}) {
@@ -244,7 +246,7 @@ public:
       return consumed;
     }
     buffer_.insert(buffer_.end(), remainder.begin(),
-                   remainder.begin() + chunk_size);
+                   remainder.begin() + static_cast<ptrdiff_t>(chunk_size));
     return consumed;
   }
 

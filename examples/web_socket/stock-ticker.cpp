@@ -71,10 +71,10 @@ struct random_feed_state {
   random_feed_state(caf::event_based_actor* selfptr,
                     caf::net::acceptor_resource<frame> events,
                     caf::timespan update_interval)
-    : self(selfptr), val_dist(0, 100000), index_dist(0, 19) {
-    // Init random number generator.
-    std::random_device rd;
-    rng.seed(rd());
+    : self(selfptr),
+      rng(std::random_device{}()),
+      val_dist(0, 100000),
+      index_dist(0, 19) {
     // Fill vector with some stuff.
     for (size_t i = 0; i < 20; ++i) {
       std::uniform_int_distribution<int> char_dist{'A', 'Z'};

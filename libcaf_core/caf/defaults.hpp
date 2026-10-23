@@ -191,6 +191,6 @@ constexpr auto https_default_port = uint16_t{443};
 constexpr auto octet_stream_buffer_size = uint32_t{1024};
 
 /// The default lp maximum message size: 64MB
-constexpr auto lp_max_message_size = size_t{64 * 1024 * 1024};
+constexpr auto lp_max_message_size = size_t{64} * 1024 * 1024;
 
 } // namespace caf::defaults::net

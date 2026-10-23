@@ -10,13 +10,8 @@ Checks: >
   -bugprone-empty-catch,
   -bugprone-exception-escape,
   -bugprone-forward-declaration-namespace,
-  -bugprone-implicit-widening-of-multiplication-result,
-  -bugprone-inc-dec-in-conditions,
   -bugprone-macro-parentheses,
   -bugprone-move-forwarding-reference,
-  -bugprone-narrowing-conversions,
-  -bugprone-posix-return,
-  -bugprone-signed-char-misuse,
   -bugprone-std-namespace-modification,
   -bugprone-suspicious-stringview-data-usage,
   -bugprone-switch-missing-default-case,
@@ -24,8 +19,6 @@ Checks: >
   -bugprone-unchecked-optional-access,
   -bugprone-unchecked-string-to-number-conversion,
   -bugprone-unhandled-exception-at-new,
-  -bugprone-unhandled-self-assignment,
-  -bugprone-unused-local-non-trivial-variable,
   -bugprone-use-after-move
 WarningsAsErrors: ''
 HeaderFilterRegex: '/caf/'

@@ -310,8 +310,8 @@ struct fixture {
       if constexpr (std::is_same_v<T, std::string>) {
         // Also test parsing from STL stream.
         std::istringstream istream{std::string{input}};
-        res = reader.load(input)    // parse JSON
-              && reader.apply(tmp); // deserialize object
+        res = reader.load_from(istream) // parse JSON
+              && reader.apply(tmp);     // deserialize object
         test::runnable::current().check(!res);
         if (res) {
           tstlog::error("got unexpected output: {}", tmp);

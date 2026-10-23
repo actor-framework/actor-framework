@@ -29,7 +29,7 @@ CAF_POP_WARNINGS
     sigemptyset(&sigpipe_mask);                                                \
     sigaddset(&sigpipe_mask, SIGPIPE);                                         \
     sigset_t saved_mask;                                                       \
-    if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) == -1) {        \
+    if (pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask) != 0) {         \
       perror("pthread_sigmask");                                               \
       exit(1);                                                                 \
     }                                                                          \
@@ -37,7 +37,7 @@ CAF_POP_WARNINGS
       [&]() noexcept {                                                         \
         struct timespec zerotime = {};                                         \
         sigtimedwait(&sigpipe_mask, 0, &zerotime);                             \
-        if (pthread_sigmask(SIG_SETMASK, &saved_mask, 0) == -1) {              \
+        if (pthread_sigmask(SIG_SETMASK, &saved_mask, 0) != 0) {               \
           perror("pthread_sigmask");                                           \
           exit(1);                                                             \
         }                                                                      \

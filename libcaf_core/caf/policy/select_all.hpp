@@ -91,9 +91,11 @@ struct select_all_helper<F> {
 
   void operator()() {
     auto lg = log::core::trace("pending = {}", *pending);
-    if (*pending > 0 && --*pending == 0) {
-      timeouts.dispose();
-      f();
+    if (*pending > 0) {
+      if (--*pending == 0) {
+        timeouts.dispose();
+        f();
+      }
     }
   }
 

@@ -42,6 +42,7 @@ receive_buffer& receive_buffer::operator=(receive_buffer&& other) noexcept {
   return *this;
 }
 
+// NOLINTNEXTLINE(bugprone-unhandled-self-assignment)
 receive_buffer& receive_buffer::operator=(const receive_buffer& other) {
   resize(other.size());
   std::copy(other.cbegin(), other.cend(), buffer_.get());
