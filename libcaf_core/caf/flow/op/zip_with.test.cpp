@@ -7,12 +7,113 @@
 #include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/scenario.hpp"
+#include "caf/test/test.hpp"
 
 #include "caf/flow/op/never.hpp"
+
+#include <limits>
+#include <source_location>
+#include <utility>
 
 using namespace caf;
 
 namespace {
+
+class recording_sub : public test::fixture::flow::counting_sub {
+public:
+  recording_sub(flow::coordinator* parent, flow::observer<int> out)
+    : counting_sub(parent), out_(std::move(out)) {
+    // nop
+  }
+
+  bool disposed() const noexcept override {
+    return !out_;
+  }
+
+  void request(size_t n) override {
+    requests.push_back(n);
+    if (!out_)
+      return;
+    test::runnable::current().require(n <= std::numeric_limits<size_t>::max()
+                                             - pending);
+    pending += n;
+  }
+
+  void start() {
+    out_.on_subscribe(flow::subscription{intrusive_ptr{this, add_ref}});
+  }
+
+  void push(int value,
+            const std::source_location& loc = std::source_location::current()) {
+    auto& ctx = test::runnable::current();
+    ctx.require(out_.valid(), loc);
+    ctx.require(pending > 0, loc);
+    --pending;
+    out_.on_next(value);
+  }
+
+  void finish(const error& reason = {}) {
+    pending = 0;
+    if (reason.valid())
+      out_.on_error(reason);
+    else
+      out_.on_complete();
+  }
+
+  std::vector<size_t> requests;
+  size_t pending = 0;
+
+private:
+  void do_dispose(bool from_external) override {
+    pending = 0;
+    if (!out_)
+      return;
+    if (from_external)
+      out_.on_error(make_error(sec::disposed));
+    else
+      out_.release_later();
+  }
+
+  flow::observer<int> out_;
+};
+
+class recording_source : public flow::op::cold<int> {
+public:
+  explicit recording_source(flow::coordinator* parent) : cold(parent) {
+    // nop
+  }
+
+  disposable subscribe(flow::observer<int> out) override {
+    sub = parent()->add_child(std::in_place_type<recording_sub>,
+                              std::move(out));
+    sub->start();
+    return sub->as_disposable();
+  }
+
+  flow::observable<int> as_observable() {
+    return flow::observable<int>{intrusive_ptr{this, add_ref}};
+  }
+
+  intrusive_ptr<recording_sub> sub;
+};
+
+class recording_observer : public test::fixture::flow::passive_observer<int> {
+public:
+  using passive_observer::passive_observer;
+
+  void on_complete() override {
+    ++completions;
+    passive_observer::on_complete();
+  }
+
+  void on_error(const error& reason) override {
+    ++errors;
+    passive_observer::on_error(reason);
+  }
+
+  size_t completions = 0;
+  size_t errors = 0;
+};
 
 struct fixture : test::fixture::flow {
   template <class F, class Out, class... Ts>
@@ -34,11 +135,146 @@ struct fixture : test::fixture::flow {
   auto make_never_sub(caf::flow::observer<T> out) {
     return make_counted<caf::flow::op::never_sub<T>>(coordinator(), out);
   }
+
+  auto make_input() {
+    return coordinator()->add_child(std::in_place_type<recording_source>);
+  }
 };
 
 } // namespace
 
 WITH_FIXTURE(fixture) {
+
+TEST(
+  "zip_with accounts for buffered and in-flight items across uneven inputs") {
+  auto first = make_input();
+  auto second = make_input();
+  using tuple_type = std::tuple<int, int>;
+  auto snk = make_passive_observer<tuple_type>();
+  first->as_observable()
+    .zip_with([](int x, int y) { return std::make_tuple(x, y); },
+              second->as_observable())
+    .subscribe(snk->as_observer());
+  snk->request(2);
+  first->sub->push(1);
+  check(snk->buf.empty());
+  snk->request(1);
+  check_eq(first->sub->pending, 2u);
+  check_eq(second->sub->pending, 3u);
+  // Deliver the remaining items and verify that zip preserves pair order.
+  second->sub->push(10);
+  first->sub->push(2);
+  second->sub->push(20);
+  first->sub->push(3);
+  second->sub->push(30);
+  check_eq(snk->buf, (std::vector<tuple_type>{{1, 10}, {2, 20}, {3, 30}}));
+  for (auto input : {first, second})
+    check_eq(input->sub->pending, 0u);
+  snk->unsubscribe();
+}
+
+TEST("zip_with handles demand at the size_t limit") {
+  auto first = make_input();
+  auto second = make_input();
+  auto snk = make_passive_observer<int>();
+  first->as_observable()
+    .zip_with([](int x, int y) { return x + y; }, second->as_observable())
+    .subscribe(snk->as_observer());
+  auto max_demand = std::numeric_limits<size_t>::max();
+  snk->request(max_demand - 1);
+  first->sub->push(1);
+  SECTION("demand reaches the limit") {
+    snk->request(1);
+  }
+  SECTION("demand exceeding the limit saturates") {
+    snk->request(max_demand);
+  }
+  for (auto input : {first, second})
+    check_eq(input->sub->requests, (std::vector<size_t>{max_demand - 1, 1}));
+  check_eq(first->sub->pending, max_demand - 1);
+  check_eq(second->sub->pending, max_demand);
+  second->sub->push(10);
+  snk->request(1);
+  for (auto input : {first, second}) {
+    check_eq(input->sub->requests, (std::vector<size_t>{max_demand - 1, 1, 1}));
+    check_eq(input->sub->pending, max_demand);
+  }
+  first->sub->push(2);
+  second->sub->push(20);
+  first->sub->finish();
+  check_eq(snk->buf, (std::vector{11, 22}));
+  check(snk->completed());
+  check(snk->err.empty());
+  check(second->sub->disposed());
+}
+
+TEST("zip_with does not request more from a terminated input") {
+  auto reason = error{};
+  auto source_first = true;
+  SECTION("the input completes") {
+    SECTION("source is the first input") {
+      source_first = true;
+    }
+    SECTION("source is the second input") {
+      source_first = false;
+    }
+  }
+  SECTION("the input fails") {
+    reason = make_error(sec::runtime_error);
+    SECTION("source is the first input") {
+      source_first = true;
+    }
+    SECTION("source is the second input") {
+      source_first = false;
+    }
+  }
+  auto source = make_input();
+  auto peer = make_input();
+  auto snk = coordinator()->add_child(std::in_place_type<recording_observer>);
+  auto add = [](int x, int y) { return x + y; };
+  auto values = caf::flow::observable<int>{};
+  if (source_first)
+    values = source->as_observable().zip_with(add, peer->as_observable());
+  else
+    values = peer->as_observable().zip_with(add, source->as_observable());
+  values.subscribe(snk->as_observer());
+  snk->request(1);
+  source->sub->push(10);
+  source->sub->finish(reason);
+  check(snk->subscribed());
+  check(snk->buf.empty());
+  snk->request(1);
+  check_eq(source->sub->requests, std::vector<size_t>{1});
+  peer->sub->push(1);
+  run_flows();
+  check_eq(snk->buf, std::vector{11});
+  check_eq(snk->completions, reason.valid() ? 0u : 1u);
+  check_eq(snk->errors, reason.valid() ? 1u : 0u);
+  check_eq(snk->err, reason);
+  check(peer->sub->disposed());
+}
+
+TEST("zip_with cancels sources with unused credit and ignores later requests") {
+  auto first = make_input();
+  auto second = make_input();
+  auto snk = make_passive_observer<int>();
+  first->as_observable()
+    .zip_with([](int x, int y) { return x + y; }, second->as_observable())
+    .subscribe(snk->as_observer());
+  snk->request(2);
+  first->sub->push(1);
+  auto sub = snk->sub;
+  snk->unsubscribe();
+  sub.request(3);
+  run_flows();
+  for (auto input : {first, second}) {
+    check(input->sub->disposed());
+    check_eq(input->sub->pending, 0u);
+    check_eq(input->sub->requests, std::vector<size_t>{2});
+  }
+  check(snk->buf.empty());
+  check(snk->idle());
+}
 
 SCENARIO("zip_with combines inputs") {
   GIVEN("two observables") {
