@@ -183,8 +183,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Fixed
 
-- Make `caf::flow::subscription::request(0)` a no-op and document demand
-  overflow preconditions (#2471).
+- Make `caf::flow::subscription::request(0)` a guaranteed no-op and document
+  demand overflow preconditions (#2471).
 - Errors that arise during the `with` DSL setup of servers and clients now
   properly call `on_error` (#2026).
 - Fix UBSan finding regarding non-aligned memory allocation when spawning
