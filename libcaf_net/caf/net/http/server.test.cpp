@@ -509,7 +509,7 @@ TEST("the server handles a chunked request that exceeds max_request_size") {
     [](auto* down, const response_t&) {
       down->send_response(net::http::status::ok, "text/plain", "OK"sv);
     },
-    size_t{64} * 1024, res_promise);
+    64ul * 1024, res_promise);
   auto req_headers = "POST /upload HTTP/1.1\r\n"
                      "Host: localhost:8000\r\n"
                      "Transfer-Encoding: chunked\r\n"

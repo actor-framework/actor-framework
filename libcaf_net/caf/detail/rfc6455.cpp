@@ -23,8 +23,8 @@ void rfc6455::mask_data(uint32_t key, byte_span data, size_t offset) {
   std::byte arr[4];
   memcpy(arr, &no_key, 4);
   auto i = offset % 4;
-  for (auto it = data.begin() + static_cast<std::ptrdiff_t>(offset);
-       it < data.end(); ++it) {
+  for (auto it = data.begin() + static_cast<ptrdiff_t>(offset); it < data.end();
+       ++it) {
     *it ^= arr[i];
     i = (i + 1) % 4;
   }
