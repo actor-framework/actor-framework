@@ -38,8 +38,8 @@ public:
 
   std::span<const scheme_and_port> schemes() const override {
     static constexpr scheme_and_port result[] = {
-      {"http", defaults::net::http_default_port, false},
-      {"https", defaults::net::https_default_port, true},
+      {"http", defaults::net::http_default_port},
+      {"https", defaults::net::https_default_port},
     };
     return result;
   }

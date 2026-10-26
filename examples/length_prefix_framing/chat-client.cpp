@@ -29,12 +29,15 @@ namespace ssl = caf::net::ssl;
 
 // -- constants ----------------------------------------------------------------
 
-static constexpr std::string_view default_uri = "tcp://localhost:7788";
+namespace {
 
-static constexpr caf::net::lp::size_field_type default_size
-  = caf::net::lp::size_field_type::u4;
+constexpr auto default_uri = "tcp://localhost:7788"sv;
 
-static constexpr std::string_view default_name = "";
+constexpr auto default_size = caf::net::lp::size_field_type::u4;
+
+constexpr auto default_name = ""sv;
+
+} // namespace
 
 // -- configuration setup ------------------------------------------------------
 
@@ -51,7 +54,7 @@ struct config : caf::actor_system_config {
 
   caf::settings dump_content() const override {
     auto result = actor_system_config::dump_content();
-    caf::put_missing(result, "uri", *caf::make_uri(default_uri));
+    caf::put_missing(result, "uri", caf::make_uri(default_uri).value());
     caf::put_missing(result, "name", default_name);
     caf::put_missing(result, "size", default_size);
     return result;
@@ -62,7 +65,8 @@ struct config : caf::actor_system_config {
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
   // Read the configuration.
-  auto uri = caf::get_or<caf::uri>(cfg, "uri", *caf::make_uri(default_uri));
+  auto uri = caf::get_or<caf::uri>(cfg, "uri",
+                                   caf::make_uri(default_uri).value());
   auto size = caf::get_or(cfg, "size", default_size);
   auto name = caf::get_or(cfg, "name", default_name);
   auto ca_file = caf::get_as<std::string>(cfg, "tls.ca-file");

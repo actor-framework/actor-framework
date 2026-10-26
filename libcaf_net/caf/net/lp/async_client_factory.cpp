@@ -30,9 +30,9 @@ public:
 
   std::span<const scheme_and_port> schemes() const override {
     static constexpr scheme_and_port result[] = {
-      {"tcp", 0, false},
-      {"ssl", 0, true},
-      {"tls", 0, true},
+      {"tcp", 0},
+      {"ssl", 0},
+      {"tls", 0},
     };
     return result;
   }

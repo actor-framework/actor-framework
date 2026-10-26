@@ -61,7 +61,7 @@ private:
 /// asynchronous client connections. Unlike `with(...)`, this API pushes the
 /// initial TCP connection attempt to the async workers thread pool instead of
 /// blocking the calling thread while establishing the connection.
-inline with_v2_t with_v2(actor_system& sys) {
+[[nodiscard]] inline with_v2_t with_v2(actor_system& sys) {
   return with_v2_t{sys};
 }
 

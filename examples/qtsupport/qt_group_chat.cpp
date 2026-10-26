@@ -34,7 +34,11 @@ using namespace caf;
 
 // -- constants ----------------------------------------------------------------
 
-static constexpr std::string_view default_uri = "tcp://localhost:7788";
+namespace {
+
+constexpr auto default_uri = "tcp://localhost:7788"sv;
+
+}
 
 // -- configuration setup ------------------------------------------------------
 
@@ -51,7 +55,8 @@ public:
 
 int caf_main(actor_system& sys, const config& cfg) {
   // Read the configuration.
-  auto uri = caf::get_or<caf::uri>(cfg, "uri", *caf::make_uri(default_uri));
+  auto uri = caf::get_or<caf::uri>(cfg, "uri",
+                                   caf::make_uri(default_uri).value());
   auto name = caf::get_or(cfg, "name", "");
   if (name.empty()) {
     sys.println("*** mandatory parameter 'name' missing or empty");

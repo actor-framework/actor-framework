@@ -56,8 +56,7 @@ private:
 
 } // namespace
 
-// Memory leak regression on LP acceptor shutdown (GH PR #2484).
-TEST("LP acceptors release resources before actor system shutdown") {
+TEST("LP acceptor memory leak regression") {
   caf::actor_system_config cfg;
   cfg.load<caf::net::middleman>();
   caf::actor_system sys{cfg};
@@ -74,8 +73,9 @@ TEST("LP acceptors release resources before actor system shutdown") {
                        });
                      });
   auto server_hdl = unbox(maybe_hdl);
-  // Do not run the multiplexer after disposal. The acceptor must break its
-  // references synchronously before the actor system begins shutting down.
+  // Do not run the multiplexer after disposal. The acceptor must clean up its
+  // references while the actor system is shutting down. Otherwise, this test
+  // triggers a memory leak (under ASan/LeakSan).
   server_hdl.dispose();
 }
 

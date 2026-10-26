@@ -13,6 +13,7 @@
 #include "caf/uri.hpp"
 
 #include <memory>
+#include <ostream>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -29,7 +30,17 @@ public:
   struct scheme_and_port {
     std::string_view scheme;
     uint16_t port;
-    bool secure;
+
+    bool secure() const noexcept {
+      using namespace std::string_view_literals;
+      return scheme == "https"sv || scheme == "wss"sv || scheme == "tls"sv
+             || scheme == "ssl"sv;
+    }
+
+    friend std::ostream& operator<<(std::ostream& out,
+                                    const scheme_and_port& x) {
+      return out << x.scheme << ':' << x.port;
+    }
   };
 
   /// Returns the accepted URI schemes and their default ports. The `secure`

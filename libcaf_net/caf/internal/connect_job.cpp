@@ -22,22 +22,6 @@
 
 namespace caf::internal {
 
-namespace {
-
-/// Renders the accepted URI schemes of `config` as a human-readable list.
-std::string
-scheme_list(std::span<const async_client_config_base::scheme_and_port> xs) {
-  std::string result;
-  for (const auto& x : xs) {
-    if (!result.empty())
-      result += " or ";
-    result += x.scheme;
-  }
-  return result;
-}
-
-} // namespace
-
 void connect_job::ref() const noexcept {
   ref_count_.inc();
 }
@@ -72,11 +56,11 @@ void connect_job::resume(scheduler*, uint64_t) {
   if (scheme == schemes.end()) {
     fail(format_to_unexpected(sec::invalid_argument,
                               "unsupported URI scheme: expected {}",
-                              scheme_list(schemes))
+                              join(schemes, "or"))
            .error());
     return;
   }
-  auto use_ssl = scheme->secure;
+  auto use_ssl = scheme->secure();
   if (auth.port == 0) {
     auth.port = scheme->port;
   }
