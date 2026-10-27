@@ -37,11 +37,13 @@ message make_response_promise_message(Args&&... args) {
 
 /// Provides a fluent interface for delegating a response promise to another
 /// actor.
+/// @note The proxy stores a copy of the response promise instead of a
+///       reference, since `mail` may be called on a temporary promise.
 template <message_priority Priority, class Outputs, class... Inputs>
 class [[nodiscard]] response_promise_mail_t {
 public:
-  response_promise_mail_t(response_promise& rp, message content)
-    : rp_(rp), content_(std::move(content)) {
+  response_promise_mail_t(response_promise rp, message content)
+    : rp_(std::move(rp)), content_(std::move(content)) {
     // nop
   }
 
@@ -56,7 +58,7 @@ public:
     requires(P == message_priority::normal)
   [[nodiscard]] auto urgent() && {
     return response_promise_mail_t<message_priority::high, Outputs, Inputs...>{
-      rp_, std::move(content_)};
+      std::move(rp_), std::move(content_)};
   }
 
   /// Satisfies the promise by delegating to `receiver`.
@@ -93,7 +95,7 @@ public:
   }
 
 private:
-  response_promise& rp_;
+  response_promise rp_;
   message content_;
 };
 
