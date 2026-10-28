@@ -120,8 +120,9 @@ public:
       }
       return;
     }
+    auto reason = what;
     source_ = nullptr;
-    this->abort(what);
+    this->abort(reason);
   }
 
   void on_subscribe(subscription in) override {

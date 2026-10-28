@@ -125,6 +125,21 @@ TEST("on_complete") {
     check_eq(obs->buf, std::vector{1});
     check_eq(obs->state, observer_state::completed);
   }
+  SECTION("partial requests drain the buffer before completion") {
+    auto obs = make_passive_observer<int>();
+    range(1, 3).on_backpressure_buffer(10).subscribe(obs->as_observer());
+    run_flows();
+    check_eq(obs->state, observer_state::subscribed);
+    for (int i = 1; i <= 3; ++i) {
+      obs->sub.request(1);
+      run_flows();
+      check_eq(obs->buf.size(), static_cast<size_t>(i));
+      for (int j = 0; j < i; ++j)
+        check_eq(obs->buf[static_cast<size_t>(j)], j + 1);
+      check_eq(obs->state,
+               i == 3 ? observer_state::completed : observer_state::subscribed);
+    }
+  }
 }
 
 TEST("on_error") {
@@ -147,6 +162,25 @@ TEST("on_error") {
     run_flows();
     check_eq(obs->buf, std::vector{1});
     check_eq(obs->state, observer_state::aborted);
+  }
+  SECTION("partial requests drain the buffer before on_error") {
+    auto obs = make_passive_observer<int>();
+    range(1, 3)
+      .concat(make_observable().fail<int>(sec::runtime_error))
+      .on_backpressure_buffer(10)
+      .subscribe(obs->as_observer());
+    run_flows();
+    check_eq(obs->state, observer_state::subscribed);
+    for (int i = 1; i <= 3; ++i) {
+      obs->sub.request(1);
+      run_flows();
+      check_eq(obs->buf.size(), static_cast<size_t>(i));
+      for (int j = 0; j < i; ++j)
+        check_eq(obs->buf[static_cast<size_t>(j)], j + 1);
+      check_eq(obs->state,
+               i == 3 ? observer_state::aborted : observer_state::subscribed);
+    }
+    check_eq(obs->err, sec::runtime_error);
   }
 }
 
