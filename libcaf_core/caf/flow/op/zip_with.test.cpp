@@ -145,6 +145,36 @@ struct fixture : test::fixture::flow {
 
 WITH_FIXTURE(fixture) {
 
+TEST("zip_with ignores requests for zero items") {
+  auto first = make_input();
+  auto second = make_input();
+  auto snk = make_passive_observer<int>();
+  first->as_observable()
+    .zip_with([](int x, int y) { return x + y; }, second->as_observable())
+    .subscribe(snk->as_observer());
+  snk->request(0);
+  for (auto input : {first, second})
+    check(input->sub->requests.empty());
+  snk->request(2);
+  first->sub->push(1);
+  snk->request(0);
+  for (auto input : {first, second})
+    check_eq(input->sub->requests, std::vector<size_t>{2});
+  check_eq(first->sub->pending, 1u);
+  check_eq(second->sub->pending, 2u);
+  check(snk->buf.empty());
+  snk->request(1);
+  for (auto input : {first, second})
+    check_eq(input->sub->requests, (std::vector<size_t>{2, 1}));
+  second->sub->push(10);
+  first->sub->push(2);
+  second->sub->push(20);
+  first->sub->push(3);
+  second->sub->push(30);
+  check_eq(snk->buf, (std::vector{11, 22, 33}));
+  snk->unsubscribe();
+}
+
 TEST(
   "zip_with accounts for buffered and in-flight items across uneven inputs") {
   auto first = make_input();
