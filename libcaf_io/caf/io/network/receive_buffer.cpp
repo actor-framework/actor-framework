@@ -43,8 +43,10 @@ receive_buffer& receive_buffer::operator=(receive_buffer&& other) noexcept {
 }
 
 receive_buffer& receive_buffer::operator=(const receive_buffer& other) {
-  resize(other.size());
-  std::copy(other.cbegin(), other.cend(), buffer_.get());
+  if (this != &other) {
+    resize(other.size());
+    std::copy(other.cbegin(), other.cend(), buffer_.get());
+  }
   return *this;
 }
 

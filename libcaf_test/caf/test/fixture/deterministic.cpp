@@ -512,7 +512,6 @@ public:
     auto diff = value - current_time;
     if (diff.count() > 0)
       return advance_time(value - current_time, loc);
-    auto msg = detail::format("set time back by {}", duration_to_string(diff));
     current_time = value;
     return 0;
   }
