@@ -232,9 +232,11 @@ public:
   iterator insert_after(iterator pos, pointer ptr) {
     CAF_ASSERT(pos != end());
     CAF_ASSERT(ptr != nullptr);
-    auto next = pos->next;
+    // `pos` may point to a sentinel, so access it as a node, not a value.
+    auto node = pos.ptr;
+    auto next = node->next;
     ptr->next = next;
-    pos->next = ptr;
+    node->next = ptr;
     if (next == &tail_)
       tail_.next = ptr;
     ++size_;
