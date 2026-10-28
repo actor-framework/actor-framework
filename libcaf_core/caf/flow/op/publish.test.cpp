@@ -7,7 +7,12 @@
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/flow/op/publish.hpp"
+
+#include "caf/flow/backpressure_overflow_strategy.hpp"
+#include "caf/flow/multicaster.hpp"
 #include "caf/flow/op/cell.hpp"
+#include "caf/sec.hpp"
 
 using std::vector;
 
@@ -25,6 +30,8 @@ auto subscribe_all(Ts... xs) {
     return src;
   };
 }
+
+using overflow_strategy = caf::flow::backpressure_overflow_strategy;
 
 auto make_hot_generator() {
   auto n = std::make_shared<int>(0);
@@ -175,6 +182,307 @@ SCENARIO("observers that dispose their subscription do not affect others") {
         run_flows();
         check(sub1.disposed());
         check(sub2.disposed());
+      }
+    }
+  }
+}
+
+SCENARIO("publish gates the credit for its source on its slowest subscriber") {
+  using snk_t = flow::passive_observer<int>;
+  using impl_t = op::publish<int>;
+  GIVEN("a publish operator with a buffer size of 5 and two subscribers") {
+    WHEN("one subscriber fills its buffer and stops requesting items") {
+      THEN("the operator stops requesting items from its source") {
+        auto src = caf::flow::multicaster<int>{coordinator()};
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(),
+                                        src.as_observable().pimpl(), 5);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        check_eq(src.demand(), 5u);
+        src.push({1, 2, 3, 4, 5});
+        run_flows();
+        check_eq(src.demand(), 0u);
+        fast->request(100);
+        run_flows();
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5});
+        check_eq(slow->buf, vector<int>{});
+        check_eq(uut->max_buffered(), 5u);
+        check_eq(src.demand(), 0u);
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+    WHEN("the slow subscriber consumes part of its buffer") {
+      THEN("the operator requests exactly the freed-up capacity") {
+        auto src = caf::flow::multicaster<int>{coordinator()};
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(),
+                                        src.as_observable().pimpl(), 5);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        src.push({1, 2, 3, 4, 5});
+        fast->request(100);
+        run_flows();
+        slow->request(3);
+        run_flows();
+        check_eq(slow->buf, vector{1, 2, 3});
+        check_eq(uut->max_buffered(), 2u);
+        check_eq(src.demand(), 3u);
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+    WHEN("the slow subscriber cancels its subscription") {
+      THEN("the operator restores its full credit window") {
+        auto src = caf::flow::multicaster<int>{coordinator()};
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(),
+                                        src.as_observable().pimpl(), 5);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        src.push({1, 2, 3, 4, 5});
+        fast->request(100);
+        run_flows();
+        slow->sub.cancel();
+        run_flows();
+        check_eq(uut->observer_count(), 1u);
+        check_eq(src.demand(), 5u);
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+  }
+}
+
+SCENARIO("a subscriber that stops requesting items stalls the other "
+         "subscribers") {
+  using snk_t = flow::passive_observer<int>;
+  using impl_t = op::publish<int>;
+  GIVEN("a publish operator with a buffer size of 5 over a hot generator") {
+    WHEN("one of two subscribers never requests any item") {
+      THEN("the generator produces no more than one buffer worth of items") {
+        auto [n, fn] = make_hot_generator();
+        auto src = make_observable().from_callable(fn).as_observable();
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(), src.pimpl(), 5);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        check_eq(*n, 5);
+        fast->request(100);
+        run_flows();
+        check_eq(*n, 5);
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5});
+        check(fast->subscribed());
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+    WHEN("the slow subscriber consumes part of its buffer") {
+      THEN("the generator resumes for exactly the freed-up capacity") {
+        auto [n, fn] = make_hot_generator();
+        auto src = make_observable().from_callable(fn).as_observable();
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(), src.pimpl(), 5);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        fast->request(100);
+        run_flows();
+        slow->request(3);
+        run_flows();
+        check_eq(*n, 8);
+        check_eq(slow->buf, vector{1, 2, 3});
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5, 6, 7, 8});
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+    WHEN("the slow subscriber cancels its subscription") {
+      THEN("the generator runs to completion") {
+        auto [n, fn] = make_hot_generator();
+        auto src = make_observable().from_callable(fn).as_observable();
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(), src.pimpl(), 5);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        fast->request(100);
+        run_flows();
+        slow->sub.cancel();
+        run_flows();
+        check_eq(*n, 10);
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        check(fast->completed());
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+  }
+}
+
+SCENARIO("an overflow strategy keeps slow subscribers from stalling the flow") {
+  using snk_t = flow::passive_observer<int>;
+  using impl_t = op::publish<int>;
+  GIVEN("a publish operator with the drop_newest strategy") {
+    WHEN("one of two subscribers never requests any item") {
+      THEN("the source completes and the slow subscriber keeps the oldest "
+           "items") {
+        auto [n, fn] = make_hot_generator();
+        auto src = make_observable().from_callable(fn).as_observable();
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(), src.pimpl(), 5,
+                                        overflow_strategy::drop_newest);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        fast->request(100);
+        run_flows();
+        check_eq(*n, 10);
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        check(fast->completed());
+        slow->request(100);
+        run_flows();
+        check_eq(slow->buf, vector{1, 2, 3, 4, 5});
+        check(slow->completed());
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+  }
+  GIVEN("a publish operator with the drop_oldest strategy") {
+    WHEN("one of two subscribers never requests any item") {
+      THEN("the source completes and the slow subscriber keeps the newest "
+           "items") {
+        auto [n, fn] = make_hot_generator();
+        auto src = make_observable().from_callable(fn).as_observable();
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(), src.pimpl(), 5,
+                                        overflow_strategy::drop_oldest);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        fast->request(100);
+        run_flows();
+        check_eq(*n, 10);
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        check(fast->completed());
+        slow->request(100);
+        run_flows();
+        check_eq(slow->buf, vector{6, 7, 8, 9, 10});
+        check(slow->completed());
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+  }
+  GIVEN("a publish operator with the fail strategy") {
+    WHEN("one of two subscribers never requests any item") {
+      THEN("only the slow subscriber receives sec::backpressure_overflow") {
+        auto [n, fn] = make_hot_generator();
+        auto src = make_observable().from_callable(fn).as_observable();
+        auto fast = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto slow = coordinator()->add_child(std::in_place_type<snk_t>);
+        auto uut = make_counted<impl_t>(coordinator(), src.pimpl(), 5,
+                                        overflow_strategy::fail);
+        auto sub1 = uut->subscribe(fast->as_observer());
+        auto sub2 = uut->subscribe(slow->as_observer());
+        auto conn = uut->connect();
+        run_flows();
+        fast->request(100);
+        run_flows();
+        check(slow->aborted());
+        check_eq(slow->err, sec::backpressure_overflow);
+        check_eq(slow->buf, vector<int>{});
+        check_eq(*n, 10);
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        check(fast->completed());
+        sub1.dispose();
+        sub2.dispose();
+        run_flows();
+      }
+    }
+  }
+}
+
+SCENARIO("an overflow strategy is transparent for subscribers that keep up") {
+  using snk_t = flow::auto_observer<int>;
+  GIVEN("a connectable with an overflow strategy and two observers") {
+    WHEN("both observers consume items as they arrive") {
+      THEN("each observer receives all items from the generator") {
+        for (auto strategy : {overflow_strategy::drop_newest,
+                              overflow_strategy::drop_oldest,
+                              overflow_strategy::fail}) {
+          auto [n, fn] = make_hot_generator();
+          auto snk1 = coordinator()->add_child(std::in_place_type<snk_t>);
+          auto snk2 = coordinator()->add_child(std::in_place_type<snk_t>);
+          make_observable()
+            .from_callable(fn)
+            .publish(strategy, 5)
+            .compose(subscribe_all(snk1, snk2))
+            .connect();
+          run_flows();
+          check_eq(*n, 10);
+          check(snk1->completed());
+          check_eq(snk1->buf, vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+          check(snk2->completed());
+          check_eq(snk2->buf, vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        }
+      }
+    }
+  }
+}
+
+SCENARIO("share accepts an overflow strategy") {
+  GIVEN("a shared observable with the drop_oldest strategy") {
+    WHEN("one subscriber consumes items and the other one does not") {
+      THEN("the source completes and the slow subscriber keeps the newest "
+           "items") {
+        auto [n, fn] = make_hot_generator();
+        auto fast = coordinator()->add_child(
+          std::in_place_type<flow::auto_observer<int>>);
+        auto slow = coordinator()->add_child(
+          std::in_place_type<flow::passive_observer<int>>);
+        make_observable()
+          .from_callable(fn)
+          .share(2, overflow_strategy::drop_oldest, 5)
+          .compose(subscribe_all(fast, slow));
+        run_flows();
+        check_eq(*n, 10);
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+        check(fast->completed());
+        slow->request(100);
+        run_flows();
+        check_eq(slow->buf, vector{6, 7, 8, 9, 10});
+        check(slow->completed());
       }
     }
   }

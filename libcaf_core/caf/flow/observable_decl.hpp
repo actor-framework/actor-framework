@@ -313,8 +313,15 @@ public:
   /// Convert this observable into a @ref connectable observable.
   connectable<T> publish();
 
+  connectable<T> publish(backpressure_overflow_strategy strategy,
+                         size_t buffer_size = defaults::flow::buffer_size);
+
   /// Convenience alias for `publish().ref_count(subscriber_threshold)`.
   observable<T> share(size_t subscriber_threshold = 1);
+
+  observable<T> share(size_t subscriber_threshold,
+                      backpressure_overflow_strategy strategy,
+                      size_t buffer_size = defaults::flow::buffer_size);
 
   // -- composing --------------------------------------------------------------
 

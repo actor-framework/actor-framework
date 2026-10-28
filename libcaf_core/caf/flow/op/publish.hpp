@@ -6,9 +6,16 @@
 
 #include "caf/detail/atomic_ref_count.hpp"
 #include "caf/detail/counted_disposable.hpp"
+#include "caf/flow/backpressure_overflow_strategy.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/connectable.hpp"
 #include "caf/flow/op/mcast.hpp"
+#include "caf/sec.hpp"
+
+#include <algorithm>
+#include <optional>
+#include <tuple>
+#include <vector>
 
 namespace caf::flow::op {
 
@@ -31,8 +38,13 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   publish(coordinator* parent, src_ptr src,
-          size_t max_buf_size = defaults::flow::buffer_size)
-    : super(parent), max_buf_size_(max_buf_size), source_(std::move(src)) {
+          size_t max_buf_size = defaults::flow::buffer_size,
+          std::optional<backpressure_overflow_strategy> overflow_strategy
+          = std::nullopt)
+    : super(parent),
+      max_buf_size_(max_buf_size),
+      overflow_strategy_(overflow_strategy),
+      source_(std::move(src)) {
     try_request_more_ = make_action([this] { this->try_request_more(); });
   }
 
@@ -92,6 +104,11 @@ public:
 
   void on_next(const T& item) override {
     --in_flight_;
+    if (overflow_strategy_) {
+      push_with_overflow_strategy(item);
+      try_request_more();
+      return;
+    }
     if (this->push(item)) {
       if (in_ && this->has_observers()) {
         // If push returns `true`, it means that all observers have consumed
@@ -147,7 +164,7 @@ protected:
   void try_request_more() {
     try_request_more_pending_ = false;
     if (in_ && this->has_observers()) {
-      if (auto buf_size = this->max_buffered() + in_flight_;
+      if (auto buf_size = gating_buf_size() + in_flight_;
           max_buf_size_ > buf_size) {
         auto demand = max_buf_size_ - buf_size;
         in_flight_ += demand;
@@ -161,6 +178,45 @@ private:
     try_request_more();
   }
 
+  size_t gating_buf_size() const noexcept {
+    return overflow_strategy_ ? this->min_buffered() : this->max_buffered();
+  }
+
+  void push_with_overflow_strategy(const T& item) {
+    std::vector<state_ptr_type> failed;
+    for (auto& state : this->states_) {
+      if (state->is_pulling() || state->buf.size() < max_buf_size_) {
+        std::ignore = state->push(item);
+        continue;
+      }
+      switch (*overflow_strategy_) {
+        case backpressure_overflow_strategy::drop_newest:
+          break;
+        case backpressure_overflow_strategy::drop_oldest:
+          state->buf.pop_front();
+          state->buf.push_back(item);
+          break;
+        default:
+          failed.push_back(state);
+      }
+    }
+    for (auto& state : failed)
+      fail_subscriber(state);
+  }
+
+  void fail_subscriber(const state_ptr_type& state) {
+    state->buf.clear();
+    state->demand = 0;
+    state->abort(make_error(sec::backpressure_overflow));
+    if (auto i = std::ranges::find(this->states_, state);
+        i != this->states_.end()) {
+      auto last = this->states_.end() - 1;
+      if (i != last)
+        std::swap(*i, *last);
+      this->states_.pop_back();
+    }
+  }
+
   mutable detail::atomic_ref_count ref_count_;
 
   /// Keeps track of the number of items that have been requested but that have
@@ -169,6 +225,8 @@ private:
 
   /// Maximum number of items to buffer.
   size_t max_buf_size_;
+
+  std::optional<backpressure_overflow_strategy> overflow_strategy_;
 
   /// Our subscription for fetching items.
   subscription in_;

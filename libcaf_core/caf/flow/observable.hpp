@@ -454,9 +454,20 @@ public:
     return materialize().publish();
   }
 
+  auto publish(backpressure_overflow_strategy strategy,
+               size_t buffer_size = defaults::flow::buffer_size) && {
+    return materialize().publish(strategy, buffer_size);
+  }
+
   /// @copydoc observable::share
   auto share(size_t subscriber_threshold = 1) && {
     return materialize().share(subscriber_threshold);
+  }
+
+  auto share(size_t subscriber_threshold,
+             backpressure_overflow_strategy strategy,
+             size_t buffer_size = defaults::flow::buffer_size) && {
+    return materialize().share(subscriber_threshold, strategy, buffer_size);
   }
 
   /// @copydoc observable::prefix_and_tail
@@ -1100,8 +1111,23 @@ connectable<T> observable<T>::publish() {
 }
 
 template <class T>
+connectable<T>
+observable<T>::publish(backpressure_overflow_strategy strategy,
+                       size_t buffer_size) {
+  return connectable<T>{
+    make_counted<op::publish<T>>(parent(), pimpl_, buffer_size, strategy)};
+}
+
+template <class T>
 observable<T> observable<T>::share(size_t subscriber_threshold) {
   return publish().ref_count(subscriber_threshold);
+}
+
+template <class T>
+observable<T> observable<T>::share(size_t subscriber_threshold,
+                                   backpressure_overflow_strategy strategy,
+                                   size_t buffer_size) {
+  return publish(strategy, buffer_size).ref_count(subscriber_threshold);
 }
 
 // -- observable: observing ----------------------------------------------------
