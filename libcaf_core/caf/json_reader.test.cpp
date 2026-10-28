@@ -14,6 +14,8 @@
 #include "caf/log/test.hpp"
 #include "caf/type_id.hpp"
 
+#include <memory_resource>
+
 using namespace caf;
 
 using namespace std::literals;
@@ -217,6 +219,49 @@ class widget_mapper : public type_id_mapper {
     else
       return query_type_id(name);
   }
+};
+
+/// A memory resource that tracks all allocations and deallocations.
+class tracking_resource : public std::pmr::memory_resource {
+public:
+  [[nodiscard]] size_t allocations() const noexcept {
+    return allocations_;
+  }
+
+  [[nodiscard]] size_t deallocations() const noexcept {
+    return deallocations_;
+  }
+
+  [[nodiscard]] size_t outstanding_allocations() const noexcept {
+    return allocations_ - deallocations_;
+  }
+
+  [[nodiscard]] size_t outstanding_bytes() const noexcept {
+    return allocated_bytes_ - deallocated_bytes_;
+  }
+
+private:
+  void* do_allocate(size_t bytes, size_t alignment) override {
+    ++allocations_;
+    allocated_bytes_ += bytes;
+    return std::pmr::new_delete_resource()->allocate(bytes, alignment);
+  }
+
+  void do_deallocate(void* ptr, size_t bytes, size_t alignment) override {
+    ++deallocations_;
+    deallocated_bytes_ += bytes;
+    std::pmr::new_delete_resource()->deallocate(ptr, bytes, alignment);
+  }
+
+  bool
+  do_is_equal(const std::pmr::memory_resource& other) const noexcept override {
+    return this == &other;
+  }
+
+  size_t allocations_ = 0;
+  size_t deallocations_ = 0;
+  size_t allocated_bytes_ = 0;
+  size_t deallocated_bytes_ = 0;
 };
 
 struct fixture {
@@ -582,6 +627,37 @@ SCENARIO("type ID mappers are authoritative") {
       }
     }
   }
+}
+
+TEST("json_reader_v2 allocates from the configured memory resource") {
+  tracking_resource tracking;
+  inspector_config config;
+  config.resource(&tracking);
+  json_reader_v2 reader{config};
+  require(reader.load(
+    R"({"city":"Model City","entries":{"Bob":5556837,"Jon":5559347}})"sv));
+  check_gt(tracking.allocations(), 0u);
+  check_gt(tracking.outstanding_bytes(), 0u);
+  reader.reset();
+  check_eq(tracking.outstanding_allocations(), 0u);
+  check_eq(tracking.outstanding_bytes(), 0u);
+}
+
+TEST("json_reader_v2 releases the configured memory resource on destruction") {
+  tracking_resource tracking;
+  {
+    inspector_config config;
+    config.resource(&tracking);
+    json_reader_v2 reader{config};
+    auto input
+      = R"({"city":"Model City","entries":{"Bob":5556837,"Jon":5559347}})"sv;
+    auto allocations_before_load = tracking.allocations();
+    require(reader.load(input));
+    check_gt(tracking.allocations(), allocations_before_load);
+    check_gt(tracking.outstanding_bytes(), 0u);
+  }
+  check_eq(tracking.outstanding_allocations(), 0u);
+  check_eq(tracking.outstanding_bytes(), 0u);
 }
 
 } // WITH_FIXTURE(fixture)
