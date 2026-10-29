@@ -6,6 +6,7 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/subscription.hpp"
@@ -16,7 +17,7 @@
 
 namespace caf::detail {
 
-class stream_bridge_sub : public flow::subscription::impl_base {
+class CAF_CORE_EXPORT stream_bridge_sub : public flow::subscription::impl_base {
 public:
   stream_bridge_sub(scheduled_actor* self, strong_actor_ptr src,
                     flow::observer<async::batch> out, uint64_t snk_flow_id,
@@ -90,7 +91,7 @@ private:
 
 using stream_bridge_sub_ptr = intrusive_ptr<stream_bridge_sub>;
 
-class stream_bridge : public flow::op::hot<async::batch> {
+class CAF_CORE_EXPORT stream_bridge : public flow::op::hot<async::batch> {
 public:
   using super = flow::op::hot<async::batch>;
 

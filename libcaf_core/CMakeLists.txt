@@ -219,6 +219,7 @@ caf_add_component(
     caf/detail/ring_buffer.test.cpp
     caf/detail/set_thread_name.cpp
     caf/detail/stream_bridge.cpp
+    caf/detail/stream_bridge.test.cpp
     caf/detail/stringification_inspector.cpp
     caf/detail/stringification_inspector.test.cpp
     caf/detail/sync_request_bouncer.cpp
