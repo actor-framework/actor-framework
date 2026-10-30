@@ -377,9 +377,7 @@ public:
           return expected<disposable>{unexpect, std::move(maybe_ctx.error())};
       }
     }
-    auto host = auth.host_str();
-    auto port = auth.port;
-    return start_client(host, port);
+    return start_client(auth.host, auth.port);
   }
 
   // State for servers.

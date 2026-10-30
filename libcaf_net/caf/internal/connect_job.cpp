@@ -115,8 +115,7 @@ void connect_job::resume(scheduler*, uint64_t) {
       fail(std::move(conn.error()));
       return;
     }
-    if (ctx->hostname_validation()
-        && !conn->hostname(auth.host_str().c_str())) {
+    if (ctx->hostname_validation() && !conn->hostname(auth.host)) {
       // new_connection() attaches the socket with BIO_NOCLOSE, so it must be
       // closed explicitly here.
       net::close(*maybe_fd);

@@ -7,6 +7,7 @@
 #include "caf/net/ssl/context.hpp"
 
 #include "caf/config.hpp"
+#include "caf/error.hpp"
 #include "caf/log/net.hpp"
 
 CAF_PUSH_WARNINGS
@@ -86,8 +87,36 @@ const char* connection::sni_hostname() noexcept {
   return SSL_get_servername(native(pimpl_), TLSEXT_NAMETYPE_host_name);
 }
 
-bool connection::hostname(const char* hostname) noexcept {
-  return SSL_set1_host(native(pimpl_), hostname);
+bool connection::hostname(const char* hoststr) noexcept {
+  ip_address addr;
+  if (parse(hoststr, addr).empty())
+    return hostname(uri::host_type{addr});
+  return hostname(uri::host_type{std::string{hoststr}});
+}
+
+bool connection::hostname(const uri::host_type& hostname) noexcept {
+#if OPENSSL_VERSION_NUMBER >= 0x40000000L
+  // OpenSSL 4 maintains separate DNS and IP lists. Clear the other list so
+  // that setting a new identity replaces the previous one.
+  if (auto* dnsname = std::get_if<std::string>(&hostname)) {
+    return SSL_set1_ipaddr(native(pimpl_), nullptr)
+           && SSL_set1_dnsname(native(pimpl_), dnsname->c_str());
+  }
+  auto ipaddr = to_string(std::get<ip_address>(hostname));
+  return SSL_set1_dnsname(native(pimpl_), nullptr)
+         && SSL_set1_ipaddr(native(pimpl_), ipaddr.c_str());
+#else
+  std::string host;
+  if (auto* dnsname = std::get_if<std::string>(&hostname))
+    host = *dnsname;
+  else
+    host = to_string(std::get<ip_address>(hostname));
+  // OpenSSL 3's SSL_set1_host may leave the other identity type in place.
+  auto* params = SSL_get0_param(native(pimpl_));
+  return X509_VERIFY_PARAM_set1_ip(params, nullptr, 0)
+         && X509_VERIFY_PARAM_set1_host(params, nullptr, 0)
+         && SSL_set1_host(native(pimpl_), host.c_str());
+#endif
 }
 
 // -- connecting and teardown --------------------------------------------------
