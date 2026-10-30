@@ -350,6 +350,12 @@ json_reader_base::json_reader_base(const type_id_mapper& mapper)
   // nop
 }
 
+json_reader_base::json_reader_base(const type_id_mapper& mapper,
+                                   std::pmr::memory_resource* resource)
+  : buf_(resource), mapper_(&mapper) {
+  CAF_ASSERT(resource != nullptr);
+}
+
 json_reader_base::~json_reader_base() {
   // nop
 }

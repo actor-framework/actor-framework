@@ -6,6 +6,8 @@
 
 #include "caf/fwd.hpp"
 
+#include <memory_resource>
+
 namespace caf {
 
 /// Specifies how an inspector encodes object types for inspectors that support
@@ -55,10 +57,23 @@ public:
     return *this;
   }
 
+  /// Returns the configured memory resource.
+  [[nodiscard]] constexpr std::pmr::memory_resource* resource() const noexcept {
+    return resource_;
+  }
+
+  /// Changes the configured memory resource.
+  constexpr inspector_config&
+  resource(std::pmr::memory_resource* ptr) noexcept {
+    resource_ = ptr;
+    return *this;
+  }
+
 private:
   caf::actor_handle_codec* codec_ = nullptr;
   const type_id_mapper* mapper_ = nullptr;
   object_type_encoding encoding_ = object_type_encoding::default_mode;
+  std::pmr::memory_resource* resource_ = std::pmr::get_default_resource();
 };
 
 } // namespace caf
