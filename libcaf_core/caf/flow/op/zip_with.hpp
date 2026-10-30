@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/detail/assert.hpp"
 #include "caf/detail/atomic_ref_count.hpp"
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/observer.hpp"
@@ -13,6 +14,7 @@
 
 #include <algorithm>
 #include <deque>
+#include <limits>
 #include <memory>
 #include <tuple>
 #include <type_traits>
@@ -39,6 +41,9 @@ struct zip_input {
 
   subscription sub;
   std::deque<T> buf;
+
+  /// Items requested from this input that have not arrived yet.
+  size_t in_flight = 0;
 
   T pop() {
     auto result = buf.front();
@@ -87,12 +92,10 @@ public:
   }
 
   void request(size_t n) override {
-    if (out_) {
-      demand_ += n;
-      for_each_input([n](auto, auto& input) {
-        if (input.sub)
-          input.sub.request(n);
-      });
+    if (out_ && n > 0) {
+      auto available = std::numeric_limits<size_t>::max() - demand_;
+      demand_ += std::min(n, available);
+      for_each_input([this](auto, auto& input) { request_input(input); });
     }
   }
 
@@ -138,9 +141,8 @@ public:
   void fwd_on_subscribe(zip_index<I> index, subscription sub) {
     if (out_) {
       if (auto& in = at(index); !in.sub) {
-        if (demand_ > 0)
-          sub.request(demand_);
         in.sub = std::move(sub);
+        request_input(in);
         return;
       }
     }
@@ -151,6 +153,7 @@ public:
   void fwd_on_complete(zip_index<I> index) {
     if (out_) {
       auto& input = at(index);
+      input.in_flight = 0;
       if (input.sub)
         input.sub.release_later();
       if (input.buf.empty())
@@ -164,6 +167,7 @@ public:
       if (err_.empty())
         err_ = what;
       auto& input = at(index);
+      input.in_flight = 0;
       if (input.sub)
         input.sub.release_later();
       if (input.buf.empty())
@@ -174,7 +178,10 @@ public:
   template <size_t I, class T>
   void fwd_on_next(zip_index<I> index, const T& item) {
     if (out_) {
-      at(index).buf.push_back(item);
+      auto& input = at(index);
+      CAF_ASSERT(input.in_flight > 0);
+      --input.in_flight;
+      input.buf.push_back(item);
       push();
     }
   }
@@ -194,12 +201,26 @@ public:
   }
 
 private:
+  template <class T>
+  void request_input(zip_input<T>& input) {
+    if (!out_ || !input.sub || input.buf.size() >= demand_)
+      return;
+    auto needed = demand_ - input.buf.size();
+    if (input.in_flight >= needed)
+      return;
+    auto n = needed - input.in_flight;
+    input.in_flight += n;
+    auto sub = input.sub;
+    sub.request(n);
+  }
+
   void do_dispose(bool from_external) override {
     if (!out_)
       return;
     for_each_input([](auto, auto& input) {
       input.sub.cancel();
       input.buf.clear();
+      input.in_flight = 0;
     });
     if (from_external) {
       if (err_.empty())
@@ -227,6 +248,7 @@ private:
     for_each_input([](auto, auto& input) {
       input.sub.cancel();
       input.buf.clear();
+      input.in_flight = 0;
     });
     // Set out_ to null and emit the final event.
     if (err_.empty())
