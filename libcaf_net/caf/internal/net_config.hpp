@@ -138,7 +138,7 @@ public:
     /// Simple type for storing host and port information for reaching a server.
     struct server_address {
       /// The host name or IP address of the host.
-      std::string host;
+      uri::host_type host;
 
       /// The port to connect to.
       uint16_t port;
@@ -150,7 +150,7 @@ public:
       using server_t = std::variant<server_address, uri>;
 
       lazy(std::string host, uint16_t port)
-        : server(server_address{std::move(host), port}) {
+        : server(server_address{make_host(std::move(host)), port}) {
         // nop
       }
 
@@ -160,6 +160,14 @@ public:
 
       /// The address for reaching the server or an error.
       server_t server;
+
+    private:
+      static uri::host_type make_host(std::string host) {
+        ip_address addr;
+        if (parse(host, addr).empty())
+          return addr;
+        return host;
+      }
     };
 
     class socket {
@@ -356,9 +364,9 @@ public:
   /// The maximum amount of retries.
   size_t max_retry_count = 0;
 
-  /// Hostname, saved during the `start_client` call and used for
-  /// SSL hostname validation.
-  std::string hostname;
+  /// Hostname, saved during the `start_client` call and used for SSL hostname
+  /// validation.
+  uri::host_type hostname;
 
   client_config client;
 
@@ -369,6 +377,12 @@ public:
   virtual expected<disposable> start_client_impl(net::ssl::connection&) = 0;
 
   virtual expected<disposable> start_client_impl(net::stream_socket) = 0;
+
+  std::string host_str() const {
+    return std::holds_alternative<std::string>(hostname)
+             ? std::get<std::string>(hostname)
+             : to_string(std::get<ip_address>(hostname));
+  }
 
   expected<disposable> start_client(none_t) {
     return expected<disposable>{unexpect, caf::sec::logic_error,
@@ -381,41 +395,43 @@ public:
 
   expected<disposable> start_client(client_config::socket& cfg) {
     if (ctx) {
-      auto conn = ctx->new_connection(cfg.take_fd());
+      auto conn = ctx->new_connection(cfg.fd);
       if (!conn) {
         return expected<disposable>{unexpect, std::move(conn.error())};
       }
       if (ctx->hostname_validation()) {
-        if (!conn->hostname(hostname.c_str())) {
+        if (!conn->hostname(hostname)) {
           return format_to_unexpected(
             sec::protocol_error, "unable to set {} for SSL hostname validation",
             hostname);
         }
         log::net::debug("set {} as hostname for SSL validation", hostname);
       }
+      std::ignore = cfg.take_fd();
       return start_client_impl(*conn);
     }
     auto fd = cfg.take_fd();
     return start_client_impl(fd);
   }
 
-  expected<disposable> start_client(std::string& host, uint16_t port) {
+  expected<disposable> start_client(const uri::host_type& host, uint16_t port) {
+    hostname = host;
     net::stream_socket fd;
     if (connector_) {
-      auto maybe_fd = connector_->connect(host, port, connection_timeout,
+      auto maybe_fd = connector_->connect(host_str(), port, connection_timeout,
                                           max_retry_count, retry_delay);
       if (!maybe_fd)
         return expected<disposable>{unexpect, std::move(maybe_fd.error())};
       fd = *maybe_fd;
     } else {
-      auto maybe_fd = detail::tcp_try_connect(host, port, connection_timeout,
+      auto maybe_fd = detail::tcp_try_connect(host_str(), port,
+                                              connection_timeout,
                                               max_retry_count, retry_delay);
       if (!maybe_fd)
         return expected<disposable>{unexpect, std::move(maybe_fd.error())};
       fd = *maybe_fd;
     }
     client_config::socket sub_cfg{fd};
-    hostname = std::move(host);
     return start_client(sub_cfg);
   }
 
