@@ -195,7 +195,7 @@ public:
     // Fill the handshake with fields from the URI and try to connect.
     hs.host(host);
     hs.endpoint(endpoint.path_query_fragment());
-    return start_client(host, port);
+    return start_client(auth.host, port);
   }
 };
 
