@@ -10,6 +10,7 @@
 
 #include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/uri.hpp"
 
 #include <cstddef>
 
@@ -67,7 +68,13 @@ public:
 
   /// Sets the SSL hostname used for certificate validation of this connection.
   /// Must be called before connect().
+  /// A null pointer clears DNS and IP checks.
+  CAF_DEPRECATED("Use hostname(const uri::host_type&) instead")
   [[nodiscard]] bool hostname(const char* hostname) noexcept;
+
+  /// Sets the SSL hostname or IP address used for certificate validation of
+  /// this connection. Must be called before connect().
+  [[nodiscard]] bool hostname(const uri::host_type& addr) noexcept;
 
   // -- connecting and teardown ------------------------------------------------
 
