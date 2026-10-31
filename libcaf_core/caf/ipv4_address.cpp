@@ -4,23 +4,17 @@
 
 #include "caf/ipv4_address.hpp"
 
-#include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
 #include "caf/error.hpp"
 #include "caf/message.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 
-#include <cstring>
 #include <string_view>
 
 namespace caf {
 
 namespace {
-
-inline uint32_t net_order(uint32_t value) {
-  return detail::to_network_order(value);
-}
 
 struct ipv4_address_consumer {
   ipv4_address& dest;
@@ -38,24 +32,22 @@ struct ipv4_address_consumer {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-ipv4_address::ipv4_address() {
-  bits_ = 0u;
-}
+ipv4_address::ipv4_address() = default;
 
-ipv4_address::ipv4_address(array_type bytes) {
-  memcpy(bytes_.data(), bytes.data(), bytes.size());
+ipv4_address::ipv4_address(array_type bytes) : bytes_(bytes) {
+  // nop
 }
 
 // -- properties ---------------------------------------------------------------
 
 bool ipv4_address::is_loopback() const noexcept {
   // All addresses in 127.0.0.0/8 are considered loopback addresses.
-  return (bits_ & net_order(0xFF000000)) == net_order(0x7F000000);
+  return bytes_[0] == 127;
 }
 
 bool ipv4_address::is_multicast() const noexcept {
   // All addresses in 224.0.0.0/4 are considered multicast addresses.
-  return (bits_ & net_order(0xF0000000)) == net_order(0xE0000000);
+  return (bytes_[0] & 0xF0) == 0xE0;
 }
 
 // -- factories ----------------------------------------------------------------

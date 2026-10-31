@@ -5,7 +5,6 @@
 #include "caf/ipv6_address.hpp"
 
 #include "caf/detail/assert.hpp"
-#include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
 #include "caf/error.hpp"
 #include "caf/ipv4_address.hpp"
@@ -14,7 +13,7 @@
 #include "caf/pec.hpp"
 
 #include <algorithm>
-#include <cstring>
+#include <bit>
 #include <string_view>
 
 namespace caf {
@@ -56,36 +55,21 @@ void append_v6_hex(std::string& result, const uint8_t* xs) {
     result += '0';
 }
 
-inline uint32_t net_order_32(uint32_t value) {
-  return detail::to_network_order(value);
-}
-
-inline uint64_t net_order_64(uint64_t value) {
-  return detail::to_network_order(value);
-}
-
-std::array<uint32_t, 3> v4_prefix{{0, 0, net_order_32(0x0000FFFFu)}};
+constexpr std::array<uint8_t, 12> v4_prefix{0, 0, 0, 0, 0,    0,
+                                            0, 0, 0, 0, 0xff, 0xff};
 
 } // namespace
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-ipv6_address::ipv6_address() noexcept {
-  half_segments_[0] = 0;
-  half_segments_[1] = 0;
-}
+ipv6_address::ipv6_address() noexcept = default;
 
 ipv6_address::ipv6_address(uint16_ilist prefix, uint16_ilist suffix) noexcept {
   CAF_ASSERT((prefix.size() + suffix.size()) <= 8);
   auto addr_fill = [&](uint16_ilist chunks, size_t p) {
-    union {
-      uint16_t i;
-      std::array<uint8_t, 2> a;
-    } tmp;
     for (auto chunk : chunks) {
-      tmp.i = detail::to_network_order(chunk);
-      bytes_[p++] = tmp.a[0];
-      bytes_[p++] = tmp.a[1];
+      bytes_[p++] = static_cast<uint8_t>(chunk >> 8);
+      bytes_[p++] = static_cast<uint8_t>(chunk & 0xff);
     }
   };
   bytes_.fill(0);
@@ -94,34 +78,32 @@ ipv6_address::ipv6_address(uint16_ilist prefix, uint16_ilist suffix) noexcept {
 }
 
 ipv6_address::ipv6_address(ipv4_address addr) noexcept {
-  std::copy(v4_prefix.begin(), v4_prefix.end(), quad_segments_.begin());
-  quad_segments_.back() = addr.bits();
+  std::copy(v4_prefix.begin(), v4_prefix.end(), bytes_.begin());
+  std::copy(addr.bytes().begin(), addr.bytes().end(), bytes_.begin() + 12);
 }
 
-ipv6_address::ipv6_address(array_type bytes) noexcept {
-  memcpy(bytes_.data(), bytes.data(), bytes.size());
+ipv6_address::ipv6_address(array_type bytes) noexcept : bytes_(bytes) {
+  // nop
 }
 
 // -- properties ---------------------------------------------------------------
 
 bool ipv6_address::embeds_v4() const noexcept {
-  using std::begin;
-  using std::end;
-  return std::equal(begin(v4_prefix), end(v4_prefix), quad_segments_.begin());
+  return std::equal(v4_prefix.begin(), v4_prefix.end(), bytes_.begin());
 }
 
 ipv4_address ipv6_address::embedded_v4() const noexcept {
-  ipv4_address result;
-  result.bits(quad_segments_.back());
-  return result;
+  ipv4_address::array_type result;
+  std::copy(bytes_.begin() + 12, bytes_.end(), result.begin());
+  return ipv4_address{result};
 }
 
 bool ipv6_address::is_loopback() const noexcept {
+  constexpr array_type native_loopback{0, 0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0, 1};
   // IPv6 defines "::1" as the loopback address, when embedding a v4 we
   // dispatch accordingly.
-  return embeds_v4()
-           ? embedded_v4().is_loopback()
-           : half_segments_[0] == 0 && half_segments_[1] == net_order_64(1u);
+  return embeds_v4() ? embedded_v4().is_loopback() : bytes_ == native_loopback;
 }
 
 // -- factories ----------------------------------------------------------------
@@ -172,7 +154,8 @@ std::string to_string(ipv6_address x) {
   std::string result;
   // Utility for appending chunks to the result.
   auto add_chunk = [&](uint16_t chunk) {
-    append_v6_hex(result, reinterpret_cast<uint8_t*>(&chunk));
+    auto bytes = std::bit_cast<std::array<uint8_t, 2>>(chunk);
+    append_v6_hex(result, bytes.data());
   };
   auto add_chunks = [&](u16_iterator i, u16_iterator e) {
     if (i != e) {
@@ -184,8 +167,9 @@ std::string to_string(ipv6_address x) {
     }
   };
   // Scan for the longest streak of 0 16-bit chunks for :: shorthand.
-  auto first = x.oct_segments_.cbegin();
-  auto last = x.oct_segments_.cend();
+  auto segments = std::bit_cast<ipv6_address::u16_array_type>(x.bytes());
+  auto first = segments.cbegin();
+  auto last = segments.cend();
   auto streak = longest_streak(first, last);
   // Put it all together.
   if (streak.first == last) {
