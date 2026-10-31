@@ -6,7 +6,6 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/assert.hpp"
-#include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/ipv4_address.hpp"
@@ -14,6 +13,7 @@
 #include "caf/pec.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 
@@ -133,12 +133,10 @@ struct read_ipv6_address_piece_consumer {
   F callback;
 
   void value(uint16_t x) {
-    union {
-      uint16_t bits;
-      std::array<uint8_t, 2> bytes;
-    } val;
-    val.bits = to_network_order(x);
-    callback(val.bytes.data(), val.bytes.size());
+    // Each octet has 8 bits; network byte order places the high octet first.
+    auto bytes = std::array{static_cast<uint8_t>(x >> 8),
+                            static_cast<uint8_t>(x)};
+    callback(bytes.data(), bytes.size());
   }
 
   void value(uint8_t x) {

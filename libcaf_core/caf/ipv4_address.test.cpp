@@ -6,7 +6,14 @@
 
 #include "caf/test/test.hpp"
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/json_object.hpp"
+#include "caf/json_reader.hpp"
+#include "caf/json_value.hpp"
+#include "caf/json_writer.hpp"
 
 using caf::detail::to_network_order;
 
@@ -121,4 +128,62 @@ TEST("operators") {
   check_eq(addr(16, 0, 0, 8) & addr(255, 2, 4, 6), addr(16, 0, 0, 0));
   check_eq(addr(16, 0, 0, 8) | addr(255, 2, 4, 6), addr(255, 2, 4, 14));
   check_eq(addr(16, 0, 0, 8) ^ addr(255, 2, 4, 6), addr(239, 2, 4, 14));
+}
+
+TEST("from_bits constructs bytes from a network-order integer") {
+  auto value = ipv4_address::from_bits(to_network_order(0x01020304u));
+  check_eq(value.bytes(), (ipv4_address::array_type{1, 2, 3, 4}));
+}
+
+TEST("loopback detection reflects changes through mutable bytes") {
+  auto value = addr(1, 2, 3, 4);
+  value.data()[0] = 127;
+  check(value.is_loopback());
+  value[0] = 128;
+  check(!value.is_loopback());
+}
+
+TEST("binary serialization stores IPv4 as a network-order scalar") {
+  auto input = addr(1, 2, 3, 4);
+  auto scalar = to_network_order(0x01020304u);
+  byte_buffer actual;
+  byte_buffer expected;
+  binary_serializer sink{actual};
+  binary_serializer reference{expected};
+  require(sink.apply(input));
+  require(reference.apply(scalar));
+  check_eq(actual, expected);
+}
+
+TEST("binary deserialization reads IPv4 from a network-order scalar") {
+  auto scalar = to_network_order(0x01020304u);
+  byte_buffer expected;
+  binary_serializer reference{expected};
+  require(reference.apply(scalar));
+  auto output = addr(9, 9, 9, 9);
+  binary_deserializer source{expected};
+  require(source.apply(output));
+  check_eq(output.bytes(), (ipv4_address::array_type{1, 2, 3, 4}));
+}
+
+TEST("JSON inspection preserves the scalar value field") {
+  auto input = addr(1, 2, 3, 4);
+  auto scalar = to_network_order(0x01020304u);
+  json_writer writer;
+  writer.skip_object_type_annotation(true);
+  require(writer.apply(input));
+  auto parsed = json_value::parse(writer.str());
+  require(parsed.has_value());
+  require(parsed->is_object());
+  auto object = parsed->to_object();
+  check_eq(object.size(), 1u);
+  auto value = object.value("value");
+  require(value.is_unsigned());
+  check_eq(value.to_unsigned(), scalar);
+  auto json = std::string{"{\"value\":"} + std::to_string(scalar) + "}";
+  json_reader reader;
+  require(reader.load(json));
+  auto output = addr(9, 9, 9, 9);
+  require(reader.apply(output));
+  check_eq(output.bytes(), (ipv4_address::array_type{1, 2, 3, 4}));
 }
