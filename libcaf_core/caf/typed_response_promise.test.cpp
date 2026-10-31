@@ -30,11 +30,25 @@ testee_actor::behavior_type delegator(testee_actor::pointer self,
   return {
     [=](int x, int y) {
       auto promise = self->make_response_promise<int>();
-      return promise.delegate(worker, x, y);
+      return promise.mail(x, y).delegate(worker);
     },
     [=](ok_atom) {
       auto promise = self->make_response_promise<void>();
-      return promise.delegate(worker, ok_atom_v);
+      return promise.mail(ok_atom_v).delegate(worker);
+    },
+  };
+}
+
+testee_actor::behavior_type deferred_delegator(testee_actor::pointer self,
+                                               testee_actor worker) {
+  return {
+    [=](int x, int y) {
+      auto msg = self->make_response_promise<int>().mail(x, y);
+      return std::move(msg).delegate(worker);
+    },
+    [=](ok_atom) {
+      auto msg = self->make_response_promise<void>().mail(ok_atom_v);
+      return std::move(msg).delegate(worker);
     },
   };
 }
@@ -195,6 +209,30 @@ SCENARIO("response promises allow delegation") {
           check_eq(received_int, 7);
         });
         check(*received);
+      }
+    }
+  }
+}
+
+SCENARIO("response promises allow deferred delegation") {
+  GIVEN("a dispatcher that stores the mail proxy before delegating") {
+    scoped_actor self{sys};
+    auto adder_hdl = sys.spawn(adder);
+    auto hdl = sys.spawn(deferred_delegator, adder_hdl);
+    WHEN("sending a request to the dispatcher") {
+      inject().with(3, 4).from(self).to(hdl);
+      THEN("clients receive the response from the adder") {
+        expect<int, int>().with(3, 4).from(self).to(adder_hdl);
+        auto received = std::make_shared<bool>(false);
+        self->receive([this, received](int received_int) {
+          *received = true;
+          check_eq(received_int, 7);
+        });
+        check(*received);
+        // The dispatcher created its mail proxy from a temporary promise. The
+        // proxy must keep the shared state of the promise alive, otherwise the
+        // client would have received a broken_promise error.
+        check(self->mailbox().empty());
       }
     }
   }
