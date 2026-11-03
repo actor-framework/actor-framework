@@ -11,6 +11,7 @@
 #include "caf/type_id.hpp"
 
 #include <cstddef>
+#include <memory_resource>
 #include <span>
 #include <string>
 #include <string_view>
@@ -155,7 +156,8 @@ public:
 protected:
   json_writer_base();
 
-  json_writer_base(const type_id_mapper& mapper);
+  json_writer_base(const type_id_mapper& mapper,
+                   std::pmr::memory_resource* resource);
 
 private:
   using util = internal::json_writer_util;
@@ -173,10 +175,10 @@ private:
   size_t indentation_factor_ = 0;
 
   /// Buffers the generated JSON text output.
-  std::vector<char> buf_;
+  std::pmr::vector<char> buf_;
 
   /// Maintains the state of the JSON writer while traversing the JSON nodes.
-  std::vector<internal::json_writer_stack_entry> stack_;
+  std::pmr::vector<internal::json_writer_stack_entry> stack_;
 
   /// Configuration flags for the JSON writer.
   flags flags_;
@@ -218,7 +220,7 @@ public:
   json_writer_v2() = default;
 
   explicit json_writer_v2(const inspector_config& config)
-    : super(config.mapper()), codec_(config.codec()) {
+    : super(config.mapper(), config.resource()), codec_(config.codec()) {
     // nop
   }
 

@@ -23,7 +23,7 @@ namespace {
 
 static constexpr const char class_name[] = "caf::json_writer_base";
 
-char last_non_ws_char(const std::vector<char>& buf) {
+char last_non_ws_char(const std::pmr::vector<char>& buf) {
   auto not_ws = [](char c) {
     return !std::isspace(static_cast<unsigned char>(c));
   };
@@ -199,12 +199,14 @@ public:
 namespace caf {
 
 json_writer_base::json_writer_base()
-  : json_writer_base(get_default_type_id_mapper()) {
+  : json_writer_base(get_default_type_id_mapper(),
+                     std::pmr::get_default_resource()) {
   // nop
 }
 
-json_writer_base::json_writer_base(const type_id_mapper& mapper)
-  : mapper_(&mapper) {
+json_writer_base::json_writer_base(const type_id_mapper& mapper,
+                                   std::pmr::memory_resource* resource)
+  : buf_(resource), stack_(resource), mapper_(&mapper) {
   /// All flags are initially set to false.
   std::memset(&flags_, 0, sizeof(flags_));
   // Reserve some reasonable storage for the character buffer. JSON grows
