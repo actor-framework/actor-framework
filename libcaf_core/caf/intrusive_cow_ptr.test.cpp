@@ -46,7 +46,8 @@ public:
     ++class0_instances;
   }
 
-  class0(const class0& other) : value(other.value), subtype_(other.subtype_) {
+  class0(const class0& other)
+    : ref_counted(other), value(other.value), subtype_(other.subtype_) {
     if (!subtype_) {
       ++class0_instances;
     }
@@ -109,7 +110,8 @@ public:
     ++custom_unshare_instances;
   }
 
-  custom_unshare(const custom_unshare& other) : value(other.value) {
+  custom_unshare(const custom_unshare& other)
+    : ref_counted(other), value(other.value) {
     ++custom_unshare_instances;
   }
 
