@@ -101,6 +101,10 @@ public:
   }
 
 private:
+  friend Derived;
+
+  byte_address() = default;
+
   Derived& dref() noexcept {
     return *static_cast<Derived*>(this);
   }

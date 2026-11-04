@@ -6,6 +6,9 @@
 
 namespace caf::intrusive {
 
+template <class T>
+class linked_list;
+
 /// Intrusive base for singly linked types that allows queues to use `T` with
 /// dummy nodes.
 template <class T>
@@ -18,6 +21,15 @@ struct singly_linked {
   /// Type of the pointer connecting two singly linked nodes.
   using node_pointer = node_type*;
 
+  // -- member variables -------------------------------------------------------
+
+  /// Intrusive pointer to the next element.
+  node_pointer next = nullptr;
+
+private:
+  friend T;
+  friend class linked_list<T>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   singly_linked() noexcept = default;
@@ -29,11 +41,6 @@ struct singly_linked {
   singly_linked(const singly_linked&) = delete;
 
   singly_linked& operator=(const singly_linked&) = delete;
-
-  // -- member variables -------------------------------------------------------
-
-  /// Intrusive pointer to the next element.
-  node_pointer next = nullptr;
 };
 
 } // namespace caf::intrusive

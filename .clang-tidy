@@ -4,7 +4,6 @@ Checks: >
   bugprone-*,
   -bugprone-branch-clone,
   -bugprone-copy-constructor-init,
-  -bugprone-crtp-constructor-accessibility,
   -bugprone-derived-method-shadowing-base-method,
   -bugprone-easily-swappable-parameters,
   -bugprone-empty-catch,

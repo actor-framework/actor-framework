@@ -313,12 +313,15 @@ public:
   }
 
 protected:
+  /// Pointer to the implementation object.
+  placement_ptr<SubtypeInterface> impl_;
+
+private:
+  friend Subtype;
+
   explicit load_inspector_base(SubtypeInterface* impl) noexcept : impl_(impl) {
     // nop
   }
-
-  /// Pointer to the implementation object.
-  placement_ptr<SubtypeInterface> impl_;
 };
 
 } // namespace caf
