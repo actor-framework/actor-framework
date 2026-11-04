@@ -83,7 +83,7 @@ struct fixture : test::fixture::deterministic {
 };
 
 template <class... Ts>
-log_type make_log(Ts&&... xs) {
+log_type make_log(Ts&&... xs) noexcept {
   return log_type{std::forward<Ts>(xs)...};
 }
 
@@ -132,6 +132,7 @@ middleman {
 )";
 
 // clang-format off
+// NOLINTNEXTLINE(bugprone-throwing-static-initialization)
 const auto conf0_log = make_log(
   "key: foo=bar",
   "{",

@@ -56,9 +56,13 @@ public:
   }
 
   /// Adds a new test factory to the suite `suite_name`.
+  /// @note This function is `noexcept` because it runs during static
+  ///       initialization, where an exception would call `std::terminate`
+  ///       anyway.
   template <class TestImpl>
   static ptrdiff_t add(std::string_view suite_name,
-                       std::string_view description, block_type type) {
+                       std::string_view description,
+                       block_type type) noexcept {
     struct impl : factory {
       using factory::factory;
       std::unique_ptr<runnable> make(context_ptr state) override {
@@ -70,13 +74,20 @@ public:
   }
 
   /// Adds a new test factory to the "anonymous" suite named `$`.
+  /// @note This function is `noexcept` because it runs during static
+  ///       initialization, where an exception would call `std::terminate`
+  ///       anyway.
   template <class TestImpl>
-  static ptrdiff_t add(unit_t, std::string_view description, block_type type) {
+  static ptrdiff_t add(unit_t, std::string_view description,
+                       block_type type) noexcept {
     return add<TestImpl>("$", description, type);
   }
 
   /// Adds a new callback that needs to run before the first test runs.
-  static ptrdiff_t add_init_callback(void_function callback);
+  /// @note This function is `noexcept` because it runs during static
+  ///       initialization, where an exception would call `std::terminate`
+  ///       anyway.
+  static ptrdiff_t add_init_callback(void_function callback) noexcept;
 
   /// Runs all registered init callbacks.
   static void run_init_callbacks();

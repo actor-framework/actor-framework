@@ -71,7 +71,7 @@ public:
   public:
     // -- constructors, destructors, and assignment operators ------------------
 
-    impl_type() = default;
+    impl_type() noexcept = default;
 
     impl_type(const impl_type&) = delete;
 

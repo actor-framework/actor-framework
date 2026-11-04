@@ -41,8 +41,11 @@ struct meta_objects_cleanup : ref_counted {
   }
 };
 
-global_meta_objects_guard_type cleanup_helper
-  = make_counted<meta_objects_cleanup>();
+global_meta_objects_guard_type make_cleanup_helper() noexcept {
+  return make_counted<meta_objects_cleanup>();
+}
+
+global_meta_objects_guard_type cleanup_helper = make_cleanup_helper();
 
 } // namespace
 

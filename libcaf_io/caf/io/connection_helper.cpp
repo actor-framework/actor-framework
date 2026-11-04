@@ -22,7 +22,7 @@ namespace caf::io {
 
 namespace {
 
-auto autoconnect_timeout = std::chrono::minutes(10);
+constexpr auto autoconnect_timeout = std::chrono::minutes(10);
 
 } // namespace
 

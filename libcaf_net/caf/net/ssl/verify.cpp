@@ -6,7 +6,7 @@ namespace caf::net::ssl::verify {
 
 namespace {
 
-constexpr verify_t i2v(int x) {
+constexpr verify_t i2v(int x) noexcept {
   return static_cast<verify_t>(x);
 }
 

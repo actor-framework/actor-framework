@@ -56,11 +56,11 @@ void append_v6_hex(std::string& result, const uint8_t* xs) {
     result += '0';
 }
 
-inline uint32_t net_order_32(uint32_t value) {
+inline uint32_t net_order_32(uint32_t value) noexcept {
   return detail::to_network_order(value);
 }
 
-inline uint64_t net_order_64(uint64_t value) {
+inline uint64_t net_order_64(uint64_t value) noexcept {
   return detail::to_network_order(value);
 }
 

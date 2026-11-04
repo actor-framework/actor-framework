@@ -53,7 +53,7 @@ ptrdiff_t registry::add(factory* new_factory) {
   return reinterpret_cast<ptrdiff_t>(new_factory);
 }
 
-ptrdiff_t registry::add_init_callback(void_function callback) {
+ptrdiff_t registry::add_init_callback(void_function callback) noexcept {
   return instance().add(callback);
 }
 
