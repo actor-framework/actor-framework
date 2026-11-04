@@ -21,6 +21,7 @@
 #  include <expected>
 #endif
 
+// NOLINTBEGIN(bugprone-forward-declaration-namespace)
 namespace caf {
 
 // clang-format off
@@ -421,3 +422,5 @@ struct handler;
 struct handler_list;
 
 } // namespace caf::meta
+
+// NOLINTEND(bugprone-forward-declaration-namespace)

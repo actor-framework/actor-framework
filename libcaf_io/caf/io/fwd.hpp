@@ -39,6 +39,7 @@ class broker;
 class connection_handle;
 class datagram_servant;
 class doorman;
+// NOLINTNEXTLINE(bugprone-forward-declaration-namespace)
 class middleman;
 class receive_policy;
 class scribe;

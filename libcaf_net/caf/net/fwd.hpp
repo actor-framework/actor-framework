@@ -11,6 +11,7 @@
 
 #include <vector>
 
+// NOLINTBEGIN(bugprone-forward-declaration-namespace)
 namespace caf::net {
 
 // -- templates ----------------------------------------------------------------
@@ -188,3 +189,5 @@ namespace caf::detail {
 class connector;
 
 } // namespace caf::detail
+
+// NOLINTEND(bugprone-forward-declaration-namespace)

@@ -8,7 +8,6 @@ Checks: >
   -bugprone-easily-swappable-parameters,
   -bugprone-empty-catch,
   -bugprone-exception-escape,
-  -bugprone-forward-declaration-namespace,
   -bugprone-macro-parentheses,
   -bugprone-move-forwarding-reference,
   -bugprone-std-namespace-modification,
