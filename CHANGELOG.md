@@ -119,6 +119,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   legacy networking APIs that have been replaced by the `caf::net` module.
 - The implicit conversion operator from `cow_string` to `std::string_view` is
   now deprecated. Users should use the `str()` method explicitly instead.
+- The utility function `caf::make_string_view` is now deprecated and will be
+  removed in the next major release. Users should construct a `std::string_view`
+  directly instead.
 
 ### Added
 

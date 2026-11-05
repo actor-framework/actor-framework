@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/concepts.hpp"
 #include "caf/detail/core_export.hpp"
@@ -49,7 +50,7 @@ CAF_CORE_EXPORT void split(std::vector<std::string_view>& result,
                            std::string_view str, char delim,
                            bool keep_all = true);
 
-// TODO: use the equivalent C++20 constructor instead, once available.
+CAF_DEPRECATED("construct std::string_view directly instead")
 constexpr std::string_view make_string_view(const char* first,
                                             const char* last) noexcept {
   auto n = static_cast<size_t>(std::distance(first, last));
