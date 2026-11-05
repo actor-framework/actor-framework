@@ -10,7 +10,6 @@ Checks: >
   -bugprone-macro-parentheses,
   -bugprone-move-forwarding-reference,
   -bugprone-std-namespace-modification,
-  -bugprone-suspicious-stringview-data-usage,
   -bugprone-switch-missing-default-case,
   -bugprone-unchecked-optional-access,
   -bugprone-unchecked-string-to-number-conversion,

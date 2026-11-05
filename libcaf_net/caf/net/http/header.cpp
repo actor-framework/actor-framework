@@ -84,7 +84,7 @@ expected<std::string_view> header::parse_fields(std::string_view data) {
   auto remainder = process_lines(data, [this](std::string_view line) {
     if (auto sep = std::ranges::find(line, ':'); sep != line.end()) {
       auto n = static_cast<size_t>(std::distance(line.begin(), sep));
-      auto key = trim(std::string_view{line.data(), n});
+      auto key = trim(line.substr(0, n));
       auto m = static_cast<size_t>(std::distance(sep + 1, line.end()));
       auto val = trim(std::string_view{std::addressof(*(sep + 1)), m});
       if (!key.empty()) {

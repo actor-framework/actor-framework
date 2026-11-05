@@ -191,9 +191,9 @@ void for_each_http_line(std::string_view lines, F&& f) {
   auto nl = "\r\n"sv;
   for (;;) {
     if (auto pos = lines.find(nl); pos != std::string_view::npos) {
-      auto line = std::string_view{lines.data(), pos};
+      auto line = lines.substr(0, pos);
       if (!line.empty())
-        f(std::string_view{lines.data(), pos});
+        f(line);
       lines.remove_prefix(pos + 2);
     } else {
       return;
