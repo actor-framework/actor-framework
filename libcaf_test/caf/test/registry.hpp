@@ -8,6 +8,7 @@
 #include "caf/test/factory.hpp"
 #include "caf/test/fwd.hpp"
 
+#include "caf/detail/critical.hpp"
 #include "caf/detail/test_export.hpp"
 #include "caf/predicate.hpp"
 #include "caf/unit.hpp"
@@ -15,6 +16,7 @@
 
 #include <cstddef>
 #include <map>
+#include <new>
 #include <string_view>
 
 namespace caf::test {
@@ -70,7 +72,10 @@ public:
                                           this->type_);
       }
     };
-    return instance().add(new impl(suite_name, description, type));
+    auto* ptr = new (std::nothrow) impl(suite_name, description, type);
+    if (ptr == nullptr)
+      caf::detail::critical("failed to allocate test factory");
+    return instance().add(ptr);
   }
 
   /// Adds a new test factory to the "anonymous" suite named `$`.

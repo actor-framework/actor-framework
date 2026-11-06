@@ -12,7 +12,6 @@ Checks: >
   -bugprone-switch-missing-default-case,
   -bugprone-unchecked-optional-access,
   -bugprone-unchecked-string-to-number-conversion,
-  -bugprone-unhandled-exception-at-new,
   -bugprone-use-after-move
 WarningsAsErrors: ''
 HeaderFilterRegex: '/caf/'

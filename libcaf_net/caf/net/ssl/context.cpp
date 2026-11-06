@@ -7,12 +7,15 @@
 #include "caf/net/ssl/connection.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/critical.hpp"
 #include "caf/expected.hpp"
 
 CAF_PUSH_WARNINGS
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 CAF_POP_WARNINGS
+
+#include <new>
 
 namespace caf::net::ssl {
 
@@ -369,8 +372,11 @@ bool context::use_private_key_file(const char* path, format file_format) {
 }
 
 void context::sni_hostname(std::string hostname) noexcept {
-  if (data_ == nullptr)
-    data_ = new user_data;
+  if (data_ == nullptr) {
+    data_ = new (std::nothrow) user_data;
+    if (data_ == nullptr)
+      caf::detail::critical("failed to allocate SSL context user data");
+  }
   data_->sni_hostname = std::move(hostname);
 }
 
@@ -381,8 +387,11 @@ const char* context::sni_hostname() const noexcept {
 }
 
 void context::hostname_validation(bool enabled) noexcept {
-  if (data_ == nullptr)
-    data_ = new user_data;
+  if (data_ == nullptr) {
+    data_ = new (std::nothrow) user_data;
+    if (data_ == nullptr)
+      caf::detail::critical("failed to allocate SSL context user data");
+  }
   data_->hostname_validation = enabled;
 }
 
