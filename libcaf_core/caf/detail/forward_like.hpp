@@ -23,7 +23,7 @@ constexpr auto&& forward_like(U&& x) noexcept {
     if constexpr (is_adding_const)
       return std::move(std::as_const(x));
     else
-      return std::move(x);
+      return std::move(x); // NOLINT(bugprone-move-forwarding-reference)
   }
 }
 

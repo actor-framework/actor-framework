@@ -49,7 +49,7 @@ TEST("async text file I/O") {
   auto res = prom->get_future();
   SECTION("read chars from file") {
     auto pub = async::file(sys, quotes_file).read_chars().run([](auto&& src) {
-      return std::move(src)
+      return std::forward<decltype(src)>(src)
         .map([](char ch) { return static_cast<char>(toupper(ch)); })
         .take(83)
         .to_publisher();
