@@ -94,6 +94,7 @@ public:
     return res;
   }
 
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   expected<connection_handle> add_tcp_scribe(const std::string& host,
                                              uint16_t port) {
     static_assert(std::is_convertible_v<actor_hdl, connection_handler>,
@@ -107,6 +108,7 @@ public:
     return super::add_scribe(fd);
   }
 
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   expected<std::pair<accept_handle, uint16_t>>
   add_tcp_doorman(uint16_t port = 0, const char* in = nullptr,
                   bool reuse_addr = false) {

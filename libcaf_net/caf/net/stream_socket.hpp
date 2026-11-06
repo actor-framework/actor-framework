@@ -30,6 +30,7 @@ struct CAF_NET_EXPORT stream_socket : network_socket {
 
   using super::super;
 
+  // NOLINTNEXTLINE(bugprone-derived-method-shadowing-base-method)
   constexpr stream_socket fd() const noexcept {
     return *this;
   }
