@@ -289,12 +289,13 @@ caf_add_component(
     caf/hash/sha1.test.cpp
     caf/init_global_meta_objects.cpp
     caf/inspector_access_type.test.cpp
+    caf/intrusive/arc.test.cpp
     caf/intrusive/atomic_control_block.cpp
     caf/intrusive/atomic_control_block.test.cpp
     caf/intrusive/lifo_inbox.test.cpp
+    caf/intrusive/lifo_uptr_queue.test.cpp
     caf/intrusive/linked_list.test.cpp
     caf/intrusive/stack.test.cpp
-    caf/intrusive/lifo_uptr_queue.test.cpp
     caf/intrusive_cow_ptr.test.cpp
     caf/intrusive_ptr.test.cpp
     caf/ipv4_address.cpp
