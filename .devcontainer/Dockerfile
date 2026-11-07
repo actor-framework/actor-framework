@@ -1,4 +1,4 @@
-FROM debian:12
+FROM debian:13
 
 # Base setup
 RUN apt-get update -y \

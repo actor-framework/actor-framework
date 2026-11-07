@@ -4,6 +4,7 @@
 
 #include "caf/type_id.hpp"
 
+#include "caf/config.hpp"
 #include "caf/detail/meta_object.hpp"
 
 namespace caf {
@@ -47,9 +48,23 @@ type_id_t default_type_id_mapper::operator()(std::string_view name) const {
 
 namespace {
 
-constinit const default_type_id_mapper default_type_id_mapper_singleton{};
+#define CAF_CONSTINIT constinit
 
-}
+// Note: GCC 14 falsely rejects `constinit` for `default_type_id_mapper`. The
+//       compiler should be able to optimize away the constructor call even
+//       without `constinit`, so we simply remove `constinit` for GCC <= 14 here
+//       but keep it for other compilers.
+// TODO: remove this workaround after GCC 14 is no longer supported.
+#ifdef CAF_GCC
+#  if __GNUC__ <= 14
+#    undef CAF_CONSTINIT
+#    define CAF_CONSTINIT
+#  endif
+#endif
+
+CAF_CONSTINIT const default_type_id_mapper default_type_id_mapper_singleton{};
+
+} // namespace
 
 const type_id_mapper& get_default_type_id_mapper() noexcept {
   return default_type_id_mapper_singleton;
