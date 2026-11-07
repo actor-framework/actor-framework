@@ -30,14 +30,6 @@ struct ipv4_address_consumer {
 
 } // namespace
 
-// -- constructors, destructors, and assignment operators ----------------------
-
-ipv4_address::ipv4_address() = default;
-
-ipv4_address::ipv4_address(array_type bytes) : bytes_(bytes) {
-  // nop
-}
-
 // -- properties ---------------------------------------------------------------
 
 bool ipv4_address::is_loopback() const noexcept {

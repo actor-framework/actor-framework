@@ -9,6 +9,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/format.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/json_object.hpp"
 #include "caf/json_reader.hpp"
@@ -132,10 +133,10 @@ TEST("operators") {
 
 TEST("from_bits constructs bytes from a network-order integer") {
   auto value = ipv4_address::from_bits(to_network_order(0x01020304u));
-  check_eq(value.bytes(), (ipv4_address::array_type{1, 2, 3, 4}));
+  check_eq(value.bytes(), ipv4_address::array_type{1, 2, 3, 4});
 }
 
-TEST("loopback detection reflects changes through mutable bytes") {
+TEST("is_loopback checks for 127.0.0.0/8 addresses") {
   auto value = addr(1, 2, 3, 4);
   value.data()[0] = 127;
   check(value.is_loopback());
@@ -163,7 +164,7 @@ TEST("binary deserialization reads IPv4 from a network-order scalar") {
   auto output = addr(9, 9, 9, 9);
   binary_deserializer source{expected};
   require(source.apply(output));
-  check_eq(output.bytes(), (ipv4_address::array_type{1, 2, 3, 4}));
+  check_eq(output.bytes(), ipv4_address::array_type{1, 2, 3, 4});
 }
 
 TEST("JSON inspection preserves the scalar value field") {
@@ -180,10 +181,10 @@ TEST("JSON inspection preserves the scalar value field") {
   auto value = object.value("value");
   require(value.is_unsigned());
   check_eq(value.to_unsigned(), scalar);
-  auto json = std::string{"{\"value\":"} + std::to_string(scalar) + "}";
+  auto json = detail::format(R"({{"value":{}}})", scalar);
   json_reader reader;
   require(reader.load(json));
   auto output = addr(9, 9, 9, 9);
   require(reader.apply(output));
-  check_eq(output.bytes(), (ipv4_address::array_type{1, 2, 3, 4}));
+  check_eq(output.bytes(), ipv4_address::array_type{1, 2, 3, 4});
 }

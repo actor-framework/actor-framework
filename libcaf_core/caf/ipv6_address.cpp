@@ -58,18 +58,19 @@ void append_v6_hex(std::string& result, const uint8_t* xs) {
 constexpr std::array<uint8_t, 12> v4_prefix{0, 0, 0, 0, 0,    0,
                                             0, 0, 0, 0, 0xff, 0xff};
 
+constexpr ipv6_address::array_type native_loopback{0, 0, 0, 0, 0, 0, 0, 0,
+                                                   0, 0, 0, 0, 0, 0, 0, 1};
+
 } // namespace
 
 // -- constructors, destructors, and assignment operators ----------------------
-
-ipv6_address::ipv6_address() noexcept = default;
 
 ipv6_address::ipv6_address(uint16_ilist prefix, uint16_ilist suffix) noexcept {
   CAF_ASSERT((prefix.size() + suffix.size()) <= 8);
   auto addr_fill = [&](uint16_ilist chunks, size_t p) {
     for (auto chunk : chunks) {
       bytes_[p++] = static_cast<uint8_t>(chunk >> 8);
-      bytes_[p++] = static_cast<uint8_t>(chunk & 0xff);
+      bytes_[p++] = static_cast<uint8_t>(chunk);
     }
   };
   bytes_.fill(0);
@@ -80,10 +81,6 @@ ipv6_address::ipv6_address(uint16_ilist prefix, uint16_ilist suffix) noexcept {
 ipv6_address::ipv6_address(ipv4_address addr) noexcept {
   std::copy(v4_prefix.begin(), v4_prefix.end(), bytes_.begin());
   std::copy(addr.bytes().begin(), addr.bytes().end(), bytes_.begin() + 12);
-}
-
-ipv6_address::ipv6_address(array_type bytes) noexcept : bytes_(bytes) {
-  // nop
 }
 
 // -- properties ---------------------------------------------------------------
@@ -99,8 +96,6 @@ ipv4_address ipv6_address::embedded_v4() const noexcept {
 }
 
 bool ipv6_address::is_loopback() const noexcept {
-  constexpr array_type native_loopback{0, 0, 0, 0, 0, 0, 0, 0,
-                                       0, 0, 0, 0, 0, 0, 0, 1};
   // IPv6 defines "::1" as the loopback address, when embedding a v4 we
   // dispatch accordingly.
   return embeds_v4() ? embedded_v4().is_loopback() : bytes_ == native_loopback;

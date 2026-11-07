@@ -35,7 +35,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   /// Constructs an all-zero address.
-  ipv6_address() noexcept;
+  ipv6_address() noexcept = default;
 
   /// Constructs an address from given prefix and suffix.
   /// @pre `prefix.size() + suffix.size() <= 8`
@@ -46,7 +46,9 @@ public:
   explicit ipv6_address(ipv4_address addr) noexcept;
 
   /// Constructs an IPv6 address from given bytes.
-  explicit ipv6_address(array_type bytes) noexcept;
+  explicit ipv6_address(array_type bytes) noexcept : bytes_(bytes) {
+    // nop
+  }
 
   // -- properties -------------------------------------------------------------
 
@@ -115,7 +117,7 @@ public:
 private:
   // -- member variables -------------------------------------------------------
 
-  array_type bytes_{};
+  array_type bytes_ = array_type{};
 };
 
 inline bool operator==(const ipv4_address& lhs, const ipv6_address& rhs) {

@@ -29,9 +29,11 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  ipv4_address();
+  ipv4_address() noexcept = default;
 
-  explicit ipv4_address(array_type bytes);
+  explicit ipv4_address(array_type bytes) noexcept : bytes_(bytes) {
+    // nop
+  }
 
   /// Constructs an IPv4 address from bits in network byte order.
   static ipv4_address from_bits(uint32_t bits) {
@@ -108,7 +110,7 @@ public:
 private:
   // -- member variables -------------------------------------------------------
 
-  array_type bytes_{};
+  array_type bytes_ = array_type{};
 
   // -- sanity checks ----------------------------------------------------------
 
