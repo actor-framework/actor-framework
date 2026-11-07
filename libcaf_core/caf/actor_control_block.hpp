@@ -6,12 +6,12 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/config.hpp"
-#include "caf/detail/control_block_ref_count.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/formatted.hpp"
 #include "caf/detail/print.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
+#include "caf/intrusive/atomic_control_block.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/node_id.hpp"
 #include "caf/weak_intrusive_ptr.hpp"
@@ -30,10 +30,9 @@ namespace caf {
 ///
 /// The actor object is destructed when the last strong reference expires. The
 /// full memory block is destroyed when the last weak reference expires.
-class CAF_CORE_EXPORT actor_control_block {
+class CAF_CORE_EXPORT actor_control_block
+  : public intrusive::atomic_control_block {
 public:
-  friend class detail::control_block_ref_count;
-
   actor_control_block(actor_id aid, caf::node_id& nid, actor_system* sys,
                       const meta::handler_list* ifptr)
     : addr_(aid, std::move(nid)), system_(sys), iface_(ifptr) {
@@ -42,11 +41,7 @@ public:
 
   using control_block_type = actor_control_block;
 
-  actor_control_block(const actor_control_block&) = delete;
-
-  actor_control_block& operator=(const actor_control_block&) = delete;
-
-  virtual ~actor_control_block() noexcept;
+  ~actor_control_block() noexcept override;
 
   /// Returns a pointer to the actor instance.
   abstract_actor* managed() noexcept {
@@ -86,38 +81,8 @@ public:
   /// Enqueues a message to the mailbox of this actor.
   bool enqueue(mailbox_element_ptr what, scheduler* sched);
 
-  /// Increments the strong reference count of this actor.
-  void ref() noexcept {
-    ref_count_.inc_strong();
-  }
-
   /// Decrements the strong reference count of this actor.
-  void deref() noexcept;
-
-  /// Increments the weak reference count of this actor.
-  void ref_weak() noexcept {
-    ref_count_.inc_weak();
-  }
-
-  /// Decrements the weak reference count of this actor.
-  void deref_weak() noexcept {
-    ref_count_.dec_weak(this);
-  }
-
-  /// Tries to upgrade a weak reference to a strong reference.
-  bool upgrade_weak() noexcept {
-    return ref_count_.upgrade_weak();
-  }
-
-  /// Returns the current number of strong references to this actor.
-  size_t strong_reference_count() const noexcept {
-    return ref_count_.strong_reference_count();
-  }
-
-  /// Returns the current number of weak references to this actor.
-  size_t weak_reference_count() const noexcept {
-    return ref_count_.weak_reference_count();
-  }
+  void deref() noexcept final;
 
   /// Returns a hash value for this actor.
   size_t hash() const noexcept {
@@ -127,16 +92,10 @@ public:
   /// Returns the control block for the given actor instance.
   static actor_control_block* from(const abstract_actor* ptr) noexcept;
 
-protected:
-  /// Destroys the control block instance and releases the memory.
-  virtual void delete_this() noexcept = 0;
-
   /// Destroys the managed actor instance.
-  void destroy_managed() noexcept;
+  void destroy_managed() noexcept final;
 
-  /// The intrusive reference count for this control block.
-  detail::control_block_ref_count ref_count_;
-
+protected:
   /// Stores a pointer to the managed actor instance.
   abstract_actor* managed_;
 
