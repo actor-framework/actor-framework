@@ -10,6 +10,7 @@
 #include "caf/intrusive/atomic_control_block.hpp"
 
 #include <concepts>
+#include <cstddef>
 #include <utility>
 
 namespace caf::intrusive {
@@ -35,14 +36,14 @@ public:
 
   constexpr arc_ptr() noexcept = default;
 
-  constexpr arc_ptr(adopt_ref_t, managed_type* managed,
-                    atomic_control_block* storage) noexcept
+  constexpr arc_ptr(managed_type* managed, atomic_control_block* storage,
+                    adopt_ref_t) noexcept
     : managed_(managed), storage_(storage) {
     // nop
   }
 
-  arc_ptr(add_ref_t, managed_type* managed,
-          atomic_control_block* storage) noexcept
+  arc_ptr(managed_type* managed, atomic_control_block* storage,
+          add_ref_t) noexcept
     : managed_(managed), storage_(storage) {
     if (storage_) {
       CAF_ASSERT(managed_ != nullptr);
@@ -51,55 +52,67 @@ public:
   }
 
   arc_ptr(arc_ptr&& other) noexcept
-    : arc_ptr(adopt_ref, std::exchange(other.managed_, nullptr),
-              std::exchange(other.storage_, nullptr)) {
+    : arc_ptr(std::exchange(other.managed_, nullptr),
+              std::exchange(other.storage_, nullptr), adopt_ref) {
     // nop
   }
 
   template <std::derived_from<Managed> Derived>
   arc_ptr(arc_ptr<Derived>&& other) noexcept
-    : arc_ptr(adopt_ref, std::exchange(other.managed_, nullptr),
-              std::exchange(other.storage_, nullptr)) {
+    : arc_ptr(std::exchange(other.managed_, nullptr),
+              std::exchange(other.storage_, nullptr), adopt_ref) {
     // nop
   }
 
   arc_ptr(const arc_ptr& other) noexcept
-    : arc_ptr(add_ref, other.managed_, other.storage_) {
+    : arc_ptr(other.managed_, other.storage_, add_ref) {
     // nop
   }
 
   template <std::derived_from<Managed> Derived>
   arc_ptr(const arc_ptr<Derived>& other) noexcept
-    : arc_ptr(add_ref, other.managed_, other.storage_) {
+    : arc_ptr(other.managed_, other.storage_, add_ref) {
     // nop
   }
 
   arc_ptr& operator=(const arc_ptr& other) noexcept {
     if (this != &other) {
-      reset(add_ref, other.managed_, other.storage_);
+      reset(other.managed_, other.storage_, add_ref);
     }
     return *this;
   }
 
   arc_ptr& operator=(arc_ptr&& other) noexcept {
     if (this != &other) {
-      reset(adopt_ref, std::exchange(other.managed_, nullptr),
-            std::exchange(other.storage_, nullptr));
+      reset(std::exchange(other.managed_, nullptr),
+            std::exchange(other.storage_, nullptr), adopt_ref);
     }
     return *this;
   }
 
   template <std::derived_from<Managed> Derived>
   arc_ptr& operator=(const arc_ptr<Derived>& other) noexcept {
-    reset(add_ref, other.managed_, other.storage_);
+    reset(other.managed_, other.storage_, add_ref);
     return *this;
   }
 
   template <std::derived_from<Managed> Derived>
   arc_ptr& operator=(arc_ptr<Derived>&& other) noexcept {
-    reset(adopt_ref, std::exchange(other.managed_, nullptr),
-          std::exchange(other.storage_, nullptr));
+    reset(std::exchange(other.managed_, nullptr),
+          std::exchange(other.storage_, nullptr), adopt_ref);
     return *this;
+  }
+
+  arc_ptr& operator=(std::nullptr_t) noexcept {
+    reset(nullptr, nullptr, adopt_ref);
+    return *this;
+  }
+
+  /// Releases the managed object and control block pointers without changing
+  /// reference counts. The caller takes over the reference.
+  [[nodiscard]] std::pair<managed_type*, atomic_control_block*>
+  release() noexcept {
+    return {std::exchange(managed_, nullptr), std::exchange(storage_, nullptr)};
   }
 
   ~arc_ptr() noexcept {
@@ -148,7 +161,7 @@ private:
   /// Resets the smart pointer to manage a new object.
   template <class Policy>
   void
-  reset(Policy, managed_type* managed, atomic_control_block* storage) noexcept {
+  reset(managed_type* managed, atomic_control_block* storage, Policy) noexcept {
     if constexpr (std::is_same_v<Policy, add_ref_t>) {
       if (storage) {
         CAF_ASSERT(managed != nullptr);
@@ -210,7 +223,7 @@ template <class Managed, class... Args>
 arc_ptr<Managed> make_arc(Args&&... args) {
   using storage_t = caf::detail::default_arc_storage<Managed>;
   auto* ptr = new storage_t(std::in_place, std::forward<Args>(args)...);
-  return {adopt_ref, ptr->managed(), ptr};
+  return {ptr->managed(), ptr, adopt_ref};
 }
 
 /// The weak counterpart to `arc_ptr` that holds a non-owning reference to the
@@ -232,14 +245,14 @@ public:
 
   constexpr arc_weak_ptr() noexcept = default;
 
-  constexpr arc_weak_ptr(adopt_ref_t, managed_type* managed,
-                         atomic_control_block* storage) noexcept
+  constexpr arc_weak_ptr(managed_type* managed, atomic_control_block* storage,
+                         adopt_ref_t) noexcept
     : managed_(managed), storage_(storage) {
     // nop
   }
 
-  arc_weak_ptr(add_ref_t, managed_type* managed,
-               atomic_control_block* storage) noexcept
+  arc_weak_ptr(managed_type* managed, atomic_control_block* storage,
+               add_ref_t) noexcept
     : managed_(managed), storage_(storage) {
     if (storage_) {
       CAF_ASSERT(managed_ != nullptr);
@@ -248,29 +261,41 @@ public:
   }
 
   arc_weak_ptr(const arc_weak_ptr& other) noexcept
-    : arc_weak_ptr(add_ref, other.managed_, other.storage_) {
+    : arc_weak_ptr(other.managed_, other.storage_, add_ref) {
     // nop
   }
 
   arc_weak_ptr(arc_weak_ptr&& other) noexcept
-    : arc_weak_ptr(adopt_ref, std::exchange(other.managed_, nullptr),
-                   std::exchange(other.storage_, nullptr)) {
+    : arc_weak_ptr(std::exchange(other.managed_, nullptr),
+                   std::exchange(other.storage_, nullptr), adopt_ref) {
     // nop
   }
 
   arc_weak_ptr& operator=(const arc_weak_ptr& other) noexcept {
     if (this != &other) {
-      reset(add_ref, other.managed_, other.storage_);
+      reset(other.managed_, other.storage_, add_ref);
     }
     return *this;
   }
 
   arc_weak_ptr& operator=(arc_weak_ptr&& other) noexcept {
     if (this != &other) {
-      reset(adopt_ref, std::exchange(other.managed_, nullptr),
-            std::exchange(other.storage_, nullptr));
+      reset(std::exchange(other.managed_, nullptr),
+            std::exchange(other.storage_, nullptr), adopt_ref);
     }
     return *this;
+  }
+
+  arc_weak_ptr& operator=(std::nullptr_t) noexcept {
+    reset(nullptr, nullptr, adopt_ref);
+    return *this;
+  }
+
+  /// Releases the managed object and control block pointers without changing
+  /// reference counts. The caller takes over the reference.
+  [[nodiscard]] std::pair<managed_type*, atomic_control_block*>
+  release() noexcept {
+    return {std::exchange(managed_, nullptr), std::exchange(storage_, nullptr)};
   }
 
   ~arc_weak_ptr() noexcept {
@@ -310,7 +335,7 @@ public:
   /// null pointer if the managed object was already destroyed.
   arc_ptr<Managed> upgrade() const noexcept {
     if (storage_ && storage_->upgrade_weak()) {
-      return {adopt_ref, managed_, storage_};
+      return {managed_, storage_, adopt_ref};
     }
     return {};
   }
@@ -319,7 +344,7 @@ private:
   /// Resets the smart pointer to manage a new object.
   template <class Policy>
   void
-  reset(Policy, managed_type* managed, atomic_control_block* storage) noexcept {
+  reset(managed_type* managed, atomic_control_block* storage, Policy) noexcept {
     if constexpr (std::is_same_v<Policy, add_ref_t>) {
       if (storage) {
         CAF_ASSERT(managed != nullptr);
@@ -339,7 +364,7 @@ private:
 
 template <class Managed>
 arc_weak_ptr<Managed> arc_ptr<Managed>::downgrade() const noexcept {
-  return {add_ref, managed_, storage_};
+  return {managed_, storage_, add_ref};
 }
 
 } // namespace caf::intrusive

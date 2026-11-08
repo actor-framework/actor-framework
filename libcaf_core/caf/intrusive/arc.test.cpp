@@ -4,10 +4,10 @@
 
 #include "caf/intrusive/arc.hpp"
 
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include <memory>
-#include <type_traits>
 #include <utility>
 
 using namespace caf;
@@ -180,4 +180,96 @@ TEST("strong pointers convert from derived types") {
     check_eq(assigned->value, 9);
   }
   check(*destroyed);
+}
+
+SCENARIO("arc_ptr is nullable") {
+  GIVEN("a strong pointer to an object") {
+    auto destroyed = std::make_shared<bool>(false);
+    auto ptr = make_arc<object>(destroyed);
+    WHEN("assigning nullptr to the pointer") {
+      ptr = nullptr;
+      THEN("the pointer is empty and the object is destroyed") {
+        check(!ptr);
+        check_eq(ptr.storage(), nullptr);
+        check(*destroyed);
+      }
+    }
+  }
+}
+
+SCENARIO("arc_weak_ptr is nullable") {
+  GIVEN("a weak pointer to an object") {
+    auto destroyed = std::make_shared<bool>(false);
+    auto strong = make_arc<object>(destroyed);
+    auto weak = strong.downgrade();
+    WHEN("assigning nullptr to the weak pointer") {
+      weak = nullptr;
+      THEN("the weak pointer is empty and its reference is released") {
+        check(!weak);
+        check_eq(weak.storage(), nullptr);
+        check_eq(strong.weak_count(), 1u);
+        check(!*destroyed);
+      }
+    }
+  }
+}
+
+SCENARIO("arc_ptr allows ownership transfer") {
+  GIVEN("a strong pointer to an object") {
+    auto destroyed = std::make_shared<bool>(false);
+    auto ptr = make_arc<object>(destroyed, 42);
+    WHEN("releasing and adopting its pointers") {
+      auto [managed, storage] = ptr.release();
+      arc_ptr<object> owner{managed, storage, adopt_ref};
+      THEN("ownership transfers without changing the reference count") {
+        check(!ptr);
+        check_eq(ptr.storage(), nullptr);
+        check_eq(owner->value, 42);
+        check_eq(owner.strong_count(), 1u);
+        arc_ptr<object> copy{managed, storage, add_ref};
+        check_eq(owner.strong_count(), 2u);
+      }
+    }
+  }
+  GIVEN("an empty strong pointer") {
+    arc_ptr<object> ptr;
+    WHEN("releasing its pointers") {
+      auto [managed, storage] = ptr.release();
+      THEN("both pointers are null") {
+        check_eq(managed, nullptr);
+        check_eq(storage, nullptr);
+      }
+    }
+  }
+}
+
+SCENARIO("arc_weak_ptr allows ownership transfer") {
+  GIVEN("an expired weak pointer") {
+    auto destroyed = std::make_shared<bool>(false);
+    auto strong = make_arc<object>(destroyed);
+    auto weak = strong.downgrade();
+    strong = nullptr;
+    WHEN("releasing and adopting its pointers") {
+      auto [managed, storage] = weak.release();
+      arc_weak_ptr<object> owner{managed, storage, adopt_ref};
+      THEN("ownership transfers without changing the reference count") {
+        check(!weak);
+        check_eq(weak.storage(), nullptr);
+        check(owner.expired());
+        check_eq(owner.weak_count(), 1u);
+        arc_weak_ptr<object> copy{managed, storage, add_ref};
+        check_eq(owner.weak_count(), 2u);
+      }
+    }
+  }
+  GIVEN("an empty weak pointer") {
+    arc_weak_ptr<object> weak;
+    WHEN("releasing its pointers") {
+      auto [managed, storage] = weak.release();
+      THEN("both pointers are null") {
+        check_eq(managed, nullptr);
+        check_eq(storage, nullptr);
+      }
+    }
+  }
 }
