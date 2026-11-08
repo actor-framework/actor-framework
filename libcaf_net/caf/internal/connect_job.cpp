@@ -50,19 +50,15 @@ void connect_job::resume(scheduler*, uint64_t) {
     return;
   }
   auto schemes = config_->schemes();
-  auto scheme = std::ranges::find_if(schemes, [&](const auto& entry) {
+  auto pos = std::ranges::find_if(schemes, [&](const auto& entry) {
     return endpoint.scheme() == entry.scheme;
   });
-  if (scheme == schemes.end()) {
-    fail(format_to_unexpected(sec::invalid_argument,
-                              "unsupported URI scheme: expected {}",
-                              join(schemes, "or"))
-           .error());
+  if (pos == schemes.end()) {
+    fail(make_error(sec::invalid_argument, "unsupported URI scheme"));
     return;
   }
-  auto use_ssl = scheme->secure();
   if (auth.port == 0) {
-    auth.port = scheme->port;
+    auth.port = pos->port;
   }
   if (auth.port == 0) {
     fail(format_to_unexpected(sec::invalid_argument,
@@ -73,7 +69,7 @@ void connect_job::resume(scheduler*, uint64_t) {
     return;
   }
   std::optional<net::ssl::context> ctx;
-  if (use_ssl) {
+  if (pos->secure()) {
     auto make_ctx = [this] {
       if (config_->context_factory)
         return (*config_->context_factory)();

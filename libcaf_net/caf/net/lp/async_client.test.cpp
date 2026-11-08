@@ -5,19 +5,16 @@
 #include "caf/test/test.hpp"
 
 #include "caf/net/lp/frame.hpp"
-#include "caf/net/lp/with.hpp"
 #include "caf/net/lp/with_v2.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/tcp_accept_socket.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/async/blocking_consumer.hpp"
 #include "caf/detail/connector.hpp"
 #include "caf/error.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/flow/observable_builder.hpp"
 
+#include <atomic>
 #include <memory>
 #include <semaphore>
 
@@ -30,15 +27,31 @@ namespace {
 
 namespace lp = caf::net::lp;
 
-class blocking_connector_state {
+struct fixture {
+  static caf::actor_system_config& init(caf::actor_system_config& cfg) {
+    cfg.load<caf::net::middleman>();
+    return cfg;
+  }
+
+  fixture() : sys(init(cfg)) {
+    // nop
+  }
+
+  caf::actor_system_config cfg;
+
+  caf::actor_system sys;
+};
+
+class mock_connector_state {
 public:
   std::binary_semaphore connect_started{0};
   std::binary_semaphore release_connect{0};
+  std::atomic<bool> release_connect_timed_out{false};
 };
 
-class blocking_connector : public detail::connector {
+class mock_connector : public detail::connector {
 public:
-  explicit blocking_connector(std::shared_ptr<blocking_connector_state> state)
+  explicit mock_connector(std::shared_ptr<mock_connector_state> state)
     : state_(std::move(state)) {
     // nop
   }
@@ -46,51 +59,28 @@ public:
   expected<net::stream_socket> connect(const std::string&, uint16_t, timespan,
                                        size_t, timespan) override {
     state_->connect_started.release();
-    state_->release_connect.acquire();
+    if (!state_->release_connect.try_acquire_for(1s))
+      state_->release_connect_timed_out.store(true);
     return caf::unexpected{make_error(sec::runtime_error)};
   }
 
 private:
-  std::shared_ptr<blocking_connector_state> state_;
+  std::shared_ptr<mock_connector_state> state_;
 };
 
 } // namespace
 
-TEST("LP acceptor memory leak regression") {
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
-  auto acceptor = unbox(net::make_tcp_accept_socket(0));
-  auto maybe_hdl = lp::with(sys) //
-                     .accept(acceptor)
-                     .start([&sys](auto events) {
-                       sys.spawn([events](event_based_actor* self) {
-                         self->make_observable().from_resource(events).for_each(
-                           [self](const auto& ev) {
-                             auto [pull, push] = ev.data();
-                             pull.observe_on(self).subscribe(push);
-                           });
-                       });
-                     });
-  auto server_hdl = unbox(maybe_hdl);
-  // Do not run the multiplexer after disposal. The acceptor must clean up its
-  // references while the actor system is shutting down. Otherwise, this test
-  // triggers a memory leak (under ASan/LeakSan).
-  server_hdl.dispose();
-}
+WITH_FIXTURE(fixture) {
 
 TEST("with_v2 connects asynchronously without blocking the caller") {
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
   auto endpoint = caf::uri{};
   auto parse_err = caf::parse("tcp://127.0.0.1:1"s, endpoint);
-  require(parse_err.empty());
-  auto state = std::make_shared<blocking_connector_state>();
+  require_eq(parse_err, error{});
+  auto state = std::make_shared<mock_connector_state>();
   auto buffers = lp::with_v2(sys)
                    .async()
                    .connect(std::move(endpoint))
-                   .connector(std::make_unique<blocking_connector>(state))
+                   .connector(std::make_unique<mock_connector>(state))
                    .start();
   auto connect_called = state->connect_started.try_acquire_for(1s);
   state->release_connect.release();
@@ -100,15 +90,13 @@ TEST("with_v2 connects asynchronously without blocking the caller") {
   lp::frame received;
   auto res = in->pull(async::prioritize_errors, received, 2s);
   check_eq(res, async::read_result::abort);
+  check(!state->release_connect_timed_out.load());
 }
 
-TEST("with_v2 reports errors by closing the buffer with an error") {
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
+TEST("with_v2 rejects unknown URI schemes with an error") {
   auto endpoint = caf::uri{};
   auto parse_err = caf::parse("ftp://example.org/"s, endpoint);
-  require(parse_err.empty());
+  require_eq(parse_err, error{});
   auto [s2a_pull, s2a_push] = make_spsc_buffer_resource<lp::frame>();
   auto [a2s_pull, a2s_push] = make_spsc_buffer_resource<lp::frame>();
   lp::with_v2(sys)
@@ -123,12 +111,9 @@ TEST("with_v2 reports errors by closing the buffer with an error") {
 }
 
 TEST("with_v2 requires an explicit port in URIs") {
-  caf::actor_system_config cfg;
-  cfg.load<caf::net::middleman>();
-  caf::actor_system sys{cfg};
   auto endpoint = caf::uri{};
   auto parse_err = caf::parse("tcp://127.0.0.1"s, endpoint);
-  require(parse_err.empty());
+  require_eq(parse_err, error{});
   auto [s2a_pull, s2a_push] = make_spsc_buffer_resource<lp::frame>();
   auto [a2s_pull, a2s_push] = make_spsc_buffer_resource<lp::frame>();
   lp::with_v2(sys)
@@ -142,3 +127,5 @@ TEST("with_v2 requires an explicit port in URIs") {
   check_eq(res, async::read_result::abort);
   check_eq(in->abort_reason(), sec::invalid_argument);
 }
+
+} // WITH_FIXTURE(fixture)

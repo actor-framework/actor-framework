@@ -91,6 +91,7 @@ caf_add_component(
     caf/net/lp/lower_layer.cpp
     caf/net/lp/upper_layer.cpp
     caf/net/lp/with.cpp
+    caf/net/lp/with.test.cpp
     caf/net/middleman.cpp
     caf/net/multiplexer.cpp
     caf/net/multiplexer.test.cpp
