@@ -9,8 +9,12 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/octet_stream/transport.hpp"
+#include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
+#include "caf/net/ssl/tls.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/net/tcp_accept_socket.hpp"
+#include "caf/net/tcp_stream_socket.hpp"
 
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
@@ -107,6 +111,42 @@ TEST("a flow bridge connects flows to a socket") {
   // Cleanup.
   ping_pong_thread.join();
   worker.join();
+}
+
+TEST("failed SSL connection creation closes the client socket") {
+  auto sockets = net::make_stream_socket_pair();
+  require_has_value(sockets);
+  auto peer = net::make_socket_guard(sockets->second);
+  auto res = net::octet_stream::with(mpx.get())
+               .context(net::ssl::context{nullptr})
+               .connect(sockets->first)
+               .start([](auto, auto) {});
+  check(!res);
+  check(!net::probe(sockets->first));
+}
+
+TEST("failed SSL identity configuration closes the client socket") {
+  auto listener = net::make_tcp_accept_socket(0, "127.0.0.1");
+  require_has_value(listener);
+  auto listener_guard = net::make_socket_guard(*listener);
+  auto port = net::local_port(*listener);
+  require_has_value(port);
+  auto ctx = net::ssl::context::make_client(net::ssl::tls::v1_2);
+  require_has_value(ctx);
+  // The resolver accepts this address, but OpenSSL rejects the ambiguous IP
+  // spelling when configuring certificate verification.
+  auto res = net::octet_stream::with(mpx.get())
+               .context(std::move(*ctx))
+               .connect("127.0.0.001", *port)
+               .start([](auto, auto) {});
+  require(!res);
+  require_eq(res.error(), error{sec::protocol_error});
+  auto accepted = net::accept(*listener);
+  require_has_value(accepted);
+  auto peer = net::make_socket_guard(*accepted);
+  check(net::receive_timeout(*accepted, 1s).empty());
+  std::byte buf;
+  check_eq(net::read(*accepted, std::span{&buf, 1}), 0);
 }
 
 } // WITH_FIXTURE(fixture)

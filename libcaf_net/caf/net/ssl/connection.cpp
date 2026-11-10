@@ -8,12 +8,15 @@
 
 #include "caf/config.hpp"
 #include "caf/error.hpp"
+#include "caf/ip_address.hpp"
 #include "caf/log/net.hpp"
 
 CAF_PUSH_WARNINGS
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 CAF_POP_WARNINGS
+
+#include <string_view>
 
 namespace caf::net::ssl {
 
@@ -88,34 +91,41 @@ const char* connection::sni_hostname() noexcept {
 }
 
 bool connection::hostname(const char* hoststr) noexcept {
+  if (!pimpl_)
+    return false;
   ip_address addr;
-  if (parse(hoststr, addr).empty())
-    return hostname(uri::host_type{addr});
-  return hostname(uri::host_type{std::string{hoststr}});
-}
-
-bool connection::hostname(const uri::host_type& hostname) noexcept {
-#if OPENSSL_VERSION_NUMBER >= 0x40000000L
-  // OpenSSL 4 maintains separate DNS and IP lists. Clear the other list so
-  // that setting a new identity replaces the previous one.
-  if (auto* dnsname = std::get_if<std::string>(&hostname)) {
-    return SSL_set1_ipaddr(native(pimpl_), nullptr)
-           && SSL_set1_dnsname(native(pimpl_), dnsname->c_str());
+  auto is_ip = hoststr && parse(hoststr, addr).empty();
+  if (is_ip) {
+    // Older OpenSSL versions accept ambiguous IPv4 spellings that the socket
+    // resolver may interpret differently. Check both IPv4 literals and the
+    // dotted IPv4 suffix of an IPv6 literal without normalizing the IPv6 part.
+    auto v4_part = std::string_view{hoststr};
+    if (auto pos = v4_part.rfind(':'); pos != std::string_view::npos)
+      v4_part.remove_prefix(pos + 1);
+    ipv4_address v4;
+    if (parse(v4_part, v4).empty() && to_string(v4) != v4_part)
+      return false;
   }
-  auto ipaddr = to_string(std::get<ip_address>(hostname));
-  return SSL_set1_dnsname(native(pimpl_), nullptr)
-         && SSL_set1_ipaddr(native(pimpl_), ipaddr.c_str());
+#if OPENSSL_VERSION_NUMBER >= 0x40000000L
+  // OpenSSL 4 maintains separate DNS and IP lists. Clear the list that we do
+  // not set so that a new identity replaces the previous one. Passing a
+  // `nullptr` clears both lists.
+  if (is_ip) {
+    return SSL_set1_dnsname(native(pimpl_), nullptr)
+           && SSL_set1_ipaddr(native(pimpl_), hoststr);
+  }
+  return SSL_set1_ipaddr(native(pimpl_), nullptr)
+         && SSL_set1_dnsname(native(pimpl_), hoststr);
 #else
-  std::string host;
-  if (auto* dnsname = std::get_if<std::string>(&hostname))
-    host = *dnsname;
-  else
-    host = to_string(std::get<ip_address>(hostname));
-  // OpenSSL 3's SSL_set1_host may leave the other identity type in place.
+  // Use the X509 parameters for IP addresses on older OpenSSL versions.
+  // Passing a `nullptr` clears both lists.
   auto* params = SSL_get0_param(native(pimpl_));
+  if (is_ip) {
+    return X509_VERIFY_PARAM_set1_host(params, nullptr, 0)
+           && X509_VERIFY_PARAM_set1_ip_asc(params, hoststr);
+  }
   return X509_VERIFY_PARAM_set1_ip(params, nullptr, 0)
-         && X509_VERIFY_PARAM_set1_host(params, nullptr, 0)
-         && SSL_set1_host(native(pimpl_), host.c_str());
+         && SSL_set1_host(native(pimpl_), hoststr);
 #endif
 }
 
