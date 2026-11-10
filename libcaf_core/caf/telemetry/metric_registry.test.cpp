@@ -279,6 +279,32 @@ SCENARIO("instance methods provide a shortcut for using the family manually") {
   }
 }
 
+TEST("wait_for supports typed and generic predicates") {
+  SECTION("integer metrics with double predicates") {
+    reg.gauge_singleton("test", "value", "test")->value(42);
+    auto fn = [](double x) { return x == 42.0; };
+    detail::predicate_ref_impl<decltype(fn), double> wrapper{fn};
+    const predicate<double>& pred = wrapper;
+    check(reg.wait_for("test", "value", std::span<const label_view>{}, 1s, 10ms,
+                       pred));
+  }
+  SECTION("double metrics with integer predicates") {
+    reg.gauge_singleton<double>("test", "value", "test")->value(42.5);
+    auto fn = [](int64_t x) { return x == 42; };
+    detail::predicate_ref_impl<decltype(fn), int64_t> wrapper{fn};
+    const predicate<int64_t>& pred = wrapper;
+    check(reg.wait_for("test", "value", std::span<const label_view>{}, 1s, 10ms,
+                       pred));
+    check(reg.wait_for("test", "value", 1s, 10ms,
+                       [](int32_t x) { return x == 42; }));
+  }
+  SECTION("generic predicates") {
+    reg.gauge_singleton("test", "value", "test")->value(42);
+    check(
+      reg.wait_for("test", "value", 1s, 10ms, [](auto x) { return x == 42; }));
+  }
+}
+
 TEST("wait_for blocks until predicate is true or timeout") {
   std::thread updater;
   auto do_update = [](auto* what) {

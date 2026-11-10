@@ -15,11 +15,6 @@ std::vector<std::byte> to_byte_buf(Ts... values) {
   return std::vector<std::byte>{static_cast<std::byte>(values)...};
 }
 
-template <class T>
-std::vector<std::byte> to_vec(std::span<const T> values) {
-  return std::vector<std::byte>{values.begin(), values.end()};
-}
-
 } // namespace
 
 TEST("default construction") {
@@ -38,7 +33,7 @@ TEST("construction from a single buffer") {
   check(!uut.bytes().empty());
   check_eq(uut.size(), 3u);
   check_eq(uut.bytes().size(), 3u);
-  check_eq(to_vec(uut.bytes()), buf);
+  check_eq(to_string_view(uut.bytes()), to_string_view(std::span{buf}));
 }
 
 TEST("construction from multiple buffers") {
@@ -51,7 +46,8 @@ TEST("construction from multiple buffers") {
   check(!uut.bytes().empty());
   check_eq(uut.size(), 5u);
   check_eq(uut.bytes().size(), 5u);
-  check_eq(to_vec(uut.bytes()), to_byte_buf(1, 2, 3, 4, 5));
+  auto expected = to_byte_buf(1, 2, 3, 4, 5);
+  check_eq(to_string_view(uut.bytes()), to_string_view(std::span{expected}));
 }
 
 TEST("copying, moving and swapping") {

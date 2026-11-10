@@ -142,7 +142,7 @@ private:
   caf::error send_request() {
     auto path = config_->endpoint.path_query_fragment();
     if (path.empty()) {
-      path = "/";
+      path.push_back('/');
     }
     down->begin_header(method_, path);
     for (const auto& [key, value] : config_->fields) {

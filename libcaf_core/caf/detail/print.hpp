@@ -231,6 +231,10 @@ void print(Buffer& buf, T x) {
   buf.insert(buf.end(), str.begin(), str.end());
 }
 
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 12
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wrestrict"
+#endif
 template <class Buffer, class Rep, class Period>
 void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
   using namespace std::literals;
@@ -263,6 +267,9 @@ void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
   auto suffix = "ns"sv;
   buf.insert(buf.end(), suffix.begin(), suffix.end());
 }
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 12
+#  pragma GCC diagnostic pop
+#endif
 
 template <class Buffer, class Duration>
 void print(Buffer& buf,
