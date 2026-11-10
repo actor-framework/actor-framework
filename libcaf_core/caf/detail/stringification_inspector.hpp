@@ -113,7 +113,9 @@ public:
         save(*this, detail::as_mutable_ref(*x));
       }
     } else {
-      append("!" + to_string(x.error()));
+      std::string msg = "!";
+      msg += to_string(x.error());
+      append(msg);
     }
     return true;
   }

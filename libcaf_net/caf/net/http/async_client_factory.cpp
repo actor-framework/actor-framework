@@ -79,7 +79,7 @@ void start_request(const_async_client_config_ptr config, http::method method,
                    Connection conn) {
   auto path = config->endpoint.path_query_fragment();
   if (path.empty()) {
-    path = "/";
+    path.push_back('/');
   }
   auto app = async_client::make(method, std::move(path), config->fields,
                                 std::move(payload), result);

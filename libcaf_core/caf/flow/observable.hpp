@@ -600,8 +600,8 @@ public:
   template <class Step, class... Steps>
   auto materialize(std::tuple<Step, Steps...>&& steps) && {
     using impl_t = op::from_steps<Input, Step, Steps...>;
-    return parent()->add_child_hdl(std::in_place_type<impl_t>, source_,
-                                   std::move(steps));
+    return parent()->add_child_hdl(std::in_place_type<impl_t>,
+                                   std::move(source_), std::move(steps));
   }
 
 private:

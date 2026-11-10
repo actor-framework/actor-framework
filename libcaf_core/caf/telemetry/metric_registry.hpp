@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/detail/assert.hpp"
+#include "caf/detail/callable_trait.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/predicate.hpp"
@@ -517,16 +518,30 @@ public:
     static_assert(is_int_predicate || is_dbl_predicate,
                   "Predicate must be invocable with int64_t or double");
     auto f = [&pred]<class T>(T x) -> bool {
+      auto invoke = [&pred]<class U>(U value) -> bool {
+        if constexpr (detail::callable<Predicate>) {
+          using trait = detail::get_callable_trait<Predicate>;
+          using arg_type = detail::tl_head_t<typename trait::decayed_arg_types>;
+          if constexpr (trait::num_args == 1
+                        && std::is_arithmetic_v<arg_type>) {
+            return pred(static_cast<arg_type>(value));
+          } else {
+            return pred(value);
+          }
+        } else {
+          return pred(value);
+        }
+      };
       if constexpr (std::is_same_v<T, int64_t>) {
         if constexpr (is_int_predicate) {
-          return pred(x);
+          return invoke(x);
         } else {
           CAF_RAISE_ERROR("type mismatch: Predicate not invocable with int64");
         }
       } else {
         static_assert(std::is_same_v<T, double>);
         if constexpr (is_dbl_predicate) {
-          return pred(x);
+          return invoke(x);
         } else {
           CAF_RAISE_ERROR("type mismatch: Predicate not invocable with double");
         }

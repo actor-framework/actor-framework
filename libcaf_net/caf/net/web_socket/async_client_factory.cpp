@@ -60,7 +60,7 @@ void configure_handshake(async_client_config& config) {
   config.hs.host(to_string(auth));
   auto endpoint = config.endpoint.path_query_fragment();
   if (endpoint.empty()) {
-    endpoint = "/";
+    endpoint.push_back('/');
   }
   config.hs.endpoint(std::move(endpoint));
 }

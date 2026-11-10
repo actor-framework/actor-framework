@@ -19,6 +19,28 @@ env:
   CTEST_OUTPUT_ON_FAILURE: ON
 
 jobs:
+  gcc-14:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:13
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates cmake g++-14 git libssl-dev ninja-build python3 python3-pip
+      - uses: actions/checkout@v5
+      - name: Install Robot dependencies
+        run: python3 -m pip install --break-system-packages -r robot/dependencies.txt
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -D CMAKE_CXX_COMPILER=g++-14 \
+            -C .ci/linux/release.cmake
+      - name: Build
+        run: cmake --build build
+      - name: Test
+        run: ctest --test-dir build
+
   debian-12: # EOL June 2028
     runs-on: ubuntu-latest
     container:
