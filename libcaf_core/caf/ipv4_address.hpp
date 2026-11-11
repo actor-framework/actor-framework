@@ -9,7 +9,6 @@
 #include "caf/fwd.hpp"
 
 #include <array>
-#include <bit>
 #include <cstdint>
 #include <string>
 
@@ -52,14 +51,10 @@ public:
 
   /// Returns the bits of the IP address in a single integer arranged in network
   /// byte order.
-  uint32_t bits() const noexcept {
-    return std::bit_cast<uint32_t>(bytes_);
-  }
+  uint32_t bits() const noexcept;
 
   /// Sets the address from an integer in network byte order.
-  void bits(uint32_t value) noexcept {
-    bytes_ = std::bit_cast<array_type>(value);
-  }
+  void bits(uint32_t value) noexcept;
 
   /// Returns the bytes of the IP address as array.
   array_type& bytes() noexcept {

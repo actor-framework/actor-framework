@@ -10,6 +10,7 @@
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 
+#include <bit>
 #include <string_view>
 
 namespace caf {
@@ -40,6 +41,14 @@ bool ipv4_address::is_loopback() const noexcept {
 bool ipv4_address::is_multicast() const noexcept {
   // All addresses in 224.0.0.0/4 are considered multicast addresses.
   return (bytes_[0] & 0xF0) == 0xE0;
+}
+
+uint32_t ipv4_address::bits() const noexcept {
+  return std::bit_cast<uint32_t>(bytes_);
+}
+
+void ipv4_address::bits(uint32_t value) noexcept {
+  bytes_ = std::bit_cast<array_type>(value);
 }
 
 // -- factories ----------------------------------------------------------------

@@ -138,7 +138,7 @@ TEST("from_bits constructs bytes from a network-order integer") {
 
 TEST("is_loopback checks for 127.0.0.0/8 addresses") {
   auto value = addr(1, 2, 3, 4);
-  value.data()[0] = 127;
+  value[0] = 127;
   check(value.is_loopback());
   value[0] = 128;
   check(!value.is_loopback());
