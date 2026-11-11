@@ -210,6 +210,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Added type information to the serialization format of `caf::message` for human
   readable serializers (such as `json`). This representation resolves issues
   related to `caf::message` deserialization in those formats.
+- Fix undefined behavior (accessing an unconstructed union member) in
+  `ipv4_address` and `ipv6_address`.
 
 ### Removed
 

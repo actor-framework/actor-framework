@@ -35,18 +35,20 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   /// Constructs an all-zero address.
-  ipv6_address() noexcept;
+  ipv6_address() noexcept = default;
 
   /// Constructs an address from given prefix and suffix.
   /// @pre `prefix.size() + suffix.size() <= 8`
-  /// @warning assumes network byte order for prefix and suffix
+  /// Segment values are in host byte order.
   ipv6_address(uint16_ilist prefix, uint16_ilist suffix) noexcept;
 
   /// Embeds an IPv4 address into an IPv6 address.
   explicit ipv6_address(ipv4_address addr) noexcept;
 
   /// Constructs an IPv6 address from given bytes.
-  explicit ipv6_address(array_type bytes) noexcept;
+  explicit ipv6_address(array_type bytes) noexcept : bytes_(bytes) {
+    // nop
+  }
 
   // -- properties -------------------------------------------------------------
 
@@ -82,7 +84,7 @@ public:
 
   /// Returns whether this address contains only zeros, i.e., equals `::`.
   bool zero() const noexcept {
-    return half_segments_[0] == 0 && half_segments_[1] == 0;
+    return bytes_ == array_type{};
   }
 
   // -- comparison -------------------------------------------------------------
@@ -115,12 +117,7 @@ public:
 private:
   // -- member variables -------------------------------------------------------
 
-  union {
-    std::array<uint64_t, 2> half_segments_;
-    std::array<uint32_t, 4> quad_segments_;
-    u16_array_type oct_segments_;
-    array_type bytes_;
-  };
+  array_type bytes_ = array_type{};
 };
 
 inline bool operator==(const ipv4_address& lhs, const ipv6_address& rhs) {

@@ -28,9 +28,11 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  ipv4_address();
+  ipv4_address() noexcept = default;
 
-  explicit ipv4_address(array_type bytes);
+  explicit ipv4_address(array_type bytes) noexcept : bytes_(bytes) {
+    // nop
+  }
 
   /// Constructs an IPv4 address from bits in network byte order.
   static ipv4_address from_bits(uint32_t bits) {
@@ -49,15 +51,10 @@ public:
 
   /// Returns the bits of the IP address in a single integer arranged in network
   /// byte order.
-  uint32_t bits() const noexcept {
-    return bits_;
-  }
+  uint32_t bits() const noexcept;
 
-  /// Sets all bits of the IP address with a single 32-bit write. Expects
-  /// argument in network byte order.
-  void bits(uint32_t value) noexcept {
-    bits_ = value;
-  }
+  /// Sets the address from an integer in network byte order.
+  void bits(uint32_t value) noexcept;
 
   /// Returns the bytes of the IP address as array.
   array_type& bytes() noexcept {
@@ -100,21 +97,20 @@ public:
 
   template <class Inspector>
   friend bool inspect(Inspector& f, ipv4_address& x) {
-    return f.object(x).fields(f.field("value", x.bits_));
+    auto get = [&x] { return x.bits(); };
+    auto set = [&x](uint32_t value) { x.bits(value); };
+    return f.object(x).fields(f.field("value", get, set));
   }
 
 private:
   // -- member variables -------------------------------------------------------
 
-  union {
-    uint32_t bits_;
-    array_type bytes_;
-  };
+  array_type bytes_ = array_type{};
 
   // -- sanity checks ----------------------------------------------------------
 
   static_assert(sizeof(array_type) == sizeof(uint32_t),
-                "array<char, 4> has a different size than uint32");
+                "array_type has a different size than uint32_t");
 };
 
 // -- related free functions ---------------------------------------------------
