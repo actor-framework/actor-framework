@@ -7,12 +7,15 @@
 #include "caf/test/approx.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
+#include "caf/test/tracking_resource.hpp"
 
 #include "caf/actor_control_block.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/log/test.hpp"
 #include "caf/type_id.hpp"
+
+#include <memory_resource>
 
 using namespace caf;
 
@@ -492,7 +495,7 @@ SCENARIO("JSON readers have builtin support for vector<bool>") {
     }
   }
   GIVEN("a JSON reader v2") {
-    json_reader_v2 reader{inspector_config{}};
+    json_reader_v2 reader;
     WHEN("loading a JSON array of booleans") {
       require(reader.load("[true, false]"));
       THEN("calling value() with a vector deserializes the JSON array") {
@@ -582,6 +585,37 @@ SCENARIO("type ID mappers are authoritative") {
       }
     }
   }
+}
+
+TEST("json_reader_v2 allocates from the configured memory resource") {
+  test::tracking_resource tracking;
+  inspector_config config;
+  config.resource(&tracking);
+  json_reader_v2 reader{config};
+  require(reader.load(
+    R"({"city":"Model City","entries":{"Bob":5556837,"Jon":5559347}})"sv));
+  check_gt(tracking.allocations(), 0u);
+  check_gt(tracking.outstanding_bytes(), 0u);
+  reader.reset();
+  check_eq(tracking.outstanding_allocations(), 0u);
+  check_eq(tracking.outstanding_bytes(), 0u);
+}
+
+TEST("json_reader_v2 releases the configured memory resource on destruction") {
+  test::tracking_resource tracking{std::pmr::new_delete_resource()};
+  {
+    inspector_config config;
+    config.resource(&tracking);
+    json_reader_v2 reader{config};
+    auto input
+      = R"({"city":"Model City","entries":{"Bob":5556837,"Jon":5559347}})"sv;
+    auto allocations_before_load = tracking.allocations();
+    require(reader.load(input));
+    check_gt(tracking.allocations(), allocations_before_load);
+    check_gt(tracking.outstanding_bytes(), 0u);
+  }
+  check_eq(tracking.outstanding_allocations(), 0u);
+  check_eq(tracking.outstanding_bytes(), 0u);
 }
 
 } // WITH_FIXTURE(fixture)
