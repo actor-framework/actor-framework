@@ -6,6 +6,7 @@
 
 #include "caf/net/fwd.hpp"
 #include "caf/net/socket.hpp"
+#include "caf/net/socket_guard.hpp"
 #include "caf/net/ssl/connection.hpp"
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/ssl/tcp_acceptor.hpp"
@@ -381,7 +382,8 @@ public:
 
   expected<disposable> start_client(client_config::socket& cfg) {
     if (ctx) {
-      auto conn = ctx->new_connection(cfg.take_fd());
+      auto fd = net::make_socket_guard(cfg.take_fd());
+      auto conn = ctx->new_connection(fd.get());
       if (!conn) {
         return expected<disposable>{unexpect, std::move(conn.error())};
       }
@@ -393,6 +395,8 @@ public:
         }
         log::net::debug("set {} as hostname for SSL validation", hostname);
       }
+      // The socket manager takes ownership when starting the client.
+      fd.release();
       return start_client_impl(*conn);
     }
     auto fd = cfg.take_fd();

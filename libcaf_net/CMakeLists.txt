@@ -111,6 +111,7 @@ caf_add_component(
     caf/net/socket_manager.cpp
     caf/net/socket_manager.test.cpp
     caf/net/ssl/connection.cpp
+    caf/net/ssl/connection.test.cpp
     caf/net/ssl/context.cpp
     caf/net/ssl/context.test.cpp
     caf/net/ssl/dtls.cpp

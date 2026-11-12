@@ -65,7 +65,8 @@ public:
   /// Reads the SNI hostname from the connection.
   [[nodiscard]] const char* sni_hostname() noexcept;
 
-  /// Sets the SSL hostname used for certificate validation of this connection.
+  /// Sets the SSL hostname or IP address used for certificate validation of
+  /// this connection. Passing `nullptr` clears the configured identity.
   /// Must be called before connect().
   [[nodiscard]] bool hostname(const char* hostname) noexcept;
 
