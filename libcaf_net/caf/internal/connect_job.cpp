@@ -14,7 +14,10 @@
 #include "caf/scheduler.hpp"
 #include "caf/sec.hpp"
 
+#include <algorithm>
 #include <optional>
+#include <span>
+#include <string>
 #include <utility>
 
 namespace caf::internal {
@@ -46,22 +49,27 @@ void connect_job::resume(scheduler*, uint64_t) {
       make_error(sec::invalid_argument, "URI must provide a valid hostname"));
     return;
   }
-  auto [plain, ssl] = config_->schemes();
-  auto use_ssl = false;
-  if (endpoint.scheme() == ssl.scheme) {
-    use_ssl = true;
-  } else if (endpoint.scheme() != plain.scheme) {
-    fail(format_to_unexpected(sec::invalid_argument,
-                              "unsupported URI scheme: expected {} or {}",
-                              plain.scheme, ssl.scheme)
-           .error());
+  auto schemes = config_->schemes();
+  auto pos = std::ranges::find_if(schemes, [&](const auto& entry) {
+    return endpoint.scheme() == entry.scheme;
+  });
+  if (pos == schemes.end()) {
+    fail(make_error(sec::invalid_argument, "unsupported URI scheme"));
     return;
   }
   if (auth.port == 0) {
-    auth.port = use_ssl ? ssl.port : plain.port;
+    auth.port = pos->port;
+  }
+  if (auth.port == 0) {
+    fail(format_to_unexpected(sec::invalid_argument,
+                              "port is mandatory: "
+                              "URI scheme {} has no default port",
+                              endpoint.scheme())
+           .error());
+    return;
   }
   std::optional<net::ssl::context> ctx;
-  if (use_ssl) {
+  if (pos->secure()) {
     auto make_ctx = [this] {
       if (config_->context_factory)
         return (*config_->context_factory)();
