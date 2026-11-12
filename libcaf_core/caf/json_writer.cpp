@@ -200,13 +200,13 @@ namespace caf {
 
 json_writer_base::json_writer_base()
   : json_writer_base(get_default_type_id_mapper(),
-                     std::pmr::get_default_resource()) {
+                     *std::pmr::get_default_resource()) {
   // nop
 }
 
 json_writer_base::json_writer_base(const type_id_mapper& mapper,
-                                   std::pmr::memory_resource* resource)
-  : buf_(resource), stack_(resource), mapper_(&mapper) {
+                                   std::pmr::memory_resource& resource)
+  : buf_(&resource), stack_(&resource), mapper_(&mapper) {
   /// All flags are initially set to false.
   std::memset(&flags_, 0, sizeof(flags_));
   // Reserve some reasonable storage for the character buffer. JSON grows

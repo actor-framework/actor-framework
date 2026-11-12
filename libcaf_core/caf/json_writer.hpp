@@ -157,7 +157,7 @@ protected:
   json_writer_base();
 
   json_writer_base(const type_id_mapper& mapper,
-                   std::pmr::memory_resource* resource);
+                   std::pmr::memory_resource& resource);
 
 private:
   using util = internal::json_writer_util;

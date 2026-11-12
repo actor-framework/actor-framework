@@ -59,15 +59,14 @@ public:
   }
 
   /// Returns the configured memory resource.
-  [[nodiscard]] constexpr std::pmr::memory_resource* resource() const noexcept {
-    CAF_ASSERT(resource_ != nullptr);
-    return resource_;
+  [[nodiscard]] constexpr std::pmr::memory_resource& resource() const noexcept {
+    return *resource_;
   }
 
   /// Changes the configured memory resource.
   constexpr inspector_config&
   resource(std::pmr::memory_resource* ptr) noexcept {
-    resource_ = ptr;
+    resource_ = ptr ? ptr : std::pmr::get_default_resource();
     return *this;
   }
 
