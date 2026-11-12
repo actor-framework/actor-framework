@@ -57,7 +57,8 @@ bool response_promise::async() const noexcept {
 }
 
 bool response_promise::pending() const noexcept {
-  return state_ != nullptr && state_->self != nullptr;
+  return state_ != nullptr && state_->self != nullptr
+         && !state_->id.is_answered();
 }
 
 strong_actor_ptr response_promise::source() const noexcept {

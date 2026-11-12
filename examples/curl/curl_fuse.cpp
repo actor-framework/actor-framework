@@ -44,6 +44,7 @@
 #include <ctime>
 #include <random>
 #include <string>
+#include <tuple>
 #include <vector>
 
 CAF_PUSH_WARNINGS
@@ -287,7 +288,7 @@ struct coordinator_state : base_state {
         auto worker = idle.back();
         idle.pop_back();
         busy.push_back(worker);
-        self->delegate(worker, rd, std::move(str), x, y);
+        std::ignore = self->mail(rd, std::move(str), x, y).delegate(worker);
         self->println(color, "{}[{}]: scheduled new work -> {} active jobs",
                       self->name(), self->id(), busy.size());
         if (idle.empty()) {
