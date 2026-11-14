@@ -12,11 +12,9 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/current_actor.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
-#include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
@@ -24,6 +22,7 @@
 #include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
 
+#include <atomic>
 #include <utility>
 
 namespace caf {
@@ -68,7 +67,8 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto src = ptr->sender;
-  if (auto* mailbox_size = metrics_.mailbox_size) {
+  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_acquire);
+  if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
   }
@@ -77,7 +77,7 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
     case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
       detail::actor_system_access{home_system()}.message_rejected(this);
-      if (auto* mailbox_size = metrics_.mailbox_size) {
+      if (mailbox_size) {
         mailbox_size->dec();
       }
       if (mid.is_request()) {
@@ -269,7 +269,8 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
     // the message, since `consume` may call `receive` again.
     current_behavior_ = &bhvr;
     current_message_id_ = mid;
-    bool consumed_msg = false;
+    auto consumed_msg = false;
+    const auto has_enqueue_time = ptr->has_enqueue_time();
     switch (consume(ptr)) {
       case consume_result::consumed:
         unstash();
@@ -287,8 +288,9 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
                               make_message(std::move(err))};
           auto prev = current_element_;
           current_element_ = &tmp;
-          auto g = detail::scope_guard{
-            [this, prev]() noexcept { current_element_ = prev; }};
+          auto guard = detail::scope_guard{[this, prev]() noexcept { //
+            current_element_ = prev;
+          }};
           bhvr(visitor, tmp.content());
           unstash();
           consumed_msg = true;
@@ -298,17 +300,22 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
         stash_.push(ptr.release());
         break;
     }
-    if (consumed_msg && getf(abstract_actor::collects_metrics_flag)) {
-      auto& builtins = builtin_metrics();
-      telemetry::timer::observe(builtins.processing_time, t0);
-      builtins.mailbox_time->observe(mbox_time);
-      builtins.mailbox_size->dec();
-    }
-    // `accept_one_cond::post()` returns false after one *accepted* message. A
-    // skipped message must not end the loop, or we exit before later mail (e.g.
-    // a request after an unrelated prior message) is ever handled.
-    if (consumed_msg && (!rcc.post() || !rcc.pre())) {
-      return;
+    if (consumed_msg) {
+      if (has_enqueue_time) {
+        auto& builtins = builtin_metrics();
+        auto* mbox_size = builtins.mailbox_size.load(std::memory_order_acquire);
+        if (mbox_size) {
+          telemetry::timer::observe(builtins.processing_time, t0);
+          builtins.mailbox_time->observe(mbox_time);
+          mbox_size->dec();
+        }
+      }
+      // `accept_one_cond::post()` returns false after one *accepted* message. A
+      // skipped message must not end the loop, or we exit before later mail
+      // (e.g. a request after an unrelated prior message) is ever handled.
+      if (!rcc.post() || !rcc.pre()) {
+        return;
+      }
     }
   }
 }
@@ -382,8 +389,10 @@ void blocking_actor::close_mailbox() {
   if (!mailbox_->closed()) {
     unstash();
     auto dropped = mailbox_->close();
-    if (dropped > 0 && metrics_.mailbox_size)
-      metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+    if (dropped > 0)
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_acquire)) {
+        gauge->dec(static_cast<int64_t>(dropped));
+      }
   }
 }
 
@@ -394,11 +403,15 @@ bool blocking_actor::try_force_close_mailbox() {
     detail::sync_request_bouncer bounce;
     while (auto stashed = stash_.pop()) {
       mailbox_element_ptr ptr{stashed};
+      if (ptr->has_enqueue_time()) {
+        ++dropped;
+      }
       bounce(*ptr);
-      ++dropped;
     }
-    if (dropped > 0 && metrics_.mailbox_size) {
-      metrics_.mailbox_size->dec(dropped);
+    if (dropped > 0) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_acquire)) {
+        gauge->dec(dropped);
+      }
     }
     return true;
   }

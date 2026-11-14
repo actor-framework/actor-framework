@@ -16,6 +16,7 @@
 #include "caf/telemetry/metric_family.hpp"
 #include "caf/telemetry/metric_registry.hpp"
 
+#include <array>
 #include <latch>
 
 using namespace caf;
@@ -405,4 +406,79 @@ TEST("GH-2296 regression") {
     check_eq(processed->load(), 10u);
     check_eq(yields->value(), 9); // Yields after each message except the last.
   }
+}
+
+namespace {
+
+class metrics_testee : public event_based_actor {
+public:
+  metrics_testee(actor_config& cfg, std::shared_ptr<std::latch> entered,
+                 std::shared_ptr<std::latch> proceed)
+    : event_based_actor(cfg),
+      entered_(std::move(entered)),
+      proceed_(std::move(proceed)) {
+    mail(1).send(this);
+  }
+
+  const char* name() const override {
+    return "metrics-testee";
+  }
+
+  behavior make_behavior() override {
+    return {[this](int value) {
+      if (value == 1) {
+        entered_->count_down();
+        proceed_->wait();
+      } else {
+        quit();
+      }
+    }};
+  }
+
+private:
+  std::shared_ptr<std::latch> entered_;
+  std::shared_ptr<std::latch> proceed_;
+};
+
+} // namespace
+
+TEST("constructor messages do not update actor metrics") {
+  actor_system_config cfg;
+  cfg.set("caf.metrics.filters.actors.includes",
+          std::vector<std::string>{"metrics-testee"});
+  actor_system sys{cfg};
+  auto entered = std::make_shared<std::latch>(1);
+  auto proceed = std::make_shared<std::latch>(1);
+  auto& reg = sys.metrics();
+  auto* mailbox_size = reg.gauge_instance("caf.actor", "mailbox-size",
+                                          {{"name", "metrics-testee"}}, "");
+  constexpr std::array bounds{1.0};
+  auto* processing_time = reg.histogram_instance<double>(
+    "caf.actor", "processing-time", {{"name", "metrics-testee"}}, bounds, "",
+    "seconds");
+  auto* mailbox_time = reg.histogram_instance<double>(
+    "caf.actor", "mailbox-time", {{"name", "metrics-testee"}}, bounds, "",
+    "seconds");
+  auto samples = [](const telemetry::dbl_histogram& histogram) {
+    auto result = int64_t{0};
+    for (const auto& bucket : histogram.buckets())
+      result += bucket.count.value();
+    return result;
+  };
+  auto aut = sys.spawn<metrics_testee>(entered, proceed);
+  entered->wait();
+  auto initial_size = mailbox_size->value();
+  auto initial_processing = samples(*processing_time);
+  auto initial_mailbox = samples(*mailbox_time);
+  anon_mail(2).send(aut);
+  auto queued_size = mailbox_size->value();
+  proceed->count_down();
+  sys.await_all_actors_done();
+  check_eq(initial_size, 0);
+  check_eq(initial_processing, 0);
+  check_eq(initial_mailbox, 0);
+  check_eq(queued_size, 1);
+  check_eq(mailbox_size->value(), 0);
+  check_eq(samples(*processing_time), 1);
+  check_eq(samples(*mailbox_time), 1);
 }

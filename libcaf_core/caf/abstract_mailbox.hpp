@@ -58,7 +58,8 @@ public:
   virtual bool close_if_blocked() = 0;
 
   /// Closes the mailbox and discards all pending messages.
-  /// @returns The number of dropped messages.
+  /// @returns The number of dropped messages *with an enqueue time*, i.e.,
+  ///          messages that caused an increment on the mailbox size metric.
   /// @note Only the owning actor is allowed to call this function.
   virtual size_t close() = 0;
 

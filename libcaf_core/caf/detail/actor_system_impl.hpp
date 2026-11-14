@@ -28,7 +28,7 @@ public:
 
   actor_system_impl& operator=(const actor_system_impl&) = delete;
 
-  virtual telemetry::actor_metrics make_actor_metrics(std::string_view name)
+  virtual void init(telemetry::actor_metrics& metrics, std::string_view name)
     = 0;
 
   virtual void start(actor_system& owner) = 0;

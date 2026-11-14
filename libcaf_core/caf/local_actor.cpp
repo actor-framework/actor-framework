@@ -34,7 +34,7 @@ local_actor::~local_actor() {
 }
 
 void local_actor::setup_metrics() {
-  metrics_ = system().make_actor_metrics(name());
+  system().init(metrics_, name());
   if (auto* running_count = metrics_.running_count) {
     running_count->inc();
   }
