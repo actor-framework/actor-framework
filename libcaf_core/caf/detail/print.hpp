@@ -8,10 +8,12 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/none.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <concepts>
 #include <cstdint>
 #include <ctime>
+#include <iterator>
 #include <limits>
 #include <string_view>
 #include <type_traits>
@@ -243,7 +245,7 @@ void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
     if (converted.count() < 1)
       return false;
     print(buf, converted.count());
-    buf.insert(buf.end(), suffix.begin(), suffix.end());
+    std::ranges::copy(suffix, std::back_inserter(buf));
     return true;
   };
   namespace sc = std::chrono;

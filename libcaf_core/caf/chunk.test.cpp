@@ -6,6 +6,8 @@
 
 #include "caf/test/test.hpp"
 
+#include <algorithm>
+
 using namespace caf;
 
 namespace {
@@ -13,11 +15,6 @@ namespace {
 template <class... Ts>
 std::vector<std::byte> to_byte_buf(Ts... values) {
   return std::vector<std::byte>{static_cast<std::byte>(values)...};
-}
-
-template <class T>
-std::vector<std::byte> to_vec(std::span<const T> values) {
-  return std::vector<std::byte>{values.begin(), values.end()};
 }
 
 } // namespace
@@ -38,7 +35,7 @@ TEST("construction from a single buffer") {
   check(!uut.bytes().empty());
   check_eq(uut.size(), 3u);
   check_eq(uut.bytes().size(), 3u);
-  check_eq(to_vec(uut.bytes()), buf);
+  check(std::ranges::equal(uut.bytes(), buf));
 }
 
 TEST("construction from multiple buffers") {
@@ -51,7 +48,7 @@ TEST("construction from multiple buffers") {
   check(!uut.bytes().empty());
   check_eq(uut.size(), 5u);
   check_eq(uut.bytes().size(), 5u);
-  check_eq(to_vec(uut.bytes()), to_byte_buf(1, 2, 3, 4, 5));
+  check(std::ranges::equal(uut.bytes(), to_byte_buf(1, 2, 3, 4, 5)));
 }
 
 TEST("copying, moving and swapping") {

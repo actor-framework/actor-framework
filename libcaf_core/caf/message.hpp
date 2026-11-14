@@ -140,7 +140,7 @@ public:
   /// Returns the type ID of the element at `index`.
   /// @pre `index < size()`
   type_id_t type_at(size_t index) const noexcept {
-    auto xs = types();
+    auto xs = data_->types();
     return xs[index];
   }
 
