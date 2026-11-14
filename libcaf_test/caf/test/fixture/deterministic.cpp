@@ -173,8 +173,10 @@ public:
     auto result = size_t{0};
     auto i = entries.begin();
     while (i != entries.end()) {
+      if (i->element->has_enqueue_time()) {
+        ++result;
+      }
       consumer(i->element);
-      ++result;
       i = entries.erase(i);
     }
     return result;
@@ -188,8 +190,10 @@ public:
     };
     auto i = std::stable_partition(entries.begin(), entries.end(), pred);
     while (i != entries.end()) {
+      if (i->element->has_enqueue_time()) {
+        ++result;
+      }
       consumer(i->element);
-      ++result;
       i = entries.erase(i);
     }
     return result;

@@ -20,6 +20,8 @@ struct actor_metrics {
   dbl_histogram* mailbox_time = nullptr;
 
   /// Counts how many messages are currently waiting in the mailbox.
+  /// Note: this metric will be accessed concurrently when enqueueing messages.
+  ///       All access must use atomic operations.
   int_gauge* mailbox_size = nullptr;
 
   /// Tracks the current number of running actors of this type.

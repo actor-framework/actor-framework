@@ -70,27 +70,29 @@ constexpr std::array<double, 9> default_buckets{{
 
 /// Metrics that the actor system collects.
 struct base_metrics_t {
-  explicit base_metrics_t(telemetry::metric_registry& reg) {
-    rejected_messages = reg.counter_singleton("caf.system", "rejected-messages",
-                                              "Number of rejected messages.");
-    max_throughput_reached = reg.counter_singleton(
-      "caf.system", "max-throughput-reached",
-      "Number of times the max throughput limit was reached.");
-    queued_messages = reg.gauge_singleton(
-      "caf.system", "queued-messages", "Number of messages in all mailboxes.");
-    running_count = reg.gauge_family("caf.system", "running-actors", {"name"},
-                                     "Number of currently running actors.");
-    processed_messages = reg.counter_family("caf.actor", "processed-messages",
+  explicit base_metrics_t(telemetry::metric_registry& reg)
+    : rejected_messages(reg.counter_singleton("caf.system", "rejected-messages",
+                                              "Number of rejected messages.")),
+      max_throughput_reached(reg.counter_singleton(
+        "caf.system", "max-throughput-reached",
+        "Number of times the max throughput limit was reached.")),
+      queued_messages(
+        reg.gauge_singleton("caf.system", "queued-messages",
+                            "Number of messages in all mailboxes.")),
+      running_count(reg.gauge_family("caf.system", "running-actors", {"name"},
+                                     "Number of currently running actors.")),
+      processed_messages(reg.counter_family("caf.actor", "processed-messages",
                                             {"name"},
-                                            "Number of processed messages.");
-    processing_time = reg.histogram_family<double>(
-      "caf.actor", "processing-time", {"name"}, default_buckets,
-      "Time an actor needs to process messages.", "seconds");
-    mailbox_time = reg.histogram_family<double>(
-      "caf.actor", "mailbox-time", {"name"}, default_buckets,
-      "Time a message waits in the mailbox before processing.", "seconds");
-    mailbox_size = reg.gauge_family("caf.actor", "mailbox-size", {"name"},
-                                    "Number of messages in the mailbox.");
+                                            "Number of processed messages.")),
+      processing_time(reg.histogram_family<double>(
+        "caf.actor", "processing-time", {"name"}, default_buckets,
+        "Time an actor needs to process messages.", "seconds")),
+      mailbox_time(reg.histogram_family<double>(
+        "caf.actor", "mailbox-time", {"name"}, default_buckets,
+        "Time a message waits in the mailbox before processing.", "seconds")),
+      mailbox_size(reg.gauge_family("caf.actor", "mailbox-size", {"name"},
+                                    "Number of messages in the mailbox.")) {
+    // nop
   }
 
   /// Counts the number of messages that were rejected because the target
@@ -421,11 +423,12 @@ public:
   }
 
   telemetry::actor_metrics make_actor_metrics(std::string_view name) override {
-    telemetry::actor_metrics result;
-    if (flags_.collect_running_actors_metrics) {
-      result.running_count
-        = base_metrics_.running_count->get_or_add({{"name", name}});
-    }
+    auto get_running_count = [this, name]() -> telemetry::int_gauge* {
+      if (flags_.collect_running_actors_metrics) {
+        return base_metrics_.running_count->get_or_add({{"name", name}});
+      }
+      return nullptr;
+    };
     auto matches = [name](const std::string& glob) {
       return detail::match_wildcard_pattern(name, glob);
     };
@@ -433,16 +436,13 @@ public:
       = std::ranges::any_of(metrics_actors_includes_, matches)
         && std::ranges::none_of(metrics_actors_excludes_, matches);
     if (enable_optional_metrics) {
-      result.processed_messages
-        = base_metrics_.processed_messages->get_or_add({{"name", name}});
-      result.processing_time
-        = base_metrics_.processing_time->get_or_add({{"name", name}});
-      result.mailbox_time
-        = base_metrics_.mailbox_time->get_or_add({{"name", name}});
-      result.mailbox_size
-        = base_metrics_.mailbox_size->get_or_add({{"name", name}});
+      return {base_metrics_.processed_messages->get_or_add({{"name", name}}),
+              base_metrics_.processing_time->get_or_add({{"name", name}}),
+              base_metrics_.mailbox_time->get_or_add({{"name", name}}),
+              base_metrics_.mailbox_size->get_or_add({{"name", name}}),
+              get_running_count()};
     }
-    return result;
+    return {nullptr, nullptr, nullptr, nullptr, get_running_count()};
   }
 
   size_t inc_running_actors_count(actor_id who) override {

@@ -13,6 +13,7 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/internal/atomic_load.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/log/net.hpp"
 #include "caf/telemetry/gauge.hpp"
@@ -145,7 +146,8 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  if (auto* mailbox_size = metrics_.mailbox_size) {
+  auto* mailbox_size = internal::atomic_load_relaxed(metrics_.mailbox_size);
+  if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
   }
@@ -168,7 +170,7 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
     default: { // intrusive::inbox_result::queue_closed
       CAF_LOG_REJECT_EVENT();
       detail::actor_system_access{home_system()}.message_rejected(this);
-      if (auto* mailbox_size = metrics_.mailbox_size) {
+      if (mailbox_size) {
         mailbox_size->dec();
       }
       if (mid.is_request()) {
@@ -217,8 +219,11 @@ void abstract_actor_shell::do_unstash(mailbox_element_ptr ptr) {
 void abstract_actor_shell::close_mailbox() {
   if (!mailbox_.closed()) {
     auto dropped = mailbox_.close();
-    if (dropped > 0 && metrics_.mailbox_size)
-      metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+    if (dropped > 0) {
+      if (auto* gauge = internal::atomic_load_relaxed(metrics_.mailbox_size)) {
+        gauge->dec(static_cast<int64_t>(dropped));
+      }
+    }
   }
 }
 

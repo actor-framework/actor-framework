@@ -22,6 +22,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/format_to_error.hpp"
+#include "caf/internal/atomic_load.hpp"
 #include "caf/internal/attachable_factory.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
@@ -190,7 +191,8 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  if (auto* mailbox_size = metrics_.mailbox_size) {
+  auto* mailbox_size = internal::atomic_load_relaxed(metrics_.mailbox_size);
+  if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
   }
@@ -214,7 +216,7 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
     default: { // intrusive::inbox_result::queue_closed
       CAF_LOG_REJECT_EVENT();
       detail::actor_system_access{home_system()}.message_rejected(this);
-      if (auto* mailbox_size = metrics_.mailbox_size) {
+      if (mailbox_size) {
         mailbox_size->dec();
       }
       if (mid.is_request()) {
@@ -953,26 +955,29 @@ scheduled_actor::consume(mailbox_element_ptr& what) {
     // Should be unreachable.
     detail::critical("categorize() returned an invalid message category");
   };
-  if (metrics_.mailbox_time) {
+  if (x.has_enqueue_time()) {
     // Note: mailbox_time, mailbox_size and processed_messages must be all
     //       enabled together or not at all.
-    CAF_ASSERT(metrics_.mailbox_size != nullptr);
-    CAF_ASSERT(metrics_.processed_messages != nullptr);
-    auto t0 = std::chrono::steady_clock::now();
-    auto mbox_time = x.seconds_until(t0);
-    if (body()) {
-      set_receive_timeout();
-      auto terminated = finalize();
-      telemetry::timer::observe(metrics_.processing_time, t0);
-      metrics_.mailbox_time->observe(mbox_time);
-      metrics_.mailbox_size->dec();
-      metrics_.processed_messages->inc();
-      if (terminated) {
-        return consume_result::terminated;
+    auto* mailbox_size = internal::atomic_load_relaxed(metrics_.mailbox_size);
+    if (mailbox_size) {
+      CAF_ASSERT(metrics_.mailbox_time != nullptr);
+      CAF_ASSERT(metrics_.processed_messages != nullptr);
+      auto t0 = std::chrono::steady_clock::now();
+      auto mbox_time = x.seconds_until(t0);
+      if (body()) {
+        set_receive_timeout();
+        auto terminated = finalize();
+        telemetry::timer::observe(metrics_.processing_time, t0);
+        mailbox_size->dec();
+        metrics_.mailbox_time->observe(mbox_time);
+        metrics_.processed_messages->inc();
+        if (terminated) {
+          return consume_result::terminated;
+        }
+        return consume_result::consumed;
       }
-      return consume_result::consumed;
+      return consume_result::skipped;
     }
-    return consume_result::skipped;
   }
   if (body()) {
     set_receive_timeout();
@@ -1217,24 +1222,30 @@ void scheduled_actor::close_mailbox() {
     }
   }
   // Clear mailbox.
-  if (!mailbox().closed())
+  if (!mailbox().closed()) {
     dropped += mailbox().close();
-  if (dropped > 0 && metrics_.mailbox_size)
-    metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+  }
+  if (dropped > 0) {
+    if (auto* gauge = internal::atomic_load_relaxed(metrics_.mailbox_size)) {
+      gauge->dec(static_cast<int64_t>(dropped));
+    }
+  }
 }
 
 bool scheduled_actor::try_force_close_mailbox() {
   if (mailbox().close_if_blocked()) {
     // Discard everything in the stash.
-    auto dropped = 0;
+    auto dropped = size_t{0};
     detail::sync_request_bouncer bounce;
     while (auto stashed = stash_.pop()) {
       mailbox_element_ptr ptr{stashed};
       bounce(*ptr);
       ++dropped;
     }
-    if (dropped > 0 && metrics_.mailbox_size) {
-      metrics_.mailbox_size->dec(dropped);
+    if (dropped > 0) {
+      if (auto* gauge = internal::atomic_load_relaxed(metrics_.mailbox_size)) {
+        gauge->dec(static_cast<int64_t>(dropped));
+      }
     }
     return true;
   }
