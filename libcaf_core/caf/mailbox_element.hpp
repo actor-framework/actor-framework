@@ -36,6 +36,11 @@ public:
     enqueue_time = std::chrono::steady_clock::now();
   }
 
+  /// Checks whether `enqueue_time` has been set.
+  bool has_enqueue_time() const noexcept {
+    return enqueue_time.time_since_epoch().count() != 0;
+  }
+
   /// Returns the time between enqueueing the message and `t`.
   double seconds_until(std::chrono::steady_clock::time_point t) const {
     namespace ch = std::chrono;
@@ -45,7 +50,6 @@ public:
 
   /// Returns the time since calling `set_enqueue_time` in seconds.
   double seconds_since_enqueue() const {
-    namespace ch = std::chrono;
     return seconds_until(std::chrono::steady_clock::now());
   }
 

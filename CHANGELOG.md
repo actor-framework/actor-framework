@@ -5,8 +5,16 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## Unreleased
 
+### Changed
+
+- Derived types of `abstract_mailbox::close` now have to return the number of
+  dropped messages *with an enqueue time*. This change became necessary for
+  fixing the mailbox size metric (cf. #2485).
+
 ### Fixed
 
+- Fix a race on the mailbox size metric that can result in a rare crash with
+  metrics enabled when sending messages from constructors (#2485).
 - Fix integer overflows in various `compare` implementations. Note that sorting
   order may have changed for types that previously had an unsafe `compare`
   implementation (#2478).

@@ -94,7 +94,9 @@ public:
     auto bounce = detail::sync_request_bouncer{};
     auto envelope = fix_->pop_msg_impl(owner_);
     while (envelope != nullptr) {
-      ++result;
+      if (envelope->has_enqueue_time()) {
+        ++result;
+      }
       bounce(*envelope);
       envelope = fix_->pop_msg_impl(owner_);
     }

@@ -5,18 +5,17 @@
 #include "caf/scheduled_actor.hpp"
 
 #include "caf/action.hpp"
-#include "caf/actor_ostream.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic.hpp"
 #include "caf/detail/critical.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/mailbox_factory.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
-#include "caf/flow/op/mcast.hpp"
 #include "caf/format_to_error.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
@@ -26,6 +25,8 @@
 #include "caf/stream.hpp"
 
 using namespace std::string_literals;
+
+using caf::detail::atomic_load_acquire;
 
 namespace caf {
 
@@ -158,10 +159,10 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  auto collects_metrics = getf(abstract_actor::collects_metrics_flag);
-  if (collects_metrics) {
+  auto* mailbox_size = atomic_load_acquire(metrics_.mailbox_size);
+  if (mailbox_size) {
     ptr->set_enqueue_time();
-    metrics_.mailbox_size->inc();
+    mailbox_size->inc();
   }
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::unblocked_reader: {
@@ -182,8 +183,9 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
     default: { // intrusive::inbox_result::queue_closed
       CAF_LOG_REJECT_EVENT();
       home_system().base_metrics().rejected_messages->inc();
-      if (collects_metrics)
-        metrics_.mailbox_size->dec();
+      if (mailbox_size) {
+        mailbox_size->dec();
+      }
       if (mid.is_request()) {
         detail::sync_request_bouncer f;
         f(sender, mid);
@@ -1169,17 +1171,23 @@ void scheduled_actor::close_mailbox(const error& reason) {
   auto dropped = size_t{0};
   if (!stash_.empty()) {
     detail::sync_request_bouncer bounce;
-    while (auto stashed = stash_.pop()) {
+    while (auto* stashed = stash_.pop()) {
+      auto del = detail::scope_guard{[stashed]() noexcept { delete stashed; }};
+      if (stashed->has_enqueue_time()) {
+        ++dropped;
+      }
       bounce(*stashed);
-      delete stashed;
-      ++dropped;
     }
   }
-  // Clear mailbox.
-  if (!mailbox().closed())
+  // Clear the mailbox.
+  if (!mailbox().closed()) {
     dropped += mailbox().close(reason);
-  if (dropped > 0 && metrics_.mailbox_size)
-    metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+  }
+  if (dropped > 0) {
+    if (auto* mailbox_size = atomic_load_acquire(metrics_.mailbox_size)) {
+      mailbox_size->dec(static_cast<int64_t>(dropped));
+    }
+  }
 }
 
 void scheduled_actor::force_close_mailbox() {

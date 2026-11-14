@@ -10,10 +10,13 @@
 #include "caf/action.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/log/net.hpp"
+
+using caf::detail::atomic_load_acquire;
 
 namespace caf::net {
 
@@ -133,10 +136,10 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  auto collects_metrics = getf(abstract_actor::collects_metrics_flag);
-  if (collects_metrics) {
+  auto* mailbox_size = atomic_load_acquire(metrics_.mailbox_size);
+  if (mailbox_size) {
     ptr->set_enqueue_time();
-    metrics_.mailbox_size->inc();
+    mailbox_size->inc();
   }
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::unblocked_reader: {
@@ -157,8 +160,9 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
     default: { // intrusive::inbox_result::queue_closed
       CAF_LOG_REJECT_EVENT();
       home_system().base_metrics().rejected_messages->inc();
-      if (collects_metrics)
-        metrics_.mailbox_size->dec();
+      if (mailbox_size) {
+        mailbox_size->dec();
+      }
       if (mid.is_request()) {
         detail::sync_request_bouncer f;
         f(sender, mid);
@@ -204,8 +208,11 @@ void abstract_actor_shell::do_unstash(mailbox_element_ptr ptr) {
 void abstract_actor_shell::close_mailbox(const error& reason) {
   if (!mailbox_.closed()) {
     auto dropped = mailbox_.close(reason);
-    if (dropped > 0 && metrics_.mailbox_size)
-      metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+    if (dropped > 0) {
+      if (auto* mailbox_size = atomic_load_acquire(metrics_.mailbox_size)) {
+        mailbox_size->dec(static_cast<int64_t>(dropped));
+      }
+    }
   }
 }
 
