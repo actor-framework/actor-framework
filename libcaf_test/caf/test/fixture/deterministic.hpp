@@ -18,6 +18,7 @@
 #include "caf/resumable.hpp"
 #include "caf/scheduled_actor.hpp"
 
+#include <functional>
 #include <list>
 #include <memory>
 
@@ -461,6 +462,10 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   deterministic();
+
+  /// Applies a user-defined configuration to the configuration before
+  /// constructing the actor system with it.
+  explicit deterministic(std::function<void(actor_system_config&)> configure);
 
   ~deterministic();
 

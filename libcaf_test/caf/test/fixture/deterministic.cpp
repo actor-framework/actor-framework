@@ -458,6 +458,22 @@ deterministic::deterministic() : sys(cfg, this) {
   // nop
 }
 
+namespace {
+
+template <class F>
+actor_system_config& configured(actor_system_config& cfg, F&& configure) {
+  configure(cfg);
+  return cfg;
+}
+
+} // namespace
+
+deterministic::deterministic(
+  std::function<void(actor_system_config&)> configure)
+  : sys(configured(cfg, configure), this) {
+  // nop
+}
+
 deterministic::~deterministic() {
   // Note: we need clean up all remaining messages manually. This in turn may
   //       clean up actors as unreachable if the test did not consume all
