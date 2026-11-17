@@ -7,6 +7,7 @@
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code_enum.hpp"
+#include "caf/message_priority.hpp"
 #include "caf/weak_intrusive_ptr_traits.hpp"
 
 #include <cstddef>
@@ -90,6 +91,9 @@ template <class...> class typed_actor_pointer;
 template <class...> class typed_actor_view;
 template <class...> class typed_behavior;
 template <class...> class typed_event_based_actor;
+
+template <message_priority Priority, class Outputs, class... Inputs>
+class response_promise_mail_t;
 
 // clang-format on
 
