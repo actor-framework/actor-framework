@@ -422,27 +422,25 @@ public:
     logger_ = nullptr;
   }
 
-  telemetry::actor_metrics make_actor_metrics(std::string_view name) override {
-    auto get_running_count = [this, name]() -> telemetry::int_gauge* {
-      if (flags_.collect_running_actors_metrics) {
-        return base_metrics_.running_count->get_or_add({{"name", name}});
-      }
-      return nullptr;
-    };
+  void init(telemetry::actor_metrics& dst, std::string_view name) override {
     auto matches = [name](const std::string& glob) {
       return detail::match_wildcard_pattern(name, glob);
     };
     auto enable_optional_metrics
       = std::ranges::any_of(metrics_actors_includes_, matches)
         && std::ranges::none_of(metrics_actors_excludes_, matches);
+    auto& src = base_metrics_;
     if (enable_optional_metrics) {
-      return {base_metrics_.processed_messages->get_or_add({{"name", name}}),
-              base_metrics_.processing_time->get_or_add({{"name", name}}),
-              base_metrics_.mailbox_time->get_or_add({{"name", name}}),
-              base_metrics_.mailbox_size->get_or_add({{"name", name}}),
-              get_running_count()};
+      dst.mailbox_size.store(src.mailbox_size->get_or_add({{"name", name}}),
+                             std::memory_order_relaxed);
+      dst.processed_messages
+        = src.processed_messages->get_or_add({{"name", name}});
+      dst.processing_time = src.processing_time->get_or_add({{"name", name}});
+      dst.mailbox_time = src.mailbox_time->get_or_add({{"name", name}});
     }
-    return {nullptr, nullptr, nullptr, nullptr, get_running_count()};
+    if (flags_.collect_running_actors_metrics) {
+      dst.running_count = src.running_count->get_or_add({{"name", name}});
+    }
   }
 
   size_t inc_running_actors_count(actor_id who) override {
@@ -757,9 +755,8 @@ actor_system::meta_objects_guard() const noexcept {
   return impl_->meta_objects_guard();
 }
 
-telemetry::actor_metrics
-actor_system::make_actor_metrics(std::string_view name) {
-  return impl_->make_actor_metrics(name);
+void actor_system::init(telemetry::actor_metrics& metrics, std::string_view name) {
+  impl_->init(metrics, name);
 }
 
 const actor_system_config& actor_system::config() const {

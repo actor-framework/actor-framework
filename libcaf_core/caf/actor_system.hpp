@@ -230,8 +230,8 @@ public:
   /// Returns the global meta objects guard.
   detail::global_meta_objects_guard_type meta_objects_guard() const noexcept;
 
-  /// Returns a set of metrics for a specific actor type.
-  telemetry::actor_metrics make_actor_metrics(std::string_view name);
+  /// Initializes metrics for a specific actor type.
+  void init(telemetry::actor_metrics& metrics, std::string_view name);
 
   /// Returns the configuration of this actor system.
   const actor_system_config& config() const;

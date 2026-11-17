@@ -16,13 +16,13 @@
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/internal/atomic_load.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
 
+#include <atomic>
 #include <utility>
 
 namespace caf {
@@ -67,7 +67,7 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto src = ptr->sender;
-  auto* mailbox_size = internal::atomic_load_relaxed(metrics_.mailbox_size);
+  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_relaxed);
   if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
@@ -303,7 +303,7 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
     if (consumed_msg) {
       if (has_enqueue_time) {
         auto& builtins = builtin_metrics();
-        auto* mbox_size = internal::atomic_load_relaxed(builtins.mailbox_size);
+        auto* mbox_size = builtins.mailbox_size.load(std::memory_order_relaxed);
         if (mbox_size) {
           telemetry::timer::observe(builtins.processing_time, t0);
           builtins.mailbox_time->observe(mbox_time);
@@ -390,7 +390,7 @@ void blocking_actor::close_mailbox() {
     unstash();
     auto dropped = mailbox_->close();
     if (dropped > 0)
-      if (auto* gauge = internal::atomic_load_relaxed(metrics_.mailbox_size)) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
         gauge->dec(static_cast<int64_t>(dropped));
       }
   }
@@ -407,7 +407,7 @@ bool blocking_actor::try_force_close_mailbox() {
       ++dropped;
     }
     if (dropped > 0) {
-      if (auto* gauge = internal::atomic_load_relaxed(metrics_.mailbox_size)) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
         gauge->dec(dropped);
       }
     }

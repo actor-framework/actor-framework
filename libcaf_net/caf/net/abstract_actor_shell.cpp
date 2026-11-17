@@ -13,7 +13,6 @@
 #include "caf/detail/assert.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/internal/atomic_load.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/log/net.hpp"
 #include "caf/telemetry/gauge.hpp"
@@ -146,7 +145,7 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  auto* mailbox_size = internal::atomic_load_relaxed(metrics_.mailbox_size);
+  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_relaxed);
   if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
@@ -220,7 +219,7 @@ void abstract_actor_shell::close_mailbox() {
   if (!mailbox_.closed()) {
     auto dropped = mailbox_.close();
     if (dropped > 0) {
-      if (auto* gauge = internal::atomic_load_relaxed(metrics_.mailbox_size)) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
         gauge->dec(static_cast<int64_t>(dropped));
       }
     }

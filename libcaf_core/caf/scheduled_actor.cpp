@@ -22,7 +22,6 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/format_to_error.hpp"
-#include "caf/internal/atomic_load.hpp"
 #include "caf/internal/attachable_factory.hpp"
 #include "caf/log/core.hpp"
 #include "caf/log/system.hpp"
@@ -191,7 +190,7 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  auto* mailbox_size = internal::atomic_load_relaxed(metrics_.mailbox_size);
+  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_relaxed);
   if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
@@ -958,7 +957,7 @@ scheduled_actor::consume(mailbox_element_ptr& what) {
   if (x.has_enqueue_time()) {
     // Note: mailbox_time, mailbox_size and processed_messages must be all
     //       enabled together or not at all.
-    auto* mailbox_size = internal::atomic_load_relaxed(metrics_.mailbox_size);
+    auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_relaxed);
     if (mailbox_size) {
       CAF_ASSERT(metrics_.mailbox_time != nullptr);
       CAF_ASSERT(metrics_.processed_messages != nullptr);
@@ -1226,7 +1225,7 @@ void scheduled_actor::close_mailbox() {
     dropped += mailbox().close();
   }
   if (dropped > 0) {
-    if (auto* gauge = internal::atomic_load_relaxed(metrics_.mailbox_size)) {
+    if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
       gauge->dec(static_cast<int64_t>(dropped));
     }
   }
@@ -1243,7 +1242,7 @@ bool scheduled_actor::try_force_close_mailbox() {
       ++dropped;
     }
     if (dropped > 0) {
-      if (auto* gauge = internal::atomic_load_relaxed(metrics_.mailbox_size)) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
         gauge->dec(static_cast<int64_t>(dropped));
       }
     }

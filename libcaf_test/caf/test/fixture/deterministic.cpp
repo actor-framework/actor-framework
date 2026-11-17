@@ -682,8 +682,8 @@ public:
     clock_ = nullptr;
   }
 
-  telemetry::actor_metrics make_actor_metrics(std::string_view) override {
-    return {};
+  void init(telemetry::actor_metrics&, std::string_view) override {
+    // nop
   }
 
   size_t inc_running_actors_count(actor_id) override {

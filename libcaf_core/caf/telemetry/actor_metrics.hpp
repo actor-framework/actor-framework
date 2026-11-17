@@ -6,10 +6,16 @@
 
 #include "caf/fwd.hpp"
 
+#include <atomic>
+
 namespace caf::telemetry {
 
 /// Optional metrics collected by individual actors when configured to do so.
 struct actor_metrics {
+  /// Counts how many messages are currently waiting in the mailbox.
+  /// Note: this metric will be accessed concurrently when enqueueing messages.
+  std::atomic<int_gauge*> mailbox_size = nullptr;
+
   /// Counts the total number of processed messages.
   int_counter* processed_messages = nullptr;
 
@@ -18,11 +24,6 @@ struct actor_metrics {
 
   /// Samples how long messages wait in the mailbox before being processed.
   dbl_histogram* mailbox_time = nullptr;
-
-  /// Counts how many messages are currently waiting in the mailbox.
-  /// Note: this metric will be accessed concurrently when enqueueing messages.
-  ///       All access must use atomic operations.
-  int_gauge* mailbox_size = nullptr;
 
   /// Tracks the current number of running actors of this type.
   int_gauge* running_count = nullptr;
