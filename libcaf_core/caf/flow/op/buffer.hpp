@@ -47,7 +47,10 @@ struct buffer_interval_trait {
   }
 };
 
-///
+/// The subscription for the `buffer` operator. Requests items only while the
+/// observer has demand and buffers at most one batch. Whenever a terminal
+/// event arrives while items are buffered and the observer has no demand, the
+/// event is deferred until the observer requests again.
 template <class Trait>
 class buffer_sub : public subscription::impl_base {
 public:
@@ -80,7 +83,7 @@ public:
   }
 
   bool running() const noexcept {
-    return state_ == state::running;
+    return state_ == state::running || state_ == state::awaiting_demand;
   }
 
   const error& err() const noexcept {
@@ -92,7 +95,8 @@ public:
   }
 
   bool can_emit() const noexcept {
-    return buf_.size() == max_buf_size_ || has_shut_down(state_);
+    return (state_ == state::running && buf_.size() == max_buf_size_)
+           || state_ == state::awaiting_demand || has_shut_down(state_);
   }
 
   // -- callbacks for the parent -----------------------------------------------
@@ -120,7 +124,7 @@ public:
       return;
     }
     value_sub_ = std::move(sub);
-    value_sub_.request(max_buf_size_);
+    pull();
   }
 
   void fwd_on_complete(buffer_input_t) {
@@ -135,6 +139,8 @@ public:
   }
 
   void fwd_on_next(buffer_input_t, const input_type& item) {
+    if (in_flight_ > 0)
+      --in_flight_;
     if (running()) {
       buf_.push_back(item);
       if (buf_.size() == max_buf_size_)
@@ -153,7 +159,7 @@ public:
 
   void fwd_on_complete(buffer_emit_t) {
     control_sub_.release_later();
-    if (state_ == state::running)
+    if (running())
       err_ = make_error(sec::end_of_stream,
                         "buffer: unexpected end of the control stream");
     shutdown();
@@ -166,13 +172,16 @@ public:
   }
 
   void fwd_on_next(buffer_emit_t, select_token_type) {
+    if (!running())
+      return;
     if constexpr (Trait::skip_empty) {
       if (!buf_.empty())
-        do_emit();
+        force_emit();
     } else {
-      do_emit();
+      force_emit();
     }
-    control_sub_.request(1);
+    if (control_sub_)
+      control_sub_.request(1);
   }
 
   // -- implementation of subscription -----------------------------------------
@@ -189,6 +198,7 @@ public:
       parent_->delay_fn([strong_this = intrusive_ptr<buffer_sub>{
                            this, add_ref}] { strong_this->on_request(); });
     }
+    pull();
   }
 
   // -- reference counting -----------------------------------------------------
@@ -222,16 +232,20 @@ private:
     value_sub_.cancel();
     control_sub_.cancel();
     switch (state_) {
+      case state::awaiting_demand:
       case state::running: {
         if (!buf_.empty()) {
           if (demand_ == 0) {
             state_ = err_.valid() ? state::aborted : state::completed;
             return;
           }
-          Trait f;
+          auto f = Trait{};
           out_.on_next(f(buf_));
           buf_.clear();
         }
+        // The observer may cancel its subscription from on_next.
+        if (!out_)
+          return;
         if (err_.empty())
           out_.on_complete();
         else
@@ -248,28 +262,51 @@ private:
     if (demand_ == 0 || !can_emit())
       return;
     if (running()) {
-      CAF_ASSERT(buf_.size() == max_buf_size_);
+      CAF_ASSERT(buf_.size() == max_buf_size_
+                 || state_ == state::awaiting_demand);
       do_emit();
       return;
     }
     if (!buf_.empty())
       do_emit();
+    if (!out_)
+      return;
     if (err_.empty())
       out_.on_complete();
     else
       out_.on_error(err_);
+    state_ = state::disposed;
+  }
+
+  void force_emit() {
+    if (demand_ == 0) {
+      state_ = state::awaiting_demand;
+      return;
+    }
+    do_emit();
   }
 
   void do_emit() {
     if (demand_ == 0)
       return;
-    Trait f;
+    if (state_ == state::awaiting_demand)
+      state_ = state::running;
+    auto f = Trait{};
     --demand_;
-    auto buffered = buf_.size();
     out_.on_next(f(buf_));
     buf_.clear();
-    if (value_sub_ && buffered > 0)
-      value_sub_.request(buffered);
+    pull();
+  }
+
+  void pull() {
+    if (state_ != state::running || demand_ == 0 || !value_sub_)
+      return;
+    auto reserved = buf_.size() + in_flight_;
+    if (reserved >= max_buf_size_)
+      return;
+    auto n = max_buf_size_ - reserved;
+    in_flight_ += n;
+    value_sub_.request(n);
   }
 
   mutable detail::atomic_ref_count ref_count_;
@@ -286,9 +323,8 @@ private:
   /// Stores a handle to the subscribed observer.
   observer<output_type> out_;
 
-  /// Our subscription for the values. We request `max_buf_size_` items and
-  /// whenever we emit a batch, we request whatever amount we have shipped. That
-  /// way, we should always have enough demand at the source to fill up a batch.
+  /// Our subscription for the values. We only request items while the observer
+  /// has demand and we never have more than one batch requested or buffered.
   subscription value_sub_;
 
   /// Our subscription for the control tokens. We always request 1 item.
@@ -297,8 +333,12 @@ private:
   /// Demand signaled by the observer.
   size_t demand_ = 0;
 
+  /// Items requested from the value source that have not arrived yet.
+  size_t in_flight_ = 0;
+
   /// Our current state.
   /// - running: alive and ready to emit batches.
+  /// - awaiting_demand: a forced batch is waiting for downstream demand.
   /// - completed: on_complete was called but some data is still buffered.
   /// - aborted: on_error was called but some data is still buffered.
   /// - disposed: inactive.
@@ -347,6 +387,7 @@ public:
       }
       return super::fail_subscription(out, err);
     }
+    super::parent_->watch(ptr->as_disposable());
     out.on_subscribe(subscription{ptr});
     return ptr->as_disposable();
   }
