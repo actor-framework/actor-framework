@@ -94,7 +94,9 @@ public:
     auto bounce = detail::sync_request_bouncer{};
     auto envelope = fix_->pop_msg_impl(owner_);
     while (envelope != nullptr) {
-      ++result;
+      if (envelope->has_enqueue_time()) {
+        ++result;
+      }
       bounce(*envelope);
       envelope = fix_->pop_msg_impl(owner_);
     }
@@ -453,6 +455,22 @@ deterministic::abstract_message_predicate::~abstract_message_predicate() {
 // -- constructors, destructors, and assignment operators ----------------------
 
 deterministic::deterministic() : sys(cfg, this) {
+  // nop
+}
+
+namespace {
+
+template <class F>
+actor_system_config& configured(actor_system_config& cfg, F&& configure) {
+  configure(cfg);
+  return cfg;
+}
+
+} // namespace
+
+deterministic::deterministic(
+  std::function<void(actor_system_config&)> configure)
+  : sys(configured(cfg, configure), this) {
   // nop
 }
 

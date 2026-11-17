@@ -6,6 +6,9 @@
 
 #include "caf/test/test.hpp"
 
+#include <algorithm>
+#include <functional>
+
 using namespace caf;
 
 namespace {
@@ -41,6 +44,37 @@ TEST("a closed mailbox no longer accepts new messages") {
   detail::default_mailbox uut;
   uut.close(error{});
   check_eq(uut.push_back(make_int_msg(1)), ires::queue_closed);
+}
+
+TEST("close discards all messages but counts only timestamped messages") {
+  detail::default_mailbox uut;
+  std::vector<message> payloads;
+  auto enqueue_batch = [this, &uut, &payloads] {
+    for (auto priority : {message_priority::normal, message_priority::high}) {
+      for (auto timestamped : {false, true}) {
+        payloads.emplace_back(make_message(static_cast<int>(payloads.size())));
+        auto ptr = make_mailbox_element(nullptr, make_message_id(priority),
+                                        payloads.back());
+        if (timestamped) {
+          ptr->set_enqueue_time();
+        }
+        check_eq(uut.push_back(std::move(ptr)), ires::success);
+      }
+    }
+  };
+  auto is_unique = [](const message& msg) { return msg.unique(); };
+  // Note: size() fetches the first batch into the urgent and normal cached
+  //       queues. The second batch remains in the inbox so that `close` needs
+  //       to traverse the caches and the inbox.
+  enqueue_batch();
+  check_eq(uut.size(), 4u);
+  enqueue_batch();
+  // The mailbox holds references to the payloads until it is closed.
+  check(std::all_of(payloads.begin(), payloads.end(), std::not_fn(is_unique)));
+  check_eq(uut.close(error{}), 4u);
+  check(uut.closed());
+  // The mailbox may no longer hold references to the payloads.
+  check(std::all_of(payloads.begin(), payloads.end(), is_unique));
 }
 
 TEST("urgent messages are processed first") {

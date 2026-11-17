@@ -8,18 +8,18 @@
 #include "caf/actor_system.hpp"
 #include "caf/anon_mail.hpp"
 #include "caf/detail/assert.hpp"
+#include "caf/detail/atomic.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
-#include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/private_thread.hpp"
-#include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
-#include "caf/invoke_message_result.hpp"
 #include "caf/log/system.hpp"
 #include "caf/logger.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
 
 #include <utility>
+
+using caf::detail::atomic_load_acquire;
 
 namespace caf {
 
@@ -59,18 +59,19 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto src = ptr->sender;
-  auto collects_metrics = getf(abstract_actor::collects_metrics_flag);
-  if (collects_metrics) {
+  auto* mailbox_size = atomic_load_acquire(metrics_.mailbox_size);
+  if (mailbox_size) {
     ptr->set_enqueue_time();
-    metrics_.mailbox_size->inc();
+    mailbox_size->inc();
   }
   // returns false if mailbox has been closed
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
       home_system().base_metrics().rejected_messages->inc();
-      if (collects_metrics)
-        metrics_.mailbox_size->dec();
+      if (mailbox_size) {
+        mailbox_size->dec();
+      }
       if (mid.is_request()) {
         detail::sync_request_bouncer srb;
         srb(src, mid);
@@ -260,6 +261,7 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
     auto ptr = mailbox().pop_front();
     auto t0 = std::chrono::steady_clock::now();
     auto mbox_time = ptr->seconds_until(t0);
+    const auto has_enqueue_time = ptr->has_enqueue_time();
     // Skip messages that don't match our message ID.
     if (mid.is_response()) {
       if (mid != ptr->mid) {
@@ -276,17 +278,21 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
     // Blocking actors can nest receives => push/pop `current_element_`
     auto prev_element = current_element_;
     current_element_ = ptr.get();
-    auto g = detail::scope_guard{
-      [&]() noexcept { current_element_ = prev_element; }};
+    auto g = detail::scope_guard{[&]() noexcept { //
+      current_element_ = prev_element;
+    }};
     // Dispatch on the current mailbox element.
     if (consume()) {
       unstash();
       CAF_LOG_FINALIZE_EVENT();
-      if (getf(abstract_actor::collects_metrics_flag)) {
-        auto& builtins = builtin_metrics();
-        telemetry::timer::observe(builtins.processing_time, t0);
-        builtins.mailbox_time->observe(mbox_time);
-        builtins.mailbox_size->dec();
+      if (has_enqueue_time) {
+        if (auto* mailbox_size = atomic_load_acquire(metrics_.mailbox_size)) {
+          CAF_ASSERT(metrics_.processing_time != nullptr);
+          CAF_ASSERT(metrics_.mailbox_time != nullptr);
+          telemetry::timer::observe(metrics_.processing_time, t0);
+          metrics_.mailbox_time->observe(mbox_time);
+          mailbox_size->dec();
+        }
       }
       // Check whether we are done.
       if (!rcc.post() || !rcc.pre()) {
@@ -313,8 +319,8 @@ bool blocking_actor::await_data(timeout_type timeout) {
     std::unique_lock guard{mtx_};
     while (mailbox().blocked()) {
       if (cv_.wait_until(guard, timeout) == std::cv_status::timeout) {
-        // If we're unable to set the queue from blocked to empty, then there's
-        // a new element in the list.
+        // If we're unable to set the queue from blocked to empty, then
+        // there's a new element in the list.
         return !mailbox().try_unblock();
       }
     }
@@ -375,8 +381,11 @@ void blocking_actor::close_mailbox(const error& reason) {
   if (!mailbox_.closed()) {
     unstash();
     auto dropped = mailbox_.close(reason);
-    if (dropped > 0 && metrics_.mailbox_size)
-      metrics_.mailbox_size->dec(static_cast<int64_t>(dropped));
+    if (dropped > 0) {
+      if (auto* mailbox_size = atomic_load_acquire(metrics_.mailbox_size)) {
+        mailbox_size->dec(static_cast<int64_t>(dropped));
+      }
+    }
   }
 }
 

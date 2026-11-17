@@ -11,6 +11,7 @@
 #include "caf/async/fwd.hpp"
 #include "caf/config.hpp"
 #include "caf/cow_string.hpp"
+#include "caf/detail/atomic.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/default_mailbox.hpp"
@@ -784,14 +785,14 @@ private:
 
   template <class F>
   activation_result run_with_metrics(mailbox_element& x, F body) {
-    if (metrics_.mailbox_time) {
+    if (x.has_enqueue_time() && metrics_.mailbox_time) {
       auto t0 = std::chrono::steady_clock::now();
       auto mbox_time = x.seconds_until(t0);
       auto res = body();
       if (res != activation_result::skipped) {
         telemetry::timer::observe(metrics_.processing_time, t0);
         metrics_.mailbox_time->observe(mbox_time);
-        metrics_.mailbox_size->dec();
+        detail::atomic_load_acquire(metrics_.mailbox_size)->dec();
       }
       return res;
     } else {

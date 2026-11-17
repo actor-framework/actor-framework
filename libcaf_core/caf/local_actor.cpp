@@ -5,32 +5,27 @@
 #include "caf/local_actor.hpp"
 
 #include "caf/actor_cast.hpp"
-#include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
 #include "caf/default_attachable.hpp"
+#include "caf/detail/atomic.hpp"
 #include "caf/detail/glob_match.hpp"
 #include "caf/disposable.hpp"
-#include "caf/exit_reason.hpp"
+#include "caf/log/core.hpp"
 #include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/resumable.hpp"
-#include "caf/scheduler.hpp"
 #include "caf/sec.hpp"
 #include "caf/telemetry/histogram.hpp"
 #include "caf/telemetry/metric.hpp"
 #include "caf/telemetry/metric_family.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
 
-#include <condition_variable>
 #include <string>
 
 namespace caf {
 
 namespace {
 
-local_actor::metrics_t make_instance_metrics(local_actor* self) {
+void set(local_actor* self, local_actor::metrics_t& dst) {
   const auto& sys = self->home_system();
   const auto& includes = sys.metrics_actors_includes();
   const auto& excludes = sys.metrics_actors_excludes();
@@ -40,20 +35,16 @@ local_actor::metrics_t make_instance_metrics(local_actor* self) {
   };
   if (includes.empty()
       || std::none_of(includes.begin(), includes.end(), matches)
-      || std::any_of(excludes.begin(), excludes.end(), matches))
-    return {
-      nullptr,
-      nullptr,
-      nullptr,
-    };
+      || std::any_of(excludes.begin(), excludes.end(), matches)) {
+    return;
+  }
   self->setf(abstract_actor::collects_metrics_flag);
-  const auto& families = sys.actor_metric_families();
-  std::string_view sv{name, strlen(name)};
-  return {
-    families.processing_time->get_or_add({{"name", sv}}),
-    families.mailbox_time->get_or_add({{"name", sv}}),
-    families.mailbox_size->get_or_add({{"name", sv}}),
-  };
+  const auto& src = sys.actor_metric_families();
+  const auto sv = std::string_view{name, strlen(name)};
+  dst.processing_time = src.processing_time->get_or_add({{"name", sv}});
+  dst.mailbox_time = src.mailbox_time->get_or_add({{"name", sv}});
+  detail::atomic_store_release(dst.mailbox_size,
+                               src.mailbox_size->get_or_add({{"name", sv}}));
 }
 
 } // namespace
@@ -71,7 +62,7 @@ local_actor::~local_actor() {
 }
 
 void local_actor::setup_metrics() {
-  metrics_ = make_instance_metrics(this);
+  set(this, metrics_);
 }
 
 auto local_actor::now() const noexcept -> clock_type::time_point {

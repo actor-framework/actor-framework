@@ -43,6 +43,13 @@ TEST("behavior_ref") {
   self->receive(bhvr);
 }
 
+TEST("unmatched messages remain available after a receive") {
+  self->mail(1.5f).send(self);
+  self->mail(42).send(self);
+  self->receive([this](int value) { check_eq(value, 42); });
+  self->receive([this](float value) { check(value > 1.0f && value < 2.0f); });
+}
+
 TEST("timeout_in_scoped_actor") {
   bool timeout_called = false;
   self->receive(after(std::chrono::milliseconds(20)) >>

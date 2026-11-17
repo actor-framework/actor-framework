@@ -149,6 +149,7 @@ caf_add_component(
     caf/detail/actor_local_printer.cpp
     caf/detail/actor_system_access.cpp
     caf/detail/actor_system_config_access.cpp
+    caf/detail/atomic.test.cpp
     caf/detail/assert.cpp
     caf/detail/atomic_ref_counted.cpp
     caf/detail/base64.cpp

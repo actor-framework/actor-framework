@@ -5,13 +5,19 @@
 #include "caf/scheduled_actor.hpp"
 
 #include "caf/test/fixture/deterministic.hpp"
+#include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/anon_mail.hpp"
 #include "caf/config.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/telemetry/int_gauge.hpp"
+#include "caf/telemetry/metric_family_impl.hpp"
+
+#include <memory>
 
 using namespace caf;
 
@@ -24,6 +30,95 @@ using std::chrono::system_clock;
     std::is_void_v<decltype(std::declval<scheduled_actor*>()->expr)>, msg)
 
 namespace {
+
+class metrics_testee : public event_based_actor {
+public:
+  metrics_testee(actor_config& cfg, std::shared_ptr<std::vector<int>> received)
+    : event_based_actor(cfg), received_(std::move(received)) {
+    mail(1).send(this);
+  }
+
+  const char* name() const override {
+    return "metrics-testee";
+  }
+
+  behavior make_behavior() override {
+    return {
+      [this](int value) { received_->push_back(value); },
+    };
+  }
+
+private:
+  std::shared_ptr<std::vector<int>> received_;
+};
+
+struct metrics_fixture : test::fixture::deterministic {
+  metrics_fixture() : deterministic(enable_metrics) {
+    // nop
+  }
+
+  static void enable_metrics(actor_system_config& cfg) {
+    cfg.set("caf.metrics-filters.actors.includes",
+            std::vector<std::string>{"metrics-testee"});
+  }
+};
+
+WITH_FIXTURE(metrics_fixture) {
+
+SCENARIO("only messages enqueued after metrics setup update actor metrics") {
+  const auto name = "metrics-testee"s;
+  const auto& amf = sys.actor_metric_families();
+  auto* mailbox_size = amf.mailbox_size->get_or_add({{"name", name}});
+  auto* processing_time = amf.processing_time->get_or_add({{"name", name}});
+  auto* mailbox_time = amf.mailbox_time->get_or_add({{"name", name}});
+  auto samples = [](const telemetry::dbl_histogram& histogram) {
+    auto result = int64_t{0};
+    for (const auto& bucket : histogram.buckets()) {
+      result += bucket.count.value();
+    }
+    return result;
+  };
+  GIVEN("an actor system with metrics enabled for the testee") {
+    auto received = std::make_shared<std::vector<int>>();
+    actor aut;
+    WHEN("spawning an actor that sends to itself in its constructor") {
+      aut = sys.spawn<metrics_testee>(received);
+      THEN("the gauge and timing histograms remain unchanged") {
+        check_eq(mailbox_size->value(), 0);
+        check_eq(samples(*processing_time), 0);
+        check_eq(samples(*mailbox_time), 0);
+      }
+    }
+    AND_WHEN("sending a message after metrics setup") {
+      anon_mail(2).send(aut);
+      THEN("only the new message is counted and no timing samples exist") {
+        check_eq(mailbox_size->value(), 1);
+        check_eq(samples(*processing_time), 0);
+        check_eq(samples(*mailbox_time), 0);
+      }
+    }
+    AND_WHEN("processing the constructor self-send") {
+      expect<int>().with(1).from(aut).to(aut);
+      THEN("the metrics remain unchanged") {
+        check_eq(*received, std::vector<int>{1});
+        check_eq(mailbox_size->value(), 1);
+        check_eq(samples(*processing_time), 0);
+        check_eq(samples(*mailbox_time), 0);
+      }
+    }
+    AND_WHEN("processing the second message") {
+      expect<int>().with(2).to(aut);
+      THEN("the metrics are updated for the processed message") {
+        check_eq(*received, (std::vector<int>{1, 2}));
+        check_eq(mailbox_size->value(), 0);
+        check_eq(samples(*processing_time), 1);
+        check_eq(samples(*mailbox_time), 1);
+      }
+    }
+  }
+}
+
+} // WITH_FIXTURE(metrics_fixture)
 
 // -- compile-time checks for set_default_handler ------------------------------
 

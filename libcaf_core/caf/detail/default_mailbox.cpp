@@ -70,9 +70,11 @@ size_t default_mailbox::close(const error&) {
   size_t result = 0;
   detail::sync_request_bouncer bounce;
   auto bounce_and_count = [&bounce, &result](mailbox_element* ptr) {
+    if (ptr->has_enqueue_time()) {
+      ++result;
+    }
     bounce(*ptr);
     delete ptr;
-    ++result;
   };
   urgent_queue_.drain(bounce_and_count);
   normal_queue_.drain(bounce_and_count);
