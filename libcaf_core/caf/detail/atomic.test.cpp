@@ -16,31 +16,29 @@ template <class T>
 using limits = std::numeric_limits<T>;
 
 TEST("atomic loads preserve integer and pointer values") {
-  uint8_t a = limits<uint8_t>::max();
-  uint16_t b = limits<uint16_t>::max();
-  uint32_t c = limits<uint32_t>::max();
-  uint64_t d = limits<uint64_t>::max();
-  int64_t e = limits<int64_t>::min();
+  auto a = limits<uint8_t>::max();
+  auto b = limits<uint16_t>::max();
+  auto c = limits<uint32_t>::max();
+  auto d = limits<uint64_t>::max();
+  auto e = limits<int64_t>::min();
   const int fixed = 42;
   int value = 42;
-  int* ptr = nullptr;
+  int* ptr = &value;
   check_eq(detail::atomic_load_acquire(a), a);
   check_eq(detail::atomic_load_acquire(b), b);
   check_eq(detail::atomic_load_acquire(c), c);
   check_eq(detail::atomic_load_acquire(d), d);
   check_eq(detail::atomic_load_acquire(e), e);
   check_eq(detail::atomic_load_acquire(fixed), fixed);
-  check_eq(detail::atomic_load_acquire(ptr), nullptr);
-  detail::atomic_store_release(ptr, &value);
   check_eq(detail::atomic_load_acquire(ptr), &value);
 }
 
 TEST("atomic stores preserve integer and pointer values") {
-  uint8_t a = 0;
-  uint16_t b = 0;
-  uint32_t c = 0;
-  uint64_t d = 0;
-  int64_t e = 0;
+  auto a = uint8_t{0};
+  auto b = uint16_t{0};
+  auto c = uint32_t{0};
+  auto d = uint64_t{0};
+  auto e = int64_t{0};
   int value = 42;
   int* ptr = nullptr;
   detail::atomic_store_release(a, limits<uint8_t>::max());
