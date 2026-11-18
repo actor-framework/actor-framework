@@ -145,7 +145,7 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_relaxed);
+  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_acquire);
   if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
@@ -219,7 +219,7 @@ void abstract_actor_shell::close_mailbox() {
   if (!mailbox_.closed()) {
     auto dropped = mailbox_.close();
     if (dropped > 0) {
-      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_acquire)) {
         gauge->dec(static_cast<int64_t>(dropped));
       }
     }

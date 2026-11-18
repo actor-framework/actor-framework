@@ -67,7 +67,7 @@ bool blocking_actor::enqueue(mailbox_element_ptr ptr, scheduler*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto src = ptr->sender;
-  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_relaxed);
+  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_acquire);
   if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
@@ -303,7 +303,7 @@ void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
     if (consumed_msg) {
       if (has_enqueue_time) {
         auto& builtins = builtin_metrics();
-        auto* mbox_size = builtins.mailbox_size.load(std::memory_order_relaxed);
+        auto* mbox_size = builtins.mailbox_size.load(std::memory_order_acquire);
         if (mbox_size) {
           telemetry::timer::observe(builtins.processing_time, t0);
           builtins.mailbox_time->observe(mbox_time);
@@ -390,7 +390,7 @@ void blocking_actor::close_mailbox() {
     unstash();
     auto dropped = mailbox_->close();
     if (dropped > 0)
-      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_acquire)) {
         gauge->dec(static_cast<int64_t>(dropped));
       }
   }
@@ -403,11 +403,13 @@ bool blocking_actor::try_force_close_mailbox() {
     detail::sync_request_bouncer bounce;
     while (auto stashed = stash_.pop()) {
       mailbox_element_ptr ptr{stashed};
+      if (ptr->has_enqueue_time()) {
+        ++dropped;
+      }
       bounce(*ptr);
-      ++dropped;
     }
     if (dropped > 0) {
-      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_acquire)) {
         gauge->dec(dropped);
       }
     }

@@ -431,12 +431,12 @@ public:
         && std::ranges::none_of(metrics_actors_excludes_, matches);
     auto& src = base_metrics_;
     if (enable_optional_metrics) {
-      dst.mailbox_size.store(src.mailbox_size->get_or_add({{"name", name}}),
-                             std::memory_order_relaxed);
       dst.processed_messages
         = src.processed_messages->get_or_add({{"name", name}});
       dst.processing_time = src.processing_time->get_or_add({{"name", name}});
       dst.mailbox_time = src.mailbox_time->get_or_add({{"name", name}});
+      dst.mailbox_size.store(src.mailbox_size->get_or_add({{"name", name}}),
+                             std::memory_order_release);
     }
     if (flags_.collect_running_actors_metrics) {
       dst.running_count = src.running_count->get_or_add({{"name", name}});

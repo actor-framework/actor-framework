@@ -190,7 +190,7 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, scheduler* sched) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
-  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_relaxed);
+  auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_acquire);
   if (mailbox_size) {
     ptr->set_enqueue_time();
     mailbox_size->inc();
@@ -957,7 +957,7 @@ scheduled_actor::consume(mailbox_element_ptr& what) {
   if (x.has_enqueue_time()) {
     // Note: mailbox_time, mailbox_size and processed_messages must be all
     //       enabled together or not at all.
-    auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_relaxed);
+    auto* mailbox_size = metrics_.mailbox_size.load(std::memory_order_acquire);
     if (mailbox_size) {
       CAF_ASSERT(metrics_.mailbox_time != nullptr);
       CAF_ASSERT(metrics_.processed_messages != nullptr);
@@ -1215,9 +1215,11 @@ void scheduled_actor::close_mailbox() {
   if (!stash_.empty()) {
     detail::sync_request_bouncer bounce;
     while (auto stashed = stash_.pop()) {
+      if (stashed->has_enqueue_time()) {
+        ++dropped;
+      }
       bounce(*stashed);
       delete stashed;
-      ++dropped;
     }
   }
   // Clear mailbox.
@@ -1225,7 +1227,7 @@ void scheduled_actor::close_mailbox() {
     dropped += mailbox().close();
   }
   if (dropped > 0) {
-    if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
+    if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_acquire)) {
       gauge->dec(static_cast<int64_t>(dropped));
     }
   }
@@ -1238,11 +1240,13 @@ bool scheduled_actor::try_force_close_mailbox() {
     detail::sync_request_bouncer bounce;
     while (auto stashed = stash_.pop()) {
       mailbox_element_ptr ptr{stashed};
+      if (ptr->has_enqueue_time()) {
+        ++dropped;
+      }
       bounce(*ptr);
-      ++dropped;
     }
     if (dropped > 0) {
-      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_relaxed)) {
+      if (auto* gauge = metrics_.mailbox_size.load(std::memory_order_acquire)) {
         gauge->dec(static_cast<int64_t>(dropped));
       }
     }
