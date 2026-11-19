@@ -231,10 +231,51 @@ void print(Buffer& buf, T x) {
   buf.insert(buf.end(), str.begin(), str.end());
 }
 
-#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 12
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wrestrict"
-#endif
+template <class Ratio>
+struct timespan_suffix;
+
+template <>
+struct timespan_suffix<std::ratio<3600>> {
+  static constexpr std::string_view value = "h";
+};
+
+template <>
+struct timespan_suffix<std::ratio<60>> {
+  static constexpr std::string_view value = "min";
+};
+
+template <>
+struct timespan_suffix<std::ratio<1>> {
+  static constexpr std::string_view value = "s";
+};
+
+template <>
+struct timespan_suffix<std::milli> {
+  static constexpr std::string_view value = "ms";
+};
+
+template <>
+struct timespan_suffix<std::micro> {
+  static constexpr std::string_view value = "us";
+};
+
+template <>
+struct timespan_suffix<std::nano> {
+  static constexpr std::string_view value = "ns";
+};
+
+template <class TargetDuration, class Buffer, class Rep, class Period>
+bool try_print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
+  auto converted = std::chrono::duration_cast<TargetDuration>(x);
+  if (converted.count() < 1) {
+    return false;
+  }
+  print(buf, converted.count());
+  auto suffix = timespan_suffix<typename TargetDuration::period>::value;
+  buf.insert(buf.end(), suffix.begin(), suffix.end());
+  return true;
+}
+
 template <class Buffer, class Rep, class Period>
 void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
   using namespace std::literals;
@@ -243,33 +284,21 @@ void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
     buf.insert(buf.end(), str.begin(), str.end());
     return;
   }
-  auto try_print = [&buf](auto converted, std::string_view suffix) {
-    if (converted.count() < 1)
-      return false;
-    print(buf, converted.count());
-    buf.insert(buf.end(), suffix.begin(), suffix.end());
-    return true;
-  };
   namespace sc = std::chrono;
   using hours = sc::duration<double, std::ratio<3600>>;
   using minutes = sc::duration<double, std::ratio<60>>;
   using seconds = sc::duration<double>;
   using milliseconds = sc::duration<double, std::milli>;
   using microseconds = sc::duration<double, std::micro>;
-  if (try_print(sc::duration_cast<hours>(x), "h")
-      || try_print(sc::duration_cast<minutes>(x), "min")
-      || try_print(sc::duration_cast<seconds>(x), "s")
-      || try_print(sc::duration_cast<milliseconds>(x), "ms")
-      || try_print(sc::duration_cast<microseconds>(x), "us"))
+  if (try_print<hours>(buf, x) || try_print<minutes>(buf, x)
+      || try_print<seconds>(buf, x) || try_print<milliseconds>(buf, x)
+      || try_print<microseconds>(buf, x))
     return;
   auto converted = sc::duration_cast<sc::nanoseconds>(x);
   print(buf, converted.count());
   auto suffix = "ns"sv;
   buf.insert(buf.end(), suffix.begin(), suffix.end());
 }
-#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ == 12
-#  pragma GCC diagnostic pop
-#endif
 
 template <class Buffer, class Duration>
 void print(Buffer& buf,
