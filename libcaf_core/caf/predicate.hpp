@@ -67,4 +67,12 @@ private:
   F f_;
 };
 
+template <class... Args>
+struct predicate_factory final {
+  template <class F>
+  static auto ref(const F& fn) noexcept {
+    return predicate_ref_impl<F, Args...>{fn};
+  }
+};
+
 } // namespace caf::detail

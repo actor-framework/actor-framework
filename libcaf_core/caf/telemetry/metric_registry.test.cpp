@@ -279,30 +279,10 @@ SCENARIO("instance methods provide a shortcut for using the family manually") {
   }
 }
 
-TEST("wait_for supports typed and generic predicates") {
-  SECTION("integer metrics with double predicates") {
-    reg.gauge_singleton("test", "value", "test")->value(42);
-    auto fn = [](double x) { return x == 42.0; };
-    detail::predicate_ref_impl<decltype(fn), double> wrapper{fn};
-    const predicate<double>& pred = wrapper;
-    check(reg.wait_for("test", "value", std::span<const label_view>{}, 1s, 10ms,
-                       pred));
-  }
-  SECTION("double metrics with integer predicates") {
-    reg.gauge_singleton<double>("test", "value", "test")->value(42.5);
-    auto fn = [](int64_t x) { return x == 42; };
-    detail::predicate_ref_impl<decltype(fn), int64_t> wrapper{fn};
-    const predicate<int64_t>& pred = wrapper;
-    check(reg.wait_for("test", "value", std::span<const label_view>{}, 1s, 10ms,
-                       pred));
-    check(reg.wait_for("test", "value", 1s, 10ms,
-                       [](int32_t x) { return x == 42; }));
-  }
-  SECTION("generic predicates") {
-    reg.gauge_singleton("test", "value", "test")->value(42);
-    check(
-      reg.wait_for("test", "value", 1s, 10ms, [](auto x) { return x == 42; }));
-  }
+TEST("wait_for supports generic predicates") {
+  reg.gauge_singleton("test", "value", "test")->value(42);
+  check(
+    reg.wait_for("test", "value", 1s, 10ms, [](auto x) { return x == 42; }));
 }
 
 TEST("wait_for blocks until predicate is true or timeout") {
@@ -311,32 +291,29 @@ TEST("wait_for blocks until predicate is true or timeout") {
     std::this_thread::sleep_for(50ms);
     what->inc(10);
   };
+  auto ge10 = [](auto x) { return x >= 10; };
   SECTION("int gauge") {
     auto* gauge = reg.gauge_singleton("test", "value", "test");
     updater = std::thread{do_update, gauge};
-    check(reg.wait_for("test", "value", 1s, 10ms,
-                       [](int64_t x) { return x >= 10; }));
+    check(reg.wait_for("test", "value", 1s, 10ms, ge10));
     check_eq(gauge->value(), 10);
   }
   SECTION("int counter") {
     auto* counter = reg.counter_singleton("test", "value", "test");
     updater = std::thread{do_update, counter};
-    check(reg.wait_for("test", "value", 1s, 10ms,
-                       [](int64_t x) { return x >= 10; }));
+    check(reg.wait_for("test", "value", 1s, 10ms, ge10));
     check_eq(counter->value(), 10);
   }
   SECTION("double gauge") {
     auto* gauge = reg.gauge_singleton<double>("test", "value", "test.");
     updater = std::thread{do_update, gauge};
-    check(reg.wait_for("test", "value", 1s, 10ms,
-                       [](double x) { return x >= 10.0; }));
+    check(reg.wait_for("test", "value", 1s, 10ms, ge10));
     check_eq(gauge->value(), test::approx{10.0});
   }
   SECTION("double counter") {
     auto* counter = reg.counter_singleton<double>("test", "value", "test");
     updater = std::thread{do_update, counter};
-    check(reg.wait_for("test", "value", 1s, 10ms,
-                       [](double x) { return x >= 10.0; }));
+    check(reg.wait_for("test", "value", 1s, 10ms, ge10));
     check_eq(counter->value(), test::approx{10.0});
   }
   if (updater.joinable()) {
@@ -345,49 +322,43 @@ TEST("wait_for blocks until predicate is true or timeout") {
 }
 
 TEST("wait_for returns false when timeout expires") {
+  auto gt0 = [](auto x) { return x > 0; };
   SECTION("int gauge") {
     auto* gauge = reg.gauge_singleton("test", "never", "test");
-    check(!reg.wait_for("test", "never", 10ms, 5ms,
-                        [](int64_t x) { return x > 0; }));
+    check(!reg.wait_for("test", "never", 10ms, 5ms, gt0));
     check_eq(gauge->value(), 0);
   }
   SECTION("int counter") {
     auto* counter = reg.counter_singleton("test", "never", "test");
-    check(!reg.wait_for("test", "never", 10ms, 5ms,
-                        [](int64_t x) { return x > 0; }));
+    check(!reg.wait_for("test", "never", 10ms, 5ms, gt0));
     check_eq(counter->value(), 0);
   }
   SECTION("double gauge") {
     auto* gauge = reg.gauge_singleton<double>("test", "never", "test");
-    check(!reg.wait_for("test", "never", 10ms, 5ms,
-                        [](double x) { return x > 0; }));
+    check(!reg.wait_for("test", "never", 10ms, 5ms, gt0));
     check_eq(gauge->value(), test::approx{0.0});
   }
   SECTION("double counter") {
     auto* counter = reg.counter_singleton<double>("test", "never", "test");
-    check(!reg.wait_for("test", "never", 10ms, 5ms,
-                        [](double x) { return x > 0; }));
+    check(!reg.wait_for("test", "never", 10ms, 5ms, gt0));
     check_eq(counter->value(), test::approx{0.0});
   }
 }
 
 TEST("wait_for returns false when metric does not exist") {
+  auto pred = [](auto) { return true; };
   SECTION("name mismatch") {
     SECTION("int gauge") {
-      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns,
-                          [](int64_t) { return true; }));
+      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns, pred));
     }
     SECTION("int counter") {
-      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns,
-                          [](int64_t) { return true; }));
+      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns, pred));
     }
     SECTION("double gauge") {
-      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns,
-                          [](double) { return true; }));
+      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns, pred));
     }
     SECTION("double counter") {
-      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns,
-                          [](double) { return true; }));
+      check(!reg.wait_for("nonexistent", "metric", 1ns, 1ns, pred));
     }
   }
   SECTION("label mismatch") {
@@ -398,8 +369,7 @@ TEST("wait_for returns false when metric does not exist") {
           .gauge_instance("test", "labeled", {{"var1", "foo"}, {"var2", "bar"}},
                           "Labeled gauge.")
           ->value(0);
-        check(!reg.wait_for("test", "labeled", 1ns, 1ns,
-                            [](int64_t) { return true; }));
+        check(!reg.wait_for("test", "labeled", 1ns, 1ns, pred));
       }
       SECTION("int counter") {
         reg.counter_family("test", "labeled", {"var1", "var2"},
@@ -407,8 +377,7 @@ TEST("wait_for returns false when metric does not exist") {
         reg.counter_instance("test", "labeled",
                              {{"var1", "foo"}, {"var2", "bar"}},
                              "Labeled counter.");
-        check(!reg.wait_for("test", "labeled", 1ns, 1ns,
-                            [](int64_t) { return true; }));
+        check(!reg.wait_for("test", "labeled", 1ns, 1ns, pred));
       }
       SECTION("double gauge") {
         reg.gauge_family<double>("test", "labeled", {"var1", "var2"},
@@ -418,8 +387,7 @@ TEST("wait_for returns false when metric does not exist") {
                                   {{"var1", "foo"}, {"var2", "bar"}},
                                   "Labeled gauge.")
           ->value(0.0);
-        check(!reg.wait_for("test", "labeled", 1ns, 1ns,
-                            [](double) { return true; }));
+        check(!reg.wait_for("test", "labeled", 1ns, 1ns, pred));
       }
       SECTION("double counter") {
         reg.counter_family<double>("test", "labeled", {"var1", "var2"},
@@ -427,8 +395,7 @@ TEST("wait_for returns false when metric does not exist") {
         reg.counter_instance<double>("test", "labeled",
                                      {{"var1", "foo"}, {"var2", "bar"}},
                                      "Labeled counter.");
-        check(!reg.wait_for("test", "labeled", 1ns, 1ns,
-                            [](double) { return true; }));
+        check(!reg.wait_for("test", "labeled", 1ns, 1ns, pred));
       }
     }
     SECTION("labels match keys but have different values") {
@@ -440,7 +407,7 @@ TEST("wait_for returns false when metric does not exist") {
           ->value(0);
         check(!reg.wait_for("test", "labeled",
                             {{"var1", "other"}, {"var2", "values"}}, 1ns, 1ns,
-                            [](int64_t) { return true; }));
+                            pred));
       }
       SECTION("int counter") {
         reg.counter_family("test", "labeled", {"var1", "var2"},
@@ -450,7 +417,7 @@ TEST("wait_for returns false when metric does not exist") {
                              "Labeled counter.");
         check(!reg.wait_for("test", "labeled",
                             {{"var1", "other"}, {"var2", "values"}}, 1ns, 1ns,
-                            [](int64_t) { return true; }));
+                            pred));
       }
       SECTION("double gauge") {
         reg.gauge_family<double>("test", "labeled", {"var1", "var2"},
@@ -462,7 +429,7 @@ TEST("wait_for returns false when metric does not exist") {
           ->value(0.0);
         check(!reg.wait_for("test", "labeled",
                             {{"var1", "other"}, {"var2", "values"}}, 1ns, 1ns,
-                            [](double) { return true; }));
+                            pred));
       }
       SECTION("double counter") {
         reg.counter_family<double>("test", "labeled", {"var1", "var2"},
@@ -472,7 +439,7 @@ TEST("wait_for returns false when metric does not exist") {
                                      "Labeled counter.");
         check(!reg.wait_for("test", "labeled",
                             {{"var1", "other"}, {"var2", "values"}}, 1ns, 1ns,
-                            [](double) { return true; }));
+                            pred));
       }
     }
   }
@@ -481,26 +448,19 @@ TEST("wait_for returns false when metric does not exist") {
 #ifdef CAF_ENABLE_EXCEPTIONS
 
 TEST("wait_for throws when timeout or poll_interval is zero or negative") {
+  static auto pred = [](auto) { return true; };
   reg.gauge_singleton("test", "value", "test");
   SECTION("relative timeout is zero") {
-    check_throws([this] {
-      reg.wait_for("test", "value", 0s, 10ms, [](int64_t) { return true; });
-    });
+    check_throws([this] { reg.wait_for("test", "value", 0s, 10ms, pred); });
   }
   SECTION("relative timeout is negative") {
-    check_throws([this] {
-      reg.wait_for("test", "value", -1s, 10ms, [](int64_t) { return true; });
-    });
+    check_throws([this] { reg.wait_for("test", "value", -1s, 10ms, pred); });
   }
   SECTION("poll interval is zero") {
-    check_throws([this] {
-      reg.wait_for("test", "value", 1s, 0ms, [](int64_t) { return true; });
-    });
+    check_throws([this] { reg.wait_for("test", "value", 1s, 0ms, pred); });
   }
   SECTION("poll interval is negative") {
-    check_throws([this] {
-      reg.wait_for("test", "value", 1s, -1ms, [](int64_t) { return true; });
-    });
+    check_throws([this] { reg.wait_for("test", "value", 1s, -1ms, pred); });
   }
 }
 

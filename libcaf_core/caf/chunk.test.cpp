@@ -33,7 +33,7 @@ TEST("construction from a single buffer") {
   check(!uut.bytes().empty());
   check_eq(uut.size(), 3u);
   check_eq(uut.bytes().size(), 3u);
-  check_eq(to_string_view(uut.bytes()), to_string_view(std::span{buf}));
+  check_eq(deep_to_string(uut.bytes()), deep_to_string(std::span{buf}));
 }
 
 TEST("construction from multiple buffers") {
@@ -47,7 +47,7 @@ TEST("construction from multiple buffers") {
   check_eq(uut.size(), 5u);
   check_eq(uut.bytes().size(), 5u);
   auto expected = to_byte_buf(1, 2, 3, 4, 5);
-  check_eq(to_string_view(uut.bytes()), to_string_view(std::span{expected}));
+  check_eq(deep_to_string(uut.bytes()), deep_to_string(std::span{expected}));
 }
 
 TEST("copying, moving and swapping") {

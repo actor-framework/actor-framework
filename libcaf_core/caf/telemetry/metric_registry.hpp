@@ -491,7 +491,8 @@ public:
   /// @param labels Label values identifying the metric instance to wait for.
   /// @param rel_timeout The duration to wait for the predicate to become true.
   /// @param poll_interval The interval between polling the metric value.
-  /// @param pred The predicate to call with the metric value.
+  /// @param pred The predicate to call with the metric value. Must be callable
+  ///             with `int64_t` and `double`.
   /// @returns the latest result of the predicate.
   /// @throws std::runtime_error if (1) the metric with given prefix and name
   ///                            does not exist, or (2) the metric exists but
@@ -511,44 +512,8 @@ public:
     if (poll_interval.count() <= 0) {
       CAF_RAISE_ERROR("poll interval must be positive");
     }
-    static constexpr bool is_int_predicate
-      = std::is_invocable_r_v<bool, Predicate, int64_t>;
-    static constexpr bool is_dbl_predicate
-      = std::is_invocable_r_v<bool, Predicate, double>;
-    static_assert(is_int_predicate || is_dbl_predicate,
-                  "Predicate must be invocable with int64_t or double");
-    auto f = [&pred]<class T>(T x) -> bool {
-      auto invoke = [&pred]<class U>(U value) -> bool {
-        if constexpr (detail::callable<Predicate>) {
-          using trait = detail::get_callable_trait<Predicate>;
-          using arg_type = detail::tl_head_t<typename trait::decayed_arg_types>;
-          if constexpr (trait::num_args == 1
-                        && std::is_arithmetic_v<arg_type>) {
-            return pred(static_cast<arg_type>(value));
-          } else {
-            return pred(value);
-          }
-        } else {
-          return pred(value);
-        }
-      };
-      if constexpr (std::is_same_v<T, int64_t>) {
-        if constexpr (is_int_predicate) {
-          return invoke(x);
-        } else {
-          CAF_RAISE_ERROR("type mismatch: Predicate not invocable with int64");
-        }
-      } else {
-        static_assert(std::is_same_v<T, double>);
-        if constexpr (is_dbl_predicate) {
-          return invoke(x);
-        } else {
-          CAF_RAISE_ERROR("type mismatch: Predicate not invocable with double");
-        }
-      }
-    };
-    detail::predicate_ref_impl<decltype(f), int64_t> int_cb{f};
-    detail::predicate_ref_impl<decltype(f), double> dbl_cb{f};
+    auto int_cb = detail::predicate_factory<int64_t>::ref(pred);
+    auto dbl_cb = detail::predicate_factory<double>::ref(pred);
     return wait_for_impl(prefix, name, labels,
                          std::chrono::duration_cast<timespan>(rel_timeout),
                          std::chrono::duration_cast<timespan>(poll_interval),
