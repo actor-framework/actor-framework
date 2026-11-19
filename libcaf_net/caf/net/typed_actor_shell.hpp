@@ -185,7 +185,7 @@ public:
   void detach(error reason) {
     if (auto ptr = get()) {
       ptr->quit(std::move(reason));
-      ptr_.release();
+      ptr_.reset();
     }
   }
 
@@ -271,7 +271,7 @@ public:
   void detach(error reason) {
     if (auto ptr = get()) {
       ptr->quit(std::move(reason));
-      ptr_.release();
+      ptr_.reset();
     }
   }
 
