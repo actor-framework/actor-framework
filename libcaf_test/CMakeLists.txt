@@ -44,4 +44,5 @@ caf_add_component(
     caf/test/test.cpp
     caf/test/test.test.cpp
     caf/test/then.cpp
+    caf/test/tracking_resource.cpp
     caf/test/when.cpp)
