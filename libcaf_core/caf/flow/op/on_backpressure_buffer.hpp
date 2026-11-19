@@ -147,7 +147,7 @@ private:
       out_.on_next(buffer_.front());
       buffer_.pop_front();
     }
-    if (out_ && src_error_) {
+    if (out_ && src_error_ && buffer_.empty()) {
       CAF_ASSERT(!sub_);
       if (src_error_->valid())
         out_.on_error(*src_error_);

@@ -2,12 +2,17 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/main/LICENSE.
 
+#include "caf/flow/op/publish.hpp"
+
 #include "caf/test/caf_test_main.hpp"
 #include "caf/test/fixture/flow.hpp"
 #include "caf/test/scenario.hpp"
 #include "caf/test/test.hpp"
 
+#include "caf/flow/backpressure_overflow_strategy.hpp"
+#include "caf/flow/multicaster.hpp"
 #include "caf/flow/op/cell.hpp"
+#include "caf/sec.hpp"
 
 using std::vector;
 
@@ -25,6 +30,8 @@ auto subscribe_all(Ts... xs) {
     return src;
   };
 }
+
+using overflow_strategy = caf::flow::backpressure_overflow_strategy;
 
 auto make_hot_generator() {
   auto n = std::make_shared<int>(0);
@@ -178,6 +185,96 @@ SCENARIO("observers that dispose their subscription do not affect others") {
       }
     }
   }
+}
+
+SCENARIO("publish gates upstream credit on its slowest subscriber") {
+  GIVEN("a publisher with a buffer size of 5 and two subscribers") {
+    auto src = caf::flow::multicaster<int>{coordinator()};
+    auto fast = make_passive_observer<int>();
+    auto slow = make_passive_observer<int>();
+    auto uut = make_counted<op::publish<int>>(coordinator(),
+                                              src.as_observable().pimpl(), 5);
+    auto sub1 = uut->subscribe(fast->as_observer());
+    auto sub2 = uut->subscribe(slow->as_observer());
+    auto conn = uut->connect();
+    run_flows();
+    check_eq(src.demand(), 5u);
+    src.push({1, 2, 3, 4, 5});
+    fast->request(10);
+    run_flows();
+    check_eq(fast->buf, vector{1, 2, 3, 4, 5});
+    check(slow->buf.empty());
+    check_eq(src.demand(), 0u);
+    WHEN("only the fast subscriber requests more items") {
+      fast->request(1);
+      run_flows();
+      THEN("the publisher keeps its source stalled") {
+        check_eq(src.demand(), 0u);
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5});
+        check(fast->subscribed());
+      }
+    }
+    WHEN("the slow subscriber consumes three items") {
+      slow->request(3);
+      run_flows();
+      THEN("the publisher requests exactly three more items") {
+        check_eq(slow->buf, vector{1, 2, 3});
+        check_eq(src.demand(), 3u);
+        src.push({6, 7, 8});
+        run_flows();
+        check_eq(fast->buf, vector{1, 2, 3, 4, 5, 6, 7, 8});
+        check_eq(slow->buf, vector{1, 2, 3});
+        check_eq(src.demand(), 0u);
+      }
+    }
+    WHEN("the slow subscriber cancels") {
+      slow->sub.cancel();
+      run_flows();
+      THEN("the publisher restores its full credit window") {
+        check(sub2.disposed());
+        check_eq(src.demand(), 5u);
+      }
+    }
+    sub1.dispose();
+    sub2.dispose();
+    conn.dispose();
+    run_flows();
+  }
+}
+
+TEST("branch overflow policies isolate slow subscribers") {
+  auto [n, fn] = make_hot_generator();
+  auto fast = make_auto_observer<int>();
+  auto oldest = make_passive_observer<int>();
+  auto newest = make_passive_observer<int>();
+  auto failed = make_passive_observer<int>();
+  auto published = make_observable().from_callable(fn).publish();
+  published.subscribe(fast->as_observer());
+  published.as_observable()
+    .on_backpressure_buffer(5, overflow_strategy::drop_newest)
+    .subscribe(oldest->as_observer());
+  published.as_observable()
+    .on_backpressure_buffer(5, overflow_strategy::drop_oldest)
+    .subscribe(newest->as_observer());
+  published.as_observable()
+    .on_backpressure_buffer(5, overflow_strategy::fail)
+    .subscribe(failed->as_observer());
+  auto conn = published.connect();
+  run_flows();
+  check_eq(*n, 10);
+  check_eq(fast->buf, vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+  check(fast->completed());
+  check(failed->aborted());
+  check_eq(failed->err, sec::backpressure_overflow);
+  oldest->request(5);
+  newest->request(5);
+  run_flows();
+  check_eq(oldest->buf, vector{1, 2, 3, 4, 5});
+  check_eq(newest->buf, vector{6, 7, 8, 9, 10});
+  check(oldest->completed());
+  check(newest->completed());
+  conn.dispose();
+  run_flows();
 }
 
 SCENARIO("publishers dispose unexpected subscriptions") {
