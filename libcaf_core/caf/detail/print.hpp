@@ -239,11 +239,11 @@ void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
     buf.insert(buf.end(), str.begin(), str.end());
     return;
   }
-  auto try_print = [&buf](auto converted, std::string_view suffix) {
+  auto try_print = [&buf]<size_t N>(auto converted, const char (&suffix)[N]) {
     if (converted.count() < 1)
       return false;
     print(buf, converted.count());
-    buf.insert(buf.end(), suffix.begin(), suffix.end());
+    buf.insert(buf.end(), suffix, suffix + (N - 1));
     return true;
   };
   namespace sc = std::chrono;
