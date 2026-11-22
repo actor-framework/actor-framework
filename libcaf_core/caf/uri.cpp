@@ -98,7 +98,7 @@ std::string uri::path_query_fragment() const {
   if (sub_str.empty() || sub_str[0] != '/') {
     result += '/';
   }
-  result.insert(result.begin(), sub_str.begin(), sub_str.end());
+  result += sub_str;
   return result;
 }
 
@@ -112,10 +112,8 @@ std::optional<uri> uri::authority_only() const {
   auto result = make_counted<uri::impl_type>();
   result->scheme = impl_->scheme;
   result->authority = impl_->authority;
-  auto& uri_str = result->str;
-  uri_str = impl_->scheme;
-  uri_str += "://";
-  uri_str += to_string(impl_->authority);
+  // Assemble via the regular code path to keep `str` and `path_offset` in sync.
+  result->assemble_str();
   return uri{std::move(result)};
 }
 
