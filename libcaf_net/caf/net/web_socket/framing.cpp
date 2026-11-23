@@ -96,7 +96,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit framing_impl(upper_layer_ptr up)
-    : up_(std::move(up)), rng_(std::random_device{}()) {
+    : rng_(std::random_device{}()), up_(std::move(up)) {
     // nop
   }
 

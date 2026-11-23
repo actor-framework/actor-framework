@@ -24,7 +24,7 @@ TEST("enqueueing a job to the clock executes it after the timeout") {
   clock.schedule(clock.now() + 1ms,
                  make_single_shot_action([actions] { actions->inc(); }));
   check(sys.metrics().wait_for("test", "actions", 1s, 10ms,
-                               [](int64_t x) { return x == 1; }));
+                               [](auto x) { return x == 1; }));
 }
 
 TEST("setting a cleanup interval removes disposed jobs from the clock") {
@@ -36,9 +36,9 @@ TEST("setting a cleanup interval removes disposed jobs from the clock") {
   auto hdl = clock.schedule(clock.now() + 1h, make_single_shot_action(
                                                 [actions] { actions->inc(); }));
   require(sys.metrics().wait_for("caf.system", "actor-clock-queue-size", 1s,
-                                 10ms, [](int64_t x) { return x == 1; }));
+                                 10ms, [](auto x) { return x == 1; }));
   hdl.dispose();
   require(sys.metrics().wait_for("caf.system", "actor-clock-queue-size", 1s,
-                                 10ms, [](int64_t x) { return x == 0; }));
+                                 10ms, [](auto x) { return x == 0; }));
   check_eq(actions->value(), 0);
 }

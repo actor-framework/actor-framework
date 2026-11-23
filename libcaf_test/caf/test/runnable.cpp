@@ -229,9 +229,16 @@ bool runnable::do_check_metric(std::string_view prefix, std::string_view name,
   if (!test_state_->current_registry_) {
     CAF_RAISE_ERROR(std::logic_error, "no metric registry set");
   }
+  auto pred_ref = [&pred]<class ValueType>(ValueType value) {
+    if constexpr (std::is_same_v<ValueType, int64_t>) {
+      return pred(value);
+    } else {
+      return false;
+    }
+  };
   auto result = test_state_->current_registry_->wait_for(
     prefix, name, labels, test_state_->registry_poll_timeout_,
-    test_state_->registry_poll_interval_, pred);
+    test_state_->registry_poll_interval_, pred_ref);
   if (result) {
     reporter::instance().pass(location);
     return true;
@@ -271,9 +278,16 @@ bool runnable::do_check_metric(std::string_view prefix, std::string_view name,
   if (!test_state_->current_registry_) {
     CAF_RAISE_ERROR(std::logic_error, "no metric registry set");
   }
+  auto pred_ref = [&pred]<class ValueType>(ValueType value) {
+    if constexpr (std::is_same_v<ValueType, double>) {
+      return pred(value);
+    } else {
+      return false;
+    }
+  };
   auto result = test_state_->current_registry_->wait_for(
     prefix, name, labels, test_state_->registry_poll_timeout_,
-    test_state_->registry_poll_interval_, pred);
+    test_state_->registry_poll_interval_, pred_ref);
   if (result) {
     reporter::instance().pass(location);
     return true;
