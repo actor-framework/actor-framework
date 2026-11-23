@@ -443,6 +443,32 @@ TEST("empty components") {
   check_eq("foo://bar?#"_u, "foo://bar");
 }
 
+TEST("path_query_fragment returns the encoded path and adds a leading slash") {
+  // The leading '/' must precede the path. Appending it at the end yields
+  // malformed request targets such as "?q=1/" for "http://example.com?q=1".
+  check_eq("http://example.com"_u.path_query_fragment(), "/");
+  check_eq("http://example.com/api/v1"_u.path_query_fragment(), "/api/v1");
+  check_eq("http://example.com?q=1"_u.path_query_fragment(), "/?q=1");
+  check_eq("http://example.com#42"_u.path_query_fragment(), "/#42");
+  check_eq("http://example.com/api/v1?a=1&b=2#42"_u.path_query_fragment(),
+           "/api/v1?a=1&b=2#42");
+  // URIs without an authority have a rootless path that also needs the slash.
+  check_eq("http:file"_u.path_query_fragment(), "/file");
+  check_eq("http:file?a=1&b=2"_u.path_query_fragment(), "/file?a=1&b=2");
+  check_eq("urn:example:animal:ferret:nose"_u.path_query_fragment(),
+           "/example:animal:ferret:nose");
+  check_eq("http:/file"_u.path_query_fragment(), "/file");
+}
+
+TEST("authority_only copies the authority and keeps the string consistent") {
+  auto x = "http://example.com/api/v1?a=1&b=2#42"_u;
+  auto y = x.authority_only();
+  require(y.has_value());
+  check_eq(y->str(), "http://example.com");
+  // A derived URI must report a root-path request target, not the whole URI.
+  check_eq(y->path_query_fragment(), "/");
+}
+
 TEST("invalid uris") {
   check("http"_i);
   check("http://"_i);
