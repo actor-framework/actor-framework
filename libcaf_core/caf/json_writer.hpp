@@ -156,8 +156,8 @@ public:
 protected:
   json_writer_base();
 
-  json_writer_base(const type_id_mapper& mapper,
-                   std::pmr::memory_resource& resource);
+  json_writer_base(std::pmr::memory_resource& resource,
+                   const type_id_mapper& mapper);
 
 private:
   using util = internal::json_writer_util;
@@ -220,7 +220,7 @@ public:
   json_writer_v2() = default;
 
   explicit json_writer_v2(const inspector_config& config)
-    : super(config.mapper(), config.resource()), codec_(config.codec()) {
+    : super(config.resource(), config.mapper()), codec_(config.codec()) {
     // nop
   }
 

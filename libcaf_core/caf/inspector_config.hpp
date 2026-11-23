@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/assert.hpp"
 #include "caf/fwd.hpp"
 
 #include <memory_resource>
@@ -64,8 +63,7 @@ public:
   }
 
   /// Changes the configured memory resource.
-  constexpr inspector_config&
-  resource(std::pmr::memory_resource* ptr) noexcept {
+  inspector_config& resource(std::pmr::memory_resource* ptr) noexcept {
     resource_ = ptr ? ptr : std::pmr::get_default_resource();
     return *this;
   }

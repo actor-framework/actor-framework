@@ -589,9 +589,7 @@ SCENARIO("type ID mappers are authoritative") {
 
 TEST("json_reader_v2 allocates from the configured memory resource") {
   test::tracking_resource tracking;
-  inspector_config config;
-  config.resource(&tracking);
-  json_reader_v2 reader{config};
+  json_reader_v2 reader{inspector_config{}.resource(&tracking)};
   require(reader.load(
     R"({"city":"Model City","entries":{"Bob":5556837,"Jon":5559347}})"sv));
   check_gt(tracking.allocations(), 0u);
@@ -602,11 +600,9 @@ TEST("json_reader_v2 allocates from the configured memory resource") {
 }
 
 TEST("json_reader_v2 releases the configured memory resource on destruction") {
-  test::tracking_resource tracking{std::pmr::new_delete_resource()};
+  test::tracking_resource tracking;
   {
-    inspector_config config;
-    config.resource(&tracking);
-    json_reader_v2 reader{config};
+    json_reader_v2 reader{inspector_config{}.resource(&tracking)};
     auto input
       = R"({"city":"Model City","entries":{"Bob":5556837,"Jon":5559347}})"sv;
     auto allocations_before_load = tracking.allocations();

@@ -345,8 +345,8 @@ namespace caf {
 
 json_reader_base::json_reader_base() = default;
 
-json_reader_base::json_reader_base(const type_id_mapper& mapper,
-                                   std::pmr::memory_resource& resource)
+json_reader_base::json_reader_base(std::pmr::memory_resource& resource,
+                                   const type_id_mapper& mapper)
   : buf_(&resource), mapper_(&mapper) {
   // nop
 }

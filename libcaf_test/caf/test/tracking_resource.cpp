@@ -6,36 +6,15 @@
 
 namespace caf::test {
 
-tracking_resource::tracking_resource(std::pmr::memory_resource* upstream)
-  : upstream_(upstream) {
-  // nop
-}
-
-std::size_t tracking_resource::allocations() const noexcept {
-  return allocations_;
-}
-
-std::size_t tracking_resource::deallocations() const noexcept {
-  return deallocations_;
-}
-
-std::size_t tracking_resource::outstanding_allocations() const noexcept {
-  return allocations_ - deallocations_;
-}
-
-std::size_t tracking_resource::outstanding_bytes() const noexcept {
-  return allocated_bytes_ - deallocated_bytes_;
-}
-
-void* tracking_resource::do_allocate(std::size_t bytes, std::size_t alignment) {
+void* tracking_resource::do_allocate(size_t bytes, size_t alignment) {
   auto ptr = upstream_->allocate(bytes, alignment);
   ++allocations_;
   allocated_bytes_ += bytes;
   return ptr;
 }
 
-void tracking_resource::do_deallocate(void* ptr, std::size_t bytes,
-                                      std::size_t alignment) {
+void tracking_resource::do_deallocate(void* ptr, size_t bytes,
+                                      size_t alignment) {
   upstream_->deallocate(ptr, bytes, alignment);
   ++deallocations_;
   deallocated_bytes_ += bytes;

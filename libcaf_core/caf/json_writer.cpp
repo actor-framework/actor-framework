@@ -199,13 +199,13 @@ public:
 namespace caf {
 
 json_writer_base::json_writer_base()
-  : json_writer_base(get_default_type_id_mapper(),
-                     *std::pmr::get_default_resource()) {
+  : json_writer_base(*std::pmr::get_default_resource(),
+                     get_default_type_id_mapper()) {
   // nop
 }
 
-json_writer_base::json_writer_base(const type_id_mapper& mapper,
-                                   std::pmr::memory_resource& resource)
+json_writer_base::json_writer_base(std::pmr::memory_resource& resource,
+                                   const type_id_mapper& mapper)
   : buf_(&resource), stack_(&resource), mapper_(&mapper) {
   /// All flags are initially set to false.
   std::memset(&flags_, 0, sizeof(flags_));

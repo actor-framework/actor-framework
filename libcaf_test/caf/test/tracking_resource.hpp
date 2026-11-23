@@ -14,36 +14,49 @@ namespace caf::test {
 /// A memory resource that tracks all allocations and deallocations.
 class CAF_TEST_EXPORT tracking_resource : public std::pmr::memory_resource {
 public:
+  /// Creates a tracking resource that forwards allocations to
+  /// `std::pmr::new_delete_resource()`.
+  tracking_resource() noexcept = default;
+
   /// Creates a tracking resource that forwards allocations to `upstream`.
-  explicit tracking_resource(std::pmr::memory_resource* upstream
-                             = std::pmr::new_delete_resource());
+  explicit tracking_resource(std::pmr::memory_resource& upstream) noexcept
+    : upstream_(&upstream) {
+    // nop
+  }
 
   /// Returns the number of allocations made through this resource.
-  [[nodiscard]] std::size_t allocations() const noexcept;
+  [[nodiscard]] size_t allocations() const noexcept {
+    return allocations_;
+  }
 
   /// Returns the number of deallocations made through this resource.
-  [[nodiscard]] std::size_t deallocations() const noexcept;
+  [[nodiscard]] size_t deallocations() const noexcept {
+    return deallocations_;
+  }
 
   /// Returns the number of allocations not yet deallocated.
-  [[nodiscard]] std::size_t outstanding_allocations() const noexcept;
+  [[nodiscard]] size_t outstanding_allocations() const noexcept {
+    return allocations_ - deallocations_;
+  }
 
   /// Returns the number of bytes allocated but not yet deallocated.
-  [[nodiscard]] std::size_t outstanding_bytes() const noexcept;
+  [[nodiscard]] size_t outstanding_bytes() const noexcept {
+    return allocated_bytes_ - deallocated_bytes_;
+  }
 
 private:
-  void* do_allocate(std::size_t bytes, std::size_t alignment) override;
+  void* do_allocate(size_t bytes, size_t alignment) override;
 
-  void do_deallocate(void* ptr, std::size_t bytes,
-                     std::size_t alignment) override;
+  void do_deallocate(void* ptr, size_t bytes, size_t alignment) override;
 
   bool
   do_is_equal(const std::pmr::memory_resource& other) const noexcept override;
 
-  std::pmr::memory_resource* upstream_;
-  std::size_t allocations_ = 0;
-  std::size_t deallocations_ = 0;
-  std::size_t allocated_bytes_ = 0;
-  std::size_t deallocated_bytes_ = 0;
+  std::pmr::memory_resource* upstream_ = std::pmr::new_delete_resource();
+  size_t allocations_ = 0;
+  size_t deallocations_ = 0;
+  size_t allocated_bytes_ = 0;
+  size_t deallocated_bytes_ = 0;
 };
 
 } // namespace caf::test

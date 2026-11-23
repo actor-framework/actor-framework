@@ -170,8 +170,8 @@ protected:
 
   /// Constructs a reader that uses @p resource as upstream for its internal
   /// buffer.
-  json_reader_base(const type_id_mapper& mapper,
-                   std::pmr::memory_resource& resource);
+  json_reader_base(std::pmr::memory_resource& resource,
+                   const type_id_mapper& mapper);
 
 private:
   using util = internal::json_reader_util;
@@ -216,7 +216,7 @@ public:
   json_reader_v2() = default;
 
   explicit json_reader_v2(const inspector_config& config)
-    : json_reader_base(config.mapper(), config.resource()),
+    : json_reader_base(config.resource(), config.mapper()),
       codec_(config.codec()) {
     // nop
   }
