@@ -23,8 +23,6 @@
 
 using namespace caf;
 
-using namespace std::literals;
-
 namespace {
 
 // Simple loop receiving `num_items` bytes and sending them back incremented by
