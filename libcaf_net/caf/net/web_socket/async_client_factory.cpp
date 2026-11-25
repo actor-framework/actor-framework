@@ -29,9 +29,12 @@ public:
 
   using super::super;
 
-  std::pair<scheme_and_port, scheme_and_port> schemes() const override {
-    return {{"ws", defaults::net::http_default_port},
-            {"wss", defaults::net::https_default_port}};
+  std::span<const scheme_and_port> schemes() const override {
+    static constexpr scheme_and_port result[] = {
+      {"ws", defaults::net::http_default_port},
+      {"wss", defaults::net::https_default_port},
+    };
+    return result;
   }
 
   handshake hs;
