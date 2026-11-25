@@ -30,10 +30,9 @@ using namespace caf;
 
 namespace {
 
-// OpenSSL 3.0 added X509_VERIFY_PARAM_get0_host and
-// X509_VERIFY_PARAM_get1_ip_asc, which let us inspect the configured identity.
-// OpenSSL 1.1.1 has no public API for reading these values, so these tests are
-// only compiled for OpenSSL 3.0 and newer.
+// OpenSSL 1.1.1 supports configuring X509 verification parameters, but the
+// getters used here to inspect the configured DNS name and IP address were
+// added in OpenSSL 3.0. Compile these tests only for OpenSSL 3.0 and newer.
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 
 ssl::connection make_connection() {
