@@ -96,12 +96,11 @@ public:
   /// the original sender to another actor.
   template <class... Args>
   [[nodiscard]] auto mail(Args&&... args) {
-    return response_promise_mail<type_list<Ts...>>(promise_,
-                                                   std::forward<Args>(args)...);
+    return detail::make_response_promise_mail<type_list<Ts...>>(
+      promise_.state_, std::forward<Args>(args)...);
   }
 
   /// Satisfies the promise by delegating to another actor.
-  /// @deprecated Use `mail(...).delegate(...)` instead.
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Us>
   CAF_DEPRECATED("use mail(...).delegate(...) instead")

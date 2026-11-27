@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/actor_control_block.hpp"
+#include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/ref_counted.hpp"
 
@@ -17,11 +18,16 @@ public:
   response_promise_state& operator=(const response_promise_state&) = delete;
   ~response_promise_state();
 
+  bool pending() const noexcept {
+    return self != nullptr && !id.is_answered();
+  }
+
   void cancel();
 
   void deliver_impl(message msg);
 
-  void delegate_impl(abstract_actor* receiver, message msg);
+  void delegate_impl(abstract_actor* receiver, message_priority priority,
+                     message msg);
 
   strong_actor_ptr self;
   strong_actor_ptr source;

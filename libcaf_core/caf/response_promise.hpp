@@ -16,7 +16,7 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/response_type.hpp"
+#include "caf/response_promise_mail.hpp"
 
 #include <utility>
 
@@ -126,15 +126,22 @@ public:
   /// Starts a new message that transfers the responsibility for responding to
   /// the original sender to another actor.
   template <class... Args>
-  [[nodiscard]] auto mail(Args&&... args);
+  [[nodiscard]] auto mail(Args&&... args) {
+    return detail::make_response_promise_mail(state_,
+                                              std::forward<Args>(args)...);
+  }
 
   /// Satisfies the promise by delegating to another actor.
-  /// @deprecated Use `mail(...).delegate(...)` instead.
   /// @post `pending() == false`
   template <message_priority P = message_priority::normal, class Handle,
             class... Ts>
   CAF_DEPRECATED("use mail(...).delegate(...) instead")
-  auto delegate(const Handle& receiver, Ts&&... args);
+  auto delegate(const Handle& receiver, Ts&&... args) {
+    if constexpr (P == message_priority::high)
+      return mail(std::forward<Ts>(args)...).urgent().delegate(receiver);
+    else
+      return mail(std::forward<Ts>(args)...).delegate(receiver);
+  }
 
 private:
   // -- constructors that are visible only to friends --------------------------
@@ -155,16 +162,9 @@ private:
   static void respond_to(local_actor* self, mailbox_element* request,
                          error& response);
 
-  // -- friends ----------------------------------------------------------------
-
-  template <message_priority, class, class...>
-  friend class response_promise_mail_t;
-
   // -- member variables -------------------------------------------------------
 
   intrusive_ptr<detail::response_promise_state> state_;
 };
 
 } // namespace caf
-
-#include "caf/response_promise_mail.hpp"

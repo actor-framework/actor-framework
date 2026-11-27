@@ -341,6 +341,37 @@ SCENARIO("response promises allow deferred delegation") {
   }
 }
 
+TEST("a promise and its mail proxy share completion state") {
+  auto client = sys.spawn([] { return behavior{[](int) {}}; });
+  auto worker = sys.spawn(adder);
+  auto dispatcher = sys.spawn([this, worker](event_based_actor* self) {
+    return behavior{[this, self, worker](bool delegate_first) {
+      auto promise = self->make_response_promise();
+      auto mail = promise.mail(3, 4);
+      if (delegate_first) {
+        auto result = std::move(mail).delegate(worker);
+        check(!promise.pending());
+        promise.deliver(42);
+        return result;
+      } else {
+        promise.deliver(42);
+        return std::move(mail).delegate(worker);
+      }
+    }};
+  });
+  SECTION("delegating prevents a subsequent delivery") {
+    inject().with(true).from(client).to(dispatcher);
+    expect<int, int>().with(3, 4).from(client).to(worker);
+    expect<int>().with(7).from(worker).to(client);
+    check_eq(mail_count(), 0u);
+  }
+  SECTION("delivering prevents a subsequent delegation") {
+    inject().with(false).from(client).to(dispatcher);
+    expect<int>().with(42).from(dispatcher).to(client);
+    check_eq(mail_count(), 0u);
+  }
+}
+
 } // WITH_FIXTURE(test::fixture::deterministic)
 
 TEST("GH - 1306 regression") {

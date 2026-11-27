@@ -10,6 +10,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
+#include "caf/message_priority.hpp"
 #include "caf/sec.hpp"
 
 namespace caf::detail {
@@ -18,7 +19,7 @@ response_promise_state::~response_promise_state() {
   // Note: the state may get destroyed outside of the actor. For example, when
   //       storing the promise in a run-later continuation. Hence, we can't call
   //       deliver_impl here since it calls self->context().
-  if (self && source && !id.is_answered()) {
+  if (source && pending()) {
     log::core::debug("broken promise!");
     auto element = make_mailbox_element(self, id.response_id(),
                                         make_error(sec::broken_promise));
@@ -49,15 +50,20 @@ void response_promise_state::deliver_impl(message msg) {
 }
 
 void response_promise_state::delegate_impl(abstract_actor* receiver,
+                                           message_priority priority,
                                            message msg) {
+  if (!pending())
+    return;
   auto lg = log::core::trace("msg = {}", msg);
-  if (receiver != nullptr) {
-    auto selfptr = static_cast<local_actor*>(self->managed());
-    auto element = make_mailbox_element(source, id, std::move(msg));
-    receiver->enqueue(std::move(element), selfptr->context());
-  } else {
-    log::core::debug("drop response: invalid delegation target");
+  if (receiver == nullptr) {
+    deliver_impl(make_message(make_error(sec::invalid_delegate)));
+    return;
   }
+  if (priority == message_priority::high)
+    id = id.with_high_priority();
+  auto selfptr = static_cast<local_actor*>(self->managed());
+  auto element = make_mailbox_element(source, id, std::move(msg));
+  receiver->enqueue(std::move(element), selfptr->context());
   cancel();
 }
 

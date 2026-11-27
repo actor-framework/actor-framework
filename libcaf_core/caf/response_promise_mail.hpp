@@ -7,13 +7,13 @@
 #include "caf/actor_cast.hpp"
 #include "caf/delegated.hpp"
 #include "caf/detail/implicit_conversions.hpp"
+#include "caf/detail/response_promise_state.hpp"
 #include "caf/detail/send_type_check.hpp"
-#include "caf/error.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/message.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/response_promise.hpp"
+#include "caf/none.hpp"
 #include "caf/response_type.hpp"
-#include "caf/sec.hpp"
 #include "caf/type_list.hpp"
 
 #include <type_traits>
@@ -21,29 +21,16 @@
 
 namespace caf {
 
-namespace detail {
-
-/// Creates an empty message if no arguments are given and otherwise forwards
-/// the arguments to `make_message_nowrap`.
-template <class... Args>
-message make_response_promise_message(Args&&... args) {
-  if constexpr (sizeof...(Args) == 0)
-    return make_message();
-  else
-    return make_message_nowrap(std::forward<Args>(args)...);
-}
-
-} // namespace detail
-
 /// Provides a fluent interface for delegating a response promise to another
 /// actor.
-/// @note The proxy stores a copy of the response promise instead of a
-///       reference, since `mail` may be called on a temporary promise.
+/// @note The proxy keeps the shared state alive even if `mail` is called on a
+///       temporary promise.
 template <message_priority Priority, class Outputs, class... Inputs>
 class [[nodiscard]] response_promise_mail_t {
 public:
-  response_promise_mail_t(response_promise rp, message content)
-    : rp_(std::move(rp)), content_(std::move(content)) {
+  response_promise_mail_t(intrusive_ptr<detail::response_promise_state> state,
+                          message content)
+    : state_(std::move(state)), content_(std::move(content)) {
     // nop
   }
 
@@ -58,7 +45,7 @@ public:
     requires(P == message_priority::normal)
   [[nodiscard]] auto urgent() && {
     return response_promise_mail_t<message_priority::high, Outputs, Inputs...>{
-      std::move(rp_), std::move(content_)};
+      std::move(state_), std::move(content_)};
   }
 
   /// Satisfies the promise by delegating to `receiver`.
@@ -80,47 +67,35 @@ public:
                     "response type mismatch");
     }
     using result_t = delegated_response_type_t<Handle, Inputs...>;
-    if (!receiver) {
-      rp_.deliver(make_error(sec::invalid_delegate));
-      return result_t{};
-    }
-    if (rp_.pending()) {
-      if constexpr (Priority == message_priority::high)
-        rp_.state_->id = rp_.state_->id.with_high_priority();
-      rp_.state_->delegate_impl(actor_cast<abstract_actor*>(receiver),
-                                std::move(content_));
-      rp_.state_.reset();
+    if (auto state = std::move(state_)) {
+      auto* dest = receiver ? actor_cast<abstract_actor*>(receiver) : nullptr;
+      state->delegate_impl(dest, Priority, std::move(content_));
     }
     return result_t{};
   }
 
 private:
-  response_promise rp_;
+  intrusive_ptr<detail::response_promise_state> state_;
   message content_;
 };
+
+namespace detail {
 
 /// Starts a new message that transfers the responsibility for responding to
 /// the original sender to another actor.
 template <class Outputs = none_t, class... Args>
-[[nodiscard]] auto response_promise_mail(response_promise& rp, Args&&... args) {
-  using result_t
-    = response_promise_mail_t<message_priority::normal, Outputs,
-                              detail::strip_and_convert_t<Args>...>;
-  return result_t{rp, detail::make_response_promise_message(
-                        std::forward<Args>(args)...)};
-}
-
-template <class... Args>
-auto response_promise::mail(Args&&... args) {
-  return response_promise_mail(*this, std::forward<Args>(args)...);
-}
-
-template <message_priority P, class Handle, class... Ts>
-auto response_promise::delegate(const Handle& receiver, Ts&&... args) {
-  if constexpr (P == message_priority::high)
-    return mail(std::forward<Ts>(args)...).urgent().delegate(receiver);
+[[nodiscard]] auto
+make_response_promise_mail(intrusive_ptr<response_promise_state> state,
+                           Args&&... args) {
+  using result_t = response_promise_mail_t<message_priority::normal, Outputs,
+                                           strip_and_convert_t<Args>...>;
+  if constexpr (sizeof...(Args) == 0)
+    return result_t{std::move(state), make_message()};
   else
-    return mail(std::forward<Ts>(args)...).delegate(receiver);
+    return result_t{std::move(state),
+                    make_message_nowrap(std::forward<Args>(args)...)};
 }
+
+} // namespace detail
 
 } // namespace caf
