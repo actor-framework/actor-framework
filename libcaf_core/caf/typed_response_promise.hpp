@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include "caf/caf_deprecated.hpp"
 #include "caf/message.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/response_promise_mail.hpp"
 #include "caf/type_list.hpp"
 
 #include <concepts>
@@ -90,11 +92,23 @@ public:
 
   // -- delegation -------------------------------------------------------------
 
+  /// Starts a new message that transfers the responsibility for responding to
+  /// the original sender to another actor.
+  template <class... Args>
+  [[nodiscard]] auto mail(Args&&... args) {
+    return detail::make_response_promise_mail<type_list<Ts...>>(
+      promise_.state_, std::forward<Args>(args)...);
+  }
+
   /// Satisfies the promise by delegating to another actor.
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Us>
+  CAF_DEPRECATED("use mail(...).delegate(...) instead")
   auto delegate(const Handle& dest, Us&&... xs) {
-    return promise_.template delegate<P>(dest, std::forward<Us>(xs)...);
+    if constexpr (P == message_priority::high)
+      return mail(std::forward<Us>(xs)...).urgent().delegate(dest);
+    else
+      return mail(std::forward<Us>(xs)...).delegate(dest);
   }
 
 private:

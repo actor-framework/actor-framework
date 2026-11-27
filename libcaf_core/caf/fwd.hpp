@@ -214,6 +214,11 @@ enum class spawn_options : int;
 enum class term;
 enum class thread_owner;
 
+// -- templates that depend on enums -------------------------------------------
+
+template <message_priority Priority, class Outputs, class... Inputs>
+class response_promise_mail_t;
+
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;

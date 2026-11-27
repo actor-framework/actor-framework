@@ -6,14 +6,19 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
-#include "caf/actor_cast.hpp"
+#include "caf/caf_deprecated.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/response_promise_state.hpp"
 #include "caf/detail/send_type_check.hpp"
+#include "caf/error.hpp"
+#include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
-#include "caf/response_type.hpp"
+#include "caf/message_priority.hpp"
+#include "caf/response_promise_mail.hpp"
+
+#include <utility>
 
 namespace caf {
 
@@ -118,28 +123,24 @@ public:
 
   // -- delegation -------------------------------------------------------------
 
+  /// Starts a new message that transfers the responsibility for responding to
+  /// the original sender to another actor.
+  template <class... Args>
+  [[nodiscard]] auto mail(Args&&... args) {
+    return detail::make_response_promise_mail(state_,
+                                              std::forward<Args>(args)...);
+  }
+
   /// Satisfies the promise by delegating to another actor.
   /// @post `pending() == false`
   template <message_priority P = message_priority::normal, class Handle,
             class... Ts>
-  delegated_response_type_t<Handle,
-                            detail::implicit_conversions_t<std::decay_t<Ts>>...>
-  delegate(const Handle& receiver, Ts&&... args) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    detail::send_type_check<none_t, Handle, Ts...>();
-    if (pending()) {
-      if constexpr (P == message_priority::high)
-        state_->id = state_->id.with_high_priority();
-      if constexpr (std::is_same_v<type_list<message>,
-                                   type_list<std::decay_t<Ts>...>>)
-        state_->delegate_impl(actor_cast<abstract_actor*>(receiver),
-                              std::forward<Ts>(args)...);
-      else
-        state_->delegate_impl(actor_cast<abstract_actor*>(receiver),
-                              make_message(std::forward<Ts>(args)...));
-      state_.reset();
-    }
-    return {};
+  CAF_DEPRECATED("use mail(...).delegate(...) instead")
+  auto delegate(const Handle& receiver, Ts&&... args) {
+    if constexpr (P == message_priority::high)
+      return mail(std::forward<Ts>(args)...).urgent().delegate(receiver);
+    else
+      return mail(std::forward<Ts>(args)...).delegate(receiver);
   }
 
 private:
